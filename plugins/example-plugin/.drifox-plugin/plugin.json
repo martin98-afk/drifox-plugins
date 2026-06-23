@@ -1,0 +1,20 @@
+{
+    "name": "example-plugin",
+    "description": "DriFox 插件的最小参考实现 — 展示全部 7 类组件（commands/agents/skills/themes/hooks/mcp/lsp）的标准写法。",
+    "version": "1.0.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "keywords": ["drifox", "example", "reference", "template"],
+    "components": {
+        "commands": true,
+        "agents": true,
+        "skills": true,
+        "themes": true,
+        "hooks": true,
+        "mcp": true,
+        "lsp": true
+    }
+}

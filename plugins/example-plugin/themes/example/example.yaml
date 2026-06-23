@@ -1,0 +1,37 @@
+# example 主题 — 最小参考主题
+# 派生新主题时复制本目录，改 name / id / colors 即可。
+name: 示例主题
+id: example
+
+window:
+  gradient_start: rgba(245, 245, 250, 255)
+  gradient_end: rgba(220, 222, 230, 255)
+
+background:
+  chat_list:
+    image: :/icons/fox_bg.png
+    opacity: 0.05
+    enabled: true
+
+colors:
+  # 基础 token
+  card_bg: rgba(255, 255, 255, 232)
+  card_bg_solid: rgba(255, 255, 255, 250)
+  content_bg: '#fafbfc'
+  border: '#d0d4dc'
+  border_accent: '#5b8def'
+  text_primary: '#1a1a1a'
+  text_secondary: rgba(26, 26, 26, 0.72)
+  text_muted: '#6a6e7a'
+  accent: '#5b8def'
+  accent_warm: '#ff9a3c'
+  hover_bg: rgba(91, 141, 239, 0.10)
+  selected_bg: rgba(91, 141, 239, 0.22)
+  capsule_bg: rgba(255, 255, 255, 220)
+  capsule_border: rgba(208, 212, 220, 220)
+
+  # 扩展 token
+  input_glow_preset: subtle
+  toolbar_bg: rgba(255, 255, 255, 0.05)
+  divider_color: rgba(0, 0, 0, 0.06)
+  hover_bg_strong: rgba(0, 0, 0, 0.08)

@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "example-server": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["example-mcp-server", "-y"],
+      "env": {
+        "EXAMPLE_API_KEY": "your-api-key"
+      },
+      "enabled": false,
+      "url": "",
+      "headers": {}
+    }
+  }
+}

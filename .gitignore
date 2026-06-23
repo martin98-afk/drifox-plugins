@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# 虚拟环境
+.venv/
+venv/
+env/
+
+# 编辑器 / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# 钩子运行时产物（Evolver 等插件可能产生）
+memory/
+*.jsonl
+!plugins/*/skills/**/*.jsonl
+
+# 临时文件
+*.log
+*.tmp
+*.bak
+
+# 凭据 / 配置
+.env
+.env.local
+*.pem
+*.key

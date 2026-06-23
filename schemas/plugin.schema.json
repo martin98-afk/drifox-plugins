@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/martin98-afk/drifox-plugins/schemas/plugin.schema.json",
+  "title": "DriFox Plugin Manifest",
+  "description": "plugin.json 字段定义。所有 DriFox 插件必须遵循此 schema。权威参考见 DriFox 运行时内置的 plugins/system/。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["name", "description", "version", "components"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{1,63}$",
+      "description": "插件名，小写 kebab-case，必须与插件目录名一致"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "description": "一句话说明插件功能"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+      "description": "SemVer 2.0 语义化版本"
+    },
+    "author": {
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name"],
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "email": { "type": "string", "format": "email" },
+            "url": { "type": "string", "format": "uri" }
+          }
+        }
+      ],
+      "description": "作者信息，字符串或对象"
+    },
+    "homepage": { "type": "string", "format": "uri" },
+    "repository": { "type": "string", "format": "uri" },
+    "license": {
+      "type": "string",
+      "minLength": 1,
+      "description": "SPDX 标识符，如 GPL-3.0-or-later、MIT"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["user", "system"],
+      "default": "user",
+      "description": "user=用户插件（默认）；system=系统级，需签名"
+    },
+    "keywords": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
+    },
+    "components": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "启用的组件，至少启用一个",
+      "anyOf": [
+        { "required": ["commands"] },
+        { "required": ["hooks"] },
+        { "required": ["skills"] },
+        { "required": ["agents"] },
+        { "required": ["themes"] },
+        { "required": ["mcp"] },
+        { "required": ["lsp"] }
+      ],
+      "properties": {
+        "commands": {
+          "type": "boolean",
+          "description": "启用 commands/*.md 斜杠命令"
+        },
+        "agents": {
+          "type": "boolean",
+          "description": "启用 agents/*.md 智能体定义"
+        },
+        "skills": {
+          "type": "boolean",
+          "description": "启用 skills/<name>/SKILL.md 技能"
+        },
+        "themes": {
+          "type": "boolean",
+          "description": "启用 themes/<theme-name>/*.yaml 主题"
+        },
+        "hooks": {
+          "type": "boolean",
+          "description": "启用 hooks/hooks.json 事件钩子"
+        },
+        "mcp": {
+          "type": "boolean",
+          "description": "加载 .mcp.json 中的 MCP 服务器配置"
+        },
+        "lsp": {
+          "type": "boolean",
+          "description": "加载 .lsp.json 中的 LSP 语言服务器配置"
+        }
+      }
+    },
+    "drifox": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "DriFox 兼容性声明",
+      "properties": {
+        "min_version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+(\\.\\d+)?$"
+        },
+        "max_version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+(\\.\\d+)?$|^\\d+\\.x$"
+        },
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "SessionStart",
+              "SessionEnd",
+              "PreToolUse",
+              "PostToolUse",
+              "UserMessageSubmit",
+              "PostAssistantMessage"
+            ]
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[\\^~>=<]*\\s*\\d+\\.\\d+\\.\\d+.*$"
+      },
+      "description": "插件间依赖，键为插件名，值为 SemVer 范围"
+    }
+  }
+}

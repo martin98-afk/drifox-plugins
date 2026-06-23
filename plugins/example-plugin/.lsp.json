@@ -1,0 +1,15 @@
+{
+    "example-ls": {
+        "command": "example-language-server",
+        "args": ["--stdio"],
+        "extensionToLanguage": {
+            ".ex": "example"
+        },
+        "initializationOptions": {},
+        "settings": {},
+        "startupTimeout": 10000,
+        "maxRestarts": 3,
+        "transport": "stdio",
+        "installHint": "npm install -g example-language-server"
+    }
+}

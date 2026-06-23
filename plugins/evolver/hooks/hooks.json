@@ -1,0 +1,44 @@
+{
+  "description": "Evolver 自进化引擎 Hook — 自动捕获会话经验日志，触发进化循环",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "python",
+            "function": ".evolver_hook:hook_session_start",
+            "timeout": 15,
+            "enabled": true,
+            "id": "56dd5b9564864cfc9725c4137feb9fa7"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "python",
+            "function": ".evolver_hook:hook_post_tool_use",
+            "timeout": 15,
+            "enabled": true,
+            "id": "34b8e1fe25f0459db6e72d996c73f541"
+          }
+        ]
+      }
+    ],
+    "PostAssistantMessage": [
+      {
+        "hooks": [
+          {
+            "type": "python",
+            "function": ".evolver_hook:hook_post_assistant_message",
+            "timeout": 30,
+            "enabled": true,
+            "id": "7d5227c09b254387ab1d80919259f126"
+          }
+        ]
+      }
+    ]
+  }
+}
