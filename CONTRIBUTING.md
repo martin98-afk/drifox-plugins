@@ -74,7 +74,11 @@ chore: 升级 schema 到 v2
 跑一遍校验：
 
 ```bash
+# 1. 校验插件 manifest + 组件完整性 + marketplace 一致性
 python tools/validate_plugins.py
+
+# 2. 确保 marketplace.json 已更新
+python tools/generate_marketplace.py
 ```
 
 输出应全部为 `OK`。如果失败，PR 不会被合入。
@@ -83,7 +87,7 @@ python tools/validate_plugins.py
 
 - 旧插件不再维护时，把 `plugin.json` 的 `components` 全部设为 `false`，但**不要删除插件**。
 - 破坏性变更必须升级 `version` 主版本号，并在 PR 描述里写迁移指南。
-- 新增事件或字段时同步更新 `schemas/plugin.schema.json` 和 `docs/`。
+- 新增事件或字段时同步更新 `schemas/plugin.schema.json`、`tools/generate_marketplace.py` 和 `docs/`。
 
 ## 行为准则
 

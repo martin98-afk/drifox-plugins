@@ -1,0 +1,14 @@
+{
+    "name": "test-scaffold",
+    "description": "测试脚手架生成 — 自动生成测试用例骨架、分析覆盖率缺口、推荐边界测试场景，加速测试编写。",
+    "version": "1.0.0",
+    "author": { "name": "DriFox Contributors" },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "drifox": { "min_version": "0.5.0" },
+    "keywords": ["test", "scaffold", "coverage", "tdd", "unit-test", "pytest"],
+    "components": {
+        "commands": true,
+        "skills": true
+    }
+}

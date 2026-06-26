@@ -1,0 +1,18 @@
+{
+    "description": "python-pro Hook — 在 PostToolUse 时对 .py 文件自动运行 ruff check",
+    "hooks": {
+        "PostToolUse": [
+            {
+                "hooks": [
+                    {
+                        "type": "python",
+                        "function": ".python-pro_hook:hook_post_tool_use",
+                        "timeout": 30,
+                        "enabled": true,
+                        "id": "3a4b5c6d-7e8f-4a9b-0c1d-2e3f4a5b6c7d"
+                    }
+                ]
+            }
+        ]
+    }
+}

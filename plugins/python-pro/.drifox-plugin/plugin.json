@@ -1,0 +1,14 @@
+{
+    "name": "python-pro",
+    "description": "Python 开发增强 — 注入 PEP 8 / 类型标注 / 异步最佳实践，PostToolUse 自动 lint 检查，让 Python 代码质量持续达标。",
+    "version": "1.0.0",
+    "author": { "name": "DriFox Contributors" },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "drifox": { "min_version": "0.5.0" },
+    "keywords": ["python", "pep8", "typing", "lint", "ruff", "mypy", "asyncio"],
+    "components": {
+        "skills": true,
+        "hooks": true
+    }
+}

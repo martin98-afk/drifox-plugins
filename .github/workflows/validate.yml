@@ -1,0 +1,68 @@
+name: Validate Plugins
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 设置 Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install jsonschema ruff
+
+      - name: 校验插件 manifest 与组件完整性
+        run: python tools/validate_plugins.py --strict
+
+      - name: 检查 marketplace.json 一致性
+        run: python tools/generate_marketplace.py --check
+
+      - name: Python 代码 lint（ruff）
+        run: ruff check tools/ plugins/*/hooks/
+
+      - name: 检查文档内部链接
+        run: |
+          python -c "
+          import re, sys
+          from pathlib import Path
+
+          errors = []
+          docs_dir = Path('docs')
+          root = Path('.')
+
+          for md in list(docs_dir.glob('*.md')) + [root / 'README.md', root / 'CONTRIBUTING.md']:
+              if not md.exists():
+                  continue
+              content = md.read_text(encoding='utf-8')
+              for match in re.finditer(r'\[([^\]]+)\]\(([^)]+)\)', content):
+                  link = match.group(2)
+                  # 跳过外部链接和锚点
+                  if link.startswith(('http://', 'https://', '#', 'mailto:')):
+                      continue
+                  # 解析相对路径
+                  target = (md.parent / link.split('#')[0]).resolve()
+                  if not target.exists():
+                      errors.append(f'{md}: 链接 {link!r} 指向的文件不存在')
+
+          if errors:
+              for e in errors:
+                  print(f'  {e}')
+              sys.exit(1)
+          else:
+              print('所有文档链接有效')
+          "

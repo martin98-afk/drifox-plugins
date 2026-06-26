@@ -1,0 +1,15 @@
+{
+    "name": "git-workflow",
+    "description": "Git 工作流增强 — 分支命名检查、提交规范验证、PR 模板生成，让团队 Git 实践自动化。",
+    "version": "1.0.0",
+    "author": { "name": "DriFox Contributors" },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "drifox": { "min_version": "0.5.0" },
+    "keywords": ["git", "workflow", "commit", "branch", "pr", "conventional-commits"],
+    "components": {
+        "commands": true,
+        "hooks": true,
+        "skills": true
+    }
+}

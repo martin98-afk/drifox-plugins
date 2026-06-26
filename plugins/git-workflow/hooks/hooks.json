@@ -1,0 +1,18 @@
+{
+    "description": "git-workflow Hook — 在 git commit 执行前检查提交消息是否符合 Conventional Commits 规范",
+    "hooks": {
+        "PreToolUse": [
+            {
+                "hooks": [
+                    {
+                        "type": "python",
+                        "function": ".git-workflow_hook:hook_pre_tool_use",
+                        "timeout": 10,
+                        "enabled": true,
+                        "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    }
+                ]
+            }
+        ]
+    }
+}

@@ -85,7 +85,9 @@ DriFox 启动时会自动捕获 `logging` 输出到 `~/.drifox/logs/`。
 2. 创建分支 `feat/your-plugin`
 3. 跑 `python tools/validate_plugins.py`，确保全 OK
 4. 提交 commit（`feat(your-plugin): 初始实现`）
-5. 创建 PR，描述插件功能与使用方式
+4. 跑 `python tools/validate_plugins.py`，确保全 OK
+5. 运行 `python tools/generate_marketplace.py` 更新市场清单
+6. 创建 PR，描述插件功能与使用方式
 
 PR 模板：
 
@@ -111,6 +113,8 @@ your-plugin
 [ ] 至少 1 个核心场景通过手动测试
 ```
 
-## 进阶：发布到 EvoMap Hub（可选）
+## 进阶：发布到插件市场
 
-DriFox 插件生态未来会支持远程市场。当前阶段建议先在本地仓库迭代，待 `drifox-plugin` CLI 上线后接入远程注册。
+插件合并到本仓库 `plugins/` 目录后，运行 `python tools/generate_marketplace.py` 更新市场清单。`marketplace.json` 是 DriFox 运行时 `drifox plugin install` 命令的数据源。
+
+未来 DriFox 运行时将提供完整的 `drifox plugin` CLI（install / search / list / update / remove），届时用户可直接通过命令行安装本仓库中的插件。

@@ -7,6 +7,9 @@
     },
     "license": "GPL-3.0-or-later",
     "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
     "keywords": ["drifox", "example", "reference", "template"],
     "components": {
         "commands": true,

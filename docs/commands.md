@@ -91,6 +91,34 @@ parameters:
 | `value` | 带值参数 | `--save-to=report.md` |
 | `positional` | 位置参数 | 无前缀的文本 |
 
+### value_options（枚举值列表）
+
+`value` 类型参数可声明 `value_options` 枚举值列表。声明后，DriFox 会在用户输入该参数前缀时**自动弹出可选值列表**，支持实时搜索过滤。
+
+```yaml
+parameters:
+  - name: "--language="
+    description: "安装指定语言的 LSP"
+    param_type: value
+    value_options:
+      - python
+      - typescript
+      - rust
+      - go
+      - cpp
+```
+
+**效果**：
+- 用户输入 `/lsp-install --lan` 时自动弹出语言列表
+- 用户输入 `--language=py` 时列表实时过滤为包含 `py` 的选项
+- 用户点击列表项或按 Tab 选中后，值自动补全到输入框
+
+**规则**：
+- 仅 `param_type: value` 的参数支持 `value_options`
+- 列表为空或不声明时，该参数不触发值选择 UI
+- `--model=` 参数特殊处理：使用运行时动态数据源（非静态列表），不需要声明 `value_options`
+- 也支持 `enum` 作为 `value_options` 的兼容别名
+
 ### 简化格式（argument-hint，兼容旧版）
 
 ```yaml
@@ -197,3 +225,4 @@ permission:
 - `type` 必须是 `prompt` / `function` / `agent`
 - 引用的 `prompt_sections` 段必须在正文里能找到对应 `<!-- section:xxx -->` 标记
 - `parameters` 列表中每项必须是 dict，且 `param_type`（如存在）必须是 `flag`/`value`/`positional`
+- `value_options`（如存在）必须是 list，且仅在 `param_type: value` 时有效

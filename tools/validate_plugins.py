@@ -32,15 +32,19 @@ from typing import Any, Iterable
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_PATH = REPO_ROOT / "schemas" / "plugin.schema.json"
 PLUGINS_DIR = REPO_ROOT / "plugins"
+MARKETPLACE_PATH = REPO_ROOT / "marketplace.json"
 MANIFEST_PATH = Path(".drifox-plugin") / "plugin.json"
 
 SUPPORTED_EVENTS = {
     "SessionStart",
-    "SessionEnd",
+    "Stop",
+    "UserPromptSubmit",
+    "PreUserMessage",
+    "PostUserMessage",
+    "PreAssistantMessage",
+    "PostAssistantMessage",
     "PreToolUse",
     "PostToolUse",
-    "UserMessageSubmit",
-    "PostAssistantMessage",
 }
 
 VALID_COMMAND_TYPES = {"prompt", "function", "agent"}
@@ -464,6 +468,21 @@ def check_commands_dir(
                             f"必须是 flag/value/positional"
                         )
 
+                    # value_options 校验：必须是 list，且仅在 value 类型时有效
+                    vo = p.get("value_options", p.get("enum"))
+                    if vo is not None:
+                        if not isinstance(vo, list):
+                            errors.append(
+                                f"{md.name} parameters[{idx}].value_options "
+                                f"必须是 list"
+                            )
+                        ptype = p.get("param_type", "")
+                        if ptype and ptype != "value":
+                            warnings.append(
+                                f"{md.name} parameters[{idx}].value_options "
+                                f"仅在 param_type=value 时有效，当前为 {ptype!r}"
+                            )
+
         # body 中 prompt_sections 段必须存在
         if isinstance(ps, dict):
             body = content.split("---", 2)[-1] if content.count("---") >= 2 else content
@@ -751,6 +770,87 @@ def check_consistency(
         warnings.append("缺少 __init__.py（影响钩子模块导入）")
 
 
+def check_dependencies(
+    plugin_dir: Path, manifest: dict, errors: list[str], warnings: list[str]
+) -> None:
+    """校验 dependencies 中引用的插件名是否存在于 plugins/ 目录。"""
+    deps = manifest.get("dependencies")
+    if not deps or not isinstance(deps, dict):
+        return
+
+    available = {
+        d.name for d in PLUGINS_DIR.iterdir() if d.is_dir() and not d.name.startswith(".")
+    } if PLUGINS_DIR.exists() else set()
+
+    for dep_name in deps:
+        if dep_name not in available:
+            errors.append(f"dependencies 引用的插件不存在: {dep_name}")
+
+
+def check_marketplace_consistency(
+    all_plugins: list[Path], errors: list[str], warnings: list[str]
+) -> None:
+    """校验 marketplace.json 与各 plugin.json 的关键字段是否一致。
+
+    此函数在所有插件校验完成后单独调用，不属于单个插件的校验。
+    """
+    if not MARKETPLACE_PATH.exists():
+        warnings.append("marketplace.json 不存在（运行 generate_marketplace.py 生成）")
+        return
+
+    try:
+        marketplace = json.loads(MARKETPLACE_PATH.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as e:
+        errors.append(f"marketplace.json 不是合法 JSON: {e}")
+        return
+
+    mp_plugins = {p.get("name"): p for p in marketplace.get("plugins", [])}
+    actual_names = {p.name for p in all_plugins}
+
+    # 检查 marketplace.json 中引用了不存在的插件
+    for name in mp_plugins:
+        if name not in actual_names:
+            errors.append(f"marketplace.json 引用了不存在的插件: {name}")
+
+    # 检查实际插件未收录到 marketplace.json
+    for name in actual_names:
+        if name not in mp_plugins:
+            errors.append(f"插件 {name} 未收录到 marketplace.json（运行 generate_marketplace.py 更新）")
+
+    # 逐插件比对关键字段
+    for plugin_dir in all_plugins:
+        manifest_path = plugin_dir / MANIFEST_PATH
+        if not manifest_path.exists():
+            continue
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+
+        name = manifest.get("name", plugin_dir.name)
+        mp_entry = mp_plugins.get(name)
+        if mp_entry is None:
+            continue
+
+        for field in ("description", "version", "license"):
+            if manifest.get(field) and mp_entry.get(field) and manifest[field] != mp_entry[field]:
+                errors.append(
+                    f"marketplace.json 中 {name} 的 {field} 与 plugin.json 不一致: "
+                    f"marketplace={mp_entry[field]!r} vs plugin.json={manifest[field]!r}"
+                )
+
+        # components 一致性
+        mp_comps = mp_entry.get("components", {})
+        pj_comps = manifest.get("components", {})
+        for comp in ("commands", "agents", "skills", "themes", "hooks", "mcp", "lsp"):
+            if comp in pj_comps and comp in mp_comps:
+                if pj_comps[comp] != mp_comps[comp]:
+                    errors.append(
+                        f"marketplace.json 中 {name} 的 components.{comp} 与 plugin.json 不一致: "
+                        f"marketplace={mp_comps[comp]!r} vs plugin.json={pj_comps[comp]!r}"
+                    )
+
+
 # ============================================================
 # 主流程
 # ============================================================
@@ -785,6 +885,7 @@ def validate_one(plugin_dir: Path) -> CheckResult:
             result.errors.extend(schema_errors)
 
     check_consistency(plugin_dir, manifest, result.errors, result.warnings)
+    check_dependencies(plugin_dir, manifest, result.errors, result.warnings)
     check_commands_dir(plugin_dir, manifest, result.errors, result.warnings)
     check_hooks_dir(plugin_dir, manifest, result.errors, result.warnings)
     check_skills_dir(plugin_dir, manifest, result.errors, result.warnings)
@@ -861,6 +962,17 @@ def main(argv: Iterable[str] | None = None) -> int:
         return 0
 
     results = [validate_one(p) for p in targets]
+
+    # 全局校验：marketplace.json 与所有插件的一致性（不限制 targets）
+    marketplace_errors: list[str] = []
+    marketplace_warnings: list[str] = []
+    all_plugins_in_repo = discover_plugins(None)
+    check_marketplace_consistency(all_plugins_in_repo, marketplace_errors, marketplace_warnings)
+    if marketplace_errors or marketplace_warnings:
+        mp_result = CheckResult(plugin="marketplace.json", ok=not marketplace_errors)
+        mp_result.errors = marketplace_errors
+        mp_result.warnings = marketplace_warnings
+        results.append(mp_result)
 
     print(_bold("结果："))
     for r in results:

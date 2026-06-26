@@ -1,0 +1,14 @@
+{
+    "name": "frontend-pro",
+    "description": "前端开发增强 — 组件设计规范、无障碍(a11y)检查、性能最佳实践注入，让前端代码兼顾质量与体验。",
+    "version": "1.0.0",
+    "author": { "name": "DriFox Contributors" },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "drifox": { "min_version": "0.5.0" },
+    "keywords": ["frontend", "a11y", "accessibility", "react", "vue", "css", "performance", "web-components"],
+    "components": {
+        "commands": true,
+        "skills": true
+    }
+}

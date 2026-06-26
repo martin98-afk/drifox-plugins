@@ -8,6 +8,9 @@
     "homepage": "https://evomap.ai",
     "license": "GPL-3.0-or-later",
     "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
     "components": {
         "commands": true,
         "hooks": true,

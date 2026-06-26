@@ -120,11 +120,14 @@
             "type": "string",
             "enum": [
               "SessionStart",
-              "SessionEnd",
+              "Stop",
+              "UserPromptSubmit",
+              "PreUserMessage",
+              "PostUserMessage",
+              "PreAssistantMessage",
+              "PostAssistantMessage",
               "PreToolUse",
-              "PostToolUse",
-              "UserMessageSubmit",
-              "PostAssistantMessage"
+              "PostToolUse"
             ]
           },
           "uniqueItems": true
