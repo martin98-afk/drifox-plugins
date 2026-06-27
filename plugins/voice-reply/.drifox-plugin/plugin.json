@@ -1,0 +1,13 @@
+{
+  "name": "voice-reply",
+  "description": "将 AI 回复转为语音播放（使用 pyttsx3 Windows SAPI5 离线 TTS）",
+  "version": "1.0.0",
+  "type": "user",
+  "components": {
+    "hooks": true
+  },
+  "author": {
+    "name": "DriFox",
+    "email": ""
+  }
+}

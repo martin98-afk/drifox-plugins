@@ -1,0 +1,19 @@
+{
+  "description": "Voice reply plugin - 将 AI 回复转为语音播放",
+  "hooks": {
+    "PostAssistantMessage": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"{skill_root}/voice_reply.py\" --event=PostAssistantMessage",
+            "add_output_to_context": false,
+            "statusMessage": "正在合成语音回复...",
+            "timeout": 60,
+            "id": "voice_reply_default"
+          }
+        ]
+      }
+    ]
+  }
+}
