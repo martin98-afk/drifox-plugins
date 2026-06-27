@@ -38,10 +38,10 @@ python -c "import pyttsx3; print('✅ pyttsx3 可用')"
 DriFox 在 `PostAssistantMessage` 事件触发时，通过 command 类型 Hook 执行：
 
 ```
-python voice_reply.py --event=PostAssistantMessage
+python "{plugin_root}/hooks/voice_reply.py" --event=PostAssistantMessage
 ```
 
-上下文通过 stdin (JSON) 传递给脚本，脚本使用 `pyttsx3` 朗读 AI 回复文本。
+其中 `{plugin_root}` 是 DriFox 内置变量，自动替换为插件根目录路径。上下文通过 stdin (JSON) 传递给脚本，脚本使用 `pyttsx3` 朗读 AI 回复文本。
 
 ## 事件
 

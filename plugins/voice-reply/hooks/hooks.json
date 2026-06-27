@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python \"{skill_root}/voice_reply.py\" --event=PostAssistantMessage",
+            "command": "python \"{plugin_root}/hooks/voice_reply.py\" --event=PostAssistantMessage",
             "add_output_to_context": false,
             "statusMessage": "正在合成语音回复...",
             "timeout": 60,
