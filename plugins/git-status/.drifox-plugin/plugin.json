@@ -1,0 +1,12 @@
+{
+  "name": "git-status",
+  "description": "在每轮用户消息前注入当前 Git 仓库状态（分支/暂存/工作区/最近 commits），让 LLM 无需询问即可知道当前代码改动了什么",
+  "version": "1.0.0",
+  "type": "user",
+  "components": {
+    "hooks": true
+  },
+  "author": {
+    "name": "martin98-afk"
+  }
+}
