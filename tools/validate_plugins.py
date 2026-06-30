@@ -206,7 +206,7 @@ def _parse_block(lines: list[str], indent: int) -> tuple[Any, int]:
     """解析一个缩进块，自动判断是 mapping 还是 sequence。"""
     # 找第一个非空非注释行
     first = next(
-        (l for l in lines if l.strip() and not l.strip().startswith("#")), None
+        (line for line in lines if line.strip() and not line.strip().startswith("#")), None
     )
     if first is None:
         return None, len(lines)
@@ -873,11 +873,15 @@ def check_marketplace_consistency(
         if mp_entry is None:
             continue
 
-        for field in ("description", "version", "license"):
-            if manifest.get(field) and mp_entry.get(field) and manifest[field] != mp_entry[field]:
+        for field_name in ("description", "version", "license"):
+            if (
+                manifest.get(field_name)
+                and mp_entry.get(field_name)
+                and manifest[field_name] != mp_entry[field_name]
+            ):
                 errors.append(
-                    f"marketplace.json 中 {name} 的 {field} 与 plugin.json 不一致: "
-                    f"marketplace={mp_entry[field]!r} vs plugin.json={manifest[field]!r}"
+                    f"marketplace.json 中 {name} 的 {field_name} 与 plugin.json 不一致: "
+                    f"marketplace={mp_entry[field_name]!r} vs plugin.json={manifest[field_name]!r}"
                 )
 
         # components 一致性

@@ -37,8 +37,8 @@ def speak(text: str) -> str:
         import pyttsx3
     except ImportError:
         return (
-            f"❌ 缺少依赖 pyttsx3，请运行: pip install pyttsx3\n"
-            f"   或参考插件 README.md 安装依赖"
+            "❌ 缺少依赖 pyttsx3，请运行: pip install pyttsx3\n"
+            "   或参考插件 README.md 安装依赖"
         )
 
     try:

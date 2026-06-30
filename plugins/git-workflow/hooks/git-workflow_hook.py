@@ -126,7 +126,7 @@ def validate_commit_message(msg: str) -> tuple[bool, str]:
 
     # 检查格式
     if ":" not in first_line:
-        return False, f"提交消息必须包含 ': ' 分隔符，格式: type(scope): description"
+        return False, "提交消息必须包含 ': ' 分隔符，格式: type(scope): description"
 
     if not re.match(r"^[a-z]+(\([a-z0-9/-]+\))?:", first_line):
         return False, "格式错误。正确格式: type(scope): description（如 feat(auth): add login）"
@@ -217,6 +217,7 @@ def hook_pre_tool_use() -> None:
     parser = argparse.ArgumentParser(description=f"{PLUGIN_NAME} - PreToolUse hook")
     parser.add_argument("--event", required=True, help="事件名")
     args = parser.parse_args()
+    _ = args  # 当前未用到 event 字段，但保留解析以触发 required 校验
 
     # 从 stdin 读取上下文
     try:

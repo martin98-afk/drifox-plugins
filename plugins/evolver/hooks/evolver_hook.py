@@ -134,7 +134,7 @@ def handle_session_start(ctx: dict):
     """SessionStart: 初始化检查"""
     project_root = get_project_root(ctx)
     memory_dir = ensure_memory_dir(project_root)
-    plugin_dir = get_plugin_dir()
+    get_plugin_dir()  # 触发插件目录检查（即使返回值未使用）
 
     # 检查 evolver 是否可用
     evolver_ok = check_evolver_installed()

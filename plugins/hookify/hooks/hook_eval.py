@@ -17,8 +17,8 @@ _PLUGIN_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _PLUGIN_ROOT not in sys.path:
     sys.path.insert(0, _PLUGIN_ROOT)
 
-from core.config_loader import load_rules
-from core.rule_engine import RuleEngine
+from core.config_loader import load_rules  # noqa: E402
+from core.rule_engine import RuleEngine  # noqa: E402
 
 # 规则引擎实例（复用，避免每次重新创建）
 _engine = RuleEngine()
