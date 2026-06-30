@@ -64,12 +64,6 @@ def _text_color(secondary: bool = False) -> str:
     return "rgba(0,0,0,0.45)" if secondary else "rgba(0,0,0,0.85)"
 
 
-def _card_bg() -> str:
-    if isDarkTheme():
-        return "rgba(255,255,255,0.05)"
-    return "rgba(0,0,0,0.03)"
-
-
 def _chart_colors() -> dict:
     """返回图表颜色方案（跟随主题）"""
     if isDarkTheme():
@@ -196,14 +190,14 @@ def _collect_header(cwd: str) -> dict:
 
 
 def _collect_commit_calendar(cwd: str) -> Dict[str, int]:
-    """收集过去一年每天的提交数
+    """收集过去半年每天的提交数
 
     Returns:
         {"2025-01-15": 3, "2025-01-16": 0, ...}
     """
-    # git log 获取过去一年的提交日期
+    # git log 获取过去半年的提交日期
     stdout, _, code = _run_git(
-        cwd, "log", "--after=1 year ago", "--format=%ai", "--all", "--no-merges"
+        cwd, "log", "--after=6 months ago", "--format=%ai", "--all", "--no-merges"
     )
     if code != 0 or not stdout:
         return {}
@@ -274,8 +268,9 @@ class _CalendarWidget(QWidget):
         super().__init__(parent)
         self._daily: Dict[str, int] = {}
         self._total_commits = 0
-        self.setMinimumHeight(160)
+        self.setMinimumHeight(150)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setStyleSheet("background: transparent;")
 
     def set_data(self, daily: Dict[str, int]):
         self._daily = daily
@@ -307,16 +302,16 @@ class _CalendarWidget(QWidget):
 
         # 布局参数
         margin_left = 36
-        margin_top = 28
+        margin_top = 52
         margin_right = 16
         margin_bottom = 16
 
-        cell_size = min(13, (w - margin_left - margin_right) // 54)
-        cell_size = max(8, cell_size)
-        cell_gap = 2
+        cell_size = min(16, (w - margin_left - margin_right) // 27)
+        cell_size = max(10, cell_size)
+        cell_gap = 3
         step = cell_size + cell_gap
 
-        chart_w = 53 * step
+        chart_w = 26 * step
         chart_h = 7 * step
 
         # 居中
@@ -330,7 +325,7 @@ class _CalendarWidget(QWidget):
         painter.drawText(
             QRectF(offset_x, 4, 300, 22),
             Qt.AlignLeft | Qt.AlignVCenter,
-            f"☀ 提交日历 · 过去一年 · 总计 {_format_number(self._total_commits)} 次提交",
+            f"☀ 提交日历 · 过去半年 · 总计 {_format_number(self._total_commits)} 次提交",
         )
 
         # ── 计算颜色等级 ──
@@ -365,20 +360,20 @@ class _CalendarWidget(QWidget):
         cal_colors = [colors["cal_0"], colors["cal_1"], colors["cal_2"], colors["cal_3"], colors["cal_4"]]
 
         # ── 计算日期 → 格子坐标 ──
-        # 找到过去一年第一天是星期几
+        # 找到过去半年第一天是星期几
         today = datetime.now()
-        one_year_ago = today - timedelta(days=364)
+        half_year_ago = today - timedelta(days=182)
 
         # 从那天开始，逐日映射到 (col, row)
         # col = 星期几偏移周数, row = weekday (0=周一)
-        day = one_year_ago
+        day = half_year_ago
         col_map: Dict[str, Tuple[int, int]] = {}
         while day <= today:
             date_key = day.strftime("%Y-%m-%d")
             # Python weekday: 0=周一, 6=周日；GitHub: 0=周日, 6=周六
             row = (day.weekday() + 1) % 7  # 0=周日
-            # 计算这是第几周（从 one_year_ago 所在的周日开始算）
-            days_since_start = (day - one_year_ago).days
+            # 计算这是第几周
+            days_since_start = (day - half_year_ago).days
             col = days_since_start // 7
             col_map[date_key] = (col, row)
             day += timedelta(days=1)
@@ -451,6 +446,7 @@ class _LogWidget(QWidget):
         self._lines: List[str] = []
         self._is_graph = (icon_char == "🌿")
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
+        self.setStyleSheet("background: transparent;")
 
     def set_lines(self, lines: List[str]):
         self._lines = lines
@@ -461,8 +457,8 @@ class _LogWidget(QWidget):
         n = max(1, len(self._lines))
         line_h = 22 if not self._is_graph else 20
         header = 30
-        self.setMinimumHeight(header + n * line_h + 8)
-        self.setMaximumHeight(header + n * line_h + 8)
+        # self.setMinimumHeight(header + n * line_h + 8)
+        # self.setMaximumHeight(header + n * line_h + 8)
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -472,21 +468,16 @@ class _LogWidget(QWidget):
         w = self.width()
         h = self.height()
 
-        # ── 背景 ──
-        bg_path = QPainterPath()
-        bg_path.addRoundedRect(QRectF(2, 2, w - 4, h - 4), 6, 6)
-        painter.fillPath(bg_path, colors["card_bg"])
-
-        # ── 标题 ──
-        title_font = QFont("Microsoft YaHei", 10, QFont.Bold)
+        # ── 标题 ──（无背景填充，完全透明）
+        title_font = QFont("Microsoft YaHei", 11, QFont.Bold)
         painter.setFont(title_font)
         painter.setPen(colors["text"])
-        painter.drawText(QRectF(12, 6, w - 24, 24), Qt.AlignLeft | Qt.AlignVCenter,
-                         f"{self._icon} {self._title}")
+        painter.drawText(QRectF(4, 4, w - 8, 26), Qt.AlignLeft | Qt.AlignVCenter,
+                         f"{self._icon}  {self._title}")
 
-        # ── 分隔线 ──
+        # ── 浅色分隔线 ──
         painter.setPen(QPen(colors["grid"], 1))
-        painter.drawLine(QPointF(12, 32), QPointF(w - 12, 32))
+        painter.drawLine(QPointF(4, 32), QPointF(w - 4, 32))
 
         # ── 内容行 ──
         if not self._lines:
@@ -500,7 +491,7 @@ class _LogWidget(QWidget):
 
         y = 38
         if self._is_graph:
-            # 分支图：等宽字体显示，graph 线用青色，hash 用黄色
+            # 分支图：等宽字体显示，graph 线用主色，hash 用强调色
             graph_font = QFont("Consolas", 9)
             if not graph_font.exactMatch():
                 graph_font = QFont("Courier New", 9)
@@ -511,17 +502,15 @@ class _LogWidget(QWidget):
                 if y > h - 4:
                     break
                 # 分离 graph 字符和提交信息
-                # 格式: "*   a1b2c3 feat: xxx" 或 "| * 8d7e6f fix: yyy"
                 graph_part = ""
                 msg_part = line
-                # 找到第一个字母/数字前的 graph 符号
                 for i, ch in enumerate(line):
                     if ch.isalnum():
                         graph_part = line[:i]
                         msg_part = line[i:]
                         break
 
-                x = 12
+                x = 8
                 # 绘制 graph 部分
                 if graph_part:
                     painter.setPen(colors["graph_line"])
@@ -552,8 +541,6 @@ class _LogWidget(QWidget):
                 if y > h - 4:
                     break
                 # 格式: "a1b2c3 feat: message"
-                painter.setPen(colors["text"])
-                # 用圆点代替 commit dot
                 if line:
                     hash_end = line.find(" ")
                     if hash_end > 0:
@@ -562,21 +549,21 @@ class _LogWidget(QWidget):
 
                         # 圆点
                         painter.setPen(colors["success"])
-                        painter.drawText(QPointF(12, y), "●")
+                        painter.drawText(QPointF(8, y), "●")
 
                         # hash
                         hash_font = QFont("Consolas", 9)
                         painter.setFont(hash_font)
                         painter.setPen(colors["accent"])
-                        painter.drawText(QPointF(30, y), hash_part)
+                        painter.drawText(QPointF(24, y), hash_part)
 
                         # 消息
                         painter.setFont(list_font)
                         painter.setPen(colors["text"])
-                        painter.drawText(QPointF(30 + painter.fontMetrics().width(hash_part) + 8, y), msg_part)
+                        painter.drawText(QPointF(24 + painter.fontMetrics().width(hash_part) + 8, y), msg_part)
                     else:
                         painter.setPen(colors["text_secondary"])
-                        painter.drawText(QPointF(12, y), line)
+                        painter.drawText(QPointF(8, y), line)
                 y += 22
 
         painter.end()
@@ -608,43 +595,54 @@ class GitDashboardCard(QWidget):
 
     def _setup_ui(self):
         self.setObjectName("git-dashboard-card")
+        self.setMinimumHeight(500)
+        # ── 主卡片：完全透明，适配容器宽度 ──
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setStyleSheet("""
+            GitDashboardCard#git-dashboard-card {
+                background: transparent;
+            }
+        """)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
 
         # 主布局
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 12, 12, 12)
-        layout.setSpacing(8)
+        layout.setContentsMargins(16, 16, 16, 12)
+        layout.setSpacing(0)
 
         # ── 头部：仓库名 + 分支 + 刷新按钮 ──
-        header_layout = QHBoxLayout()
-        header_layout.setContentsMargins(0, 0, 0, 0)
-
         self._header_widget = QWidget()
+        self._header_widget.setStyleSheet("background: transparent;")
         self._header_layout = QHBoxLayout(self._header_widget)
-        self._header_layout.setContentsMargins(0, 0, 0, 0)
+        self._header_layout.setContentsMargins(0, 0, 0, 12)
+        self._header_layout.setSpacing(8)
 
         # 仓库图标 + 名称
         self._repo_icon = IconWidget(FluentIcon.GITHUB, self)
         self._repo_icon.setFixedSize(20, 20)
+        self._repo_icon.setStyleSheet("background: transparent;")
         self._header_layout.addWidget(self._repo_icon)
 
         self._repo_label = StrongBodyLabel("", self)
+        self._repo_label.setStyleSheet("background: transparent;")
         self._header_layout.addWidget(self._repo_label)
-        self._header_layout.addSpacing(16)
+        self._header_layout.addSpacing(8)
 
         # 分支
-        self._branch_icon = IconWidget(FluentIcon.BRANCH, self)
-        self._branch_icon.setFixedSize(16, 16)
+        self._branch_icon = IconWidget(FluentIcon.CODE, self)
+        self._branch_icon.setFixedSize(14, 14)
+        self._branch_icon.setStyleSheet("background: transparent;")
         self._header_layout.addWidget(self._branch_icon)
 
         self._branch_label = QLabel("", self)
-        self._branch_label.setStyleSheet(f"color: {_text_color()}; font-size: 13px;")
+        self._branch_label.setObjectName("branchLabel")
         self._header_layout.addWidget(self._branch_label)
 
-        self._header_layout.addStretch()
+        self._header_layout.addStretch(1)
 
         # 状态消息
         self._status_label = QLabel("", self)
-        self._status_label.setStyleSheet(f"color: {_text_color(True)}; font-size: 11px;")
+        self._status_label.setObjectName("statusLabel")
         self._header_layout.addWidget(self._status_label)
 
         # 刷新按钮
@@ -654,20 +652,53 @@ class GitDashboardCard(QWidget):
         self._refresh_btn.clicked.connect(self._refresh_data)
         self._header_layout.addWidget(self._refresh_btn)
 
+        # 关闭按钮
+        self._close_btn = TransparentToolButton(FluentIcon.CLOSE, self)
+        self._close_btn.setFixedSize(28, 28)
+        self._close_btn.setToolTip("关闭")
+        self._close_btn.clicked.connect(self.closed.emit)
+        self._header_layout.addWidget(self._close_btn)
+
         layout.addWidget(self._header_widget)
+
+        # ── 分隔线 ──
+        self._separator = QFrame(self)
+        self._separator.setFrameShape(QFrame.HLine)
+        self._separator.setFrameShadow(QFrame.Sunken)
+        self._separator.setStyleSheet("""
+            QFrame {
+                background: transparent;
+                max-height: 1px;
+                margin: 0px 0px 0px 0px;
+                border: none;
+                border-top: 1px solid palette(midlight);
+            }
+        """)
+        layout.addWidget(self._separator)
 
         # ── 滚动区域（主体） ──
         self._scroll = ScrollArea(self)
         self._scroll.setWidgetResizable(True)
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self._scroll.setStyleSheet("ScrollArea { border: none; background: transparent; }")
+        self._scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self._scroll.setStyleSheet("""
+            ScrollArea {
+                border: none;
+                background: transparent;
+            }
+            ScrollArea > QWidget > QWidget {
+                background: transparent;
+            }
+        """)
+        self._scroll.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         self._scroll_content = QWidget()
+        self._scroll_content.setStyleSheet("background: transparent;")
         self._scroll_layout = QVBoxLayout(self._scroll_content)
-        self._scroll_layout.setContentsMargins(0, 0, 0, 0)
-        self._scroll_layout.setSpacing(8)
+        self._scroll_layout.setContentsMargins(0, 8, 0, 0)
+        self._scroll_layout.setSpacing(10)
 
-        # 提交日历
+        # 提交日历（半年）
         self._calendar = _CalendarWidget(self._scroll_content)
         self._scroll_layout.addWidget(self._calendar)
 
@@ -741,6 +772,9 @@ class GitDashboardCard(QWidget):
         self._refresh_btn.setEnabled(True)
         self._status_label.setText("")
 
+        # 刷新动态颜色（跟随主题）
+        self._refresh_styles()
+
         # ── 头部 ──
         header = data.get("header", {})
         repo_name = header.get("repo_name", "")
@@ -766,6 +800,25 @@ class GitDashboardCard(QWidget):
 
         # ── 分支图 ──
         self._graph_widget.set_lines(data.get("graph", []))
+
+    def _refresh_styles(self):
+        """刷新文本颜色（跟随深色/浅色主题切换）"""
+        tc = _text_color()
+        tc_sec = _text_color(True)
+        self._branch_label.setStyleSheet(
+            f"background: transparent; color: {tc}; font-size: 13px; font-weight: 500;"
+        )
+        self._status_label.setStyleSheet(
+            f"background: transparent; color: {tc_sec}; font-size: 11px;"
+        )
+
+    def refresh_style(self):
+        """被 UIPluginRegistry / CardContainer 调用，响应主题切换"""
+        self._refresh_styles()
+        # 触发图表子组件重绘
+        self._calendar.update()
+        self._commits_widget.update()
+        self._graph_widget.update()
 
     def _on_data_error(self, err: str):
         self._loading = False
