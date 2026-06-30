@@ -1,7 +1,6 @@
 ---
 description: Get help with the hookify plugin
-allowed-tools:
-- Read
+allowed-tools: [Read]
 type: prompt
 ---
 
