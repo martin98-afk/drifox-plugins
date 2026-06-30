@@ -15,6 +15,12 @@
   - 根 `README.md` 与 `plugins/README.md` 7→8 类能力，组件覆盖矩阵新增 `ui` 列
   - `docs/architecture.md` 目录约定新增 `ui/` 段，加入「ui 组件」章节介绍 3 个扩展点 + 3 个官方 UI 插件参考实现
   - `docs/plugin-manifest.md` / `docs/plugin-development.md` / `CONTRIBUTING.md` 同步 7→8
+- **CI**：
+  - `.github/workflows/validate.yml` 新增 `auto-fix-marketplace` job：当 `generate_marketplace.py --check` 失败时自动修复
+  - 触发场景：PR 推送 → push 回 PR head 分支；push main → push 回 main，保证 main 始终 green
+  - commit 携带 `[skip ci]` 防止无限循环
+  - 非 marketplace 漂移的失败：PR 留 comment，main push 让 job 失败（不污染 main 历史）
+  - 加 `concurrency` 防止并发 PR 互相干扰
 
 ## 1.1.0 (2026-06-26)
 

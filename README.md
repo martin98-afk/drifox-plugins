@@ -138,6 +138,19 @@ python tools/validate_plugins.py
 - `dependencies` 中引用的插件存在
 - `marketplace.json` 与各 `plugin.json` 关键字段一致
 
+## CI / CD
+
+仓库自带 GitHub Actions 工作流（`.github/workflows/validate.yml`），在 PR 与 push main 时自动跑校验。**marketplace.json 的同步已实现全自动**：
+
+1. **检测**：CI 跑 `generate_marketplace.py --check`，发现 `plugin.json` 与 `marketplace.json` 不一致时该 step 失败
+2. **自动修复**：`auto-fix-marketplace` job 触发，重新生成 `marketplace.json` 并自动 commit / push：
+   - **PR 场景**：push 回 PR head 分支
+   - **push main 场景**：push 回 main，保证 main 始终 green
+3. **防循环**：bot commit 携带 `[skip ci]`，GitHub Actions 原生跳过整个 workflow
+4. **其他失败**：如果失败原因不是 marketplace 漂移（例如 schema / hooks 语法 / 链接断链），CI 会在 PR 留 comment（PR 场景）或让 job 失败（main 场景），不会自动 commit
+
+> 开发者新增 / 修改插件后**无需手动跑 `generate_marketplace.py`**，CI 会自动帮你补上。
+
 ## marketplace.json 生成
 
 `marketplace.json` 是插件市场清单，由脚本自动生成，**请勿手动编辑**：

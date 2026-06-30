@@ -6,12 +6,19 @@ on:
   push:
     branches: [main]
 
+# 防止并发运行导致 marketplace.json 修复冲突
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
+    name: 校验插件 manifest 与 marketplace 一致性
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
+      fail-fast: false
 
     steps:
       - uses: actions/checkout@v4
@@ -30,7 +37,24 @@ jobs:
         run: python tools/validate_plugins.py --strict
 
       - name: 检查 marketplace.json 一致性
-        run: python tools/generate_marketplace.py --check
+        id: marketplace-check
+        run: |
+          # --check 失败时 set -e 会让 step 失败但我们需要后续步骤能继续
+          # 因此用 if 处理
+          if python tools/generate_marketplace.py --check; then
+            echo "consistent=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "consistent=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+      - name: 上传 marketplace.json 供下游 job 使用
+        if: always() && steps.marketplace-check.outputs.consistent == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: marketplace-drift
+          path: marketplace.json
+          retention-days: 1
 
       - name: Python 代码 lint（ruff）
         run: ruff check tools/ plugins/*/hooks/
@@ -66,3 +90,129 @@ jobs:
           else:
               print('所有文档链接有效')
           "
+
+  # ------------------------------------------------------------------
+  # 自动修复 marketplace.json
+  #
+  # 触发场景（全部需要 validate job 失败）：
+  #   1) pull_request 推送 → 重新生成 → push 回 PR head 分支
+  #   2) push 到 main      → 重新生成 → push 回 main，保证 main 始终 green
+  #
+  # 关键设计：
+  #   1) bot commit message 携带 [skip ci] 防止 push 回 main 后再次触发
+  #      workflow（GitHub Actions 原生识别 [skip ci] / [no ci] / [ci skip]）
+  #   2) 仅在 marketplace.json 真的有变化时（即 "drift"）才提交；
+  #      如果失败原因不在 marketplace（schema / hooks / 链接…），
+  #      PR 留 comment，main push 则让 job 失败（不污染 main 历史）
+  #   3) 用 GITHUB_TOKEN 显式 push（需在 repo Settings 里
+  #      "Allow GitHub Actions to create and approve pull requests" 打开）；
+  #      如果组织禁用，可配 secrets.DRIFOX_BOT_TOKEN 兜底
+  # ------------------------------------------------------------------
+  auto-fix-marketplace:
+    name: 自动修复 marketplace.json
+    needs: validate
+    if: |
+      (failure() || success()) &&
+      needs.validate.result == 'failure' &&
+      (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout 目标分支
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          # 默认 token 在 PR 上有写权限；如果组织禁用了默认 token，
+          # 需在 secrets 配 DRIFOX_BOT_TOKEN
+          token: ${{ secrets.GITHUB_TOKEN || secrets.DRIFOX_BOT_TOKEN }}
+          persist-credentials: false
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 重新生成 marketplace.json
+        run: |
+          python tools/generate_marketplace.py
+
+      - name: 检查 marketplace.json 是否真有变化
+        id: drift
+        run: |
+          if git diff --quiet marketplace.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "ℹ️ marketplace.json 已最新，无需提交" >&2
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "📝 marketplace.json 有更新需要提交" >&2
+            git diff --stat marketplace.json >&2
+          fi
+
+      - name: 决定 push 目标分支
+        id: target
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "branch=${{ github.head_ref }}" >> "$GITHUB_OUTPUT"
+            echo "is_pr=true" >> "$GITHUB_OUTPUT"
+            echo "📍 push 目标: PR head ref ${{ github.head_ref }}" >&2
+          else
+            echo "branch=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+            echo "is_pr=false" >> "$GITHUB_OUTPUT"
+            echo "📍 push 目标: 直接 push 回 ${{ github.ref_name }}" >&2
+          fi
+
+      - name: Commit 并 push marketplace.json 修复
+        if: steps.drift.outputs.changed == 'true'
+        env:
+          TARGET_BRANCH: ${{ steps.target.outputs.branch }}
+        run: |
+          git config user.name "drifox-bot"
+          git config user.email "drifox-bot@users.noreply.github.com"
+          git add marketplace.json
+
+          # 主体 commit message：[skip ci] 是 GitHub Actions 原生识别的标志，
+          # 触发 push 后会跳过整个 workflow，避免无限循环
+          git commit \
+            -m "chore(marketplace): auto-regenerate from plugin.json [skip ci]" \
+            -m "由 GitHub Actions 自动生成。"
+
+          echo "📤 推送到 ${TARGET_BRANCH}..." >&2
+          git push origin "HEAD:${TARGET_BRANCH}"
+
+      - name: PR 评论（PR 触发 + 失败原因不在 marketplace）
+        if: |
+          steps.drift.outputs.changed == 'false' &&
+          steps.target.outputs.is_pr == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '🤖 **drifox-bot 报告**：CI 失败但 marketplace.json 已最新。\n\n' +
+                    '失败原因不在 marketplace 漂移，请查看上面的 validate job 详情。\n\n' +
+                    '**常见原因**：\n' +
+                    '- 新插件未通过 schema 校验（缺字段 / 字段类型错）\n' +
+                    '- 启用的组件（commands/agents/skills/...）缺对应资源\n' +
+                    '- 钩子 Python 文件语法错\n' +
+                    '- 文档内部链接断链\n\n' +
+                    '修复后重新 push 即可，CI 会再次校验。'
+            })
+
+      - name: 报告失败（main push + 失败原因不在 marketplace）
+        if: |
+          steps.drift.outputs.changed == 'false' &&
+          steps.target.outputs.is_pr == 'false'
+        run: |
+          echo "❌ push 到 main 后 CI 失败，但失败原因不在 marketplace 漂移。" >&2
+          echo "请查看 validate job 详情修复后重新 push。" >&2
+          echo "" >&2
+          echo "自动修复策略：只接管 marketplace 漂移这类自动可修的失败，" >&2
+          echo "其他类型的失败（schema / hooks 语法 / 链接等）需要人工修复，" >&2
+          echo "避免 bot 提交掩盖真实问题。" >&2
+          exit 1

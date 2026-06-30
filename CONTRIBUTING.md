@@ -11,12 +11,22 @@
    ↓
 3. 在 plugins/<your-plugin>/ 开发
    ↓
-4. 运行 python tools/validate_plugins.py
+4. 本地运行 python tools/validate_plugins.py
    ↓
 5. 提交 commit（遵循 Conventional Commits）
    ↓
 6. 创建 Pull Request
+   ↓
+7. CI 校验：失败时 marketplace.json 由 drifox-bot 自动 commit 修复
+   ↓
+8. Maintainer 评审 & merge
 ```
+
+> **marketplace.json 自动同步**：当你修改 `plugin.json` 后忘记跑 `generate_marketplace.py` 时，CI 会自动跑生成并把修复 commit：
+> - PR 场景 → commit 到 PR head 分支
+> - push main 场景 → commit 到 main（保证 main 始终 green）
+>
+> bot commit 含 `[skip ci]`，GitHub Actions 原生跳过整个 workflow，不会无限循环。详见 `.github/workflows/validate.yml` 的 `auto-fix-marketplace` job。
 
 ## 插件开发
 
