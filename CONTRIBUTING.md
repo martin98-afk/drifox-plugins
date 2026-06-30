@@ -40,10 +40,11 @@ cp -r plugins/example-plugin plugins/your-plugin
 |------|------|
 | 插件根目录必须有 `.drifox-plugin/plugin.json` | manifest 是 DriFox 识别插件的唯一依据 |
 | `plugin.json` 必须能被 `schemas/plugin.schema.json` 校验通过 | 跑 `python tools/validate_plugins.py` 验证 |
-| 启用的组件必须有对应目录与文件 | `components.commands=true` ⇒ 至少 1 个 `commands/*.md` |
+| 启用的组件必须有对应目录与文件 | `components.commands=true` ⇒ 至少 1 个 `commands/*.md`；`components.ui=true` ⇒ `ui/__init__.py` + widget 模块 |
 | 钩子 Python 文件必须能 `python -m py_compile` 通过 | 语法层面不能有错 |
 | 每个 `commands/*.md` 顶部必须有 frontmatter | 至少包含 `description` 和 `type` |
 | 每个 `skills/<name>/SKILL.md` 顶部必须有 frontmatter | 至少包含 `name` 和 `description` |
+| ui 插件的 `ui/__init__.py` 必须定义 `register_ui(registry)` 顶层函数 | 由 DriFox 启动时 `UIPluginRegistry.load_plugin` 调用 |
 
 详细字段定义见 [docs/plugin-manifest.md](docs/plugin-manifest.md)。
 

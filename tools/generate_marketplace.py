@@ -107,6 +107,8 @@ def infer_categories(manifest: dict) -> list[str]:
         categories.append("mcp")
     if comps.get("lsp"):
         categories.append("lsp")
+    if comps.get("ui"):
+        categories.append("ui")
     if comps.get("agents"):
         categories.append("agent")
 
@@ -132,6 +134,13 @@ def infer_categories(manifest: dict) -> list[str]:
         "java": "language",
         "go": "language",
         "rust": "language",
+        "stats": "stats",
+        "statistics": "stats",
+        "analytics": "stats",
+        "usage": "stats",
+        "token": "stats",
+        "context": "stats",
+        "dashboard": "stats",
     }
     for kw in keywords:
         cat = kw_category_map.get(kw)

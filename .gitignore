@@ -40,3 +40,23 @@ memory/
 .env.local
 *.pem
 *.key
+
+# ── Auto-appended by format_memory_context hook ──
+
+# Python 生态
+*.pyc
+*.pyo
+*.pyd
+*.egg
+build/
+dist/
+*.spec
+
+# 系统文件
+desktop.ini
+$RECYCLE.BIN/
+
+# IDE/编辑器
+*.swn
+.project
+.pycpath

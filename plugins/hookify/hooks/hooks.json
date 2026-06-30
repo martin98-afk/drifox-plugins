@@ -1,0 +1,61 @@
+{
+  "description": "Hookify plugin - User-configurable hooks from .local.md files (DriFox native)",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "python",
+            "function": ".hook_eval:eval_pretooluse",
+            "timeout": 10,
+            "enabled": false,
+            "id": "0f6f7e8a218f4744a9d18a80df22ddaf",
+            "add_output_to_context": true
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "python",
+            "function": ".hook_eval:eval_posttooluse",
+            "timeout": 10,
+            "enabled": true,
+            "id": "e08fde8bf4b54c0f874abd950736dd39",
+            "add_output_to_context": true
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "python",
+            "function": ".hook_eval:eval_stop",
+            "timeout": 10,
+            "enabled": false,
+            "id": "43de5cc998244e35abfc2b0ec7fa6358",
+            "add_output_to_context": true
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "python",
+            "function": ".hook_eval:eval_userprompt",
+            "timeout": 10,
+            "enabled": false,
+            "id": "299edcd55c63468583db0f439a51a7d1",
+            "add_output_to_context": true
+          }
+        ]
+      }
+    ]
+  }
+}

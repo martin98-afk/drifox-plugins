@@ -68,7 +68,8 @@
         { "required": ["agents"] },
         { "required": ["themes"] },
         { "required": ["mcp"] },
-        { "required": ["lsp"] }
+        { "required": ["lsp"] },
+        { "required": ["ui"] }
       ],
       "properties": {
         "commands": {
@@ -98,6 +99,10 @@
         "lsp": {
           "type": "boolean",
           "description": "加载 .lsp.json 中的 LSP 语言服务器配置"
+        },
+        "ui": {
+          "type": "boolean",
+          "description": "加载 ui/__init__.py 中的 UI 组件（浮动卡片 / 内容块渲染器 / 消息元素工厂）"
         }
       }
     },

@@ -25,8 +25,12 @@ cp -r plugins/example-plugin plugins/your-plugin
 | `commands` | 插件要暴露 `/xx` 斜杠命令给用户 |
 | `hooks` | 插件要在特定 DriFox 事件上自动做事 |
 | `skills` | 插件要让 AI 在相关任务中拿到领域知识 |
+| `ui` | 插件要往 DriFox 主窗口注入浮动卡片 / 自定义渲染器 / 消息元素工厂 |
+| `themes` | 插件要贡献一套配色方案 |
+| `agents` | 插件要提供 `@xx` 智能体 |
+| `mcp` / `lsp` | 插件要注册外部工具服务器 / 语言服务器 |
 
-> **Tip**：建议三个组件都实现。`hooks` 采集数据 → `commands` 让用户操作 → `skills` 让 AI 知道怎么用。
+> **Tip**：常见组合是 `commands + hooks + skills + ui`。`hooks` 采集数据 → `ui` 把数据变成可视面板 → `commands` 让用户操作 → `skills` 让 AI 知道怎么用。
 
 ## 3. 实现 components
 
@@ -35,6 +39,11 @@ cp -r plugins/example-plugin plugins/your-plugin
 - [commands.md](commands.md)
 - [hooks.md](hooks.md)
 - [skills.md](skills.md)
+- [agents.md](agents.md)
+- [themes.md](themes.md)
+- [mcp.md](mcp.md)
+- [lsp.md](lsp.md)
+- ui 组件：见 [architecture.md](architecture.md#ui-组件) 与 [`plugins/context-usage-stats/`](../plugins/context-usage-stats/) 示例
 
 ## 4. 本地测试
 

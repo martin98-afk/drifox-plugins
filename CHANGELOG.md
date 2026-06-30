@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.2.0 (2026-07-01)
+
+### ✨ 新增 ui 组件类型（第 8 类）
+
+- **3 个 ui 插件**（官方 UI 三件套）：
+  - **`plugin-marketplace`** — 官方插件市场浮动卡片 + 2 个内容块渲染器（`plugin_marketplace_grid` / `plugin_marketplace_card`），覆盖浏览 / 搜索 / 安装
+  - **`plugin-manager`** — 插件管理浮动卡片，列出已安装插件并支持启用 / 禁用 / 卸载
+  - **`context-usage-stats`** — 对话上下文用量统计浮动卡片，token / 消息量趋势 + 会话活跃度图表
+- **Schema**：`schemas/plugin.schema.json` 新增 `components.ui` 字段
+- **校验**：`tools/validate_plugins.py` 新增 `check_ui_dir()` — 校验 `ui/__init__.py` 存在 + `register_ui(registry)` 顶层函数
+- **marketplace 生成**：`tools/generate_marketplace.py` 新增 `ui` 分类识别 + 统计类关键词（`stats` / `analytics` / `token` / `context` / `dashboard`）
+- **文档同步**：
+  - 根 `README.md` 与 `plugins/README.md` 7→8 类能力，组件覆盖矩阵新增 `ui` 列
+  - `docs/architecture.md` 目录约定新增 `ui/` 段，加入「ui 组件」章节介绍 3 个扩展点 + 3 个官方 UI 插件参考实现
+  - `docs/plugin-manifest.md` / `docs/plugin-development.md` / `CONTRIBUTING.md` 同步 7→8
+
 ## 1.1.0 (2026-06-26)
 
 ### 🏗️ 基础设施完善

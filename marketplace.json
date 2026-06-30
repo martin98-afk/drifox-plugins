@@ -36,6 +36,34 @@
             }
         },
         {
+            "name": "context-usage-stats",
+            "description": "对话上下文用量统计 — 展示最近对话的 token 用量、消息数量趋势、会话活跃度图表",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui",
+                "stats"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/context-usage-stats",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true
+            },
+            "keywords": [
+                "stats",
+                "token",
+                "usage",
+                "context",
+                "dashboard"
+            ],
+            "homepage": "https://github.com/martin98-afk/DriFox"
+        },
+        {
             "name": "evolver",
             "description": "Evolver 自进化引擎集成插件 — 基于 GEP 协议的 AI Agent 进化能力。捕获会话经验，通过 Hook 自动触发进化循环，让 DriFox 越用越强。",
             "version": "1.0.0",
@@ -131,6 +159,25 @@
             }
         },
         {
+            "name": "git-status",
+            "description": "在每轮用户消息前注入当前 Git 仓库状态（分支/暂存/工作区/最近 commits），让 LLM 无需询问即可知道当前代码改动了什么",
+            "version": "1.0.0",
+            "author": "martin98-afk",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/git-status",
+                "ref": "main"
+            },
+            "components": {
+                "hooks": true
+            }
+        },
+        {
             "name": "git-workflow",
             "description": "Git 工作流增强 — 分支命名检查、提交规范验证、PR 模板生成，让团队 Git 实践自动化。",
             "version": "1.0.0",
@@ -161,6 +208,68 @@
             "drifox": {
                 "min_version": "0.5.0"
             }
+        },
+        {
+            "name": "hookify",
+            "description": "Easily create hooks to prevent unwanted behaviors by analyzing conversation patterns",
+            "version": "1.0.0",
+            "author": "Anthropic",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "agent"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/hookify",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true,
+                "agents": true,
+                "skills": true,
+                "hooks": true
+            }
+        },
+        {
+            "name": "plugin-manager",
+            "description": "插件管理器 — 查看、启用、禁用、卸载已安装的插件",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/plugin-manager",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true
+            },
+            "homepage": "https://github.com/martin98-afk/DriFox"
+        },
+        {
+            "name": "plugin-marketplace",
+            "description": "DriFox 官方插件市场 — 浏览、安装、管理插件",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/plugin-marketplace",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true
+            },
+            "homepage": "https://github.com/martin98-afk/drifox-plugins"
         },
         {
             "name": "python-pro",
@@ -223,6 +332,25 @@
             ],
             "drifox": {
                 "min_version": "0.5.0"
+            }
+        },
+        {
+            "name": "voice-reply",
+            "description": "将 AI 回复转为语音播放（使用 pyttsx3 Windows SAPI5 离线 TTS）",
+            "version": "1.0.0",
+            "author": "DriFox",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/voice-reply",
+                "ref": "main"
+            },
+            "components": {
+                "hooks": true
             }
         }
     ]

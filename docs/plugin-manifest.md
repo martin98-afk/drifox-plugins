@@ -34,7 +34,7 @@
 | `drifox` | object | 兼容性声明，见下 |
 | `dependencies` | object | 插件间依赖，见下 |
 
-### `components` 子字段（7 个 flag）
+### `components` 子字段（8 个 flag）
 
 ```json
 "components": {
@@ -44,7 +44,8 @@
   "themes": true,      // themes/<name>/*.yaml → 主题方案
   "hooks": true,       // hooks/hooks.json + <plugin>_hook.py
   "mcp": true,         // .mcp.json → MCP 服务器
-  "lsp": true          // .lsp.json → LSP 语言服务器
+  "lsp": true,         // .lsp.json → LSP 语言服务器
+  "ui": true           // ui/__init__.py → 浮动卡片 / 内容块渲染器 / 消息元素工厂
 }
 ```
 
@@ -59,6 +60,7 @@
 | `hooks` | `hooks/hooks.json` + `hooks/<plugin>_hook.py` | [hooks.md](hooks.md) |
 | `mcp` | `.mcp.json`（插件根） | [mcp.md](mcp.md) |
 | `lsp` | `.lsp.json`（插件根） | [lsp.md](lsp.md) |
+| `ui` | `ui/__init__.py`（含 `register_ui(registry)`） + widget 模块 | [architecture.md](architecture.md#ui-组件) |
 
 ### `drifox` 兼容性
 

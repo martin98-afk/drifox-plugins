@@ -139,7 +139,7 @@ def basic_manifest_check(manifest: dict) -> list[str]:
             )
 
         comps = manifest.get("components", {})
-        valid_comps = {"commands", "agents", "skills", "themes", "hooks", "mcp", "lsp"}
+        valid_comps = {"commands", "agents", "skills", "themes", "hooks", "mcp", "lsp", "ui"}
         extra = set(comps) - valid_comps
         if extra:
             errors.append(f"components 包含未知键: {sorted(extra)}")
@@ -755,6 +755,47 @@ def check_lsp_file(
             errors.append(f".lsp.json.{name} 缺少 command 字段")
 
 
+def check_ui_dir(
+    plugin_dir: Path, manifest: dict, errors: list[str], warnings: list[str]
+) -> None:
+    """校验 components.ui=true 时，ui/ 目录与 register_ui(registry) 入口合规。
+
+    约束：
+    - 必须存在 ui/__init__.py
+    - ui/__init__.py 必须能 ast.parse 通过
+    - 必须定义 register_ui(registry) 函数（顶层 def）
+    """
+    if not manifest.get("components", {}).get("ui"):
+        return
+
+    ui_dir = plugin_dir / "ui"
+    if not ui_dir.exists():
+        errors.append("components.ui=true 但 ui/ 目录不存在")
+        return
+
+    ui_init = ui_dir / "__init__.py"
+    if not ui_init.exists():
+        errors.append("components.ui=true 但 ui/__init__.py 不存在")
+        return
+
+    try:
+        tree = ast.parse(ui_init.read_text(encoding="utf-8"))
+    except SyntaxError as e:
+        errors.append(f"ui/__init__.py 语法错误: {e}")
+        return
+
+    # 必须定义 register_ui 函数（顶层 def）
+    has_register_ui = any(
+        isinstance(node, ast.FunctionDef) and node.name == "register_ui"
+        for node in tree.body
+    )
+    if not has_register_ui:
+        errors.append(
+            "ui/__init__.py 必须定义 register_ui(registry) 顶层函数，"
+            "由 DriFox 启动时由 UIPluginRegistry.load_plugin 调用"
+        )
+
+
 def check_consistency(
     plugin_dir: Path, manifest: dict, errors: list[str], warnings: list[str]
 ) -> None:
@@ -842,7 +883,7 @@ def check_marketplace_consistency(
         # components 一致性
         mp_comps = mp_entry.get("components", {})
         pj_comps = manifest.get("components", {})
-        for comp in ("commands", "agents", "skills", "themes", "hooks", "mcp", "lsp"):
+        for comp in ("commands", "agents", "skills", "themes", "hooks", "mcp", "lsp", "ui"):
             if comp in pj_comps and comp in mp_comps:
                 if pj_comps[comp] != mp_comps[comp]:
                     errors.append(
@@ -893,6 +934,7 @@ def validate_one(plugin_dir: Path) -> CheckResult:
     check_themes_dir(plugin_dir, manifest, result.errors, result.warnings)
     check_mcp_file(plugin_dir, manifest, result.errors, result.warnings)
     check_lsp_file(plugin_dir, manifest, result.errors, result.warnings)
+    check_ui_dir(plugin_dir, manifest, result.errors, result.warnings)
 
     if result.errors:
         result.ok = False
