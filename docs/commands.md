@@ -186,7 +186,7 @@ prompt_sections:
 | `/verify --tests --build` | 公共部分 + `--tests` 段（mode 互斥） |
 | `/verify --quick --html` | 公共部分 + `--quick` + `--html` 段（不同组叠加） |
 
-完整规范见 [DriFox 文档（.drifox-plugin/command_format.md）](../plugins/system/.drifox-plugin/command_format.md)（在 system 插件中）。
+完整规范见 `DriFox 文档（.drifox-plugin/command_format.md）`（在 DriFox 仓库 `plugins/system/` 下，不在本仓库内）。
 
 ## 工具限制
 

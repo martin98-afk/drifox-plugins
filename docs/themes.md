@@ -150,7 +150,7 @@ colors:
 
 ## 创建新主题
 
-最快方式：复制 `plugins/system/themes/amber/` 或 `plugins/example-plugin/themes/`，改 `name` / `id` / 颜色 token。
+最快方式：复制 `plugins/example-plugin/themes/`（本仓库内有完整示例），改 `name` / `id` / 颜色 token。
 
 ## 校验
 
@@ -161,4 +161,4 @@ colors:
 
 ## 参考
 
-完整示例见 `plugins/system/themes/amber/amber.yaml`、`bordeaux/`、`ocean/` 等。
+完整示例见 `plugins/example-plugin/themes/`（amber、ocean、bordeaux、sunset、forest、aurora、midnight、crimson、amber-night、twilight、amber-light）。
