@@ -1,0 +1,22 @@
+{
+    "name": "git-dashboard",
+    "description": "Git 仪表盘 — 提交日历热力图、最近提交、分支图可视化",
+    "version": "0.1.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "homepage": "https://github.com/martin98-afk/DriFox",
+    "license": "MIT",
+    "type": "user",
+    "keywords": [
+        "git",
+        "dashboard",
+        "commits",
+        "calendar",
+        "graph",
+        "visualization"
+    ],
+    "components": {
+        "ui": true
+    }
+}

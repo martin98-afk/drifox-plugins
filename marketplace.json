@@ -159,6 +159,36 @@
             }
         },
         {
+            "name": "git-dashboard",
+            "description": "Git 仪表盘 — 提交日历热力图、最近提交、分支图可视化",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui",
+                "workflow",
+                "stats"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/git-dashboard",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true
+            },
+            "keywords": [
+                "git",
+                "dashboard",
+                "commits",
+                "calendar",
+                "graph",
+                "visualization"
+            ],
+            "homepage": "https://github.com/martin98-afk/DriFox"
+        },
+        {
             "name": "git-status",
             "description": "在每轮用户消息前注入当前 Git 仓库状态（分支/暂存/工作区/最近 commits），让 LLM 无需询问即可知道当前代码改动了什么",
             "version": "1.0.0",
