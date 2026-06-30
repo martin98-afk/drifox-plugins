@@ -5,12 +5,8 @@
       {
         "hooks": [
           {
-            "type": "command",
-            "command": "python \"{plugin_root}/hooks/voice_reply.py\" --event=PostAssistantMessage",
-            "add_output_to_context": false,
-            "statusMessage": "正在合成语音回复...",
-            "timeout": 60,
-            "id": "voice_reply_default"
+            "type": "python",
+            "function": ".voice-reply_hook:handle_post_assistant_message"
           }
         ]
       }

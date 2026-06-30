@@ -3,15 +3,13 @@
 """
 Voice Reply Hook — 将 AI 回复转为语音播放
 
-作为 hook 命令行脚本使用（由 DriFox hooks.json 配置为 command 类型）：
-    python voice_reply.py --event=PostAssistantMessage
-
-上下文通过 stdin (JSON) 传入，包含：
-    - event_name: 事件名
-    - response / assistant_response: AI 回复文本
-    - project_root: 项目根目录
+标准 Python 钩子形式（由 DriFox hooks.json 配置为 type=python）：
+    function: voice-reply_hook:handle_post_assistant_message
 
 依赖：pyttsx3（需单独安装，详见插件 README.md）
+
+CLI 调试：
+    echo '{"response":"hello"}' | python voice-reply_hook.py --event=PostAssistantMessage
 """
 
 import argparse
@@ -63,14 +61,21 @@ def speak(text: str) -> str:
         return f"❌ 语音播报失败: {e}"
 
 
+# ============================================================
+# 钩子入口（DriFox HookManager 调用）
+# ============================================================
+
+
 def handle_post_assistant_message(ctx: dict) -> str:
     """处理 PostAssistantMessage 事件
 
     Args:
-        ctx: DriFox 传入的上下文字典
+        ctx: DriFox 传入的上下文字典，包含：
+            - response / assistant_response: AI 回复文本
+            - project_root: 项目根目录
 
     Returns:
-        播报状态字符串
+        播报状态字符串（可空）
     """
     response = ctx.get("response", "") or ctx.get("assistant_response", "")
     if not response:
@@ -88,7 +93,7 @@ def handle_post_assistant_message(ctx: dict) -> str:
 
 
 # ============================================================
-# CLI 入口
+# CLI 入口（仅用于本地调试）
 # ============================================================
 
 
