@@ -126,6 +126,26 @@
             }
         },
         {
+            "name": "file-tree",
+            "description": "当前项目文件树浏览 — 直观展示项目目录结构，支持右键菜单与实时文件监听",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/file-tree",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true
+            },
+            "homepage": "https://github.com/martin98-afk/DriFox"
+        },
+        {
             "name": "frontend-pro",
             "description": "前端开发增强 — 组件设计规范、无障碍(a11y)检查、性能最佳实践注入，让前端代码兼顾质量与体验。",
             "version": "1.0.0",
