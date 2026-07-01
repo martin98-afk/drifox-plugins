@@ -2,20 +2,7 @@
 """
 GitDashboardCard 浮动卡片 — Git 仓库可视化仪表盘
 
-功能：
-- 🔀 头部状态栏：仓库名、当前分支、ahead/behind
-- ☀ 提交日历热力图（GitHub 风格）：过去一年每天的提交数
-- 📜 最近提交列表：最近 20 条 commit
-- 🌿 分支图：git log --graph 可视化
-
-数据获取：
-- 通过 context_provider 拿到 project_root（即 DriFox 当前工作目录）
-- 所有 git 命令在 QThread 后台执行，不阻塞 UI
-
-设计约束：
-- 不导入 app.core 或 app.widgets 内部模块
-- 所有数据通过 subprocess + git 命令获取
-- 颜色方案自动跟随浅色/深色主题
+布局：左日历（竖向：x=周几，y=月份向下） + 右提交横向排列
 """
 
 from __future__ import annotations
@@ -24,33 +11,37 @@ import subprocess
 import traceback
 from collections import defaultdict
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 
-from PyQt5.QtCore import QObject, QPointF, QRectF, QThread, Qt, pyqtSignal
-from PyQt5.QtGui import QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
+from PyQt5.QtCore import QObject, QPointF, QRectF, QSize, QThread, Qt, pyqtSignal
+from PyQt5.QtGui import QBrush, QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
 from PyQt5.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
     QSizePolicy,
+    QToolTip,
     QVBoxLayout,
     QWidget,
 )
-from qfluentwidgets import (
-    FluentIcon,
-    IconWidget,
-    ScrollArea,
-    StrongBodyLabel,
-    ToolButton,
-    TransparentToolButton,
-    isDarkTheme,
-)
+from qfluentwidgets import FluentIcon, IconWidget, ScrollArea, StrongBodyLabel, TransparentToolButton, isDarkTheme
 from loguru import logger
 
 PLUGIN_NAME = "git-dashboard"
-
-# ── Git 命令超时 ────────────────────────────────────────
 GIT_TIMEOUT = 5
+_DEFAULT_FONT = "Segoe UI"
+_DEFAULT_FONT_SIZE = 14
+COMMIT_COUNT = 50
+
+# ── 日历常量 ──
+CAL_MARGIN_LEFT = 40  # 留给月份标签
+CAL_TOP = 60  # 标题+星期标签占高
+CELL_SIZE = 20
+CELL_GAP = 3
+STEP = CELL_SIZE + CELL_GAP
+COLS = 7  # 一周7天
+CAL_PAD_BOTTOM = 30  # 底部留白（图例）
+CAL_WIDTH = 280  # 日历面板固定宽
 
 
 # ============================================================
@@ -58,56 +49,100 @@ GIT_TIMEOUT = 5
 # ============================================================
 
 
-def _text_color(secondary: bool = False) -> str:
-    if isDarkTheme():
-        return "rgba(255,255,255,0.55)" if secondary else "rgba(255,255,255,0.9)"
-    return "rgba(0,0,0,0.45)" if secondary else "rgba(0,0,0,0.85)"
+def _resolve_colors(context: dict | None = None) -> dict:
+    if context and context.get("colors"):
+        return _from_theme_dict(context["colors"], context.get("is_dark", isDarkTheme()))
+    return _fallback_colors()
 
 
-def _chart_colors() -> dict:
-    """返回图表颜色方案（跟随主题）"""
-    if isDarkTheme():
+def _c_str(raw: dict, key: str, fallback: str) -> QColor:
+    val = raw.get(key, fallback)
+    return QColor(val) if isinstance(val, str) else QColor(*val) if isinstance(val, (list, tuple)) else QColor(fallback)
+
+
+def _from_theme_dict(raw: dict, is_dark: bool) -> dict:
+    txt = _c_str(raw, "text_primary", "#ffffff")
+    txt_sec = _c_str(raw, "text_secondary", "rgba(255,255,255,0.5)")
+    card_bg = _c_str(raw, "card_bg", "rgba(33,33,38,250)")
+    card_bg.setAlpha(200)
+    accent = _c_str(raw, "accent", "#62a0ea" if is_dark else "#2878dc")
+    if is_dark:
         return {
-            "bg": QColor(30, 30, 30),
-            "card_bg": QColor(255, 255, 255, 15),
-            "text": QColor(255, 255, 255, 200),
-            "text_secondary": QColor(255, 255, 255, 100),
-            "grid": QColor(255, 255, 255, 15),
-            "accent": QColor(98, 160, 234),
-            "success": QColor(80, 227, 194, 200),
-            "warning": QColor(255, 193, 7, 200),
-            "danger": QColor(255, 107, 107, 200),
-            "graph_line": QColor(98, 160, 234, 120),
-            "graph_dot": QColor(98, 160, 234),
-            # 提交日历 5 级颜色（从浅到深）
-            "cal_0": QColor(40, 40, 40),          # 无提交
-            "cal_1": QColor(14, 68, 41),           # 1-3 次
-            "cal_2": QColor(0, 109, 50),           # 4-6 次
-            "cal_3": QColor(38, 166, 65),          # 7-10 次
-            "cal_4": QColor(57, 211, 83),          # 10+ 次
-            "cal_label": QColor(255, 255, 255, 100),
+            "card_bg": card_bg,
+            "text": txt,
+            "text_secondary": txt_sec,
+            "separator": QColor(255, 255, 255, 20),
+            "accent": accent,
+            "success": QColor(80, 227, 194, 220),
+            "cal_0": QColor(40, 40, 40),
+            "cal_1": QColor(14, 68, 41),
+            "cal_2": QColor(0, 109, 50),
+            "cal_3": QColor(38, 166, 65),
+            "cal_4": QColor(57, 211, 83),
+            "cal_label": QColor(255, 255, 255, 110),
             "cal_border": QColor(255, 255, 255, 8),
+            "cal_tooltip_border": accent,
+            "scrollbar_handle": QColor(255, 255, 255, 30),
+            "scrollbar_handle_hover": QColor(255, 255, 255, 50),
         }
     return {
-        "bg": QColor(250, 250, 250),
-        "card_bg": QColor(0, 0, 0, 6),
-        "text": QColor(0, 0, 0, 200),
-        "text_secondary": QColor(0, 0, 0, 100),
-        "grid": QColor(0, 0, 0, 10),
-        "accent": QColor(40, 120, 220),
-        "success": QColor(16, 185, 129, 200),
-        "warning": QColor(245, 158, 11, 200),
-        "danger": QColor(239, 68, 68, 200),
-        "graph_line": QColor(40, 120, 220, 100),
-        "graph_dot": QColor(40, 120, 220),
-        # 提交日历 5 级颜色
+        "card_bg": card_bg,
+        "text": txt,
+        "text_secondary": txt_sec,
+        "separator": QColor(0, 0, 0, 10),
+        "accent": accent,
+        "success": QColor(16, 185, 129, 220),
         "cal_0": QColor(235, 237, 240),
         "cal_1": QColor(155, 233, 168),
         "cal_2": QColor(0, 184, 77),
         "cal_3": QColor(0, 140, 60),
         "cal_4": QColor(0, 100, 40),
-        "cal_label": QColor(0, 0, 0, 100),
+        "cal_label": QColor(0, 0, 0, 110),
         "cal_border": QColor(0, 0, 0, 6),
+        "cal_tooltip_border": accent,
+        "scrollbar_handle": QColor(0, 0, 0, 20),
+        "scrollbar_handle_hover": QColor(0, 0, 0, 40),
+    }
+
+
+def _fallback_colors() -> dict:
+    is_dark = isDarkTheme()
+    if is_dark:
+        return {
+            "card_bg": QColor(33, 33, 38, 200),
+            "text": QColor(255, 255, 255),
+            "text_secondary": QColor(255, 255, 255, 128),
+            "separator": QColor(255, 255, 255, 20),
+            "accent": QColor(98, 160, 234),
+            "success": QColor(80, 227, 194, 220),
+            "cal_0": QColor(40, 40, 40),
+            "cal_1": QColor(14, 68, 41),
+            "cal_2": QColor(0, 109, 50),
+            "cal_3": QColor(38, 166, 65),
+            "cal_4": QColor(57, 211, 83),
+            "cal_label": QColor(255, 255, 255, 110),
+            "cal_border": QColor(255, 255, 255, 8),
+            "cal_tooltip_border": QColor(98, 160, 234),
+            "scrollbar_handle": QColor(255, 255, 255, 30),
+            "scrollbar_handle_hover": QColor(255, 255, 255, 50),
+        }
+    return {
+        "card_bg": QColor(255, 255, 255, 200),
+        "text": QColor(0, 0, 0),
+        "text_secondary": QColor(0, 0, 0, 128),
+        "separator": QColor(0, 0, 0, 10),
+        "accent": QColor(40, 120, 220),
+        "success": QColor(16, 185, 129, 220),
+        "cal_0": QColor(235, 237, 240),
+        "cal_1": QColor(155, 233, 168),
+        "cal_2": QColor(0, 184, 77),
+        "cal_3": QColor(0, 140, 60),
+        "cal_4": QColor(0, 100, 40),
+        "cal_label": QColor(0, 0, 0, 110),
+        "cal_border": QColor(0, 0, 0, 6),
+        "cal_tooltip_border": QColor(40, 120, 220),
+        "scrollbar_handle": QColor(0, 0, 0, 20),
+        "scrollbar_handle_hover": QColor(0, 0, 0, 40),
     }
 
 
@@ -120,14 +155,13 @@ def _format_number(n: int) -> str:
 
 
 # ============================================================
-# Git 数据采集（在 QThread 中运行）
+# Git 数据采集
 # ============================================================
 
 
 def _run_git(cwd: str, *args: str) -> Tuple[str, str, int]:
-    """执行 git 命令，返回 (stdout, stderr, returncode)"""
     try:
-        result = subprocess.run(
+        r = subprocess.run(
             ["git", *args],
             cwd=cwd,
             capture_output=True,
@@ -136,7 +170,7 @@ def _run_git(cwd: str, *args: str) -> Tuple[str, str, int]:
             errors="replace",
             timeout=GIT_TIMEOUT,
         )
-        return result.stdout.strip(), result.stderr.strip(), result.returncode
+        return r.stdout.strip(), r.stderr.strip(), r.returncode
     except subprocess.TimeoutExpired:
         return "", "timeout", -1
     except FileNotFoundError:
@@ -153,20 +187,12 @@ def _is_git_repo(cwd: str) -> bool:
 
 
 def _collect_header(cwd: str) -> dict:
-    """收集仓库状态：repo 名、分支、ahead/behind"""
-    info: dict = {
-        "repo_name": "",
-        "branch": "",
-        "ahead": 0,
-        "behind": 0,
-    }
-    # 仓库名（目录名）
+    info: dict = {"repo_name": "", "branch": "", "ahead": 0, "behind": 0}
     stdout, _, _ = _run_git(cwd, "rev-parse", "--show-toplevel")
     if stdout:
         import os as _os
-        info["repo_name"] = _os.path.basename(stdout)
 
-    # 分支名
+        info["repo_name"] = _os.path.basename(stdout)
     stdout, _, code = _run_git(cwd, "branch", "--show-current")
     if code == 0 and stdout:
         info["branch"] = stdout
@@ -174,8 +200,6 @@ def _collect_header(cwd: str) -> dict:
         stdout, _, _ = _run_git(cwd, "rev-parse", "--short", "HEAD")
         if stdout:
             info["branch"] = f"(detached @ {stdout})"
-
-    # ahead/behind
     stdout, _, _ = _run_git(cwd, "rev-list", "--left-right", "--count", "HEAD...@{u}")
     if stdout:
         parts = stdout.split()
@@ -185,54 +209,29 @@ def _collect_header(cwd: str) -> dict:
                 info["behind"] = int(parts[1])
             except ValueError:
                 pass
-
     return info
 
 
 def _collect_commit_calendar(cwd: str) -> Dict[str, int]:
-    """收集过去半年每天的提交数
-
-    Returns:
-        {"2025-01-15": 3, "2025-01-16": 0, ...}
-    """
-    # git log 获取过去半年的提交日期
-    stdout, _, code = _run_git(
-        cwd, "log", "--after=6 months ago", "--format=%ai", "--all", "--no-merges"
-    )
+    stdout, _, code = _run_git(cwd, "log", "--after=6 months ago", "--format=%ai", "--all", "--no-merges")
     if code != 0 or not stdout:
         return {}
-
     daily: Dict[str, int] = defaultdict(int)
     for line in stdout.splitlines():
-        date_str = line[:10]  # "2025-01-15"
+        date_str = line[:10]
         if date_str:
             daily[date_str] += 1
     return dict(daily)
 
 
-def _collect_recent_commits(cwd: str, n: int = 20) -> List[str]:
-    """收集最近 n 条 commit（短 hash + subject）"""
-    stdout, _, code = _run_git(
-        cwd, "log", f"-n{n}", "--oneline", "--decorate", "--no-merges"
-    )
-    if code == 0 and stdout:
-        return stdout.splitlines()
-    return []
-
-
-def _collect_commit_graph(cwd: str, n: int = 30) -> List[str]:
-    """收集分支图（git log --graph）"""
-    stdout, _, code = _run_git(
-        cwd, "log", "--all", "--oneline", "--graph", f"-n{n}", "--decorate"
-    )
+def _collect_recent_commits(cwd: str, n: int = COMMIT_COUNT) -> List[str]:
+    stdout, _, code = _run_git(cwd, "log", f"-n{n}", "--oneline", "--decorate", "--no-merges")
     if code == 0 and stdout:
         return stdout.splitlines()
     return []
 
 
 class _GitDataWorker(QObject):
-    """后台线程：采集所有 git 数据"""
-
     finished = pyqtSignal(dict)
     error = pyqtSignal(str)
 
@@ -246,7 +245,6 @@ class _GitDataWorker(QObject):
                 "header": _collect_header(self._cwd),
                 "calendar": _collect_commit_calendar(self._cwd),
                 "commits": _collect_recent_commits(self._cwd),
-                "graph": _collect_commit_graph(self._cwd),
             }
             self.finished.emit(data)
         except Exception as e:
@@ -254,317 +252,402 @@ class _GitDataWorker(QObject):
 
 
 # ============================================================
-# 提交日历热力图组件
+# 提交日历热力图（竖向：x=周几，y=月份向下）
 # ============================================================
 
 
 class _CalendarWidget(QWidget):
-    """GitHub 风格提交日历热力图
-
-    7 行（日~六） × 53 列（周），每格颜色深浅表示提交次数。
-    """
+    """竖向提交日历：x轴=周日~周六，y轴=按周向下排列，左侧标月份"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._daily: Dict[str, int] = {}
         self._total_commits = 0
-        self.setMinimumHeight(150)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self._colors = _resolve_colors()
+        self._font_family = _DEFAULT_FONT
+        self.setMouseTracking(True)
+        self.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         self.setStyleSheet("background: transparent;")
+        self.setFixedWidth(CAL_WIDTH)
+
+        self._hover_date: str | None = None
+        self._hover_count: int = 0
+        self._cell_rects: Dict[str, QRectF] = {}
+        self._cell_map: Dict[str, Tuple[int, int]] = {}  # date_key -> (col_day, row_week)
+        self._month_rows: Dict[str, int] = {}  # "YYYY-MM" -> first_row_index
+        self._num_rows = 0
+        self._cell_size = 20
+        self._step = 23
 
     def set_data(self, daily: Dict[str, int]):
         self._daily = daily
         self._total_commits = sum(daily.values())
+        self._colors = _resolve_colors()
+        self._build_cell_map()
+        self._recalc_geometry()
         self.update()
 
-    @property
-    def total_commits(self) -> int:
-        return self._total_commits
+    def set_font_info(self, family: str, size: int):
+        self._font_family = family
+
+    # ── 几何 ──
+
+    def _build_cell_map(self):
+        """建立竖向映射：col=周几(0=日…6=六)，row=第几周(0开始)，左侧标月份"""
+        today = datetime.now()
+        start = today - timedelta(days=182)
+        start -= timedelta(days=start.weekday())  # 对齐周一，保证完整周
+
+        # 收集所有日期
+        all_dates: List[datetime] = []
+        d = start
+        while d <= today:
+            all_dates.append(d)
+            d += timedelta(days=1)
+
+        # 按周分组：同一周的行号相同
+        week_map: Dict[str, int] = {}  # week_key -> row
+        cell_map: Dict[str, Tuple[int, int]] = {}
+        month_rows: Dict[str, int] = {}  # "YYYY-MM" -> first row
+
+        prev_month = -1
+        for d in all_dates:
+            # 周一开始的一周作为key
+            mon = d - timedelta(days=d.weekday())
+            week_key = mon.strftime("%Y-%m-%d")
+            if week_key not in week_map:
+                week_map[week_key] = len(week_map)
+            row = week_map[week_key]
+            col = (d.weekday() + 1) % 7  # 0=周日…6=周六
+            date_key = d.strftime("%Y-%m-%d")
+            cell_map[date_key] = (col, row)
+
+            # 记录月份起始行
+            m = d.month
+            if m != prev_month:
+                ym = d.strftime("%Y-%m")
+                if ym not in month_rows:
+                    month_rows[ym] = row
+                prev_month = m
+
+        # 反转行号：最近一周在最上面（row=0），最旧在底部
+        total_rows = len(week_map)
+        reversed_cell = {}
+        for k, (col, row) in cell_map.items():
+            reversed_cell[k] = (col, total_rows - 1 - row)
+        self._cell_map = reversed_cell
+
+        # 月份行号也反转
+        reversed_months = {}
+        for ym, row in month_rows.items():
+            reversed_months[ym] = total_rows - 1 - row
+        self._month_rows = dict(sorted(reversed_months.items(), key=lambda x: x[1]))
+        self._num_rows = total_rows
+
+    def _recalc_geometry(self):
+        """根据行数计算固定高度"""
+        # 尽量用大格子让日历饱满
+        avail_x = CAL_WIDTH - CAL_MARGIN_LEFT - 8
+        cs = max(14, min(28, (avail_x - COLS * CELL_GAP) // COLS))
+        self._cell_size = cs
+        self._step = cs + CELL_GAP
+        h = CAL_TOP + self._num_rows * self._step + CAL_PAD_BOTTOM
+        self.setFixedHeight(h)
+
+    def sizeHint(self) -> QSize:
+        return QSize(CAL_WIDTH, 500)
+
+    # ── 悬浮 ──
+
+    def mouseMoveEvent(self, event):
+        pos = event.pos()
+        self._hover_date = None
+        for date_key, rect in self._cell_rects.items():
+            if rect.contains(pos):
+                self._hover_date = date_key
+                self._hover_count = self._daily.get(date_key, 0)
+                weekday_cn = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]
+                try:
+                    dt = datetime.strptime(date_key, "%Y-%m-%d")
+                    date_str = f"{dt.year}年{dt.month}月{dt.day}日（{weekday_cn[dt.weekday()]}）"
+                except ValueError:
+                    date_str = date_key
+                QToolTip.showText(event.globalPos(), f"{date_str}\n{self._hover_count} 次提交", self)
+                break
+        if not self._hover_date:
+            QToolTip.hideText()
+        self.update()
+        super().mouseMoveEvent(event)
+
+    def leaveEvent(self, event):
+        self._hover_date = None
+        QToolTip.hideText()
+        self.update()
+        super().leaveEvent(event)
+
+    # ── 绘制 ──
 
     def paintEvent(self, event):
-        if not self._daily:
-            painter = QPainter(self)
-            painter.setRenderHint(QPainter.Antialiasing)
-            colors = _chart_colors()
-            painter.setPen(colors["text_secondary"])
-            font = QFont("Microsoft YaHei", 9)
-            painter.setFont(font)
-            painter.drawText(self.rect(), Qt.AlignCenter, "暂无提交数据")
-            painter.end()
-            return
-
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-
-        colors = _chart_colors()
+        colors = self._colors
         w = self.width()
-        h = self.height()
+        cs = self._cell_size
+        step = self._step
 
-        # 布局参数
-        margin_left = 36
-        margin_top = 52
-        margin_right = 16
-        margin_bottom = 16
-
-        cell_size = min(16, (w - margin_left - margin_right) // 27)
-        cell_size = max(10, cell_size)
-        cell_gap = 3
-        step = cell_size + cell_gap
-
-        chart_w = 26 * step
-        chart_h = 7 * step
-
-        # 居中
-        offset_x = margin_left
-        offset_y = margin_top
+        ox = CAL_MARGIN_LEFT  # 网格起始X
+        oy = CAL_TOP  # 网格起始Y
+        cw = COLS * step  # 网格总宽
 
         # ── 标题 ──
-        title_font = QFont("Microsoft YaHei", 10, QFont.Bold)
-        painter.setFont(title_font)
+        painter.setFont(QFont(self._font_family, 11, QFont.Bold))
         painter.setPen(colors["text"])
         painter.drawText(
-            QRectF(offset_x, 4, 300, 22),
+            QRectF(6, 4, w - 12, 20),
             Qt.AlignLeft | Qt.AlignVCenter,
-            f"☀ 提交日历 · 过去半年 · 总计 {_format_number(self._total_commits)} 次提交",
+            f"☀ 提交日历 · {_format_number(self._total_commits)} 次",
         )
 
-        # ── 计算颜色等级 ──
-        values = sorted(self._daily.values())
-        if not values:
+        # 日期范围
+        painter.setFont(QFont(self._font_family, 8))
+        painter.setPen(colors["text_secondary"])
+        try:
+            today = datetime.now()
+            start = today - timedelta(days=182)
+            painter.drawText(
+                QRectF(6, 22, w - 12, 16),
+                Qt.AlignLeft | Qt.AlignVCenter,
+                f"{start.month}月{start.day}日 → {today.month}月{today.day}日",
+            )
+        except Exception:
+            pass
+
+        # ── 星期标签（顶部） ──
+        day_labels = ["日", "一", "二", "三", "四", "五", "六"]
+        painter.setFont(QFont(self._font_family, 9))
+        painter.setPen(colors["cal_label"])
+        for i, label in enumerate(day_labels):
+            lx = ox + i * step + (cs - painter.fontMetrics().width(label)) / 2
+            painter.drawText(QPointF(lx, oy - 8), label)
+
+        if not self._daily or not self._cell_map:
+            painter.setFont(QFont(self._font_family, 9))
+            painter.setPen(colors["text_secondary"])
+            painter.drawText(QRectF(ox, oy, w - ox - 8, self.height() - oy - 8), Qt.AlignCenter, "暂无提交数据")
             painter.end()
             return
 
-        # 分 4 个提交密度等级（cal_1~4），cal_0 为 0 次
+        # ── 颜色等级 ──
+        values = sorted(self._daily.values())
         max_val = max(values)
-        thresholds = [0, 1, 3, 6] if max_val <= 6 else [
-            max(1, int(max_val * 0.1)),
-            max(2, int(max_val * 0.3)),
-            max(3, int(max_val * 0.6)),
-        ]
-        # 补全到 4 个阈值
+        if max_val <= 6:
+            thresholds = [0, 1, 3, 6]
+        else:
+            thresholds = [max(1, int(max_val * 0.1)), max(2, int(max_val * 0.3)), max(3, int(max_val * 0.6))]
         while len(thresholds) < 3:
             thresholds.append(max_val)
         thresholds = thresholds[:3]
 
-        def _level(count: int) -> int:
-            if count == 0:
+        def _level(c: int) -> int:
+            if c == 0:
                 return 0
-            if count <= thresholds[0]:
+            if c <= thresholds[0]:
                 return 1
-            if count <= thresholds[1]:
+            if c <= thresholds[1]:
                 return 2
-            if count <= thresholds[2]:
+            if c <= thresholds[2]:
                 return 3
             return 4
 
         cal_colors = [colors["cal_0"], colors["cal_1"], colors["cal_2"], colors["cal_3"], colors["cal_4"]]
 
-        # ── 计算日期 → 格子坐标 ──
-        # 找到过去半年第一天是星期几
-        today = datetime.now()
-        half_year_ago = today - timedelta(days=182)
-
-        # 从那天开始，逐日映射到 (col, row)
-        # col = 星期几偏移周数, row = weekday (0=周一)
-        day = half_year_ago
-        col_map: Dict[str, Tuple[int, int]] = {}
-        while day <= today:
-            date_key = day.strftime("%Y-%m-%d")
-            # Python weekday: 0=周一, 6=周日；GitHub: 0=周日, 6=周六
-            row = (day.weekday() + 1) % 7  # 0=周日
-            # 计算这是第几周
-            days_since_start = (day - half_year_ago).days
-            col = days_since_start // 7
-            col_map[date_key] = (col, row)
-            day += timedelta(days=1)
+        # ── 月份标签（左侧Y轴） ──
+        month_cn = ["", "1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"]
+        painter.setFont(QFont(self._font_family, 9))
+        painter.setPen(colors["cal_label"])
+        for ym, first_row in self._month_rows.items():
+            try:
+                m = int(ym.split("-")[1])
+                label_y = oy + first_row * step + cs / 2 + 4
+                painter.drawText(
+                    QRectF(2, label_y - 10, CAL_MARGIN_LEFT - 4, 20), Qt.AlignRight | Qt.AlignVCenter, month_cn[m]
+                )
+            except ValueError, IndexError:
+                pass
 
         # ── 画格子 ──
+        self._cell_rects.clear()
         for date_key, count in self._daily.items():
-            if date_key not in col_map:
+            if date_key not in self._cell_map:
                 continue
-            col, row = col_map[date_key]
-            x = offset_x + col * step
-            y = offset_y + row * step
+            col, row = self._cell_map[date_key]
+            x = ox + col * step
+            y = oy + row * step
             lvl = _level(count)
-            rect = QRectF(x, y, cell_size, cell_size)
+            rect = QRectF(x, y, cs, cs)
+            self._cell_rects[date_key] = rect
+
             path = QPainterPath()
-            path.addRoundedRect(rect, 2, 2)
-            painter.fillPath(path, cal_colors[lvl])
-            painter.setPen(QPen(colors["cal_border"], 0.5))
+            path.addRoundedRect(rect, 2.5, 2.5)
+            if date_key == self._hover_date:
+                hl = QColor(cal_colors[lvl])
+                hl = hl.lighter(135) if isDarkTheme() else hl.darker(85)
+                painter.fillPath(path, QBrush(hl))
+                painter.setPen(QPen(colors["cal_tooltip_border"], 1.5))
+            else:
+                painter.fillPath(path, QBrush(cal_colors[lvl]))
+                painter.setPen(QPen(colors["cal_border"], 0.5))
             painter.drawPath(path)
 
-        # ── 星期标签（仅显示 3 行节省空间） ──
-        label_font = QFont("Microsoft YaHei", 7)
-        painter.setFont(label_font)
-        painter.setPen(colors["cal_label"])
-        day_labels = {0: "日", 2: "二", 4: "四"}
-        for row, label in day_labels.items():
-            y = offset_y + row * step + (cell_size - 10) / 2
-            painter.drawText(
-                QRectF(2, y, margin_left - 6, 14),
-                Qt.AlignRight | Qt.AlignVCenter,
-                label,
-            )
+        # ── 横线分隔月份（可选，增强可读性） ──
+        painter.setPen(QPen(colors["separator"], 1))
+        for ym, first_row in self._month_rows.items():
+            if first_row > 0:
+                y_line = oy + first_row * step - 1
+                painter.drawLine(QPointF(ox, y_line), QPointF(ox + cw, y_line))
 
-        # ── 月份标签 ──
-        month_font = QFont("Microsoft YaHei", 7)
-        painter.setFont(month_font)
-        current_month = -1
-        for date_key, (col, row) in col_map.items():
-            if row != 0:  # 只在周日行标月份
-                continue
-            try:
-                month = int(date_key[5:7])
-                if month != current_month:
-                    current_month = month
-                    month_names = ["", "1月", "2月", "3月", "4月", "5月", "6月",
-                                   "7月", "8月", "9月", "10月", "11月", "12月"]
-                    x = offset_x + col * step
-                    painter.drawText(
-                        QRectF(x, offset_y - 16, step * 4, 14),
-                        Qt.AlignLeft | Qt.AlignVCenter,
-                        month_names[month],
-                    )
-            except (ValueError, IndexError):
-                pass
+        # ── 图例（底部居中） ──
+        legend_y = self.height() - 18
+        legend_x = (w - (5 * (cs + 2) + 34)) / 2
+        painter.setFont(QFont(self._font_family, 8))
+        painter.setPen(colors["cal_label"])
+        painter.drawText(QPointF(legend_x, legend_y + cs - 4), "少")
+        for i, color in enumerate(cal_colors):
+            lx = legend_x + 18 + i * (cs + 2)
+            lr = QRectF(lx, legend_y, cs, cs)
+            p2 = QPainterPath()
+            p2.addRoundedRect(lr, 2.5, 2.5)
+            painter.fillPath(p2, QBrush(color))
+            painter.setPen(QPen(colors["cal_border"], 0.5))
+            painter.drawPath(p2)
+        painter.drawText(QPointF(legend_x + 18 + 5 * (cs + 2) + 4, legend_y + cs - 4), "多")
 
         painter.end()
 
 
 # ============================================================
-# Git 日志渲染组件
+# 提交列表组件（右侧，支持自动换行）
 # ============================================================
 
 
-class _LogWidget(QWidget):
-    """垂直信息展示组件 — 接收纯文本行并渲染为带颜色的列表"""
+class _CommitListWidget(QWidget):
+    """提交列表，自动换行"""
 
-    def __init__(self, title: str, icon_char: str, parent=None):
+    COMMIT_LINE_HEIGHT = 30
+
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self._title = title
-        self._icon = icon_char
         self._lines: List[str] = []
-        self._is_graph = (icon_char == "🌿")
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
+        self._colors = _resolve_colors()
+        self._font_family = _DEFAULT_FONT
+        self._font_size = _DEFAULT_FONT_SIZE
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.setStyleSheet("background: transparent;")
 
     def set_lines(self, lines: List[str]):
         self._lines = lines
-        self._update_height()
+        self._colors = _resolve_colors()
+        self._update_size()
         self.update()
 
-    def _update_height(self):
-        n = max(1, len(self._lines))
-        line_h = 22 if not self._is_graph else 20
-        header = 30
-        # self.setMinimumHeight(header + n * line_h + 8)
-        # self.setMaximumHeight(header + n * line_h + 8)
+    def set_font_info(self, family: str, size: int):
+        self._font_family = family
+        self._font_size = size
+
+    def _update_size(self):
+        avail_w = max(100, self.width() - 16)
+        total_h = 42
+        for line in self._lines:
+            lines_needed = self._calc_lines(line, avail_w)
+            total_h += lines_needed * self.COMMIT_LINE_HEIGHT
+        total_h = max(total_h, 60)
+        self.setMinimumHeight(total_h)
+        self.setMaximumHeight(min(total_h, 3000))
+
+    def _calc_lines(self, line: str, avail_w: int) -> int:
+        if avail_w <= 0 or not line:
+            return 1
+        hash_end = line.find(" ")
+        if hash_end <= 0:
+            return 1
+        msg = line[hash_end:].strip()
+        if not msg:
+            return 1
+        fm = QFontMetrics(QFont(self._font_family, 11))
+        msg_w = fm.width(msg)
+        line_w = avail_w - 48
+        if line_w <= 0 or msg_w <= line_w:
+            return 1
+        return (msg_w // line_w) + 1
+
+    def sizeHint(self) -> QSize:
+        return QSize(300, 200)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._update_size()
+        self.update()
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-
-        colors = _chart_colors()
+        colors = self._colors
         w = self.width()
-        h = self.height()
 
-        # ── 标题 ──（无背景填充，完全透明）
-        title_font = QFont("Microsoft YaHei", 11, QFont.Bold)
-        painter.setFont(title_font)
+        # ── 标题 ──
+        painter.setFont(QFont(self._font_family, 13, QFont.Bold))
         painter.setPen(colors["text"])
-        painter.drawText(QRectF(4, 4, w - 8, 26), Qt.AlignLeft | Qt.AlignVCenter,
-                         f"{self._icon}  {self._title}")
+        painter.drawText(QRectF(4, 4, w - 8, 26), Qt.AlignLeft | Qt.AlignVCenter, "📜  最近提交")
 
-        # ── 浅色分隔线 ──
-        painter.setPen(QPen(colors["grid"], 1))
-        painter.drawLine(QPointF(4, 32), QPointF(w - 4, 32))
+        # ── 分隔线 ──
+        painter.setPen(QPen(colors["separator"], 1))
+        painter.drawLine(QPointF(8, 32), QPointF(w - 8, 32))
 
-        # ── 内容行 ──
         if not self._lines:
+            painter.setFont(QFont(self._font_family, 11))
             painter.setPen(colors["text_secondary"])
-            empty_font = QFont("Microsoft YaHei", 9)
-            painter.setFont(empty_font)
-            painter.drawText(QRectF(12, 36, w - 24, h - 42), Qt.AlignLeft | Qt.AlignTop,
-                             "(暂无数据)")
+            painter.drawText(QRectF(12, 40, w - 24, self.height() - 48), Qt.AlignLeft | Qt.AlignTop, "(暂无数据)")
             painter.end()
             return
 
-        y = 38
-        if self._is_graph:
-            # 分支图：等宽字体显示，graph 线用主色，hash 用强调色
-            graph_font = QFont("Consolas", 9)
-            if not graph_font.exactMatch():
-                graph_font = QFont("Courier New", 9)
-            painter.setFont(graph_font)
-            fm = QFontMetrics(graph_font)
+        y = 40
+        list_font = QFont(self._font_family, 11)
+        hash_font = QFont("Consolas", 10)
 
-            for line in self._lines:
-                if y > h - 4:
-                    break
-                # 分离 graph 字符和提交信息
-                graph_part = ""
-                msg_part = line
-                for i, ch in enumerate(line):
-                    if ch.isalnum():
-                        graph_part = line[:i]
-                        msg_part = line[i:]
-                        break
+        for line in self._lines:
+            if y > self.height() - 4:
+                break
+            if not line:
+                y += self.COMMIT_LINE_HEIGHT
+                continue
 
-                x = 8
-                # 绘制 graph 部分
-                if graph_part:
-                    painter.setPen(colors["graph_line"])
-                    painter.drawText(QPointF(x, y), graph_part)
-                    x += fm.width(graph_part)
+            hash_end = line.find(" ")
+            if hash_end > 0:
+                hash_part = line[:hash_end]
+                msg_part = line[hash_end:].strip()
 
-                # 分隔空格
-                msg_part = msg_part.lstrip()
+                painter.setFont(list_font)
+                painter.setPen(colors["success"])
+                painter.drawText(QPointF(12, y), "●")
 
-                # 绘制 hash（前 7 字符）
-                if msg_part and len(msg_part) >= 7:
-                    hash_str = msg_part[:7]
-                    painter.setPen(colors["graph_dot"])
-                    painter.drawText(QPointF(x, y), hash_str)
-                    x += fm.width(hash_str)
-                    msg_part = msg_part[7:]
+                painter.setFont(hash_font)
+                painter.setPen(colors["accent"])
+                painter.drawText(QPointF(28, y), hash_part)
+                hash_w = 28 + QFontMetrics(hash_font).width(hash_part) + 8
 
-                # 绘制提交信息
+                painter.setFont(list_font)
                 painter.setPen(colors["text"])
-                painter.drawText(QPointF(x, y), msg_part)
+                msg_rect = QRectF(hash_w, y - 8, w - hash_w - 12, 500)
+                painter.drawText(msg_rect, Qt.AlignLeft | Qt.AlignTop | Qt.TextWordWrap, msg_part)
 
-                y += 20
-        else:
-            # 普通提交列表
-            list_font = QFont("Microsoft YaHei", 9)
-            painter.setFont(list_font)
-            for line in self._lines:
-                if y > h - 4:
-                    break
-                # 格式: "a1b2c3 feat: message"
-                if line:
-                    hash_end = line.find(" ")
-                    if hash_end > 0:
-                        hash_part = line[:hash_end]
-                        msg_part = line[hash_end:]
-
-                        # 圆点
-                        painter.setPen(colors["success"])
-                        painter.drawText(QPointF(8, y), "●")
-
-                        # hash
-                        hash_font = QFont("Consolas", 9)
-                        painter.setFont(hash_font)
-                        painter.setPen(colors["accent"])
-                        painter.drawText(QPointF(24, y), hash_part)
-
-                        # 消息
-                        painter.setFont(list_font)
-                        painter.setPen(colors["text"])
-                        painter.drawText(QPointF(24 + painter.fontMetrics().width(hash_part) + 8, y), msg_part)
-                    else:
-                        painter.setPen(colors["text_secondary"])
-                        painter.drawText(QPointF(8, y), line)
-                y += 22
+                br = painter.boundingRect(msg_rect, Qt.AlignLeft | Qt.AlignTop | Qt.TextWordWrap, msg_part)
+                used = max(1, int(br.height() / self.COMMIT_LINE_HEIGHT + 0.5))
+                y += used * self.COMMIT_LINE_HEIGHT
+            else:
+                painter.setFont(list_font)
+                painter.setPen(colors["text_secondary"])
+                painter.drawText(QPointF(12, y), line)
+                y += self.COMMIT_LINE_HEIGHT
 
         painter.end()
 
@@ -575,186 +658,219 @@ class _LogWidget(QWidget):
 
 
 class GitDashboardCard(QWidget):
-    """Git 仪表盘浮动卡片
-
-    通过 set_context() 接收 project_root，然后异步加载 git 数据并渲染。
-    """
-
     closed = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._context_provider: Optional[Callable[[], Dict[str, str]]] = None
         self._context: Dict[str, str] = {}
         self._data: Optional[dict] = None
         self._loading = False
         self._worker: Optional[_GitDataWorker] = None
         self._thread: Optional[QThread] = None
-
-        # 布局
+        self._last_project_root: str = ""
+        self._font_family: str = _DEFAULT_FONT
+        self._font_size: int = _DEFAULT_FONT_SIZE
+        self._colors: dict = {}
         self._setup_ui()
 
     def _setup_ui(self):
         self.setObjectName("git-dashboard-card")
-        self.setMinimumHeight(500)
-        # ── 主卡片：完全透明，适配容器宽度 ──
         self.setAttribute(Qt.WA_StyledBackground, True)
-        self.setStyleSheet("""
-            GitDashboardCard#git-dashboard-card {
-                background: transparent;
-            }
-        """)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
+        self.setMinimumHeight(650)
 
-        # 主布局
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(16, 16, 16, 12)
+        layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # ── 头部：仓库名 + 分支 + 刷新按钮 ──
+        self._content_widget = QWidget(self)
+        self._content_widget.setObjectName("cardContent")
+        self._content_layout = QVBoxLayout(self._content_widget)
+        self._content_layout.setContentsMargins(20, 16, 20, 16)
+        self._content_layout.setSpacing(0)
+
+        self._build_header()
+        self._content_layout.addWidget(self._header_widget)
+
+        self._separator = QFrame(self)
+        self._separator.setFrameShape(QFrame.HLine)
+        self._separator.setFrameShadow(QFrame.Sunken)
+        self._separator.setMaximumHeight(1)
+        self._content_layout.addWidget(self._separator)
+
+        self._build_content_area()
+        self._content_layout.addWidget(self._body_widget, 1)
+
+        layout.addWidget(self._content_widget)
+        self._refresh_styles()
+        self._status_label.setText("等待上下文...")
+
+    def _build_header(self):
         self._header_widget = QWidget()
         self._header_widget.setStyleSheet("background: transparent;")
-        self._header_layout = QHBoxLayout(self._header_widget)
-        self._header_layout.setContentsMargins(0, 0, 0, 12)
-        self._header_layout.setSpacing(8)
-
-        # 仓库图标 + 名称
+        hl = QHBoxLayout(self._header_widget)
+        hl.setContentsMargins(0, 0, 0, 12)
+        hl.setSpacing(8)
         self._repo_icon = IconWidget(FluentIcon.GITHUB, self)
-        self._repo_icon.setFixedSize(20, 20)
+        self._repo_icon.setFixedSize(22, 22)
         self._repo_icon.setStyleSheet("background: transparent;")
-        self._header_layout.addWidget(self._repo_icon)
-
+        hl.addWidget(self._repo_icon)
         self._repo_label = StrongBodyLabel("", self)
-        self._repo_label.setStyleSheet("background: transparent;")
-        self._header_layout.addWidget(self._repo_label)
-        self._header_layout.addSpacing(8)
-
-        # 分支
+        self._repo_label.setStyleSheet("background: transparent; font-weight: 600;")
+        hl.addWidget(self._repo_label)
+        hl.addSpacing(12)
         self._branch_icon = IconWidget(FluentIcon.CODE, self)
-        self._branch_icon.setFixedSize(14, 14)
+        self._branch_icon.setFixedSize(15, 15)
         self._branch_icon.setStyleSheet("background: transparent;")
-        self._header_layout.addWidget(self._branch_icon)
-
+        hl.addWidget(self._branch_icon)
         self._branch_label = QLabel("", self)
-        self._branch_label.setObjectName("branchLabel")
-        self._header_layout.addWidget(self._branch_label)
-
-        self._header_layout.addStretch(1)
-
-        # 状态消息
+        self._branch_label.setStyleSheet("background: transparent;")
+        hl.addWidget(self._branch_label)
+        hl.addStretch(1)
         self._status_label = QLabel("", self)
-        self._status_label.setObjectName("statusLabel")
-        self._header_layout.addWidget(self._status_label)
-
-        # 刷新按钮
+        self._status_label.setStyleSheet("background: transparent;")
+        hl.addWidget(self._status_label)
         self._refresh_btn = TransparentToolButton(FluentIcon.SYNC, self)
         self._refresh_btn.setFixedSize(28, 28)
         self._refresh_btn.setToolTip("刷新")
         self._refresh_btn.clicked.connect(self._refresh_data)
-        self._header_layout.addWidget(self._refresh_btn)
-
-        # 关闭按钮
+        hl.addWidget(self._refresh_btn)
         self._close_btn = TransparentToolButton(FluentIcon.CLOSE, self)
         self._close_btn.setFixedSize(28, 28)
         self._close_btn.setToolTip("关闭")
         self._close_btn.clicked.connect(self.closed.emit)
-        self._header_layout.addWidget(self._close_btn)
+        hl.addWidget(self._close_btn)
 
-        layout.addWidget(self._header_widget)
+    def _build_content_area(self):
+        """横向：左日历（可滚动） + 右提交（可滚动）"""
+        self._body_widget = QWidget()
+        self._body_widget.setStyleSheet("background: transparent;")
+        bl = QHBoxLayout(self._body_widget)
+        bl.setContentsMargins(0, 10, 0, 0)
+        bl.setSpacing(16)
 
-        # ── 分隔线 ──
-        self._separator = QFrame(self)
-        self._separator.setFrameShape(QFrame.HLine)
-        self._separator.setFrameShadow(QFrame.Sunken)
-        self._separator.setStyleSheet("""
-            QFrame {
-                background: transparent;
-                max-height: 1px;
-                margin: 0px 0px 0px 0px;
-                border: none;
-                border-top: 1px solid palette(midlight);
-            }
+        # 左日历（独立滚动）
+        self._calendar_scroll = ScrollArea(self._body_widget)
+        self._calendar_scroll.setWidgetResizable(False)
+        self._calendar_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._calendar_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self._calendar_scroll.setFrameShape(QFrame.NoFrame)
+        self._calendar = _CalendarWidget()
+        self._calendar_scroll.setWidget(self._calendar)
+        bl.addWidget(self._calendar_scroll)
+
+        # 右提交（独立滚动）
+        self._commits_scroll = ScrollArea(self._body_widget)
+        self._commits_scroll.setWidgetResizable(True)
+        self._commits_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._commits_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self._commits_scroll.setFrameShape(QFrame.NoFrame)
+        self._commits_widget = _CommitListWidget()
+        self._commits_scroll.setWidget(self._commits_widget)
+        bl.addWidget(self._commits_scroll, 1)
+
+    def _refresh_styles(self):
+        self._colors = _resolve_colors(self._context)
+        ctx_font = self._context.get("font_family", _DEFAULT_FONT)
+        ctx_font_size = self._context.get("font_size", _DEFAULT_FONT_SIZE)
+        self._font_family = ctx_font
+
+        self._calendar.set_font_info(ctx_font, ctx_font_size)
+        self._commits_widget.set_font_info(ctx_font, ctx_font_size)
+
+        colors = self._colors
+        bg = colors["card_bg"]
+        bg_rgba = f"rgba({bg.red()}, {bg.green()}, {bg.blue()}, {bg.alpha()})"
+        sep = colors["separator"]
+        sep_hex = f"rgba({sep.red()}, {sep.green()}, {sep.blue()}, {sep.alpha()})"
+
+        self._content_widget.setStyleSheet(f"""
+            QWidget#cardContent {{
+                background: {bg_rgba};
+                border: 1px solid {sep_hex};
+                border-radius: 10px;
+            }}
         """)
-        layout.addWidget(self._separator)
 
-        # ── 滚动区域（主体） ──
-        self._scroll = ScrollArea(self)
-        self._scroll.setWidgetResizable(True)
-        self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self._scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self._scroll.setStyleSheet("""
-            ScrollArea {
-                border: none;
-                background: transparent;
-            }
-            ScrollArea > QWidget > QWidget {
-                background: transparent;
-            }
-        """)
-        self._scroll.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self._repo_label.setStyleSheet(
+            f"background: transparent; color: {colors['text'].name()}; "
+            f"font-size: {ctx_font_size + 1}px; font-weight: 600; font-family: '{ctx_font}';"
+        )
+        self._branch_label.setStyleSheet(
+            f"background: transparent; color: {colors['text_secondary'].name()}; "
+            f"font-size: {ctx_font_size - 1}px; font-weight: 500; font-family: '{ctx_font}';"
+        )
+        self._status_label.setStyleSheet(
+            f"background: transparent; color: {colors['text_secondary'].name()}; "
+            f"font-size: {ctx_font_size - 3}px; font-family: '{ctx_font}';"
+        )
+        self._separator.setStyleSheet(
+            f"QFrame {{ border: none; border-top: 1px solid {sep_hex}; margin: 0; max-height: 1px; }}"
+        )
 
-        self._scroll_content = QWidget()
-        self._scroll_content.setStyleSheet("background: transparent;")
-        self._scroll_layout = QVBoxLayout(self._scroll_content)
-        self._scroll_layout.setContentsMargins(0, 8, 0, 0)
-        self._scroll_layout.setSpacing(10)
+        sh = colors.get("scrollbar_handle", QColor(255, 255, 255, 30))
+        sh_h = colors.get("scrollbar_handle_hover", QColor(255, 255, 255, 50))
+        sh_hex = f"rgba({sh.red()}, {sh.green()}, {sh.blue()}, {sh.alpha()})"
+        sh_hover = f"rgba({sh_h.red()}, {sh_h.green()}, {sh_h.blue()}, {sh_h.alpha()})"
+        scroll_qss = f"""
+            ScrollArea {{ border: none; background: transparent; }}
+            ScrollArea > QWidget > QWidget {{ background: transparent; }}
+            ScrollArea QScrollBar:vertical {{ width: 6px; background: transparent; }}
+            ScrollArea QScrollBar::handle:vertical {{ background: {sh_hex}; border-radius: 3px; min-height: 30px; }}
+            ScrollArea QScrollBar::handle:vertical:hover {{ background: {sh_hover}; }}
+            ScrollArea QScrollBar::add-line:vertical, ScrollArea QScrollBar::sub-line:vertical {{ height: 0; }}
+        """
+        self._calendar_scroll.setStyleSheet(scroll_qss)
+        self._commits_scroll.setStyleSheet(scroll_qss)
 
-        # 提交日历（半年）
-        self._calendar = _CalendarWidget(self._scroll_content)
-        self._scroll_layout.addWidget(self._calendar)
+        if self._data:
+            self._calendar.set_data(self._data.get("calendar", {}))
+            self._commits_widget.set_lines(self._data.get("commits", []))
 
-        # 最近提交
-        self._commits_widget = _LogWidget("最近提交", "📜", self._scroll_content)
-        self._scroll_layout.addWidget(self._commits_widget)
-
-        # 分支图
-        self._graph_widget = _LogWidget("分支图", "🌿", self._scroll_content)
-        self._scroll_layout.addWidget(self._graph_widget)
-
-        # 间距
-        self._scroll_layout.addStretch()
-
-        self._scroll.setWidget(self._scroll_content)
-        layout.addWidget(self._scroll, 1)
-
-        # 初始状态
-        self._status_label.setText("等待上下文...")
+    def set_context_provider(self, provider: Callable[[], Dict[str, str]]):
+        self._context_provider = provider
 
     def set_context(self, context: dict):
-        """由 UIPluginRegistry 注入上下文
-
-        context 包含:
-        - project_root: 当前工作目录
-        - project_name: 当前项目名
-        - session_id: 当前会话 ID
-        - window_id: 当前窗口 ID
-        """
         self._context = dict(context)
-        # 拿到 context 后立即开始加载数据
+        self._refresh_styles()
         self._refresh_data()
 
+    def show_card(self):
+        self.setVisible(True)
+        if self._context_provider:
+            nc = self._context_provider()
+            pr = nc.get("project_root", "")
+            changed = pr != self._last_project_root and pr != self._context.get("project_root", "")
+            self._context = nc
+            self._refresh_styles()
+            if changed:
+                self._data = None
+                self._last_project_root = pr
+                self._refresh_data()
+            elif self._data is None:
+                self._refresh_data()
+
+    def hide_card(self):
+        self.setVisible(False)
+
     def _refresh_data(self):
-        """刷新 git 数据"""
-        project_root = self._context.get("project_root", "")
-        if not project_root:
+        pr = self._context.get("project_root", "")
+        if not pr:
             self._status_label.setText("未获取到项目路径")
             return
-
-        if not _is_git_repo(project_root):
+        if not _is_git_repo(pr):
             self._status_label.setText("非 Git 仓库")
             self._repo_label.setText(self._context.get("project_name", "(未知)"))
             self._branch_label.setText("⛔ 无仓库")
             return
-
         if self._loading:
             return
-
         self._loading = True
         self._status_label.setText("加载中...")
         self._refresh_btn.setEnabled(False)
-
-        # 启动后台线程
         self._thread = QThread()
-        self._worker = _GitDataWorker(project_root)
+        self._worker = _GitDataWorker(pr)
         self._worker.moveToThread(self._thread)
         self._thread.started.connect(self._worker.run)
         self._worker.finished.connect(self._on_data_loaded)
@@ -766,59 +882,24 @@ class GitDashboardCard(QWidget):
         self._thread.start()
 
     def _on_data_loaded(self, data: dict):
-        """数据加载完成后刷新 UI"""
         self._data = data
         self._loading = False
         self._refresh_btn.setEnabled(True)
+        self._colors = _resolve_colors(self._context)
+        self._refresh_styles()
+        hdr = data.get("header", {})
+        rn = hdr.get("repo_name", "")
+        br = hdr.get("branch", "")
+        a = hdr.get("ahead", 0)
+        b = hdr.get("behind", 0)
+        self._repo_label.setText(rn or self._context.get("project_name", "(未知)"))
+        bt = br
+        if a or b:
+            bt += f"  ↑{a}  ↓{b}"
+        self._branch_label.setText(bt)
         self._status_label.setText("")
-
-        # 刷新动态颜色（跟随主题）
-        self._refresh_styles()
-
-        # ── 头部 ──
-        header = data.get("header", {})
-        repo_name = header.get("repo_name", "")
-        branch = header.get("branch", "")
-        ahead = header.get("ahead", 0)
-        behind = header.get("behind", 0)
-
-        if repo_name:
-            self._repo_label.setText(repo_name)
-        else:
-            self._repo_label.setText(self._context.get("project_name", "(未知)"))
-
-        branch_text = branch
-        if ahead or behind:
-            branch_text += f"  ↑{ahead} ↓{behind}"
-        self._branch_label.setText(branch_text)
-
-        # ── 提交日历 ──
         self._calendar.set_data(data.get("calendar", {}))
-
-        # ── 最近提交 ──
         self._commits_widget.set_lines(data.get("commits", []))
-
-        # ── 分支图 ──
-        self._graph_widget.set_lines(data.get("graph", []))
-
-    def _refresh_styles(self):
-        """刷新文本颜色（跟随深色/浅色主题切换）"""
-        tc = _text_color()
-        tc_sec = _text_color(True)
-        self._branch_label.setStyleSheet(
-            f"background: transparent; color: {tc}; font-size: 13px; font-weight: 500;"
-        )
-        self._status_label.setStyleSheet(
-            f"background: transparent; color: {tc_sec}; font-size: 11px;"
-        )
-
-    def refresh_style(self):
-        """被 UIPluginRegistry / CardContainer 调用，响应主题切换"""
-        self._refresh_styles()
-        # 触发图表子组件重绘
-        self._calendar.update()
-        self._commits_widget.update()
-        self._graph_widget.update()
 
     def _on_data_error(self, err: str):
         self._loading = False
@@ -826,13 +907,22 @@ class GitDashboardCard(QWidget):
         self._status_label.setText("加载失败")
         logger.error(f"[GitDashboard] 数据加载失败: {err}")
 
-    def show_card(self):
-        """卡片显示时触发"""
-        self.setVisible(True)
-        # 如果还没有数据，自动刷新
-        if self._data is None and self._context:
+    def refresh_style(self):
+        self._colors = _resolve_colors(self._context)
+        changed = False
+        if self._context_provider:
+            nc = self._context_provider()
+            nr = nc.get("project_root", "")
+            or_ = self._context.get("project_root", "")
+            if nr and nr != or_ and nr != self._last_project_root:
+                self._context = nc
+                self._last_project_root = nr
+                self._data = None
+                changed = True
+        if changed:
             self._refresh_data()
-
-    def hide_card(self):
-        """卡片隐藏时触发"""
-        self.setVisible(False)
+        elif self._data:
+            self._calendar.set_data(self._data.get("calendar", {}))
+            self._commits_widget.set_lines(self._data.get("commits", []))
+        self._refresh_styles()
+        self.update()
