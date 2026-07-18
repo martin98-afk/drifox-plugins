@@ -304,6 +304,26 @@
             }
         },
         {
+            "name": "minesweeper",
+            "description": "经典扫雷游戏——在 DriFox 中直接玩的浮動卡片",
+            "version": "0.1.0",
+            "author": "DriFox Contributor",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/minesweeper",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true,
+                "ui": true
+            }
+        },
+        {
             "name": "plugin-manager",
             "description": "插件管理器 — 查看、启用、禁用、卸载已安装的插件",
             "version": "0.1.0",
