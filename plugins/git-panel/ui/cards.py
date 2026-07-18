@@ -31,7 +31,6 @@ from PyQt5.QtWidgets import (
     QLineEdit,
     QListWidget,
     QListWidgetItem,
-    QMessageBox,
     QPushButton,
     QSizePolicy,
     QTextEdit,
@@ -193,7 +192,12 @@ def _get_ahead_behind(cwd: str) -> Tuple[int, int]:
 
 
 def _get_status(cwd: str) -> List[dict]:
-    """获取文件变更列表，返回 [{"path": str, "status": str, "staged": bool}, ...]"""
+    """获取文件变更列表，返回 [{"path": str, "status": str, "staged": bool}, ...]
+
+    git status --porcelain 格式：XY PATH
+    - X = 暂存区状态，Y = 工作区状态
+    - "??" = 未跟踪文件（优先级最高，先处理避免重复）
+    """
     stdout, _, code = _run_git(cwd, "status", "--porcelain", "-u")
     if code != 0 or not stdout:
         return []
@@ -201,19 +205,22 @@ def _get_status(cwd: str) -> List[dict]:
     for line in stdout.splitlines():
         if not line.strip():
             continue
-        staged_flag = line[:2].strip()
-        status = "??"
+        x = line[0]
+        y = line[1]
         path = line[3:].strip()
-        if line[0] != " " and line[0] != "?":
-            status = line[0]
-            result.append({"path": path, "status": status, "staged": True})
-        if line[1] != " ":
-            status_ws = line[1]
-            result.append({"path": path, "status": status_ws, "staged": False})
-        elif line[0] == "?":
+
+        # 1. 未跟踪文件（??）
+        if x == "?" and y == "?":
             result.append({"path": path, "status": "??", "staged": False})
-        elif line[0] == " " and line[1] == " ":
-            result.append({"path": path, "status": "  ", "staged": False})
+            continue
+
+        # 2. 暂存区变更（X != ' '）
+        if x != " ":
+            result.append({"path": path, "status": x, "staged": True})
+
+        # 3. 工作区变更（Y != ' '）
+        if y != " ":
+            result.append({"path": path, "status": y, "staged": False})
     return result
 
 
@@ -333,12 +340,16 @@ class _FileRowWidget(QWidget):
 
     def __init__(self, file_info: dict, parent=None):
         super().__init__(parent)
+        self.setObjectName("FileRow")
         self._info = file_info
         self._setup_ui()
 
     def _setup_ui(self):
         self.setFixedHeight(32)
-        self.setStyleSheet("background: transparent;")
+        self.setStyleSheet(
+            "#FileRow { background: transparent; }"
+            "#FileRow:hover { background: rgba(128,128,128,0.06); border-radius: 4px; }"
+        )
 
         ly = QHBoxLayout(self)
         ly.setContentsMargins(8, 0, 8, 0)
@@ -417,18 +428,23 @@ class _FileRowWidget(QWidget):
                 self.staged_changed.emit()
 
     def _on_discard(self):
-        reply = QMessageBox.question(
-            self, "确认放弃修改",
-            f"确定要放弃 {self._info['path']} 的所有修改吗？\n此操作不可恢复！",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
-        )
-        if reply != QMessageBox.Yes:
+        path = self._info["path"]
+        st = self._info["status"]
+        if not _ConfirmDialog.ask("确认放弃修改", f"确定要放弃 {path} 的所有修改吗？\n此操作不可恢复！", self):
             return
         repo = self._get_repo_path()
         if repo:
-            _, _, code = _run_git(repo, "checkout", "--", self._info["path"])
+            # 未跟踪文件用 git clean，已跟踪文件用 git checkout
+            if st == "??":
+                _, _, code = _run_git(repo, "clean", "-f", "--", path)
+            elif st == "D":
+                _, _, code = _run_git(repo, "checkout", "--", path)
+            else:
+                _, _, code = _run_git(repo, "checkout", "--", path)
             if code == 0:
                 self.staged_changed.emit()
+            else:
+                logger.error(f"[git-panel] discard failed: {path} (status={st})")
 
 
 # ========================================================================
@@ -528,6 +544,107 @@ class _DiffDialog(QDialog):
 
 
 # ========================================================================
+# 5.5 确认弹窗（Fluent 风格，替代 QMessageBox）
+# ========================================================================
+
+
+class _ConfirmDialog(QDialog):
+    """Fluent 风格确认弹窗"""
+
+    def __init__(self, title: str, message: str, parent=None):
+        super().__init__(parent)
+        self._confirmed = False
+        self.setWindowTitle(title)
+        self.setFixedSize(360, 180)
+        self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self._setup_ui(title, message)
+
+    def _setup_ui(self, title: str, message: str):
+        colors = _resolve_colors()
+        bg = colors.get("card_bg", "rgba(33,33,38,240)")
+        if isinstance(bg, str):
+            bg_rgba = bg
+        else:
+            bg_rgba = f"rgba({bg.red()}, {bg.green()}, {bg.blue()}, {bg.alpha()})"
+        tc = colors.get("text_primary", _text_color())
+        tcs = colors.get("text_secondary", _text_color(secondary=True))
+        border = colors.get("border", "rgba(128,128,128,0.15)")
+
+        self.setStyleSheet(f"""
+            _ConfirmDialog {{ background: transparent; }}
+        """)
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+
+        card = QWidget(self)
+        card.setObjectName("confirmCard")
+        card.setStyleSheet(f"""
+            #confirmCard {{
+                background: {bg_rgba};
+                border: 1px solid {border};
+                border-radius: 12px;
+            }}
+        """)
+        cl = QVBoxLayout(card)
+        cl.setContentsMargins(24, 20, 24, 16)
+        cl.setSpacing(12)
+
+        # 标题
+        title_lb = QLabel(title, card)
+        title_lb.setStyleSheet(
+            f"color: {tc}; font-size: 15px; font-weight: 600; background: transparent;"
+        )
+        cl.addWidget(title_lb)
+
+        # 消息
+        msg_lb = QLabel(message, card)
+        msg_lb.setWordWrap(True)
+        msg_lb.setStyleSheet(
+            f"color: {tcs}; font-size: 13px; background: transparent;"
+        )
+        cl.addWidget(msg_lb, 1)
+
+        # 按钮行
+        btn_row = QHBoxLayout()
+        btn_row.addStretch(1)
+
+        cancel_btn = QPushButton("取消", card)
+        cancel_btn.setFixedSize(80, 32)
+        cancel_btn.setStyleSheet(
+            f"QPushButton {{ background: rgba(128,128,128,0.12); border: none; border-radius: 6px; "
+            f"color: {tc}; font-size: 13px; }}"
+            "QPushButton:hover { background: rgba(128,128,128,0.22); }"
+        )
+        cancel_btn.clicked.connect(self.reject)
+        btn_row.addWidget(cancel_btn)
+
+        confirm_btn = QPushButton("确定", card)
+        confirm_btn.setFixedSize(80, 32)
+        confirm_btn.setStyleSheet(
+            "QPushButton { background: rgba(98,160,234,0.2); border: none; border-radius: 6px; "
+            f"color: #62a0ea; font-size: 13px; font-weight: 600; }}"
+            "QPushButton:hover { background: rgba(98,160,234,0.35); }"
+        )
+        confirm_btn.clicked.connect(self._on_confirm)
+        btn_row.addWidget(confirm_btn)
+
+        cl.addLayout(btn_row)
+        root.addWidget(card)
+
+    def _on_confirm(self):
+        self._confirmed = True
+        self.accept()
+
+    @staticmethod
+    def ask(title: str, message: str, parent=None) -> bool:
+        dlg = _ConfirmDialog(title, message, parent)
+        dlg.exec_()
+        return dlg._confirmed
+
+
+# ========================================================================
 # 6. 可折叠区域控件
 # ========================================================================
 
@@ -546,19 +663,23 @@ class _CollapsibleSection(QWidget):
     def _setup_ui(self):
         self.setStyleSheet("background: transparent;")
         ly = QVBoxLayout(self)
-        ly.setContentsMargins(0, 0, 0, 0)
+        ly.setContentsMargins(0, 2, 0, 2)
         ly.setSpacing(0)
 
         # 头部（可点击）
         self._header = QWidget(self)
         self._header.setCursor(Qt.PointingHandCursor)
-        self._header.setStyleSheet("background: transparent;")
+        self._header.setStyleSheet(
+            "QWidget { background: transparent; }"
+            "QWidget:hover { background: rgba(128,128,128,0.06); border-radius: 6px; }"
+        )
         self._header.mousePressEvent = lambda e: self._toggle()
         hl = QHBoxLayout(self._header)
-        hl.setContentsMargins(8, 6, 8, 6)
-        hl.setSpacing(4)
+        hl.setContentsMargins(10, 7, 10, 7)
+        hl.setSpacing(6)
 
         self._arrow_lb = QLabel("▶" if self._collapsed else "▼", self._header)
+        self._arrow_lb.setFixedWidth(14)
         self._arrow_lb.setStyleSheet(
             f"background: transparent; color: {_text_color(secondary=True)}; font-size: 10px;"
         )
@@ -581,16 +702,10 @@ class _CollapsibleSection(QWidget):
 
         ly.addWidget(self._header)
 
-        # 分隔线
-        sep = QFrame(self)
-        sep.setFrameShape(QFrame.HLine)
-        sep.setStyleSheet("background: rgba(128,128,128,0.1); max-height: 1px;")
-        ly.addWidget(sep)
-
         # 内容容器
         self._content_widget = QWidget(self)
         self._content_layout = QVBoxLayout(self._content_widget)
-        self._content_layout.setContentsMargins(0, 2, 0, 2)
+        self._content_layout.setContentsMargins(4, 2, 4, 2)
         self._content_layout.setSpacing(0)
         self._content_widget.setVisible(not self._collapsed)
         ly.addWidget(self._content_widget)
@@ -630,7 +745,11 @@ class _StashRowWidget(QWidget):
         super().__init__(parent)
         self._info = stash_info
         self.setFixedHeight(32)
-        self.setStyleSheet("background: transparent;")
+        self.setObjectName("StashRow")
+        self.setStyleSheet(
+            "#StashRow { background: transparent; }"
+            "#StashRow:hover { background: rgba(128,128,128,0.06); border-radius: 4px; }"
+        )
         ly = QHBoxLayout(self)
         ly.setContentsMargins(16, 0, 8, 0)
         ly.setSpacing(6)
@@ -699,7 +818,11 @@ class _BranchRowWidget(QWidget):
         super().__init__(parent)
         self._info = branch_info
         self.setFixedHeight(30)
-        self.setStyleSheet("background: transparent;")
+        self.setObjectName("BranchRow")
+        self.setStyleSheet(
+            "#BranchRow { background: transparent; }"
+            "#BranchRow:hover { background: rgba(128,128,128,0.06); border-radius: 4px; }"
+        )
         ly = QHBoxLayout(self)
         ly.setContentsMargins(16, 0, 8, 0)
         ly.setSpacing(6)
@@ -762,7 +885,11 @@ class _CommitRowWidget(QWidget):
         super().__init__(parent)
         self._info = commit_info
         self.setFixedHeight(26)
-        self.setStyleSheet("background: transparent;")
+        self.setObjectName("CommitRow")
+        self.setStyleSheet(
+            "#CommitRow { background: transparent; }"
+            "#CommitRow:hover { background: rgba(128,128,128,0.06); border-radius: 4px; }"
+        )
         ly = QHBoxLayout(self)
         ly.setContentsMargins(16, 0, 8, 0)
         ly.setSpacing(6)
@@ -878,7 +1005,86 @@ class GitPanelCard(QWidget):
         ff = self._cached_ff
         fs = self._cached_fs
         tcs = self._cached_tcs
+        border_c = self._cached_border
 
+        # 卡片背景
+        colors = _resolve_colors()
+        bg = colors.get("card_bg", "rgba(33,33,38,240)")
+        if isinstance(bg, str):
+            bg_rgba = bg
+        else:
+            bg_rgba = f"rgba({bg.red()}, {bg.green()}, {bg.blue()}, {bg.alpha()})"
+        self._content_widget.setStyleSheet(f"""
+            QWidget#cardContent {{
+                background: {bg_rgba};
+                border: 1px solid {border_c};
+                border-radius: 12px;
+            }}
+        """)
+
+        # 分隔线
+        self._separator.setStyleSheet(
+            f"QFrame {{ border: none; border-top: 1px solid {border_c}; margin: 0; max-height: 1px; }}"
+        )
+
+        # 标题
+        self._title_lb.setStyleSheet(
+            f"color: {tc}; background: transparent; font-weight: 600; "
+            f"font-family: '{ff}'; font-size: {fs}px;"
+        )
+
+        # 分支标签
+        self._branch_lb.setStyleSheet(
+            f"background: transparent; color: {tcs}; font-family: '{ff}'; font-size: {fs - 2}px;"
+        )
+
+        # 状态标签
+        self._status_lb.setStyleSheet(
+            f"background: transparent; color: {tcs}; font-family: '{ff}'; font-size: {fs - 2}px;"
+        )
+
+        # 提交输入框
+        self._commit_input.setStyleSheet(
+            "QLineEdit { background: rgba(128,128,128,0.08); border: 1px solid rgba(128,128,128,0.15); "
+            "border-radius: 6px; padding: 7px 10px; "
+            f"color: {tc}; font-family: '{ff}'; font-size: {fs - 1}px; }}"
+            "QLineEdit:focus { border-color: #62a0ea; }"
+        )
+
+        # 提交按钮
+        self._commit_btn.setStyleSheet(
+            f"QPushButton {{ background: rgba(98,160,234,0.18); border: none; border-radius: 5px; "
+            f"color: {tc}; font-family: '{ff}'; font-size: {fs - 2}px; padding: 5px 14px; }}"
+            "QPushButton:hover { background: rgba(98,160,234,0.3); }"
+            "QPushButton:pressed { background: rgba(98,160,234,0.4); }"
+        )
+
+        # Amend 按钮
+        btn_base = (
+            f"QPushButton {{ background: rgba(128,128,128,0.1); border: none; border-radius: 5px; "
+            f"color: {tc}; font-family: '{ff}'; font-size: {fs - 3}px; padding: 4px 10px; }}"
+            "QPushButton:hover { background: rgba(128,128,128,0.2); }"
+            "QPushButton:pressed { background: rgba(128,128,128,0.3); }"
+        )
+        self._amend_btn.setStyleSheet(btn_base)
+        if hasattr(self, '_stash_btn'):
+            self._stash_btn.setStyleSheet(btn_base)
+        if hasattr(self, '_new_branch_btn'):
+            self._new_branch_btn.setStyleSheet(btn_base)
+
+        # 滚动条
+        sh_hex = "rgba(255,255,255,0.12)" if isDarkTheme() else "rgba(0,0,0,0.12)"
+        sh_hover = "rgba(255,255,255,0.22)" if isDarkTheme() else "rgba(0,0,0,0.22)"
+        self._scroll.setStyleSheet(
+            "ScrollArea { background: transparent; border: none; }"
+            "ScrollArea > QWidget > QWidget { background: transparent; }"
+            f"QScrollBar:vertical {{ width: 6px; background: transparent; }}"
+            f"QScrollBar::handle:vertical {{ background: {sh_hex}; border-radius: 3px; min-height: 30px; }}"
+            f"QScrollBar::handle:vertical:hover {{ background: {sh_hover}; }}"
+            "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
+        )
+
+        # Labels 样式更新
         for child in self.findChildren(QLabel):
             try:
                 from qfluentwidgets import FluentLabelBase
@@ -901,17 +1107,33 @@ class GitPanelCard(QWidget):
 
     def _setup_ui(self):
         self.setMinimumHeight(0)
-        self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setStyleSheet("GitPanelCard { background: transparent; }")
+        self.setAttribute(Qt.WA_StyledBackground, True)
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        self._build_header(root)
-        self._build_toolbar(root)
-        self._build_body(root)
-        self._build_empty_state(root)
+        # 卡片背景容器
+        self._content_widget = QWidget(self)
+        self._content_widget.setObjectName("cardContent")
+        content = QVBoxLayout(self._content_widget)
+        content.setContentsMargins(16, 12, 16, 12)
+        content.setSpacing(0)
+
+        self._build_header(content)
+
+        # 分隔线
+        self._separator = QFrame(self)
+        self._separator.setFrameShape(QFrame.HLine)
+        self._separator.setFrameShadow(QFrame.Sunken)
+        self._separator.setMaximumHeight(1)
+        content.addWidget(self._separator)
+
+        self._build_toolbar(content)
+        self._build_body(content)
+        self._build_empty_state(content)
+
+        root.addWidget(self._content_widget)
 
     def _build_header(self, root: QVBoxLayout):
         """头部：图标 + 标题 + 分支信息 + 操作按钮"""
@@ -964,29 +1186,18 @@ class GitPanelCard(QWidget):
 
         root.addWidget(self._header_widget)
 
-        # 分隔线
-        sep = QFrame(self)
-        sep.setFrameShape(QFrame.HLine)
-        sep.setStyleSheet("background: rgba(128,128,128,0.1); max-height: 1px;")
-        root.addWidget(sep)
-
     def _build_toolbar(self, root: QVBoxLayout):
         """工具栏：提交消息输入 + 提交 / Stash / 新建分支"""
         tb = QWidget(self)
         tb.setStyleSheet("background: transparent;")
         tly = QHBoxLayout(tb)
-        tly.setContentsMargins(12, 6, 12, 6)
+        tly.setContentsMargins(0, 8, 0, 6)
         tly.setSpacing(6)
 
         # 提交消息输入
         self._commit_input = QLineEdit(tb)
         self._commit_input.setPlaceholderText("提交描述...")
-        self._commit_input.setStyleSheet(
-            "QLineEdit { background: rgba(128,128,128,0.08); border: 1px solid rgba(128,128,128,0.15); "
-            "border-radius: 6px; padding: 6px 10px; "
-            f"color: {self._cached_tc}; font-size: 13px; }}"
-            "QLineEdit:focus { border-color: #62a0ea; }"
-        )
+        self._commit_input.setMinimumHeight(30)
         self._commit_input.returnPressed.connect(self._on_commit)
         tly.addWidget(self._commit_input, 1)
 
@@ -998,37 +1209,27 @@ class GitPanelCard(QWidget):
 
         # Amend 按钮
         self._amend_btn = QPushButton("Amend", tb)
-        self._amend_btn.setFixedSize(55, 28)
+        self._amend_btn.setFixedSize(52, 28)
         self._amend_btn.setToolTip("修改上次提交（--amend）")
-        self._amend_btn.setStyleSheet(
-            "QPushButton { background: rgba(98,160,234,0.12); border: none; border-radius: 4px; "
-            f"color: {self._cached_tc}; font-size: 11px; }}"
-            "QPushButton:hover { background: rgba(98,160,234,0.25); }"
-        )
+        self._amend_btn.setCursor(Qt.PointingHandCursor)
         self._amend_btn.clicked.connect(self._on_amend)
         tly.addWidget(self._amend_btn)
 
         # Stash 按钮
-        stash_btn = QPushButton("↻ Stash", tb)
-        stash_btn.setFixedHeight(28)
-        stash_btn.setStyleSheet(
-            "QPushButton { background: rgba(80,227,194,0.12); border: none; border-radius: 4px; "
-            f"color: {self._cached_tc}; font-size: 11px; padding: 0 10px; }}"
-            "QPushButton:hover { background: rgba(80,227,194,0.25); }"
-        )
-        stash_btn.clicked.connect(self._on_stash)
-        tly.addWidget(stash_btn)
+        self._stash_btn = QPushButton("↻ Stash", tb)
+        self._stash_btn.setFixedHeight(28)
+        self._stash_btn.setCursor(Qt.PointingHandCursor)
+        self._stash_btn.setToolTip("保存当前工作进度")
+        self._stash_btn.clicked.connect(self._on_stash)
+        tly.addWidget(self._stash_btn)
 
         # 新建分支按钮
-        new_branch_btn = QPushButton("🌿 新建分支", tb)
-        new_branch_btn.setFixedHeight(28)
-        new_branch_btn.setStyleSheet(
-            "QPushButton { background: rgba(240,160,48,0.12); border: none; border-radius: 4px; "
-            f"color: {self._cached_tc}; font-size: 11px; padding: 0 10px; }}"
-            "QPushButton:hover { background: rgba(240,160,48,0.25); }"
-        )
-        new_branch_btn.clicked.connect(self._on_create_branch)
-        tly.addWidget(new_branch_btn)
+        self._new_branch_btn = QPushButton("🌿 新建分支", tb)
+        self._new_branch_btn.setFixedHeight(28)
+        self._new_branch_btn.setCursor(Qt.PointingHandCursor)
+        self._new_branch_btn.setToolTip("创建并切换到新分支")
+        self._new_branch_btn.clicked.connect(self._on_create_branch)
+        tly.addWidget(self._new_branch_btn)
 
         root.addWidget(tb)
 
@@ -1036,19 +1237,14 @@ class GitPanelCard(QWidget):
         """主体内容：滚动区域内的所有区块"""
         self._scroll = ScrollArea(self)
         self._scroll.setWidgetResizable(True)
-        self._scroll.setStyleSheet(
-            "ScrollArea { background: transparent; border: none; }"
-            "ScrollArea > QWidget > QWidget { background: transparent; }"
-            "QScrollBar:vertical { width: 6px; background: transparent; }"
-            "QScrollBar::handle:vertical { background: rgba(255,255,255,0.12); "
-            "border-radius: 3px; min-height: 30px; }"
-            "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
-        )
+        self._scroll.setFrameShape(QFrame.NoFrame)
+        self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self._content = QWidget(self._scroll)
         self._content.setStyleSheet("background: transparent;")
         self._content_layout = QVBoxLayout(self._content)
-        self._content_layout.setContentsMargins(4, 4, 4, 4)
-        self._content_layout.setSpacing(4)
+        self._content_layout.setContentsMargins(0, 4, 0, 4)
+        self._content_layout.setSpacing(6)
         self._content_layout.setAlignment(Qt.AlignTop)
         self._scroll.setWidget(self._content)
         root.addWidget(self._scroll, 1)
@@ -1393,11 +1589,7 @@ class GitPanelCard(QWidget):
         args = ["commit", "--amend", "--no-edit"]
         if msg:
             args = ["commit", "--amend", "-m", msg]
-        reply = QMessageBox.question(
-            self, "确认 Amend", "确定要修改上次提交吗？",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
-        )
-        if reply != QMessageBox.Yes:
+        if not _ConfirmDialog.ask("确认 Amend", "确定要修改上次提交吗？", self):
             return
         self._status_lb.setText("Amend 中…")
         self._run_git_async(
@@ -1422,42 +1614,27 @@ class GitPanelCard(QWidget):
     def _on_stash(self):
         """创建 stash"""
         msg = self._commit_input.text().strip() or "WIP"
-        reply = QMessageBox.question(
-            self, "确认 Stash",
-            f"确定要 stash 当前修改吗？\n消息: {msg}",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes,
-        )
-        if reply != QMessageBox.Yes:
+        if not _ConfirmDialog.ask("确认 Stash", f"确定要 stash 当前修改吗？\n消息: {msg}", self):
             return
         self._status_lb.setText("Stash 中…")
         self._run_git_async(
             lambda: _run_git(self._repo_path, "stash", "push", "-m", msg),
-            lambda: self._on_op_done("Stash 成功"),
+            lambda r: self._on_op_done("Stash 成功", r),
         )
 
     def _on_stash_action(self, action: str, ref: str):
         """处理 stash 操作"""
         if action == "drop":
-            reply = QMessageBox.question(
-                self, "确认删除 Stash",
-                f"确定要删除 {ref} 吗？",
-                QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
-            )
-            if reply != QMessageBox.Yes:
+            if not _ConfirmDialog.ask("确认删除 Stash", f"确定要删除 {ref} 吗？", self):
                 return
         elif action == "pop":
-            reply = QMessageBox.question(
-                self, "确认弹出 Stash",
-                f"确定要弹出 {ref} 吗？\n此操作会应用并删除该 stash。",
-                QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
-            )
-            if reply != QMessageBox.Yes:
+            if not _ConfirmDialog.ask("确认弹出 Stash", f"确定要弹出 {ref} 吗？\n此操作会应用并删除该 stash。", self):
                 return
         self._status_lb.setText(f"{action} {ref}…")
-        cmd = ["stash", action]
+        cmd = ["stash", action, ref]
         self._run_git_async(
             lambda: _run_git(self._repo_path, *cmd),
-            lambda: self._on_op_done(f"{action.capitalize()} 成功"),
+            lambda r: self._on_op_done(f"{action.capitalize()} 成功", r),
         )
 
     def _on_switch_branch(self, name: str):
@@ -1465,22 +1642,17 @@ class GitPanelCard(QWidget):
         self._status_lb.setText(f"切换到 {name}…")
         self._run_git_async(
             lambda: _run_git(self._repo_path, "checkout", name),
-            lambda: self._on_op_done(f"已切换到 {name}"),
+            lambda r: self._on_op_done(f"已切换到 {name}", r),
         )
 
     def _on_delete_branch(self, name: str):
         """删除分支"""
-        reply = QMessageBox.question(
-            self, "确认删除分支",
-            f"确定要删除分支「{name}」吗？",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
-        )
-        if reply != QMessageBox.Yes:
+        if not _ConfirmDialog.ask("确认删除分支", f"确定要删除分支「{name}」吗？", self):
             return
         self._status_lb.setText(f"删除 {name}…")
         self._run_git_async(
             lambda: _run_git(self._repo_path, "branch", "-d", name),
-            lambda: self._on_op_done(f"已删除 {name}"),
+            lambda r: self._on_op_done(f"已删除 {name}", r),
         )
 
     def _on_create_branch(self):
@@ -1492,7 +1664,7 @@ class GitPanelCard(QWidget):
         self._status_lb.setText(f"创建分支 {branch_name}…")
         self._run_git_async(
             lambda: _run_git(self._repo_path, "checkout", "-b", branch_name),
-            lambda: self._on_op_done(f"已创建并切换到 {branch_name}"),
+            lambda r: self._on_op_done(f"已创建并切换到 {branch_name}", r),
         )
 
     def _on_stage_all(self):
@@ -1500,7 +1672,7 @@ class GitPanelCard(QWidget):
         self._status_lb.setText("暂存中…")
         self._run_git_async(
             lambda: _run_git(self._repo_path, "add", "-A"),
-            lambda: self._on_op_done("已暂存所有修改"),
+            lambda r: self._on_op_done("已暂存所有修改", r),
         )
 
     def _on_unstage_all(self):
@@ -1508,22 +1680,17 @@ class GitPanelCard(QWidget):
         self._status_lb.setText("取消暂存中…")
         self._run_git_async(
             lambda: _run_git(self._repo_path, "restore", "--staged", "."),
-            lambda: self._on_op_done("已取消暂存所有修改"),
+            lambda r: self._on_op_done("已取消暂存所有修改", r),
         )
 
     def _on_discard_all(self):
         """放弃所有修改"""
-        reply = QMessageBox.question(
-            self, "确认放弃所有修改",
-            "确定要放弃所有工作区修改吗？\n此操作不可恢复！",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
-        )
-        if reply != QMessageBox.Yes:
+        if not _ConfirmDialog.ask("确认放弃所有修改", "确定要放弃所有工作区修改吗？\n此操作不可恢复！", self):
             return
         self._status_lb.setText("放弃中…")
         self._run_git_async(
             lambda: _run_git(self._repo_path, "checkout", "--", "."),
-            lambda: self._on_op_done("已放弃所有修改"),
+            lambda r: self._on_op_done("已放弃所有修改", r),
         )
 
     def _on_diff_request(self, path: str, staged: bool):
@@ -1531,11 +1698,18 @@ class GitPanelCard(QWidget):
         dialog = _DiffDialog(self._repo_path, path, staged, self)
         dialog.exec_()
 
-    def _on_op_done(self, msg: str):
-        """操作完成后的公共处理"""
+    def _on_op_done(self, msg: str, result: Optional[Tuple[str, str, int]] = None):
+        """操作完成后的公共处理，检查 git 返回码"""
+        if result:
+            _, stderr, code = result
+            if code != 0:
+                err_msg = stderr[:80] if stderr else "未知错误"
+                self._status_lb.setText(f"❌ 失败: {err_msg}")
+                QTimer.singleShot(4000, lambda: self._reset_status())
+                return
         self._status_lb.setText(f"✅ {msg}")
         QTimer.singleShot(2000, lambda: self._reset_status())
-        QTimer.singleShot(500, self._async_refresh)
+        QTimer.singleShot(300, self._async_refresh)
 
     def _reset_status(self):
         if not self._is_loading:

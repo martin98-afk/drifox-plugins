@@ -40,7 +40,7 @@ CELL_SIZE = 20
 CELL_GAP = 3
 STEP = CELL_SIZE + CELL_GAP
 COLS = 7  # 一周7天
-CAL_PAD_BOTTOM = 30  # 底部留白（图例）
+CAL_PAD_BOTTOM = 34  # 底部留白（图例）
 CAL_WIDTH = 280  # 日历面板固定宽
 
 
@@ -79,7 +79,7 @@ def _from_theme_dict(raw: dict, is_dark: bool) -> dict:
             "cal_2": QColor(0, 109, 50),
             "cal_3": QColor(38, 166, 65),
             "cal_4": QColor(57, 211, 83),
-            "cal_label": QColor(255, 255, 255, 110),
+            "cal_label": QColor(255, 255, 255, 180),
             "cal_border": QColor(255, 255, 255, 8),
             "cal_tooltip_border": accent,
             "scrollbar_handle": QColor(255, 255, 255, 30),
@@ -97,7 +97,7 @@ def _from_theme_dict(raw: dict, is_dark: bool) -> dict:
         "cal_2": QColor(0, 184, 77),
         "cal_3": QColor(0, 140, 60),
         "cal_4": QColor(0, 100, 40),
-        "cal_label": QColor(0, 0, 0, 110),
+        "cal_label": QColor(0, 0, 0, 180),
         "cal_border": QColor(0, 0, 0, 6),
         "cal_tooltip_border": accent,
         "scrollbar_handle": QColor(0, 0, 0, 20),
@@ -120,7 +120,7 @@ def _fallback_colors() -> dict:
             "cal_2": QColor(0, 109, 50),
             "cal_3": QColor(38, 166, 65),
             "cal_4": QColor(57, 211, 83),
-            "cal_label": QColor(255, 255, 255, 110),
+            "cal_label": QColor(255, 255, 255, 180),
             "cal_border": QColor(255, 255, 255, 8),
             "cal_tooltip_border": QColor(98, 160, 234),
             "scrollbar_handle": QColor(255, 255, 255, 30),
@@ -138,7 +138,7 @@ def _fallback_colors() -> dict:
         "cal_2": QColor(0, 184, 77),
         "cal_3": QColor(0, 140, 60),
         "cal_4": QColor(0, 100, 40),
-        "cal_label": QColor(0, 0, 0, 110),
+        "cal_label": QColor(0, 0, 0, 180),
         "cal_border": QColor(0, 0, 0, 6),
         "cal_tooltip_border": QColor(40, 120, 220),
         "scrollbar_handle": QColor(0, 0, 0, 20),
@@ -401,10 +401,10 @@ class _CalendarWidget(QWidget):
         cw = COLS * step  # 网格总宽
 
         # ── 标题 ──
-        painter.setFont(QFont(self._font_family, 11, QFont.Bold))
+        painter.setFont(QFont(self._font_family, 12, QFont.Bold))
         painter.setPen(colors["text"])
         painter.drawText(
-            QRectF(6, 4, w - 12, 20),
+            QRectF(8, 6, w - 16, 22),
             Qt.AlignLeft | Qt.AlignVCenter,
             f"☀ 提交日历 · {_format_number(self._total_commits)} 次",
         )
@@ -416,7 +416,7 @@ class _CalendarWidget(QWidget):
             today = datetime.now()
             start = today - timedelta(days=182)
             painter.drawText(
-                QRectF(6, 22, w - 12, 16),
+                QRectF(8, 26, w - 16, 14),
                 Qt.AlignLeft | Qt.AlignVCenter,
                 f"{start.month}月{start.day}日 → {today.month}月{today.day}日",
             )
@@ -429,7 +429,7 @@ class _CalendarWidget(QWidget):
         painter.setPen(colors["cal_label"])
         for i, label in enumerate(day_labels):
             lx = ox + i * step + (cs - painter.fontMetrics().width(label)) / 2
-            painter.drawText(QPointF(lx, oy - 8), label)
+            painter.drawText(QPointF(lx, oy - 6), label)
 
         if not self._daily or not self._cell_map:
             painter.setFont(QFont(self._font_family, 9))
@@ -464,16 +464,19 @@ class _CalendarWidget(QWidget):
 
         # ── 月份标签（左侧Y轴） ──
         month_cn = ["", "1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"]
-        painter.setFont(QFont(self._font_family, 9))
+        month_font = QFont(self._font_family, 9)
+        painter.setFont(month_font)
         painter.setPen(colors["cal_label"])
         for ym, first_row in self._month_rows.items():
             try:
                 m = int(ym.split("-")[1])
-                label_y = oy + first_row * step + cs / 2 + 4
+                label_y = oy + first_row * step + cs / 2
                 painter.drawText(
-                    QRectF(2, label_y - 10, CAL_MARGIN_LEFT - 4, 20), Qt.AlignRight | Qt.AlignVCenter, month_cn[m]
+                    QRectF(2, label_y - 10, CAL_MARGIN_LEFT - 4, 20),
+                    Qt.AlignRight | Qt.AlignVCenter,
+                    month_cn[m],
                 )
-            except ValueError, IndexError:
+            except (ValueError, IndexError):
                 pass
 
         # ── 画格子 ──
@@ -500,28 +503,44 @@ class _CalendarWidget(QWidget):
                 painter.setPen(QPen(colors["cal_border"], 0.5))
             painter.drawPath(path)
 
-        # ── 横线分隔月份（可选，增强可读性） ──
-        painter.setPen(QPen(colors["separator"], 1))
+        # ── 横线分隔月份 ──
+        month_sep_color = QColor(colors["separator"])
+        month_sep_color.setAlpha(min(month_sep_color.alpha(), 60))
+        painter.setPen(QPen(month_sep_color, 1, Qt.DashLine))
         for ym, first_row in self._month_rows.items():
             if first_row > 0:
-                y_line = oy + first_row * step - 1
-                painter.drawLine(QPointF(ox, y_line), QPointF(ox + cw, y_line))
+                y_line = oy + first_row * step + cs / 2
+                painter.drawLine(QPointF(ox + 4, y_line), QPointF(ox + cw - 4, y_line))
 
         # ── 图例（底部居中） ──
-        legend_y = self.height() - 18
-        legend_x = (w - (5 * (cs + 2) + 34)) / 2
-        painter.setFont(QFont(self._font_family, 8))
+        legend_h = 22
+        legend_y = self.height() - legend_h - 4
+        legend_cell = min(14, cs)
+        legend_items = 5
+        legend_text_w = 20  # "少"/"多" 两字宽
+        legend_total_w = legend_text_w * 2 + legend_items * (legend_cell + 4) + 8
+        legend_x = (w - legend_total_w) / 2
+        legend_font = QFont(self._font_family, 8)
+        painter.setFont(legend_font)
         painter.setPen(colors["cal_label"])
-        painter.drawText(QPointF(legend_x, legend_y + cs - 4), "少")
+        painter.drawText(
+            QRectF(legend_x, legend_y, legend_text_w, legend_h),
+            Qt.AlignCenter, "少"
+        )
         for i, color in enumerate(cal_colors):
-            lx = legend_x + 18 + i * (cs + 2)
-            lr = QRectF(lx, legend_y, cs, cs)
+            lx = legend_x + legend_text_w + 4 + i * (legend_cell + 4)
+            ly = legend_y + (legend_h - legend_cell) / 2
+            lr = QRectF(lx, ly, legend_cell, legend_cell)
             p2 = QPainterPath()
-            p2.addRoundedRect(lr, 2.5, 2.5)
+            p2.addRoundedRect(lr, 2, 2)
             painter.fillPath(p2, QBrush(color))
             painter.setPen(QPen(colors["cal_border"], 0.5))
             painter.drawPath(p2)
-        painter.drawText(QPointF(legend_x + 18 + 5 * (cs + 2) + 4, legend_y + cs - 4), "多")
+        painter.drawText(
+            QRectF(legend_x + legend_text_w + 4 + legend_items * (legend_cell + 4),
+                   legend_y, legend_text_w, legend_h),
+            Qt.AlignCenter, "多"
+        )
 
         painter.end()
 
@@ -594,26 +613,31 @@ class _CommitListWidget(QWidget):
         painter.setRenderHint(QPainter.Antialiasing)
         colors = self._colors
         w = self.width()
+        pad = 4
 
         # ── 标题 ──
-        painter.setFont(QFont(self._font_family, 13, QFont.Bold))
+        title_font = QFont(self._font_family, 13, QFont.Bold)
+        painter.setFont(title_font)
         painter.setPen(colors["text"])
-        painter.drawText(QRectF(4, 4, w - 8, 26), Qt.AlignLeft | Qt.AlignVCenter, "📜  最近提交")
+        painter.drawText(QRectF(pad, 6, w - pad * 2, 24), Qt.AlignLeft | Qt.AlignVCenter, "📜  最近提交")
 
         # ── 分隔线 ──
         painter.setPen(QPen(colors["separator"], 1))
-        painter.drawLine(QPointF(8, 32), QPointF(w - 8, 32))
+        painter.drawLine(QPointF(pad + 4, 34), QPointF(w - pad - 4, 34))
 
         if not self._lines:
             painter.setFont(QFont(self._font_family, 11))
             painter.setPen(colors["text_secondary"])
-            painter.drawText(QRectF(12, 40, w - 24, self.height() - 48), Qt.AlignLeft | Qt.AlignTop, "(暂无数据)")
+            painter.drawText(QRectF(pad + 8, 42, w - pad * 2 - 16, self.height() - 50),
+                             Qt.AlignLeft | Qt.AlignTop, "(暂无数据)")
             painter.end()
             return
 
-        y = 40
+        y = 42
         list_font = QFont(self._font_family, 11)
         hash_font = QFont("Consolas", 10)
+        hash_fm = QFontMetrics(hash_font)
+        list_fm = QFontMetrics(list_font)
 
         for line in self._lines:
             if y > self.height() - 4:
@@ -627,18 +651,22 @@ class _CommitListWidget(QWidget):
                 hash_part = line[:hash_end]
                 msg_part = line[hash_end:].strip()
 
-                painter.setFont(list_font)
-                painter.setPen(colors["success"])
-                painter.drawText(QPointF(12, y), "●")
+                # 圆点指示器
+                dot_color = colors["success"]
+                painter.setBrush(dot_color)
+                painter.setPen(Qt.NoPen)
+                painter.drawEllipse(QPointF(pad + 12, y + 5), 4, 4)
 
+                # Hash
                 painter.setFont(hash_font)
                 painter.setPen(colors["accent"])
-                painter.drawText(QPointF(28, y), hash_part)
-                hash_w = 28 + QFontMetrics(hash_font).width(hash_part) + 8
+                painter.drawText(QPointF(pad + 26, y + 5 + hash_fm.ascent()), hash_part)
+                hash_w = pad + 26 + hash_fm.width(hash_part) + 10
 
+                # 提交信息
                 painter.setFont(list_font)
                 painter.setPen(colors["text"])
-                msg_rect = QRectF(hash_w, y - 8, w - hash_w - 12, 500)
+                msg_rect = QRectF(hash_w, y, w - hash_w - pad - 4, 500)
                 painter.drawText(msg_rect, Qt.AlignLeft | Qt.AlignTop | Qt.TextWordWrap, msg_part)
 
                 br = painter.boundingRect(msg_rect, Qt.AlignLeft | Qt.AlignTop | Qt.TextWordWrap, msg_part)
@@ -647,7 +675,7 @@ class _CommitListWidget(QWidget):
             else:
                 painter.setFont(list_font)
                 painter.setPen(colors["text_secondary"])
-                painter.drawText(QPointF(12, y), line)
+                painter.drawText(QPointF(pad + 12, y + 5 + list_fm.ascent()), line)
                 y += self.COMMIT_LINE_HEIGHT
 
         painter.end()
@@ -790,7 +818,7 @@ class GitDashboardCard(QWidget):
             QWidget#cardContent {{
                 background: {bg_rgba};
                 border: 1px solid {sep_hex};
-                border-radius: 10px;
+                border-radius: 12px;
             }}
         """)
 
