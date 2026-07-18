@@ -42,8 +42,7 @@
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
-                "ui",
-                "stats"
+                "ui"
             ],
             "source": {
                 "type": "git-subdir",
@@ -54,13 +53,6 @@
             "components": {
                 "ui": true
             },
-            "keywords": [
-                "stats",
-                "token",
-                "usage",
-                "context",
-                "dashboard"
-            ],
             "homepage": "https://github.com/martin98-afk/DriFox"
         },
         {
@@ -209,6 +201,36 @@
             "homepage": "https://github.com/martin98-afk/DriFox"
         },
         {
+            "name": "git-panel",
+            "description": "Git 控制面板 — 文件变更、暂存/取消暂存、提交、Stash、分支管理、提交历史、Diff 预览",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui",
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/git-panel",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true
+            },
+            "keywords": [
+                "git",
+                "source-control",
+                "changes",
+                "commit",
+                "stash",
+                "branch",
+                "diff"
+            ],
+            "homepage": "https://github.com/martin98-afk/DriFox"
+        },
+        {
             "name": "git-status",
             "description": "在每轮用户消息前注入当前 Git 仓库状态（分支/暂存/工作区/最近 commits），让 LLM 无需询问即可知道当前代码改动了什么",
             "version": "1.0.0",
@@ -304,7 +326,7 @@
         {
             "name": "plugin-marketplace",
             "description": "DriFox 官方插件市场 — 浏览、安装、管理插件",
-            "version": "0.1.0",
+            "version": "0.2.0",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
