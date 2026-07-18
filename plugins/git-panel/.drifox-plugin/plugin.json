@@ -1,6 +1,10 @@
 {
     "name": "git-panel",
     "description": "Git 控制面板 — 文件变更、暂存/取消暂存、提交、Stash、分支管理、提交历史、Diff 预览",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
     "version": "1.0.0",
     "author": {
         "name": "DriFox Contributors"

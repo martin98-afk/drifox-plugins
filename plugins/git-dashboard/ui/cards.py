@@ -63,8 +63,8 @@ def _c_str(raw: dict, key: str, fallback: str) -> QColor:
 def _from_theme_dict(raw: dict, is_dark: bool) -> dict:
     txt = _c_str(raw, "text_primary", "#ffffff")
     txt_sec = _c_str(raw, "text_secondary", "rgba(255,255,255,0.5)")
-    card_bg = _c_str(raw, "card_bg", "rgba(33,33,38,250)")
-    card_bg.setAlpha(200)
+    # 不取主机的 card_bg（固定 rgba(33,33,38,...) 太深），改用按主题调亮的颜色
+    card_bg = QColor(55, 55, 68, 230) if is_dark else QColor(255, 255, 255, 240)
     accent = _c_str(raw, "accent", "#62a0ea" if is_dark else "#2878dc")
     if is_dark:
         return {
@@ -109,7 +109,7 @@ def _fallback_colors() -> dict:
     is_dark = isDarkTheme()
     if is_dark:
         return {
-            "card_bg": QColor(33, 33, 38, 200),
+            "card_bg": QColor(42, 42, 50, 220),
             "text": QColor(255, 255, 255),
             "text_secondary": QColor(255, 255, 255, 128),
             "separator": QColor(255, 255, 255, 20),
@@ -169,6 +169,7 @@ def _run_git(cwd: str, *args: str) -> Tuple[str, str, int]:
             encoding="utf-8",
             errors="replace",
             timeout=GIT_TIMEOUT,
+            creationflags=subprocess.CREATE_NO_WINDOW,
         )
         return r.stdout.strip(), r.stderr.strip(), r.returncode
     except subprocess.TimeoutExpired:

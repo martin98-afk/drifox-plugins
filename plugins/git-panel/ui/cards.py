@@ -152,6 +152,7 @@ def _run_git(cwd: str, *args: str) -> Tuple[str, str, int]:
             encoding="utf-8",
             errors="replace",
             timeout=GIT_TIMEOUT,
+            creationflags=subprocess.CREATE_NO_WINDOW,
         )
         return r.stdout.strip(), r.stderr.strip(), r.returncode
     except subprocess.TimeoutExpired:

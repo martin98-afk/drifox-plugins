@@ -1,6 +1,10 @@
 {
     "name": "git-dashboard",
     "description": "Git 仪表盘 — 提交日历热力图、最近提交、分支图可视化",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
     "version": "0.1.0",
     "author": {
         "name": "DriFox Contributors"
