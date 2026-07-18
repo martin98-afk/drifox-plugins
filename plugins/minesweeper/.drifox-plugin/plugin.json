@@ -1,0 +1,17 @@
+{
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "name": "minesweeper",
+    "description": "经典扫雷游戏——在 DriFox 中直接玩的浮動卡片",
+    "version": "0.1.0",
+    "author": {
+        "name": "DriFox Contributor"
+    },
+    "type": "game",
+    "components": {
+        "commands": true,
+        "ui": true
+    }
+}
