@@ -1,0 +1,23 @@
+{
+    "name": "git-panel",
+    "description": "Git 控制面板 — 文件变更、暂存/取消暂存、提交、Stash、分支管理、提交历史、Diff 预览",
+    "version": "1.0.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "homepage": "https://github.com/martin98-afk/DriFox",
+    "license": "MIT",
+    "type": "user",
+    "keywords": [
+        "git",
+        "source-control",
+        "changes",
+        "commit",
+        "stash",
+        "branch",
+        "diff"
+    ],
+    "components": {
+        "ui": true
+    }
+}
