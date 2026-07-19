@@ -230,10 +230,15 @@ class BreakoutGame:
                 self.bricks.append(brick)
 
     def start(self):
-        """开始游戏"""
-        if self.state == GameState.READY or self.state == GameState.LOST:
+        """开始游戏
+
+        - READY: 首次开始或失命后继续，直接设为 PLAYING（已有棋盘状态）
+        - LOST: 全部生命耗尽，需要重置所有
+        """
+        if self.state == GameState.LOST:
             self.reset()
-        self.state = GameState.PLAYING
+        if self.state in (GameState.READY, GameState.PLAYING):
+            self.state = GameState.PLAYING
 
     def reset(self):
         """重置游戏"""

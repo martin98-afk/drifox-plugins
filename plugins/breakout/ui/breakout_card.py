@@ -227,6 +227,7 @@ class BreakoutCard(QWidget):
         """开始按钮点击"""
         if self._game.state == GameState.READY:
             self._game.start()
+            self._game.launch_ball()  # 随机发射方向
             self._timer.start()
         elif self._game.state == GameState.PLAYING:
             self._game.launch_ball()

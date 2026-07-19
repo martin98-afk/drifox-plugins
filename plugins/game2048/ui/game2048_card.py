@@ -246,6 +246,10 @@ class Game2048Card(QWidget):
         self._game.init()
         self._sync_grid(animate=True)
         self._update_status()
+        # 清除游戏结束遮罩
+        for child in self._grid_container.findChildren(QLabel):
+            if child.property("overlay"):
+                child.deleteLater()
 
     def _sync_grid(self, animate: bool = False):
         """同步游戏网格到 UI"""
