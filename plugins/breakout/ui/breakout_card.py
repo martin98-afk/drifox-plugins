@@ -103,6 +103,9 @@ class BreakoutCard(QWidget):
 
         # 键盘状态
         self._keys_pressed = set()
+        # 鼠标追踪
+        self.setMouseTracking(True)
+        self.setFocusPolicy(Qt.StrongFocus)
 
         self._setup_ui()
         self._update_display()
@@ -117,6 +120,8 @@ class BreakoutCard(QWidget):
         """卡片显示时：用最新上下文刷新主题色"""
         self._apply_latest_theme()
         self.setVisible(True)
+        self.setFocus()  # 获取键盘焦点
+        self._game_canvas.setFocus()
 
     def _apply_latest_theme(self):
         """从上下文拉取最新主题色并刷新全部子控件样式"""
@@ -270,13 +275,9 @@ class BreakoutCard(QWidget):
 
     def mouse_move_handler(self, x: int):
         """处理鼠标移动（控制挡板）"""
-        if self._game.state == GameState.PLAYING:
-            # 计算画布在窗口中的偏移
-            canvas_x = self._game_canvas.x()
-            # 转换为画布内的坐标
-            canvas_rel_x = x - canvas_x
-            # 限制在游戏区域内
-            self._game.set_paddle_position(canvas_rel_x)
+        if self._game.state in (GameState.PLAYING, GameState.READY):
+            # x 已由 canvas 转发，是画布内相对坐标
+            self._game.set_paddle_position(x)
 
     def mouse_click_handler(self):
         """处理鼠标点击"""
@@ -297,9 +298,11 @@ class BreakoutCard(QWidget):
         elif key == Qt.Key_Space:
             if self._game.state == GameState.READY:
                 self._game.launch_ball()
+            elif self._game.state == GameState.PLAYING:
+                pass  # 游戏中空格无操作
         elif key == Qt.Key_R:
             self._on_restart()
-        super().keyPressEvent(event)
+        event.accept()
 
     def keyReleaseEvent(self, event):
         """键盘释放"""
@@ -308,7 +311,9 @@ class BreakoutCard(QWidget):
             self._keys_pressed.discard("left")
         elif key == Qt.Key_Right or key == Qt.Key_D:
             self._keys_pressed.discard("right")
-        super().keyReleaseEvent(event)
+        event.accept()
+
+    # ── 鼠标控制（由 GameCanvas 转发调用）──
 
     # ── 关闭 ──
 
