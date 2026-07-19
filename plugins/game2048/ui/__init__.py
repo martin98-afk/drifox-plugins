@@ -24,7 +24,7 @@ def register_ui(registry):
         card_id="game2048",
         widget_class=Game2048Card,
         container="bottom",
-        title="🎮 2048",
+        title="2048",
         default_visible=False,
     )
 

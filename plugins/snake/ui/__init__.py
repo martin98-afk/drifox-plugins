@@ -24,7 +24,7 @@ def register_ui(registry):
         card_id="snake",
         widget_class=SnakeCard,
         container="bottom",
-        title="🐍 贪吃蛇",
+        title="贪吃蛇",
         default_visible=False,
     )
 

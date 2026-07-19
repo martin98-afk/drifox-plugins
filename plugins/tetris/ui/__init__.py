@@ -24,7 +24,7 @@ def register_ui(registry):
         card_id="tetris",
         widget_class=TetrisCard,
         container="bottom",
-        title="🧱 俄罗斯方块",
+        title="俄罗斯方块",
         default_visible=False,
     )
 

@@ -24,7 +24,7 @@ def register_ui(registry):
         card_id="breakout",
         widget_class=BreakoutCard,
         container="bottom",
-        title="🏓 打砖块",
+        title="打砖块",
         default_visible=False,
     )
 

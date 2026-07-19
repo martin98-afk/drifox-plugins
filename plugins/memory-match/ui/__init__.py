@@ -24,7 +24,7 @@ def register_ui(registry):
         card_id="memory-match",
         widget_class=MemoryMatchCard,
         container="bottom",
-        title="🧠 记忆翻牌",
+        title="记忆翻牌",
         default_visible=False,
     )
 

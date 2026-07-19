@@ -177,7 +177,7 @@ class BreakoutCard(QWidget):
         ic.setFixedSize(22, 22)
         hly.addWidget(ic)
 
-        self._title_label = StrongBodyLabel("🏓 打砖块", header)
+        self._title_label = StrongBodyLabel("打砖块", header)
         self._title_label.setStyleSheet(f"color: {_text_color()}; background: transparent;")
         hly.addWidget(self._title_label)
 
