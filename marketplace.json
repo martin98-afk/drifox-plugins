@@ -193,7 +193,7 @@
         {
             "name": "game2048",
             "description": "经典 2048 益智游戏——在 DriFox 中直接玩的浮動卡片",
-            "version": "0.1.0",
+            "version": "0.2.0",
             "author": "DriFox Contributor",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -346,7 +346,7 @@
         {
             "name": "memory-match",
             "description": "经典记忆翻牌游戏——在 DriFox 中直接玩的浮動卡片",
-            "version": "0.1.0",
+            "version": "0.2.0",
             "author": "DriFox Contributor",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -458,7 +458,7 @@
         {
             "name": "snake",
             "description": "经典贪吃蛇游戏——在 DriFox 中直接玩的浮動卡片",
-            "version": "0.1.0",
+            "version": "0.2.0",
             "author": "DriFox Contributor",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -509,7 +509,7 @@
         {
             "name": "tetris",
             "description": "经典俄罗斯方块——在 DriFox 中直接玩的浮動卡片",
-            "version": "0.1.0",
+            "version": "0.2.0",
             "author": "DriFox Contributor",
             "license": "GPL-3.0-or-later",
             "categories": [
