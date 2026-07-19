@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#6366F1" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <!-- brain shape left hemisphere -->
+  <path d="M6 8c0-2.2 1.8-4 4-4 1.5 0 2.8.8 3.5 2" />
+  <path d="M13.5 6c.7-1.2 2-2 3.5-2 2.2 0 4 1.8 4 4 0 1.5-.8 2.8-2 3.5" />
+  <!-- brain shape center groove -->
+  <path d="M12 6v12" />
+  <!-- brain folds left -->
+  <path d="M7 8c0 2.2 2 4 5 4" />
+  <path d="M7 12c0 2.2 2 4 5 4" />
+  <!-- brain folds right -->
+  <path d="M17 8c0 2.2-2 4-5 4" />
+  <path d="M17 12c0 2.2-2 4-5 4" />
+  <!-- bottom of brain -->
+  <path d="M6 16c0 2.2 2.7 4 6 4s6-1.8 6-4" />
+  <!-- question mark overlay indicating memory/test -->
+  <circle cx="17" cy="7" r="4" fill="white" stroke="#6366F1" stroke-width="1.5"/>
+  <text x="17" y="9.5" font-size="6" text-anchor="middle" fill="#6366F1" font-weight="bold">?</text>
+</svg>

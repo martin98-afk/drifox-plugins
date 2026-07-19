@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#eee" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Classic tetromino T-shape in blue -->
+  <!-- top bar -->
+  <rect x="6" y="5" width="12" height="4" rx="1" fill="#5C6BC0" stroke="#eee"/>
+  <!-- center stem -->
+  <rect x="10" y="9" width="4" height="8" rx="1" fill="#5C6BC0" stroke="#eee"/>
+  <!-- highlight -->
+  <rect x="6" y="5" width="12" height="1.5" rx="0.5" fill="rgba(255,255,255,0.3)"/>
+</svg>

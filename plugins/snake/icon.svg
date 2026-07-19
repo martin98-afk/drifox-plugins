@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Snake body (curved path) -->
+  <path d="M4 12 C4 8, 8 4, 12 4 C16 4, 20 8, 20 12 C20 16, 16 20, 12 20 C8 20, 4 16, 4 12"/>
+  <!-- Snake head -->
+  <circle cx="18" cy="12" r="2.5"/>
+  <!-- Snake eye -->
+  <circle cx="19" cy="11" r="0.8" fill="#333"/>
+  <!-- Snake tongue -->
+  <path d="M21 12 L23 10 M21 12 L23 14" stroke-width="1.4"/>
+  <!-- Snake body segments -->
+  <circle cx="14" cy="10" r="1.5"/>
+  <circle cx="10" cy="8" r="1.5"/>
+  <circle cx="6" cy="10" r="1.5"/>
+</svg>

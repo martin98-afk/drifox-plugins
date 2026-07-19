@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#333" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+  <!-- paddle at bottom -->
+  <rect x="4" y="19" width="16" height="3" rx="1.5"/>
+  <!-- ball -->
+  <circle cx="12" cy="14" r="2.5"/>
+  <!-- bricks -->
+  <rect x="3" y="3" width="5" height="3" rx="0.5" fill="#E94560" stroke="#E94560"/>
+  <rect x="9.5" y="3" width="5" height="3" rx="0.5" fill="#FF7043" stroke="#FF7043"/>
+  <rect x="16" y="3" width="5" height="3" rx="0.5" fill="#FFCA28" stroke="#FFCA28"/>
+  <rect x="6" y="7" width="5" height="3" rx="0.5" fill="#66BB6A" stroke="#66BB6A"/>
+  <rect x="12.5" y="7" width="5" height="3" rx="0.5" fill="#42A5F5" stroke="#42A5F5"/>
+  <!-- motion lines from ball -->
+  <line x1="15" y1="12" x2="18" y2="10" stroke="#333" stroke-width="1.2" opacity="0.5"/>
+  <line x1="16" y1="14" x2="19" y2="14" stroke="#333" stroke-width="1.2" opacity="0.5"/>
+</svg>
