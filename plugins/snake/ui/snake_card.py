@@ -349,6 +349,7 @@ class SnakeCard(QWidget):
             self._current_interval = self._game.interval
             self._timer.start(self._current_interval)
             self._update_display()
+            self._canvas.setFocus()
             return
 
         if self._game.state == GameState.WON or self._game.state == GameState.LOST:
@@ -364,6 +365,7 @@ class SnakeCard(QWidget):
         else:
             self._timer.start(self._current_interval)
             self._status_bar.set_paused(False)
+        self._canvas.setFocus()
 
     def _on_restart(self):
         """重新开始游戏"""
@@ -381,6 +383,8 @@ class SnakeCard(QWidget):
         self._current_interval = self._game.interval
         self._timer.start(self._current_interval)
         self._update_display()
+
+        self._canvas.setFocus()
 
     def _show_game_over(self, message: str):
         """显示游戏结束信息"""

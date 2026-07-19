@@ -231,6 +231,9 @@ class BreakoutCard(QWidget):
             self._timer.start()
         elif self._game.state == GameState.PLAYING:
             self._game.launch_ball()
+        # 按钮点击后归还键盘焦点
+        self.setFocus()
+        self._game_canvas.setFocus()
 
     def _on_restart(self):
         """重新开始游戏"""
@@ -238,6 +241,8 @@ class BreakoutCard(QWidget):
         self._game.reset()
         self._status_bar.reset()
         self._update_display()
+        self.setFocus()
+        self._game_canvas.setFocus()
 
     def _on_game_tick(self):
         """游戏每帧更新"""
@@ -256,14 +261,15 @@ class BreakoutCard(QWidget):
         # 更新显示
         self._update_display()
 
-        # 处理游戏结束
+        # 处理游戏结束（game_over 优先级高于 life_lost）
         if result.get("game_over"):
             self._timer.stop()
             self._status_bar.show_restart_button()
-
-        # 处理生命损失（重置到 READY 状态）
-        if result.get("life_lost"):
+        elif result.get("life_lost"):
+            # 失命但未结束 → 显示开始按钮等待重新发射
             self._status_bar.show_start_button()
+            self.setFocus()  # 保持键盘焦点
+            self._game_canvas.setFocus()
 
     def _update_display(self):
         """更新游戏画面显示"""
