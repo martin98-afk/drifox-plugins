@@ -322,6 +322,42 @@
             }
         },
         {
+            "name": "guizang-ppt-skill",
+            "description": "生成横向翻页网页 PPT（单 HTML 文件），含 WebGL 背景、章节幕封、数据大字报、图片网格等模板 + MiniMax TTS 逐页语音配音。两种风格可选：① 电子杂志 × 电子墨水 ② 瑞士国际主义。当用户需要制作分享/演讲/发布会风格的网页 PPT 时使用。",
+            "version": "2.0.0",
+            "author": "歸藏",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/guizang-ppt-skill",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "ppt",
+                "presentation",
+                "slides",
+                "guizang",
+                "swiss",
+                "magazine",
+                "swiss-style",
+                "tts",
+                "voice",
+                "minimax",
+                "audio",
+                "配音"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            }
+        },
+        {
             "name": "hookify",
             "description": "Easily create hooks to prevent unwanted behaviors by analyzing conversation patterns",
             "version": "1.0.0",
