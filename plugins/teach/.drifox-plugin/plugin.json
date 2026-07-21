@@ -1,0 +1,20 @@
+{
+    "name": "teach",
+    "description": "AI 私人教师技能——基于学习目标进行多轮交互式教学，跟踪学习进度，持续教会你任何知识。",
+    "version": "1.0.0",
+    "author": {
+        "name": "DriFox Contributor"
+    },
+    "license": "MIT",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "teach", "education", "learning", "tutorial",
+        "交互式教学", "学习路线", "知识管理"
+    ],
+    "components": {
+        "skills": true
+    }
+}

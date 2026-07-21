@@ -512,6 +512,37 @@
             }
         },
         {
+            "name": "teach",
+            "description": "AI 私人教师技能——基于学习目标进行多轮交互式教学，跟踪学习进度，持续教会你任何知识。",
+            "version": "1.0.0",
+            "author": "DriFox Contributor",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/teach",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "teach",
+                "education",
+                "learning",
+                "tutorial",
+                "交互式教学",
+                "学习路线",
+                "知识管理"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            }
+        },
+        {
             "name": "test-scaffold",
             "description": "测试脚手架生成 — 自动生成测试用例骨架、分析覆盖率缺口、推荐边界测试场景，加速测试编写。",
             "version": "1.0.0",
