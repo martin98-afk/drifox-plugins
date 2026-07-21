@@ -34,9 +34,12 @@ python scripts/generate_tts.py --input ppt/演讲稿.md --output-dir ppt/audio
 
 | 按键 | 功能 |
 |------|------|
-| ← → / 空格 | 翻页 |
-| ESC | 索引视图 |
-| B | 低功耗模式 |
+| `← →` / `Space` / `↑ ↓` | 翻页 |
+| `B` | 低功耗模式（静态/动态动画） |
+| `ESC` | 索引视图 |
+| `F` | 全屏切换 |
+| `H` | 显示/隐藏底部 UI（导航点、语音条、提示文字） |
+| `Home` / `End` | 首尾页 |
 | `?slide=N` | URL 跳转 |
 
 ## 参考

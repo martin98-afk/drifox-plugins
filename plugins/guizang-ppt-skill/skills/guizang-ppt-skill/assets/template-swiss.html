@@ -598,6 +598,9 @@
   body.dark-bg #hint{color:var(--paper);opacity:.4}
   body.low-power #hint{color:var(--accent);opacity:.72}
   body.dark-bg.low-power #hint{color:var(--paper);opacity:.72}
+body.ui-hidden #nav,
+body.ui-hidden #audio-control,
+body.ui-hidden #hint{display:none}
 
   /* ESC 索引页: 动画元素强制可见 (覆盖 motion-ready 的 opacity:0) */
   #overview [data-anim]{opacity:1!important;transform:none!important}
@@ -1195,7 +1198,7 @@
     window.__lowPowerMode = stored === '1' || (stored === null && reduced);
     function updateHint(){
       const hint = document.getElementById('hint');
-      if(hint) hint.textContent = `← → 翻页 · B ${window.__lowPowerMode ? '动态' : '静态'} · ESC 索引`;
+      if(hint) hint.textContent = `← → 翻页 · B ${window.__lowPowerMode ? '动态' : '静态'} · ESC 索引 · F 全屏 · H 隐藏UI`;
     }
     window.__setLowPowerMode = function(on, opts={}){
       window.__lowPowerMode = !!on;
@@ -1214,7 +1217,7 @@
 </script>
 
 <canvas id="bg-grid" class="bg"></canvas>
-<div id="hint">← → 翻页 · B 静态 · ESC 索引</div>
+<div id="hint">← → 翻页 · B 静态 · ESC 索引 · F 全屏 · H 隐藏UI</div>
 
 <div id="deck">
 
@@ -1556,6 +1559,22 @@ addEventListener('keydown',e=>{
   if(e.key && e.key.toLowerCase()==='b' && !e.metaKey && !e.ctrlKey && !e.altKey){
     e.preventDefault();
     window.__setLowPowerMode(!window.__lowPowerMode);
+    return;
+  }
+  // F 键: 切换全屏
+  if(e.key && e.key.toLowerCase()==='f' && !e.metaKey && !e.ctrlKey && !e.altKey){
+    e.preventDefault();
+    if(!document.fullscreenElement){
+      document.documentElement.requestFullscreen?.();
+    } else {
+      document.exitFullscreen?.();
+    }
+    return;
+  }
+  // H 键: 切换底部 UI 显示/隐藏
+  if(e.key && e.key.toLowerCase()==='h' && !e.metaKey && !e.ctrlKey && !e.altKey){
+    e.preventDefault();
+    document.body.classList.toggle('ui-hidden');
     return;
   }
   if(overviewOn)return;

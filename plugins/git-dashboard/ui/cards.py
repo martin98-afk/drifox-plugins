@@ -13,7 +13,7 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Callable, Dict, List, Optional, Tuple
 
-from PyQt5.QtCore import QObject, QPointF, QRectF, QSize, QThread, Qt, pyqtSignal
+from PyQt5.QtCore import QEvent, QObject, QPointF, QRectF, QSize, QThread, Qt, pyqtSignal
 from PyQt5.QtGui import QBrush, QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
 from PyQt5.QtWidgets import (
     QFrame,
@@ -75,11 +75,11 @@ def _from_theme_dict(raw: dict, is_dark: bool) -> dict:
             "accent": accent,
             "success": QColor(80, 227, 194, 220),
             "cal_0": QColor(40, 40, 40),
-            "cal_1": QColor(14, 68, 41),
-            "cal_2": QColor(0, 109, 50),
-            "cal_3": QColor(38, 166, 65),
-            "cal_4": QColor(57, 211, 83),
-            "cal_label": QColor(255, 255, 255, 180),
+            "cal_1": QColor(60, 205, 80),
+            "cal_2": QColor(35, 155, 60),
+            "cal_3": QColor(18, 105, 42),
+            "cal_4": QColor(8, 65, 28),
+            "cal_label": QColor(255, 255, 255, 110),
             "cal_border": QColor(255, 255, 255, 8),
             "cal_tooltip_border": accent,
             "scrollbar_handle": QColor(255, 255, 255, 30),
@@ -116,11 +116,11 @@ def _fallback_colors() -> dict:
             "accent": QColor(98, 160, 234),
             "success": QColor(80, 227, 194, 220),
             "cal_0": QColor(40, 40, 40),
-            "cal_1": QColor(14, 68, 41),
-            "cal_2": QColor(0, 109, 50),
-            "cal_3": QColor(38, 166, 65),
-            "cal_4": QColor(57, 211, 83),
-            "cal_label": QColor(255, 255, 255, 180),
+            "cal_1": QColor(60, 205, 80),  # 亮绿=少
+            "cal_2": QColor(35, 155, 60),  # 中绿
+            "cal_3": QColor(18, 105, 42),  # 暗绿
+            "cal_4": QColor(8, 65, 28),  # 最深=最多
+            "cal_label": QColor(255, 255, 255, 110),
             "cal_border": QColor(255, 255, 255, 8),
             "cal_tooltip_border": QColor(98, 160, 234),
             "scrollbar_handle": QColor(255, 255, 255, 30),
@@ -581,8 +581,9 @@ class _CommitListWidget(QWidget):
             lines_needed = self._calc_lines(line, avail_w)
             total_h += lines_needed * self.COMMIT_LINE_HEIGHT
         total_h = max(total_h, 60)
-        self.setMinimumHeight(total_h)
-        self.setMaximumHeight(min(total_h, 3000))
+        # setWidgetResizable=False 时需要显式设高度
+        self.setFixedHeight(min(total_h, 3000))
+        self.updateGeometry()
 
     def _calc_lines(self, line: str, avail_w: int) -> int:
         if avail_w <= 0 or not line:
@@ -605,8 +606,10 @@ class _CommitListWidget(QWidget):
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        self._update_size()
-        self.update()
+        # 有数据时重算高度（应对父容器宽度变化）
+        if self._lines:
+            self._update_size()
+            self.update()
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -789,14 +792,16 @@ class GitDashboardCard(QWidget):
         self._calendar_scroll.setWidget(self._calendar)
         bl.addWidget(self._calendar_scroll)
 
-        # 右提交（独立滚动）
+        # 右提交（独立滚动，False 防止撑出空白）
         self._commits_scroll = ScrollArea(self._body_widget)
-        self._commits_scroll.setWidgetResizable(True)
+        self._commits_scroll.setWidgetResizable(False)
         self._commits_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._commits_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self._commits_scroll.setFrameShape(QFrame.NoFrame)
         self._commits_widget = _CommitListWidget()
         self._commits_scroll.setWidget(self._commits_widget)
+        # 监听视口宽度变化 → 更新换行
+        self._commits_scroll.viewport().installEventFilter(self)
         bl.addWidget(self._commits_scroll, 1)
 
     def _refresh_styles(self):
@@ -955,3 +960,15 @@ class GitDashboardCard(QWidget):
             self._commits_widget.set_lines(self._data.get("commits", []))
         self._refresh_styles()
         self.update()
+
+    # ── 事件过滤：检测提交区域视口宽度变化 → 更新换行和宽度 ──
+
+    def eventFilter(self, obj, event):
+        if obj is self._commits_scroll.viewport() and event.type() == QEvent.Resize:
+            vp_w = obj.width()
+            # 同步 widget 宽度到视口宽度（setWidgetResizable=False 不自动同步）
+            if self._commits_widget.width() != vp_w:
+                self._commits_widget.setFixedWidth(vp_w)
+            # 重算换行
+            self._commits_widget.set_lines(self._commits_widget._lines)
+        return super().eventFilter(obj, event)
