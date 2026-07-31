@@ -4,6 +4,38 @@
     "homepage": "https://github.com/martin98-afk/drifox-plugins",
     "plugins": [
         {
+            "name": "beautiful-article-skills",
+            "description": "精美文章技能——将任意素材（URL/PDF/DOCX/Markdown/文本/截图）编辑设计成美丽的单文件 HTML 网页文章。",
+            "version": "1.0.0",
+            "author": "ConardLi",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/beautiful-article-skills",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "article",
+                "editorial",
+                "html",
+                "reacticle",
+                "文章",
+                "编辑",
+                "排版",
+                "网页文章"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            }
+        },
+        {
             "name": "breakout",
             "description": "经典打砖块游戏——在 DriFox 中直接玩的浮动卡片",
             "version": "0.3.0",
@@ -380,6 +412,37 @@
             }
         },
         {
+            "name": "knowledge-base-skills",
+            "description": "本地知识库检索技能——面向本地知识库目录的分层检索和问答助手，支持 Markdown/PDF/Excel 渐进式检索。",
+            "version": "1.0.0",
+            "author": "ConardLi",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/knowledge-base-skills",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "knowledge-base",
+                "retrieval",
+                "pdf",
+                "excel",
+                "知识库",
+                "检索",
+                "RAG"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            }
+        },
+        {
             "name": "memory-match",
             "description": "经典记忆翻牌游戏——在 DriFox 中直接玩的浮動卡片",
             "version": "0.3.0",
@@ -610,6 +673,38 @@
             },
             "components": {
                 "hooks": true
+            }
+        },
+        {
+            "name": "web-design-skills",
+            "description": "网页设计技能——使用 HTML/CSS/JavaScript/React 构建和重新设计高质量的视觉网页作品。",
+            "version": "1.0.0",
+            "author": "ConardLi",
+            "license": "MIT",
+            "categories": [
+                "language"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/web-design-skills",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "web-design",
+                "frontend",
+                "html",
+                "css",
+                "react",
+                "网页设计",
+                "前端",
+                "视觉设计"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
             }
         }
     ]
