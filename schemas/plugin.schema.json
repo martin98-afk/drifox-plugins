@@ -12,6 +12,34 @@
       "pattern": "^[a-z][a-z0-9-]{1,63}$",
       "description": "插件名，小写 kebab-case，必须与插件目录名一致"
     },
+    "icon": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "description": "图标文件路径，相对 manifest（plugin.json）所在目录"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["light"],
+          "properties": {
+            "light": {
+              "type": "string",
+              "minLength": 1,
+              "description": "浅色主题图标路径，相对 manifest 所在目录"
+            },
+            "dark": {
+              "type": "string",
+              "minLength": 1,
+              "description": "深色主题图标路径，相对 manifest 所在目录"
+            }
+          },
+          "description": "按主题分别指定图标：{ \"light\": \"icon.svg\", \"dark\": \"icon_dark.svg\" }"
+        }
+      ],
+      "description": "插件图标。字符串=单一图标文件；对象=按浅色/深色主题区分"
+    },
     "description": {
       "type": "string",
       "minLength": 1,

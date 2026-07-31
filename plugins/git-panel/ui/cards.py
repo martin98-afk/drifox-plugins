@@ -15,8 +15,10 @@
 - 所有 Git 操作通过 subprocess 完成，在 QThread 中异步执行
 """
 
+import os
 import re
 import subprocess
+import sys
 import traceback
 from typing import Callable, List, Optional, Tuple
 
@@ -36,13 +38,15 @@ from PyQt5.QtWidgets import (
     QTextEdit,
     QVBoxLayout,
     QWidget,
-    QScrollArea as QWScrollArea,
 )
 from qfluentwidgets import (
+    Action,
     FluentIcon,
     FluentLabelBase,
     IconWidget,
+    InfoBar,
     PrimaryPushButton,
+    RoundMenu,
     ScrollArea,
     StrongBodyLabel,
     ToolButton,
@@ -51,32 +55,15 @@ from qfluentwidgets import (
 )
 from loguru import logger
 
-PLUGIN_NAME = "git-panel"
-GIT_TIMEOUT = 15
+from .diff_renderer import render_diff_html
+from .git_core import GitRepo, GitResult
 
-# ── 图标常量（避免拼写错误） ──
-_ICONS = {
-    "git": None,
-    "branch": None,
-    "refresh": FluentIcon.SYNC,
-    "close": FluentIcon.CLOSE,
-    "add": FluentIcon.ADD,
-    "delete": FluentIcon.DELETE,
-    "accept": FluentIcon.ACCEPT,
-    "cancel": FluentIcon.CANCEL,
-}
+PLUGIN_NAME = "git-panel"
 
 
 # ========================================================================
 # 1. 主题色辅助
 # ========================================================================
-
-
-def _resolve_colors(context: Optional[dict] = None) -> dict:
-    """从上下文解析颜色字典"""
-    if context and context.get("colors"):
-        return context["colors"]
-    return _fallback_colors()
 
 
 def _fallback_colors() -> dict:
@@ -137,162 +124,6 @@ def _make_style(color: str, font_family: str = "", font_size: int = 0, extra: st
 
 
 # ========================================================================
-# 2. Git 工具函数
-# ========================================================================
-
-
-def _run_git(cwd: str, *args: str) -> Tuple[str, str, int]:
-    """执行 git 命令，返回 (stdout, stderr, returncode)"""
-    try:
-        r = subprocess.run(
-            ["git", "-C", cwd, *args],
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=GIT_TIMEOUT,
-            creationflags=subprocess.CREATE_NO_WINDOW,
-        )
-        return r.stdout.strip(), r.stderr.strip(), r.returncode
-    except subprocess.TimeoutExpired:
-        return "", "timeout", -1
-    except FileNotFoundError:
-        return "", "git not found", -1
-    except Exception as e:
-        return "", str(e), -1
-
-
-def _is_git_repo(cwd: str) -> bool:
-    if not cwd:
-        return False
-    _, _, code = _run_git(cwd, "rev-parse", "--is-inside-work-tree")
-    return code == 0
-
-
-def _get_branch(cwd: str) -> str:
-    stdout, _, code = _run_git(cwd, "branch", "--show-current")
-    if code == 0 and stdout:
-        return stdout
-    stdout, _, _ = _run_git(cwd, "rev-parse", "--short", "HEAD")
-    if stdout:
-        return f"(detached @ {stdout})"
-    return ""
-
-
-def _get_ahead_behind(cwd: str) -> Tuple[int, int]:
-    stdout, _, _ = _run_git(cwd, "rev-list", "--left-right", "--count", "HEAD...@{u}")
-    if stdout:
-        parts = stdout.split()
-        if len(parts) == 2:
-            try:
-                return int(parts[0]), int(parts[1])
-            except ValueError:
-                pass
-    return 0, 0
-
-
-def _get_status(cwd: str) -> List[dict]:
-    """获取文件变更列表，返回 [{"path": str, "status": str, "staged": bool}, ...]
-
-    git status --porcelain 格式：XY PATH
-    - X = 暂存区状态，Y = 工作区状态
-    - "??" = 未跟踪文件（优先级最高，先处理避免重复）
-    """
-    stdout, _, code = _run_git(cwd, "status", "--porcelain", "-u")
-    if code != 0 or not stdout:
-        return []
-    result = []
-    for line in stdout.splitlines():
-        if not line.strip():
-            continue
-        x = line[0]
-        y = line[1]
-        path = line[3:].strip()
-
-        # 1. 未跟踪文件（??）
-        if x == "?" and y == "?":
-            result.append({"path": path, "status": "??", "staged": False})
-            continue
-
-        # 2. 暂存区变更（X != ' '）
-        if x != " ":
-            result.append({"path": path, "status": x, "staged": True})
-
-        # 3. 工作区变更（Y != ' '）
-        if y != " ":
-            result.append({"path": path, "status": y, "staged": False})
-    return result
-
-
-def _get_diff(cwd: str, path: str, staged: bool = False) -> str:
-    """获取单个文件的 diff"""
-    args = ["diff", "--cached", "--"] if staged else ["diff", "--"]
-    stdout, _, _ = _run_git(cwd, *args, path)
-    return stdout
-
-
-def _get_stashes(cwd: str) -> List[dict]:
-    """获取 stash 列表"""
-    stdout, _, code = _run_git(cwd, "stash", "list")
-    if code != 0 or not stdout:
-        return []
-    result = []
-    for line in stdout.splitlines():
-        parts = line.split(": ", 1)
-        ref = parts[0] if len(parts) > 0 else ""
-        msg = parts[1] if len(parts) > 1 else ""
-        # Extract index from ref like "stash@{0}"
-        idx = 0
-        m = re.search(r"stash@\{(\d+)\}", ref)
-        if m:
-            idx = int(m.group(1))
-        result.append({"ref": ref, "message": msg, "index": idx})
-    return result
-
-
-def _get_branches(cwd: str) -> List[dict]:
-    """获取分支列表"""
-    stdout, _, code = _run_git(cwd, "branch")
-    if code != 0 or not stdout:
-        return []
-    current_branch = _get_branch(cwd)
-    result = []
-    for line in stdout.splitlines():
-        is_current = line.startswith("*")
-        name = line[2:].strip()
-        result.append({"name": name, "current": is_current})
-    return result
-
-
-def _get_log(cwd: str, n: int = 30) -> List[dict]:
-    """获取提交历史"""
-    fmt = "--format=%h%x1f%an%x1f%ai%x1f%s%x1f%D"
-    stdout, _, code = _run_git(cwd, "log", f"-n{n}", fmt, "--all")
-    if code != 0 or not stdout:
-        return []
-    result = []
-    for line in stdout.splitlines():
-        parts = line.split("\x1f")
-        hash_ = parts[0] if len(parts) > 0 else ""
-        author = parts[1] if len(parts) > 1 else ""
-        date_raw = parts[2] if len(parts) > 2 else ""
-        subject = parts[3] if len(parts) > 3 else ""
-        refs = parts[4] if len(parts) > 4 else ""
-        # Format date to YYYY-MM-DD HH:MM
-        date = date_raw
-        if date_raw and len(date_raw) >= 10:
-            date = date_raw[:10]
-        result.append({
-            "hash": hash_,
-            "author": author,
-            "date": date,
-            "subject": subject,
-            "refs": refs,
-        })
-    return result
-
-
-# ========================================================================
 # 3. 异步 Worker
 # ========================================================================
 
@@ -328,8 +159,17 @@ _STATUS_MAP = {
     "R": ("🔁", "#62a0ea", "重命名"),
     "C": ("📋", "#62a0ea", "复制"),
     "??": ("❓", "#f0a030", "未跟踪"),
-    "U": ("⚠️", "#f0a030", "冲突"),
+    # 两位组合冲突码
+    "UU": ("⚠️", "#f0a030", "双方修改冲突"),
+    "AA": ("⚠️", "#f0a030", "双方新增冲突"),
+    "DD": ("⚠️", "#f0a030", "双方删除冲突"),
+    "DU": ("⚠️", "#f0a030", "删除/修改冲突"),
+    "UD": ("⚠️", "#f0a030", "修改/删除冲突"),
+    "AU": ("⚠️", "#f0a030", "新增/修改冲突"),
+    "UA": ("⚠️", "#f0a030", "修改/新增冲突"),
 }
+
+_CONFLICT_STATUS = {"UU", "AA", "DD", "DU", "UD", "AU", "UA"}
 
 
 class _FileRowWidget(QWidget):
@@ -377,8 +217,19 @@ class _FileRowWidget(QWidget):
         )
         ly.addWidget(path_lb)
 
-        # 暂存/取消暂存按钮
-        if self._info["staged"]:
+        # 暂存/取消暂存按钮（冲突文件用「解决冲突」菜单代替）
+        if self._info["status"] in _CONFLICT_STATUS:
+            conflict_btn = QPushButton("⚠️", self)
+            conflict_btn.setFixedSize(24, 22)
+            conflict_btn.setToolTip("解决冲突")
+            conflict_btn.setStyleSheet(
+                "QPushButton { background: rgba(240,160,48,0.15); border: none; border-radius: 4px; "
+                "font-size: 12px; padding: 0; }"
+                "QPushButton:hover { background: rgba(240,160,48,0.3); }"
+            )
+            conflict_btn.clicked.connect(self._on_conflict_menu)
+            ly.addWidget(conflict_btn)
+        elif self._info["staged"]:
             btn = TransparentToolButton(FluentIcon.CANCEL, self)
             btn.setFixedSize(22, 22)
             btn.setToolTip("取消暂存")
@@ -388,20 +239,22 @@ class _FileRowWidget(QWidget):
             btn.setFixedSize(22, 22)
             btn.setToolTip("暂存")
             btn.clicked.connect(self._on_stage)
-        ly.addWidget(btn)
+        if self._info["status"] not in _CONFLICT_STATUS:
+            ly.addWidget(btn)
 
-        # 放弃修改按钮
-        discard_btn = QPushButton("↩", self)
-        discard_btn.setFixedSize(22, 22)
-        discard_btn.setToolTip("放弃修改")
-        discard_btn.setStyleSheet(
-            "QPushButton { background: transparent; border: none; "
-            f"color: {_text_color(secondary=True)}; font-size: 12px; "
-            "padding: 0; }"
-            "QPushButton:hover { color: #f14c4c; }"
-        )
-        discard_btn.clicked.connect(self._on_discard)
-        ly.addWidget(discard_btn)
+        # 放弃修改按钮（冲突文件改用「解决冲突」菜单，避免误操作）
+        if self._info["status"] not in _CONFLICT_STATUS:
+            discard_btn = QPushButton("↩", self)
+            discard_btn.setFixedSize(22, 22)
+            discard_btn.setToolTip("放弃修改")
+            discard_btn.setStyleSheet(
+                "QPushButton { background: transparent; border: none; "
+                f"color: {_text_color(secondary=True)}; font-size: 12px; "
+                "padding: 0; }"
+                "QPushButton:hover { color: #f14c4c; }"
+            )
+            discard_btn.clicked.connect(self._on_discard)
+            ly.addWidget(discard_btn)
 
     def _get_repo_path(self) -> str:
         p = self
@@ -413,19 +266,33 @@ class _FileRowWidget(QWidget):
 
     def _on_stage(self):
         repo = self._get_repo_path()
-        if repo:
-            _, _, code = _run_git(repo, "add", self._info["path"])
-            if code == 0:
-                self.staged_changed.emit()
-            else:
-                logger.error(f"[git-panel] stage failed: {self._info['path']}")
+        if not repo:
+            return
+        self._run_row_async(
+            lambda: GitRepo(repo).add([self._info["path"]]),
+            self._on_stage_done,
+        )
+
+    def _on_stage_done(self, res: GitResult):
+        if res.ok:
+            self.staged_changed.emit()
+        else:
+            logger.error(f"[git-panel] stage failed: {self._info['path']}: {res.error_message}")
 
     def _on_unstage(self):
         repo = self._get_repo_path()
-        if repo:
-            _, _, code = _run_git(repo, "restore", "--staged", self._info["path"])
-            if code == 0:
-                self.staged_changed.emit()
+        if not repo:
+            return
+        self._run_row_async(
+            lambda: GitRepo(repo).restore_staged([self._info["path"]]),
+            self._on_unstage_done,
+        )
+
+    def _on_unstage_done(self, res: GitResult):
+        if res.ok:
+            self.staged_changed.emit()
+        else:
+            logger.error(f"[git-panel] unstage failed: {self._info['path']}: {res.error_message}")
 
     def _on_discard(self):
         path = self._info["path"]
@@ -433,18 +300,228 @@ class _FileRowWidget(QWidget):
         if not _ConfirmDialog.ask("确认放弃修改", f"确定要放弃 {path} 的所有修改吗？\n此操作不可恢复！", self):
             return
         repo = self._get_repo_path()
-        if repo:
-            # 未跟踪文件用 git clean，已跟踪文件用 git checkout
+        if not repo:
+            return
+        g = GitRepo(repo)
+        # 未跟踪文件用 git clean，已跟踪文件用 git checkout
+        if st == "??":
+            fn = lambda: g.clean_untracked([path])
+        else:
+            fn = lambda: g.checkout_discard([path])
+        self._run_row_async(fn, self._on_discard_done)
+
+    def _on_discard_done(self, res: GitResult):
+        path = self._info["path"]
+        st = self._info["status"]
+        if res.ok:
+            self.staged_changed.emit()
+        else:
+            logger.error(f"[git-panel] discard failed: {path} (status={st}): {res.error_message}")
+
+    def _run_row_async(self, fn, on_done):
+        """在后台线程执行行级 git 操作，不阻塞主线程"""
+        # 防抖：已有操作进行中则忽略重复触发
+        if getattr(self, "_row_thread", None) is not None and self._row_thread.isRunning():
+            logger.warning("[git-panel] 行操作进行中，忽略重复触发")
+            return
+        self._cleanup_row_thread()
+
+        def _safe_done(result):
+            # 行控件可能已删除（deleteLater 或 C++ 侧销毁），保护回调
+            if getattr(self, "_cleaning_up", False):
+                return
+            try:
+                on_done(result)
+            except RuntimeError:
+                logger.warning("[git-panel] 行控件已销毁，忽略异步回调")
+
+        w = _Worker(fn)
+        t = QThread(self)
+        w.moveToThread(t)
+        t.started.connect(w.run)
+        w.finished.connect(_safe_done)
+        w.error.connect(lambda err: logger.error(f"[git-panel] 行操作失败: {err}"))
+        w.finished.connect(t.quit)
+        w.error.connect(t.quit)
+        w.finished.connect(w.deleteLater)
+        w.error.connect(w.deleteLater)
+        t.finished.connect(t.deleteLater)
+        # 保存引用防止 _Worker 被 GC（无 parent，仅靠局部变量会被立即回收）
+        self._row_worker = w
+        self._row_thread = t
+        t.start()
+
+    def _cleanup_row_thread(self):
+        """清理行级线程引用（非阻塞，线程结束后由 finished 链自行销毁）"""
+        if getattr(self, "_row_thread", None) is not None:
+            try:
+                self._row_thread.quit()
+                self._row_thread.wait(0)
+            except RuntimeError:
+                pass
+            self._row_thread = None
+        self._row_worker = None
+
+    def deleteLater(self):
+        self._cleaning_up = True
+        self._cleanup_row_thread()
+        super().deleteLater()
+
+    # ── 冲突解决 ──
+
+    def _is_conflict(self) -> bool:
+        return self._info.get("status", "") in _CONFLICT_STATUS
+
+    def _on_conflict_menu(self):
+        """「解决冲突」按钮：弹出操作菜单"""
+        menu = self._build_conflict_menu()
+        if menu:
+            menu.exec(self.cursor().pos())
+
+    def _build_conflict_menu(self) -> Optional[RoundMenu]:
+        menu = RoundMenu(parent=self)
+
+        def _act(text: str, handler) -> Action:
+            a = Action(text)
+            a.triggered.connect(handler)
+            return a
+
+        menu.addAction(_act("使用 ours（当前分支）", lambda: self._run_conflict_op("ours")))
+        menu.addAction(_act("使用 theirs（合并来源）", lambda: self._run_conflict_op("theirs")))
+        menu.addSeparator()
+        menu.addAction(_act("标记为已解决", self._on_mark_resolved))
+        menu.addAction(_act("打开文件", self._open_file))
+        return menu
+
+    def _run_conflict_op(self, side: str):
+        repo = self._get_repo_path()
+        path = self._info["path"]
+        if not repo:
+            return
+        g = GitRepo(repo)
+        fn = (lambda: g.checkout_ours(path)) if side == "ours" else (lambda: g.checkout_theirs(path))
+        self._run_row_async(fn, self._on_conflict_done)
+
+    def _on_conflict_done(self, res: GitResult):
+        path = self._info["path"]
+        if res.ok:
+            self.staged_changed.emit()
+        else:
+            logger.error(f"[git-panel] 冲突解决失败: {path}: {res.error_message}")
+
+    def _on_mark_resolved(self):
+        repo = self._get_repo_path()
+        if not repo:
+            return
+        self._run_row_async(
+            lambda: GitRepo(repo).add([self._info["path"]]),
+            self._on_conflict_done,
+        )
+
+    def _open_file(self):
+        repo = self._get_repo_path()
+        path = self._info["path"]
+        if not repo:
+            return
+        full = os.path.join(repo, path)
+        try:
+            if sys.platform.startswith("win"):
+                os.startfile(full)  # noqa: S606
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", full])
+            else:
+                subprocess.Popen(["xdg-open", full])
+        except OSError as e:
+            logger.error(f"[git-panel] 打开文件失败: {e}")
+
+    # ── 右键菜单 ──
+
+    def contextMenuEvent(self, event):
+        menu = self._build_context_menu()
+        if menu:
+            menu.exec(event.globalPos())
+
+    def _build_context_menu(self) -> Optional[RoundMenu]:
+        menu = RoundMenu(parent=self)
+        st = self._info["status"]
+
+        def _act(text: str, handler) -> Action:
+            a = Action(text)
+            a.triggered.connect(handler)
+            return a
+
+        if self._is_conflict():
+            menu.addAction(_act("使用 ours（当前分支）", lambda: self._run_conflict_op("ours")))
+            menu.addAction(_act("使用 theirs（合并来源）", lambda: self._run_conflict_op("theirs")))
+            menu.addSeparator()
+            menu.addAction(_act("标记为已解决", self._on_mark_resolved))
+            menu.addAction(_act("打开文件", self._open_file))
+        else:
+            if self._info["staged"]:
+                menu.addAction(_act("取消暂存", self._on_unstage))
+            else:
+                menu.addAction(_act("暂存此文件", self._on_stage))
+            menu.addSeparator()
             if st == "??":
-                _, _, code = _run_git(repo, "clean", "-f", "--", path)
-            elif st == "D":
-                _, _, code = _run_git(repo, "checkout", "--", path)
+                menu.addAction(_act("放弃未跟踪文件", self._on_discard))
             else:
-                _, _, code = _run_git(repo, "checkout", "--", path)
-            if code == 0:
-                self.staged_changed.emit()
+                menu.addAction(_act("放弃修改", self._on_discard))
+
+        menu.addSeparator()
+        menu.addAction(_act("复制相对路径", self._copy_path))
+        menu.addAction(_act("添加到 .gitignore", self._add_to_gitignore))
+        menu.addAction(_act("在文件管理器中显示", self._reveal_in_file_manager))
+        return menu
+
+    def _copy_path(self):
+        from PyQt5.QtWidgets import QApplication
+
+        QApplication.clipboard().setText(self._info["path"])
+
+    def _add_to_gitignore(self):
+        repo = self._get_repo_path()
+        path = self._info["path"]
+        if not repo:
+            return
+        gi_path = os.path.join(repo, ".gitignore")
+        # 目录条目追加 /（gitignore 目录匹配约定）
+        entry = path
+        if os.path.isdir(os.path.join(repo, path)):
+            entry = path.rstrip("/") + "/"
+        if os.path.exists(gi_path) and not os.access(gi_path, os.W_OK):
+            logger.error(f"[git-panel] .gitignore 无写权限: {gi_path}")
+            return
+        try:
+            existing = ""
+            if os.path.exists(gi_path):
+                with open(gi_path, "r", encoding="utf-8") as f:
+                    existing = f.read()
+            lines = existing.splitlines()
+            if entry in lines:
+                return  # 已存在，去重
+            with open(gi_path, "a", encoding="utf-8") as f:
+                if existing and not existing.endswith("\n"):
+                    f.write("\n")
+                f.write(entry + "\n")
+            self.staged_changed.emit()  # .gitignore 变化 → 刷新
+        except OSError as e:
+            logger.error(f"[git-panel] 写入 .gitignore 失败: {e}")
+
+    def _reveal_in_file_manager(self):
+        repo = self._get_repo_path()
+        path = self._info["path"]
+        if not repo:
+            return
+        full = os.path.join(repo, path)
+        try:
+            if sys.platform.startswith("win"):
+                subprocess.Popen(["explorer", "/select,", full])
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", "-R", full])
             else:
-                logger.error(f"[git-panel] discard failed: {path} (status={st})")
+                subprocess.Popen(["xdg-open", os.path.dirname(full)])
+        except OSError as e:
+            logger.error(f"[git-panel] 打开文件管理器失败: {e}")
 
 
 # ========================================================================
@@ -507,40 +584,44 @@ class _DiffDialog(QDialog):
         ly.addLayout(btn_row)
 
     def _load_diff(self):
+        """异步加载 diff，避免大文件 diff 阻塞主线程"""
+        self._diff_area.setPlainText("加载中…")
+        w = _Worker(self._fetch_diff)
+        t = QThread(self)
+        w.moveToThread(t)
+        t.started.connect(w.run)
+        w.finished.connect(self._on_diff_loaded)
+        w.error.connect(self._on_diff_error)
+        w.finished.connect(t.quit)
+        w.error.connect(t.quit)
+        w.finished.connect(w.deleteLater)
+        w.error.connect(w.deleteLater)
+        t.finished.connect(t.deleteLater)
+        # 保存引用防止 _Worker 被 GC（无 parent，仅靠局部变量会被立即回收）
+        self._diff_worker = w
+        self._diff_thread = t
+        t.start()
+
+    def _fetch_diff(self) -> str:
+        return GitRepo(self._repo_path).diff(self._file_path, self._staged)
+
+    def _on_diff_loaded(self, stdout: str):
+        if not stdout:
+            self._diff_area.setPlainText("(无差异)")
+            return
         try:
-            if self._staged:
-                stdout, _, _ = _run_git(self._repo_path, "diff", "--cached", "--", self._file_path)
-            else:
-                stdout, _, _ = _run_git(self._repo_path, "diff", "--", self._file_path)
-
-            if not stdout:
-                self._diff_area.setPlainText("(无差异)")
-                return
-
-            # 对 diff 进行语法着色
-            colored = self._colorize_diff(stdout)
+            # 词级高亮渲染（difflib.SequenceMatcher）
+            colored = render_diff_html(
+                stdout,
+                base_color=_text_color(),
+                secondary_color=_text_color(secondary=True),
+            )
             self._diff_area.setHtml(colored)
         except Exception as e:
             self._diff_area.setPlainText(f"加载 diff 失败: {e}")
 
-    def _colorize_diff(self, diff_text: str) -> str:
-        """将 diff 文本转为带颜色的 HTML"""
-        lines = diff_text.splitlines()
-        html_parts = ['<pre style="margin:0; white-space:pre-wrap;">']
-        for line in lines:
-            escaped = line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            if line.startswith("+"):
-                html_parts.append(f'<span style="color:#50e3c2;">{escaped}</span>\n')
-            elif line.startswith("-"):
-                html_parts.append(f'<span style="color:#f14c4c;">{escaped}</span>\n')
-            elif line.startswith("@@"):
-                html_parts.append(f'<span style="color:#62a0ea;font-weight:bold;">{escaped}</span>\n')
-            elif line.startswith("diff --git") or line.startswith("index ") or line.startswith("---") or line.startswith("+++"):
-                html_parts.append(f'<span style="color:{_text_color(secondary=True)};">{escaped}</span>\n')
-            else:
-                html_parts.append(f'<span style="color:{_text_color()};">{escaped}</span>\n')
-        html_parts.append("</pre>")
-        return "".join(html_parts)
+    def _on_diff_error(self, err: str):
+        self._diff_area.setPlainText(f"加载 diff 失败: {err}")
 
 
 # ========================================================================
@@ -561,7 +642,7 @@ class _ConfirmDialog(QDialog):
         self._setup_ui(title, message)
 
     def _setup_ui(self, title: str, message: str):
-        colors = _resolve_colors()
+        colors = _fallback_colors()
         bg = colors.get("card_bg", "rgba(33,33,38,240)")
         if isinstance(bg, str):
             bg_rgba = bg
@@ -881,11 +962,15 @@ class _BranchRowWidget(QWidget):
 class _CommitRowWidget(QWidget):
     """单个提交行"""
 
+    detail_requested = pyqtSignal(str)  # hash
+
     def __init__(self, commit_info: dict, parent=None):
         super().__init__(parent)
         self._info = commit_info
         self.setFixedHeight(26)
         self.setObjectName("CommitRow")
+        self.setCursor(Qt.PointingHandCursor)
+        self.setToolTip("双击查看提交详情")
         self.setStyleSheet(
             "#CommitRow { background: transparent; }"
             "#CommitRow:hover { background: rgba(128,128,128,0.06); border-radius: 4px; }"
@@ -933,6 +1018,180 @@ class _CommitRowWidget(QWidget):
                 "font-size: 10px; padding: 1px 4px; border-radius: 3px;"
             )
             ly.addWidget(ref_lb)
+
+    def mouseDoubleClickEvent(self, event):
+        self.detail_requested.emit(self._info["hash"])
+        super().mouseDoubleClickEvent(event)
+
+
+# ========================================================================
+# 9.5 Commit 详情对话框
+# ========================================================================
+
+_COMMIT_DIFF_LIMIT = 5000
+
+
+class _CommitDetailDialog(QDialog):
+    """Commit 详情对话框：元信息条 + 完整 diff（词级高亮）"""
+
+    def __init__(self, repo_path: str, hash_: str, parent=None):
+        super().__init__(parent)
+        self._repo_path = repo_path
+        self._hash = hash_
+        self.setWindowTitle(f"Commit — {hash_[:8]}")
+        self.setMinimumSize(760, 520)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self._setup_ui()
+        self._load()
+
+    def _setup_ui(self):
+        ly = QVBoxLayout(self)
+        ly.setContentsMargins(16, 16, 16, 16)
+        ly.setSpacing(8)
+
+        # 元信息条
+        self._hash_lb = QLabel(f"🔗 {self._hash}", self)
+        self._hash_lb.setStyleSheet(
+            "background: transparent; color: #62a0ea; font-size: 13px; "
+            "font-family: 'Consolas', monospace;"
+        )
+        self._hash_lb.setCursor(Qt.PointingHandCursor)
+        self._hash_lb.setToolTip("点击复制完整 hash")
+        self._hash_lb.mousePressEvent = self._on_hash_click
+        ly.addWidget(self._hash_lb)
+
+        self._meta_lb = QLabel("加载中…", self)
+        self._meta_lb.setStyleSheet(
+            f"background: transparent; color: {_text_color(secondary=True)}; font-size: 12px;"
+        )
+        ly.addWidget(self._meta_lb)
+
+        self._msg_lb = QLabel("", self)
+        self._msg_lb.setWordWrap(True)
+        self._msg_lb.setStyleSheet(
+            f"background: transparent; color: {_text_color()}; font-size: 13px;"
+        )
+        ly.addWidget(self._msg_lb)
+
+        # Diff 区
+        self._diff_area = QTextEdit(self)
+        self._diff_area.setReadOnly(True)
+        self._diff_area.setStyleSheet(
+            "QTextEdit { background: rgba(0,0,0,0.2); border: 1px solid rgba(128,128,128,0.15); "
+            "border-radius: 6px; padding: 8px; font-family: 'Consolas', 'Courier New', monospace; "
+            f"color: {_text_color()}; font-size: 13px; }}"
+        )
+        ly.addWidget(self._diff_area, 1)
+
+        # 关闭按钮
+        btn_row = QHBoxLayout()
+        btn_row.addStretch(1)
+        close_btn = QPushButton("关闭", self)
+        close_btn.setFixedWidth(80)
+        close_btn.clicked.connect(self.accept)
+        btn_row.addWidget(close_btn)
+        ly.addLayout(btn_row)
+
+    def _on_hash_click(self, event):
+        from PyQt5.QtWidgets import QApplication
+
+        QApplication.clipboard().setText(self._hash)
+        self._hash_lb.setText(f"🔗 {self._hash}  ✅ 已复制")
+
+    def _load(self):
+        """异步加载 git show 输出"""
+        self._diff_area.setPlainText("加载中…")
+        w = _Worker(lambda: GitRepo(self._repo_path).show_commit(self._hash))
+        t = QThread(self)
+        w.moveToThread(t)
+        t.started.connect(w.run)
+        w.finished.connect(self._on_loaded)
+        w.error.connect(self._on_error)
+        w.finished.connect(t.quit)
+        w.error.connect(t.quit)
+        w.finished.connect(w.deleteLater)
+        w.error.connect(w.deleteLater)
+        t.finished.connect(t.deleteLater)
+        self._detail_worker = w
+        self._detail_thread = t
+        t.start()
+
+    @staticmethod
+    def _parse_show_output(text: str) -> dict:
+        """解析 git show --format=fuller --stat 输出
+
+        返回 {"hash", "author", "date", "message", "diff"}
+        """
+        result = {
+            "hash": "",
+            "author": "",
+            "date": "",
+            "message": "",
+            "diff": "",
+        }
+        lines = text.splitlines()
+        msg_lines: List[str] = []
+        diff_start = None
+
+        for i, line in enumerate(lines):
+            if line.startswith("commit ") and not result["hash"]:
+                result["hash"] = line.split()[1].strip()
+            elif line.startswith("Author:"):
+                result["author"] = line.split(":", 1)[1].strip()
+            elif line.startswith(("CommitDate:", "AuthorDate:", "Date:")) and not result["date"]:
+                result["date"] = line.split(":", 1)[1].strip()
+            elif line.startswith("diff --git"):
+                diff_start = i
+                break
+            elif line.startswith("    ") and not diff_start:
+                # 缩进的 message 正文
+                stripped = line[4:]
+                if stripped:
+                    msg_lines.append(stripped)
+
+        result["message"] = "\n".join(msg_lines)
+        if diff_start is not None:
+            result["diff"] = "\n".join(lines[diff_start:])
+        return result
+
+    def _on_loaded(self, res: GitResult):
+        if not res.ok:
+            self._diff_area.setPlainText(f"加载 commit 失败: {res.error_message}")
+            return
+        info = self._parse_show_output(res.stdout)
+        if info["hash"]:
+            self._hash_lb.setText(f"🔗 {info['hash']}")
+            self._hash = info["hash"]
+        meta = " · ".join(x for x in (info["author"], info["date"]) if x)
+        if meta:
+            self._meta_lb.setText(meta)
+        if info["message"]:
+            self._msg_lb.setText(info["message"])
+
+        diff = info["diff"] or res.stdout
+        total = len(diff.splitlines())
+        if total > _COMMIT_DIFF_LIMIT:
+            lines = diff.splitlines()[:_COMMIT_DIFF_LIMIT]
+            diff = "\n".join(lines) + "\n"
+            self._diff_area.setPlainText("")
+            self._diff_area.append(
+                f"⚠️ diff 过大，仅显示前 {_COMMIT_DIFF_LIMIT} 行（共 {total} 行）\n"
+            )
+        if not diff.strip():
+            self._diff_area.setPlainText("(无文件变更)")
+            return
+        try:
+            colored = render_diff_html(
+                diff,
+                base_color=_text_color(),
+                secondary_color=_text_color(secondary=True),
+            )
+            self._diff_area.setHtml(colored)
+        except Exception as e:
+            self._diff_area.setPlainText(f"渲染失败: {e}")
+
+    def _on_error(self, err: str):
+        self._diff_area.setPlainText(f"加载 commit 失败: {err}")
 
 
 # ========================================================================
@@ -1008,7 +1267,7 @@ class GitPanelCard(QWidget):
         border_c = self._cached_border
 
         # 卡片背景
-        colors = _resolve_colors()
+        colors = _fallback_colors()
         bg = colors.get("card_bg", "rgba(33,33,38,240)")
         if isinstance(bg, str):
             bg_rgba = bg
@@ -1071,6 +1330,9 @@ class GitPanelCard(QWidget):
             self._stash_btn.setStyleSheet(btn_base)
         if hasattr(self, '_new_branch_btn'):
             self._new_branch_btn.setStyleSheet(btn_base)
+        for name in ("_push_btn", "_pull_btn", "_fetch_btn"):
+            if hasattr(self, name):
+                getattr(self, name).setStyleSheet(btn_base)
 
         # 滚动条
         sh_hex = "rgba(255,255,255,0.12)" if isDarkTheme() else "rgba(0,0,0,0.12)"
@@ -1119,6 +1381,12 @@ class GitPanelCard(QWidget):
         content = QVBoxLayout(self._content_widget)
         content.setContentsMargins(16, 12, 16, 12)
         content.setSpacing(0)
+
+        # InfoBar 容器（操作结果提示，显示在卡片顶部）
+        self._info_bar_layout = QVBoxLayout()
+        self._info_bar_layout.setContentsMargins(0, 0, 0, 4)
+        self._info_bar_layout.setSpacing(4)
+        content.addLayout(self._info_bar_layout)
 
         self._build_header(content)
 
@@ -1169,6 +1437,33 @@ class GitPanelCard(QWidget):
             f"background: transparent; color: {self._cached_tcs}; font-size: 12px;"
         )
         hl.addWidget(self._status_lb)
+
+        # 同步按钮组：Push / Pull / Fetch
+        sync_widget = QWidget(self._header_widget)
+        sync_widget.setStyleSheet("background: transparent;")
+        sl = QHBoxLayout(sync_widget)
+        sl.setContentsMargins(0, 0, 0, 0)
+        sl.setSpacing(4)
+
+        self._push_btn = QPushButton("⬆ Push", sync_widget)
+        self._push_btn.setToolTip("推送本地提交到远程")
+        self._push_btn.setCursor(Qt.PointingHandCursor)
+        self._push_btn.clicked.connect(self._do_push)
+        sl.addWidget(self._push_btn)
+
+        self._pull_btn = QPushButton("⬇ Pull", sync_widget)
+        self._pull_btn.setToolTip("拉取远程更新")
+        self._pull_btn.setCursor(Qt.PointingHandCursor)
+        self._pull_btn.clicked.connect(self._do_pull)
+        sl.addWidget(self._pull_btn)
+
+        self._fetch_btn = QPushButton("🔄 Fetch", sync_widget)
+        self._fetch_btn.setToolTip("获取远程所有分支更新")
+        self._fetch_btn.setCursor(Qt.PointingHandCursor)
+        self._fetch_btn.clicked.connect(self._do_fetch)
+        sl.addWidget(self._fetch_btn)
+
+        hl.addWidget(sync_widget)
 
         # 刷新
         self._refresh_btn = ToolButton(FluentIcon.SYNC, self._header_widget)
@@ -1309,15 +1604,16 @@ class GitPanelCard(QWidget):
         repo = self._repo_path
         if not repo:
             return {"error": "未获取到项目路径"}
-        if not _is_git_repo(repo):
+        g = GitRepo(repo)
+        if not g.is_git_repo():
             return {"error": "当前项目不是 Git 仓库"}
 
-        branch = _get_branch(repo)
-        ahead, behind = _get_ahead_behind(repo)
-        status = _get_status(repo)
-        stashes = _get_stashes(repo)
-        branches = _get_branches(repo)
-        log = _get_log(repo)
+        branch = g.branch()
+        ahead, behind = g.ahead_behind()
+        status = g.status_items()
+        stashes = g.stash_list()
+        branches = g.branch_list()
+        log = g.log()
 
         return {
             "branch": branch,
@@ -1363,6 +1659,13 @@ class GitPanelCard(QWidget):
 
     def _render_content(self, data: dict):
         """渲染所有区块到内容区"""
+        # 断开旧行控件信号，避免回调进入即将销毁的对象（B2）
+        for row in self.findChildren(_FileRowWidget):
+            try:
+                row.staged_changed.disconnect()
+                row.diff_requested.disconnect()
+            except (TypeError, RuntimeError):
+                pass
         # 清空旧内容
         while self._content_layout.count():
             item = self._content_layout.takeAt(0)
@@ -1377,6 +1680,11 @@ class GitPanelCard(QWidget):
         if ahead or behind:
             bt += f"  ↑{ahead}  ↓{behind}"
         self._branch_lb.setText(bt)
+
+        # 同步按钮 tooltip 显示 ahead/behind
+        self._push_btn.setToolTip(f"推送本地提交到远程（本地领先 {ahead} 个提交）")
+        self._pull_btn.setToolTip(f"拉取远程更新（远程领先 {behind} 个提交）")
+        self._fetch_btn.setToolTip("获取远程所有分支更新（fetch --all --prune）")
 
         self._commit_input.setText("")
 
@@ -1510,6 +1818,7 @@ class GitPanelCard(QWidget):
         if log:
             for item in log:
                 row = _CommitRowWidget(item)
+                row.detail_requested.connect(self._on_commit_detail)
                 ll.addWidget(row)
         else:
             no_log = QLabel("  无提交记录", log_content)
@@ -1574,37 +1883,33 @@ class GitPanelCard(QWidget):
         """执行提交"""
         msg = self._commit_input.text().strip()
         if not msg:
-            self._status_lb.setText("提交信息不能为空")
-            QTimer.singleShot(3000, lambda: self._reset_status())
+            self._show_info_bar("info", "提交信息不能为空", "")
             return
         self._status_lb.setText("提交中…")
         self._run_git_async(
-            lambda: _run_git(self._repo_path, "commit", "-m", msg),
-            lambda: self._on_commit_done(),
+            lambda: GitRepo(self._repo_path).commit(msg),
+            lambda r: self._on_commit_done(r),
         )
 
     def _on_amend(self):
         """修改上次提交"""
         msg = self._commit_input.text().strip()
-        args = ["commit", "--amend", "--no-edit"]
-        if msg:
-            args = ["commit", "--amend", "-m", msg]
         if not _ConfirmDialog.ask("确认 Amend", "确定要修改上次提交吗？", self):
             return
         self._status_lb.setText("Amend 中…")
         self._run_git_async(
-            lambda: _run_git(self._repo_path, *args),
-            lambda: self._on_commit_done(),
+            lambda: GitRepo(self._repo_path).commit(msg, amend=True),
+            lambda r: self._on_commit_done(r),
         )
 
-    def _on_commit_done(self, result: Optional[Tuple[str, str, int]] = None):
-        if result:
-            stdout, stderr, code = result
-            if code == 0:
+    def _on_commit_done(self, result: Optional[GitResult] = None):
+        if result is not None:
+            if result.ok:
                 self._status_lb.setText("✅ 提交成功")
             else:
-                self._status_lb.setText(f"❌ 提交失败: {stderr[:50]}")
-                QTimer.singleShot(3000, lambda: self._reset_status())
+                self._status_lb.setText(f"❌ 提交失败: {result.stderr[:50]}")
+                logger.error(f"[git-panel] commit 失败: {result.error_message}")
+                QTimer.singleShot(3000, lambda: self._reset_status() if not self._is_loading else None)
                 return
         else:
             self._status_lb.setText("✅ 提交成功")
@@ -1618,7 +1923,7 @@ class GitPanelCard(QWidget):
             return
         self._status_lb.setText("Stash 中…")
         self._run_git_async(
-            lambda: _run_git(self._repo_path, "stash", "push", "-m", msg),
+            lambda: GitRepo(self._repo_path).stash_push(msg),
             lambda r: self._on_op_done("Stash 成功", r),
         )
 
@@ -1630,10 +1935,20 @@ class GitPanelCard(QWidget):
         elif action == "pop":
             if not _ConfirmDialog.ask("确认弹出 Stash", f"确定要弹出 {ref} 吗？\n此操作会应用并删除该 stash。", self):
                 return
+        idx = 0
+        m = re.search(r"stash@\{(\d+)\}", ref)
+        if m:
+            idx = int(m.group(1))
+        g = GitRepo(self._repo_path)
+        if action == "apply":
+            fn = lambda: g.stash_apply(idx)
+        elif action == "pop":
+            fn = lambda: g.stash_pop(idx)
+        else:
+            fn = lambda: g.stash_drop(idx)
         self._status_lb.setText(f"{action} {ref}…")
-        cmd = ["stash", action, ref]
         self._run_git_async(
-            lambda: _run_git(self._repo_path, *cmd),
+            fn,
             lambda r: self._on_op_done(f"{action.capitalize()} 成功", r),
         )
 
@@ -1641,7 +1956,7 @@ class GitPanelCard(QWidget):
         """切换分支"""
         self._status_lb.setText(f"切换到 {name}…")
         self._run_git_async(
-            lambda: _run_git(self._repo_path, "checkout", name),
+            lambda: GitRepo(self._repo_path).branch_checkout(name),
             lambda r: self._on_op_done(f"已切换到 {name}", r),
         )
 
@@ -1651,7 +1966,7 @@ class GitPanelCard(QWidget):
             return
         self._status_lb.setText(f"删除 {name}…")
         self._run_git_async(
-            lambda: _run_git(self._repo_path, "branch", "-d", name),
+            lambda: GitRepo(self._repo_path).branch_delete(name),
             lambda r: self._on_op_done(f"已删除 {name}", r),
         )
 
@@ -1663,7 +1978,7 @@ class GitPanelCard(QWidget):
         branch_name = name.strip()
         self._status_lb.setText(f"创建分支 {branch_name}…")
         self._run_git_async(
-            lambda: _run_git(self._repo_path, "checkout", "-b", branch_name),
+            lambda: GitRepo(self._repo_path).branch_create(branch_name),
             lambda r: self._on_op_done(f"已创建并切换到 {branch_name}", r),
         )
 
@@ -1671,7 +1986,7 @@ class GitPanelCard(QWidget):
         """全部暂存"""
         self._status_lb.setText("暂存中…")
         self._run_git_async(
-            lambda: _run_git(self._repo_path, "add", "-A"),
+            lambda: GitRepo(self._repo_path).add(["-A"]),
             lambda r: self._on_op_done("已暂存所有修改", r),
         )
 
@@ -1679,7 +1994,7 @@ class GitPanelCard(QWidget):
         """全部取消暂存"""
         self._status_lb.setText("取消暂存中…")
         self._run_git_async(
-            lambda: _run_git(self._repo_path, "restore", "--staged", "."),
+            lambda: GitRepo(self._repo_path).restore_staged(["."]),
             lambda r: self._on_op_done("已取消暂存所有修改", r),
         )
 
@@ -1689,7 +2004,7 @@ class GitPanelCard(QWidget):
             return
         self._status_lb.setText("放弃中…")
         self._run_git_async(
-            lambda: _run_git(self._repo_path, "checkout", "--", "."),
+            lambda: GitRepo(self._repo_path).checkout_discard(["."]),
             lambda r: self._on_op_done("已放弃所有修改", r),
         )
 
@@ -1698,18 +2013,104 @@ class GitPanelCard(QWidget):
         dialog = _DiffDialog(self._repo_path, path, staged, self)
         dialog.exec_()
 
-    def _on_op_done(self, msg: str, result: Optional[Tuple[str, str, int]] = None):
-        """操作完成后的公共处理，检查 git 返回码"""
-        if result:
-            _, stderr, code = result
-            if code != 0:
-                err_msg = stderr[:80] if stderr else "未知错误"
-                self._status_lb.setText(f"❌ 失败: {err_msg}")
-                QTimer.singleShot(4000, lambda: self._reset_status())
+    def _on_commit_detail(self, hash_: str):
+        """双击提交行：打开 Commit 详情对话框"""
+        if not self._repo_path:
+            return
+        dialog = _CommitDetailDialog(self._repo_path, hash_, self)
+        dialog.exec_()
+
+    def _do_push(self):
+        """推送本地提交到远程（无 upstream 时自动 --set-upstream）"""
+        if not self._repo_path:
+            return
+        if self._is_loading:
+            self._status_lb.setText("正在刷新，请稍候…")
+            QTimer.singleShot(2000, lambda: self._reset_status() if not self._is_loading else None)
+            return
+        self._set_sync_busy(True)
+        self._status_lb.setText("Push 中…")
+        self._run_git_async(
+            lambda: GitRepo(self._repo_path).push(),
+            lambda r: self._on_sync_done("Push 完成", r),
+        )
+
+    def _do_pull(self):
+        """拉取远程更新（rebase --autostash，失败回退普通 pull）"""
+        if not self._repo_path:
+            return
+        if self._is_loading:
+            self._status_lb.setText("正在刷新，请稍候…")
+            QTimer.singleShot(2000, lambda: self._reset_status() if not self._is_loading else None)
+            return
+        self._set_sync_busy(True)
+        self._status_lb.setText("Pull 中…")
+        self._run_git_async(
+            lambda: GitRepo(self._repo_path).pull_rebase(),
+            lambda r: self._on_sync_done("Pull 完成", r),
+        )
+
+    def _do_fetch(self):
+        """获取远程所有分支更新"""
+        if not self._repo_path:
+            return
+        if self._is_loading:
+            self._status_lb.setText("正在刷新，请稍候…")
+            QTimer.singleShot(2000, lambda: self._reset_status() if not self._is_loading else None)
+            return
+        self._set_sync_busy(True)
+        self._status_lb.setText("Fetch 中…")
+        self._run_git_async(
+            lambda: GitRepo(self._repo_path).fetch(),
+            lambda r: self._on_sync_done("Fetch 完成", r),
+        )
+
+    def _set_sync_busy(self, busy: bool):
+        """同步操作期间置灰三个按钮，防止重复触发"""
+        for b in (self._push_btn, self._pull_btn, self._fetch_btn):
+            b.setEnabled(not busy)
+
+    def _on_sync_done(self, msg: str, result: GitResult):
+        """同步操作完成：恢复按钮，统一走 _on_op_done 反馈并刷新"""
+        self._set_sync_busy(False)
+        self._on_op_done(msg, result)
+
+    def _on_op_done(self, msg: str, result: Optional[GitResult] = None):
+        """操作完成后的公共处理：InfoBar 反馈 + 检查 git 返回码"""
+        if result is not None:
+            if not result.ok:
+                self._show_info_bar("error", "操作失败", result.error_message)
+                logger.error(f"[git-panel] {msg} 失败: {result.error_message}")
+                self._status_lb.setText(f"❌ 失败: {result.stderr[:50]}")
+                QTimer.singleShot(4000, lambda: self._reset_status() if not self._is_loading else None)
                 return
+        self._show_info_bar("success", msg, "")
         self._status_lb.setText(f"✅ {msg}")
-        QTimer.singleShot(2000, lambda: self._reset_status())
+        QTimer.singleShot(2000, lambda: self._reset_status() if not self._is_loading else None)
         QTimer.singleShot(300, self._async_refresh)
+
+    # ── InfoBar 提示 ──
+
+    def _show_info_bar(self, kind: str, title: str, content: str = ""):
+        """在卡片顶部显示 InfoBar（success 3s / error 5s / info 不自动消失）"""
+        try:
+            if kind == "success":
+                bar = InfoBar.success(title, content, parent=self, duration=3000)
+            elif kind == "error":
+                bar = InfoBar.error(title, content, parent=self, duration=5000)
+            else:
+                bar = InfoBar.info(title, content, parent=self, duration=0)
+            self._info_bar_layout.addWidget(bar)
+            bar.closedSignal.connect(lambda: self._cleanup_info_bar(bar))
+        except Exception as e:
+            logger.error(f"[git-panel] InfoBar 显示失败: {e}")
+
+    def _cleanup_info_bar(self, bar):
+        try:
+            self._info_bar_layout.removeWidget(bar)
+            bar.deleteLater()
+        except RuntimeError:
+            pass
 
     def _reset_status(self):
         if not self._is_loading:
@@ -1726,7 +2127,7 @@ class GitPanelCard(QWidget):
         w.moveToThread(t)
         t.started.connect(w.run)
         w.finished.connect(on_done)
-        w.error.connect(self._on_refresh_error)
+        w.error.connect(self._on_worker_error)
         w.finished.connect(t.quit)
         w.error.connect(t.quit)
         w.finished.connect(w.deleteLater)
@@ -1735,6 +2136,14 @@ class GitPanelCard(QWidget):
         self._worker, self._worker_thread = w, t
         t.start()
 
+    def _on_worker_error(self, err: str):
+        """后台任务异常（非 GitResult 路径）：恢复同步按钮并反馈"""
+        self._set_sync_busy(False)
+        logger.error(f"[git-panel] 后台操作异常: {err}")
+        self._show_info_bar("error", "操作异常", err[:200])
+        self._status_lb.setText("❌ 操作异常")
+        QTimer.singleShot(4000, lambda: self._reset_status() if not self._is_loading else None)
+
     # ── 关闭 ──
 
     def _on_close(self):
@@ -1742,10 +2151,11 @@ class GitPanelCard(QWidget):
         self.closed.emit()
 
     def _cleanup_worker(self):
+        """清理卡片级后台线程引用（非阻塞，线程结束后由 finished 链自行销毁）"""
         if self._worker_thread is not None:
             try:
                 self._worker_thread.quit()
-                self._worker_thread.wait(500)
+                self._worker_thread.wait(0)
             except RuntimeError:
                 pass
             self._worker_thread = None
