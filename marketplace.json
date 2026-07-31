@@ -513,6 +513,41 @@
             }
         },
         {
+            "name": "omml-docx",
+            "description": "OMML 公式 docx 生成——用 Python 脚本生成规范 Word 数学公式并嵌入 .docx，附辅助函数库与结构验证，纯标准库零依赖。当用户需要在 Word 文档（专利交底书/论文/报告）插入数学公式或询问如何用 Python 写 Word 公式时使用。",
+            "version": "1.0.0",
+            "author": "马丁",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/omml-docx",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "omml",
+                "docx",
+                "word",
+                "math",
+                "formula",
+                "equation",
+                "公式",
+                "数学公式",
+                "专利交底书",
+                "OMML",
+                "document-generation"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            }
+        },
+        {
             "name": "plugin-manager",
             "description": "插件管理器 — 查看、启用、禁用、卸载已安装的插件",
             "version": "0.1.0",
