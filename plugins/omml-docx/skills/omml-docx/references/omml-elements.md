@@ -21,9 +21,19 @@
 ```xml
 <w:p>
   <w:pPr><w:jc w:val="center"/></w:pPr>
-  <m:oMathPara><m:oMath>…</m:oMath></m:oMathPara>
+  <m:oMath>…</m:oMath>                    <!-- ✅ 推荐：行内 oMath + 居中段落（渲染最稳） -->
 </w:p>
 ```
+```xml
+<w:p>
+  <w:pPr><w:jc w:val="center"/></w:pPr>
+  <m:oMathPara><m:oMath>…</m:oMath></m:oMathPara>   <!-- ⚠️ 仅正文非表格段落使用 -->
+</w:p>
+```
+
+> **兼容性警告（2026-07 专利交底书实测）**：`m:oMathPara` 块级公式放在**表格单元格**
+> （`<w:tc>`）中会渲染中断——症状：公式只显示前半段（"只剩一半"），从内部的
+> `<m:frac>`/`<m:nary>` 处丢失。**独立公式一律用「行内 `<m:oMath>` + 居中段落」**。
 
 ## 2. 基础 run
 
@@ -54,6 +64,9 @@
 <m:frac><m:num>分子</m:num><m:den>分母</m:den></m:frac>  <!-- ∂x/∂t -->
 ```
 - 分数内部可以嵌套任意表达式（m:frac 的 num/den 里再放 m:frac）。
+- **兼容性警告**：部分 Word/WPS 环境中 `<m:frac>` 内容可能不渲染（尤其位于
+  `<m:oMathPara>` 内）。**稳妥方案**：用斜线文本 `mtext("A") + mtext(" / ") + mtext("B")`。
+  在行内 `<m:oMath>` 中可渲染，但交付前务必用 Word/WPS 复核。
 
 ### 括号（定界符）d
 ```xml
@@ -79,6 +92,8 @@
 ```
 - 常用 chr：`∑`（求和）、`∫`（积分）、`∏`（连乘）、`⋃`（并集）。
 - 积分无上下限时 `<m:sub/>` `<m:sup/>` 留空。
+- **兼容性警告**：部分 Word/WPS 环境中 `<m:nary>` 的算子字符（∑/∫）会丢失、
+  只剩上下标。**稳妥方案**：`msub_sup(mtext("Σ"), mtext("j=1"), mtext("N_a"))` 文本 Σ + 上下标。
 
 ### 重音（hat / bar / tilde）acc
 ```xml
@@ -117,13 +132,17 @@
 ## 4. 指示函数与特殊记号（专利场景常用）
 
 ```xml
-<!-- 指示函数：粗体 I，条件用方括号定界 -->
-<m:r><m:rPr><m:sty m:val="p"/><m:b m:val="1"/></m:rPr><m:t>I</m:t></m:r>
+<!-- 指示函数：粗体 I，条件用方括号定界。加粗用 m:sty m:val="b"（OMML 无 m:b 元素！） -->
+<m:r><m:rPr><m:sty m:val="b"/></m:rPr><w:rPr><w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/></w:rPr><m:t>I</m:t></m:r>
 <m:d><m:dPr><m:begChr m:val="["/><m:endChr m:val="]"/></m:dPr><m:e>Viol=0</m:e></m:d>
 
 <!-- 范数：双竖线包住表达式 -->
 <m:t>‖</m:t>…<m:t>‖</m:t>
 ```
+
+> ⚠️ **不要用 `<m:b m:val="1"/>` 加粗数学 run**——`m:rPr` 中没有 `m:b` 元素，
+> 部分 Word/WPS 会因此渲染中断。正确写法是 `<m:sty m:val="b"/>`。
+> 数学 run 建议带 `<w:rPr><w:rFonts w:ascii="Cambria Math" .../></w:rPr>` 字体声明。
 
 ## 5. 文本拼接规则
 

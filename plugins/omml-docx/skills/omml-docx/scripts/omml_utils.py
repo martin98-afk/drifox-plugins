@@ -12,6 +12,12 @@
 * 行内公式 ``<m:oMath>`` 是 ``<w:p>`` 的**直接子元素**，与 ``<w:r>`` 平级——
   绝不能把 oMath 塞进 w:r 内部，否则 Word 打不开或公式不渲染。
 * 独立公式用 ``<m:oMathPara>`` 包裹 ``<m:oMath>``，整段居中显示。
+* **兼容性铁律（2026-07 专利交底书实测）**：
+  - 行内 ``<m:oMath>``（与 ``<w:r>`` 平级）渲染最稳；**独立公式也用「行内 oMath + 居中段落」**（``math_display`` 默认即此）。
+  - ``<m:oMathPara>`` 块级公式在**表格单元格**中会渲染中断——症状：公式只显示前半段（"只剩一半"），从 ``<m:frac>/<m:nary>`` 处丢失。
+  - ``<m:frac>``（分数）、``<m:nary>``（求和/积分）兼容性差：稳妥方案是「/ 斜线文本」与「文本 Σ + 上下标」。
+  - ``m:rPr`` 中**没有** ``<m:b>`` 元素——加粗必须用 ``<m:sty m:val="b"/>``（``<m:b>`` 会导致该数学 run 渲染中断）。
+  - 数学 run（``m:r``）内嵌 ``<w:rPr><w:rFonts w:ascii="Cambria Math" .../>`` 与 Word 原生公式一致。
 * docx 就是 zip 包：改 ``word/document.xml`` 后重新 zip 即可。
 
 典型用法
@@ -38,6 +44,10 @@ M = "http://schemas.openxmlformats.org/officeDocument/2006/math"
 def esc(s: str) -> str:
     """XML 文本转义（& < >；引号仅在属性里需要，文本节点不必转）。"""
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+#: 数学 run 的字体声明（Word 原生公式写法：m:r 内嵌 w:rPr 指定 Cambria Math）
+MATH_FONT = '<w:rPr><w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/></w:rPr>'
 
 
 # ---------------------------------------------------------------------------
@@ -91,14 +101,14 @@ def para_text(text: str, **kw) -> str:
 # OMML 基础元素
 # ---------------------------------------------------------------------------
 def mtext(s: str) -> str:
-    """数学 run（普通正体）：<m:r><m:rPr><m:sty m:val='p'/>...</m:rPr><m:t>…</m:t></m:r>"""
-    return (f'<m:r><m:rPr><m:sty m:val="p"/></m:rPr>'
+    """数学 run（普通正体）：<m:r><m:rPr><m:sty m:val='p'/>…</m:rPr><m:t>…</m:t></m:r>"""
+    return (f'<m:r><m:rPr><m:sty m:val="p"/></m:rPr>{MATH_FONT}'
             f'<m:t xml:space="preserve">{esc(s)}</m:t></m:r>')
 
 
 def mit(s: str) -> str:
     """数学 run（斜体，变量惯例）：<m:r><m:rPr><m:sty m:val='i'/><m:i m:val='1'/></m:rPr>…</m:r>"""
-    return (f'<m:r><m:rPr><m:sty m:val="i"/><m:i m:val="1"/></m:rPr>'
+    return (f'<m:r><m:rPr><m:sty m:val="i"/><m:i m:val="1"/></m:rPr>{MATH_FONT}'
             f'<m:t xml:space="preserve">{esc(s)}</m:t></m:r>')
 
 
@@ -119,7 +129,13 @@ def msub_sup(base: str, sub: str, sup: str) -> str:
 
 
 def mfrac(num: str, den: str) -> str:
-    """分数：<m:frac><m:num>分子</m:num><m:den>分母</m:den></m:frac>"""
+    """分数：<m:frac><m:num>分子</m:num><m:den>分母</m:den></m:frac>
+
+    兼容性注意（2026-07 实测）：<m:frac> 在部分 Word/WPS 环境中内容可能不渲染
+    （尤其位于 <m:oMathPara> 块级公式中时）。**稳妥方案**：用斜线文本替代——
+    ``mtext("|A|") + mtext(" / ") + mtext("|B|")``。
+    在行内 <m:oMath> 中可渲染，但交付前务必用 Word/WPS 复核。
+    """
     return f"<m:frac><m:num>{num}</m:num><m:den>{den}</m:den></m:frac>"
 
 
@@ -146,6 +162,15 @@ def mnary(operator: str, sub: str | None, sup: str | None, content: str,
     return f"<m:nary>{pr}{sub_x}{sup_x}<m:e>{content}</m:e></m:nary>"
 
 
+def mnary_safe(operator: str, sub: str, sup: str, content: str) -> str:
+    """兼容版求和/积分：文本算子 + 上下标（替代 <m:nary>）。
+
+    适用场景：目标环境对 <m:nary> 渲染不佳（算子字符丢失、只剩上下标）时使用。
+    例：Σ_{j=1}^{N_a} → msub_sup(mtext("Σ"), mtext("j=1"), mtext("N_a")) + content
+    """
+    return msub_sup(mtext(operator), mtext(sub), mtext(sup)) + content
+
+
 def mhat(var: str) -> str:
     """重音（hat / 顶帽）：<m:acc><m:accPr><m:chr m:val='̂'/></m:accPr><m:e>基</m:e></m:acc>
 
@@ -161,8 +186,12 @@ def mnorm_par(var: str) -> str:
 
 
 def I_chr() -> str:
-    """指示函数记号：粗体 I（𝟙 回退方案，部分字体不支持 U+1D7D9）。"""
-    return ('<m:r><m:rPr><m:sty m:val="p"/><m:b m:val="1"/></m:rPr>'
+    """指示函数记号：粗体 I。
+
+    注意：OMML 的 m:rPr 中**没有** <m:b> 元素——加粗必须用
+    <m:sty m:val="b"/>（<m:b> 在部分 Word/WPS 中会导致该数学 run 渲染中断）。
+    """
+    return (f'<m:r><m:rPr><m:sty m:val="b"/></m:rPr>{MATH_FONT}'
             '<m:t xml:space="preserve">I</m:t></m:r>')
 
 
@@ -174,12 +203,20 @@ def math_inline(math_xml: str) -> str:
     return f"<m:oMath>{math_xml}</m:oMath>"
 
 
-def math_display(math_xml: str, *, align: str = "center") -> str:
-    """独立公式段落（独占一行，默认居中）：
-    <w:p><m:oMathPara><m:oMath>…</m:oMath></m:oMathPara></w:p>
+def math_display(math_xml: str, *, align: str = "center", block: bool = False) -> str:
+    """独立公式段落（独占一行，默认居中）。
+
+    兼容性铁律：**默认（block=False）用行内 <m:oMath> + 居中段落**——
+    <m:oMathPara> 块级公式在**表格单元格**中会渲染中断（症状：公式只显示
+    前半段"只剩一半"，从 <m:frac>/<m:nary> 处丢失）。行内 oMath 渲染最稳。
+
+    block=True 时生成 <m:oMathPara>（仅当公式位于**正文非表格段落**且
+    已在目标 Word/WPS 确认渲染正常时使用）。
     """
-    body = f"<m:oMathPara><m:oMath>{math_xml}</m:oMath></m:oMathPara>"
-    return para(body, align=align)
+    if block:
+        body = f"<m:oMathPara><m:oMath>{math_xml}</m:oMath></m:oMathPara>"
+        return para(body, align=align)
+    return para(f"<m:oMath>{math_xml}</m:oMath>", align=align)
 
 
 def mixed_para(segments: list, **kw) -> str:

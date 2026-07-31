@@ -7,13 +7,17 @@
 ## 功能
 
 - **OMML 辅助函数库** `skills/omml-docx/scripts/omml_utils.py`
-  - 行内公式（`m:oMath` 与 `w:r` 平级混排）、独立公式（`m:oMathPara` 居中）
+  - 行内公式（`m:oMath` 与 `w:r` 平级混排）、独立公式（**行内 oMath 居中，兼容性最佳**；可选 `oMathPara`）
   - 下标/上标/上下标同时/分数/括号/求和 Σ/积分 ∫/重音 hat/范数/指示函数
   - 文本+公式混合段落、常用公式模板（Pareto 评分、通过判据、综合目标、技能匹配）
   - docx 打包：从零生成 或 复用母版（保留样式/图片/页眉）
   - **纯标准库，零第三方依赖**
+- **兼容性策略**（2026-07 实测沉淀）：
+  - `m:oMathPara` 块级公式在**表格单元格**中渲染中断（"只剩一半"）→ 一律用行内 oMath + 居中段落
+  - `m:frac`/`m:nary` 兼容性差 → 提供 `mnary_safe`，优先用「/ 斜线文本」「文本 Σ + 上下标」
+  - `m:rPr` 无 `m:b` 元素（加粗用 `m:sty m:val="b"`）；数学 run 自动带 Cambria Math 字体声明
 - **结构验证脚本** `skills/omml-docx/scripts/validate_omml.py`
-  - 15 项检查：zip 完整性、XML 良构、m 命名空间、公式数量、oMath 位置、各结构元素、xml:space、w:t/m:t 分离
+  - 17 项检查：zip 完整性、XML 良构、m 命名空间、公式数量、oMath 位置、oMathPara 表格兼容性、各结构元素、非法 m:b、Cambria Math 字体、xml:space、w:t/m:t 分离
 - **参考文档** `skills/omml-docx/references/`
   - `omml-elements.md` — OMML 元素逐项详解（含可复制 XML 片段）
   - `docx-packaging.md` — docx zip 结构与打包流水线（含图片嵌入、表格混合）
@@ -23,7 +27,7 @@
 ```bash
 cd skills/omml-docx/scripts
 python demo_build_docx.py              # 生成 demo_omml.docx（9 类公式示例）
-python validate_omml.py demo_omml.docx # 15 项结构验证
+python validate_omml.py demo_omml.docx # 17 项结构验证（含兼容性检查）
 ```
 
 在自己的脚本中使用：

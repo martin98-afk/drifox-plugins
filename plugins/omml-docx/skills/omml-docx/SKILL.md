@@ -12,8 +12,9 @@ description: "用 Python 脚本生成规范的 Word 数学公式（OMML / Office
 1. **docx 就是 zip 包**：`word/document.xml` 是正文。生成公式 = 往 document.xml 里写 `<m:oMath>`，再重新 zip。
 2. **命名空间**：公式用 `m` 前缀，命名空间 `http://schemas.openxmlformats.org/officeDocument/2006/math`。`w:document` 根元素**必须声明** `xmlns:m`，否则公式无法解析。
 3. **行内公式是 `<w:p>` 的直接子元素**：`<m:oMath>…</m:oMath>` 与 `<w:r>` 平级排列在 `<w:p>` 内。**绝不能把 `oMath` 塞进 `<w:r>` 内部**——Word 会打不开或公式不渲染。
-4. **独立公式**（独占一行、默认居中）：`<w:p><m:oMathPara><m:oMath>…</m:oMath></m:oMathPara></w:p>`。
-5. **文本节点分两套**：普通文本在 `<w:t>`（w 命名空间），公式文本在 `<m:t>`（m 命名空间），且 `<m:t>` 要带 `xml:space="preserve"` 保留空格。
+4. **独立公式**（独占一行、默认居中）：**优先用行内公式** `<w:p><w:jc w:val="center"/><m:oMath>…</m:oMath></w:p>`。`<m:oMathPara>` 块级公式**在表格单元格中会渲染中断**——症状：公式只显示前半段（"只剩一半"），从 `<m:frac>`/`<m:nary>` 处丢失（2026-07 实测）。仅在**正文非表格段落**且已确认渲染正常时才用 `oMathPara`。
+5. **兼容性三戒**（Word/WPS 实测）：① `<m:frac>` 分数、`<m:nary>` 求和/积分兼容性差——稳妥用「/ 斜线文本」「文本 Σ + 上下标」（`mnary_safe`）；② `m:rPr` 中**没有** `<m:b>` 元素，加粗必须用 `<m:sty m:val="b"/>`；③ 数学 run 应内嵌 `<w:rPr><w:rFonts w:ascii="Cambria Math" .../>`（与 Word 原生公式一致）。
+6. **文本节点分两套**：普通文本在 `<w:t>`（w 命名空间），公式文本在 `<m:t>`（m 命名空间），且 `<m:t>` 要带 `xml:space="preserve"` 保留空格。
 
 ## 快速开始
 
@@ -70,12 +71,13 @@ build_docx(body_xml, "out.docx", template_docx="母版.docx")
 | `msub(base, sub)` | 下标 `<m:sSub>` | `msub(mtext("x"), mtext("t"))` → x_t |
 | `msup(base, sup)` | 上标 `<m:sSup>` | `msup(mtext("a"), mtext("(k)"))` → a⁽ᵏ⁾ |
 | `msub_sup(base, sub, sup)` | 上下标 `<m:sSubSup>` | x_t^max |
-| `mfrac(num, den)` | 分数 `<m:frac>` | ∂x/∂t |
+| `mfrac(num, den)` | 分数 `<m:frac>` | ∂x/∂t（**兼容性差，优先用 `mtext("A")+mtext(" / ")+mtext("B")`**） |
 | `mdelim(open, content, close)` | 括号 `<m:d>` | `mdelim("(", a_k, ")")` |
-| `mnary(op, sub, sup, content, lim_loc=)` | 求和/积分 `<m:nary>` | Σ、∫、Π（**推荐用这个，比下标模拟的 Σ 更规范**） |
+| `mnary(op, sub, sup, content, lim_loc=)` | 求和/积分 `<m:nary>` | Σ、∫、Π（**兼容性差：算子字符可能丢失，优先用 `mnary_safe`**） |
+| `mnary_safe(op, sub, sup, content)` | 文本算子+上下标（兼容版） | `msub_sup(mtext("Σ"), mtext("j=1"), mtext("N_a")) + …` |
 | `mhat(var)` | 重音/顶帽 `<m:acc>` | x̂ |
 | `mnorm_par(var)` | 双竖线范数 | ‖r_t‖ |
-| `I_chr()` | 指示函数粗体 I | I[条件] |
+| `I_chr()` | 指示函数粗体 I（用 `m:sty b`，**不用非法的 `m:b`**） | I[条件] |
 
 ### 便捷组合器
 | 函数 | 说明 |
@@ -89,7 +91,7 @@ build_docx(body_xml, "out.docx", template_docx="母版.docx")
 | 函数 | 说明 |
 |------|------|
 | `math_inline(math_xml)` | `<m:oMath>`（**与 w:r 平级**，用于 mixed_para） |
-| `math_display(math_xml)` | 独立公式段落 `<m:oMathPara>`，默认居中 |
+| `math_display(math_xml, block=False)` | 独立公式段落，**默认行内 oMath 居中**（最稳）；`block=True` 才用 `<m:oMathPara>`（仅正文非表格） |
 | `mixed_para([('text',…),('math',…)])` | 文本+公式混合段落（最常用） |
 
 ### 常用公式模板（借鉴专利交底书案例）
@@ -125,7 +127,12 @@ build_docx(body_xml, "out.docx", template_docx="母版.docx")
 | m:t 未带 xml:space="preserve" | 公式内空格被吞（如 "a b" 变 "ab"） | m:t 加 `xml:space="preserve"` |
 | 特殊字符未转义（& < >） | XML 解析失败 | 文本一律过 `esc()`（库内已自动处理） |
 | 下标内容含运算符 | 显示错乱（如 t+1 整体是下标内容） | `msub(mtext("x"), mtext("t+1"))` —— 下标内容整个放 mtext 里 |
-| 求和用下标模拟 Σ | 上下限不随算子缩放（不规范） | 用 `mnary("∑", sub, sup, content)` 标准结构 |
+| **oMathPara 放在表格单元格** | **公式只显示前半段（从 frac/nary 处中断，"只剩一半"）** | **独立公式用行内 oMath + 居中段落（math_display 默认）；oMathPara 仅用于正文非表格** |
+| **mfrac 内容不渲染** | **分数部分整体消失（尤其 oMathPara 中）** | **用 `mtext("A") + mtext(" / ") + mtext("B")` 斜线文本** |
+| **mnary 算子丢失** | **∑/∫ 符号消失，只剩上下标** | **用 `mnary_safe`（文本 Σ + 上下标）** |
+| **m:rPr 里写 m:b 加粗** | **该数学 run 渲染中断/异常** | **加粗用 `<m:sty m:val="b"/>`（OMML 无 m:b 元素）** |
+| **数学 run 无字体声明** | **部分 Word/WPS 环境公式字体异常** | **m:r 内嵌 `<w:rPr><w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/></w:rPr>`（库内已自动）** |
+| 求和用下标模拟 Σ | 上下限不随算子缩放（不规范） | 用 `mnary("∑", …)` 标准结构；环境不兼容时用 `mnary_safe` |
 | Windows 终端中文乱码 | 只是显示问题 | 脚本本身 UTF-8 正确；PowerShell 里 `chcp 65001` 或重定向到文件查看 |
 | 直接改现有 docx 的 XML 字符串 | 极易破坏公式结构 | 走 build_docx（解压→替换→重打包），或从母版复用 |
 
@@ -144,7 +151,8 @@ build_docx(body_xml, "out.docx", template_docx="母版.docx")
 
 ## 验证清单（交付前必跑）
 
-- [ ] `python scripts/validate_omml.py <out.docx>` 全部 15 项 PASS
+- [ ] `python scripts/validate_omml.py <out.docx>` 全部 17 项 PASS（含 V10 非法 m:b 检测、V11 字体声明）
 - [ ] Word/WPS 实际打开，公式渲染正确（行内不串行、独立公式居中、上下标/分数/求和显示正常）
 - [ ] 含公式的段落中没有把 oMath 放进 w:r
+- [ ] 若文档含**表格**：确认表格单元格内**没有 oMathPara**（用行内 oMath）；独立公式在表格内也走行内 oMath
 - [ ] 若用了特殊 Unicode（如 ‖、̂、Σ、∫），确认目标字体支持

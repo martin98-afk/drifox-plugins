@@ -11,15 +11,18 @@
     V3  根元素声明了 m 命名空间
     V4  m:oMath 数量 >= 1（存在公式）
     V5  行内公式 m:oMath 是 w:p 的直接子元素（与 w:r 平级，未塞进 w:r 内部）
-    V6  m:oMathPara 独立公式存在
+    V6  兼容性：m:oMathPara 块级公式未置于表格单元格内（表格内会渲染中断"只剩一半"）
     V7  各类结构元素出现：sSub / sSup / sSubSup / frac / d / nary / acc
     V8  文本节点 m:t 均带 xml:space="preserve"
     V9  w:t 与 m:t 命名空间正确分离（公式文本不在 w:t 里）
+    V10 无非法 <m:b> 元素（m:rPr 无 m:b，加粗必须用 m:sty m:val="b"）
+    V11 数学 run 带 Cambria Math 字体声明（建议，与 Word 原生公式一致）
 
 退出码: 0 全部通过 / 1 有失败
 """
 from __future__ import annotations
 
+import re
 import sys
 import zipfile
 from pathlib import Path
@@ -91,9 +94,32 @@ def main() -> int:
                 inline_ok = False
     check("V5 行内公式为 w:p 直接子元素（未塞进 w:r）", inline_ok)
 
-    # V6 oMathPara 独立公式
+    # V6 兼容性：oMathPara 独立公式仅允许在非表格段落（表格内渲染中断）
     omps = list(root.iter(M + "oMathPara"))
-    check("V6 独立公式 (m:oMathPara) 存在", len(omps) >= 1, f"共 {len(omps)} 个")
+    if omps:
+        omp_bad = 0
+        for omp in omps:
+            # 向上查找祖先：是否位于 w:tbl 内
+            node = omp
+            in_tbl = False
+            while node is not None:
+                parent = None
+                for p in root.iter():
+                    if node in list(p):
+                        parent = p
+                        break
+                if parent is None:
+                    break
+                if parent.tag == W + "tbl":
+                    in_tbl = True
+                    break
+                node = parent
+            if in_tbl:
+                omp_bad += 1
+        check("V6 兼容性: oMathPara 未置于表格单元格内", omp_bad == 0,
+              f"{omp_bad}/{len(omps)} 个在表格内（会渲染中断）")
+    else:
+        check("V6 兼容性: 独立公式用行内 oMath 居中段落（推荐，无 oMathPara）", True)
 
     # V7 结构元素覆盖
     for tag, name in [("sSub", "下标 sSub"), ("sSup", "上标 sSup"),
@@ -117,6 +143,14 @@ def main() -> int:
     mts = list(root.iter(M + "t"))
     check("V9 w:t 与 m:t 分离", len(wts) >= 1 and len(mts) >= 1,
           f"w:t={len(wts)} 个 / m:t={len(mts)} 个")
+
+    # V10 非法 <m:b> 元素（m:rPr 中无 m:b；加粗用 m:sty m:val="b"）
+    bad_b = len(re.findall(r"<m:b[ >]", xml))
+    check("V10 无非法 <m:b> 元素（加粗用 m:sty b）", bad_b == 0, f"{bad_b} 处")
+
+    # V11 数学 run 字体声明（建议：与 Word 原生一致用 Cambria Math）
+    has_font = 'w:rFonts w:ascii="Cambria Math"' in xml
+    check("V11 数学 run 带 Cambria Math 字体声明（建议）", has_font)
 
     failed = [n for n, s in CHECKS if s == "FAIL"]
     print()
