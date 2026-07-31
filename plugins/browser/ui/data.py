@@ -85,8 +85,8 @@ def _get_conn() -> sqlite3.Connection:
 # ══════════════════════════════════════════════════════════
 
 
-def add_bookmark(url: str, title: str = "", folder: str = "") -> None:
-    """添加/更新收藏（url 为主键，upsert）"""
+def add_bookmark(url: str, title: str = "", folder: str = "") -> bool:
+    """添加/更新收藏（url 为主键，upsert），返回是否成功。"""
     _ensure_db()
     try:
         conn = _get_conn()
@@ -97,19 +97,23 @@ def add_bookmark(url: str, title: str = "", folder: str = "") -> None:
         )
         conn.commit()
         conn.close()
+        return True
     except Exception as e:
         logger.error(f"[browser] 添加收藏失败: {e}")
+        return False
 
 
-def remove_bookmark(url: str) -> None:
+def remove_bookmark(url: str) -> bool:
     _ensure_db()
     try:
         conn = _get_conn()
         conn.execute("DELETE FROM bookmarks WHERE url=?", (url,))
         conn.commit()
         conn.close()
+        return True
     except Exception as e:
         logger.error(f"[browser] 删除收藏失败: {e}")
+        return False
 
 
 def record_history(url: str, title: str = "") -> None:

@@ -12,19 +12,158 @@ from typing import List
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (
     QDialog,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QListWidget,
     QListWidgetItem,
     QPushButton,
+    QScrollArea,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
-from loguru import logger
-
 from .data import AsyncDataLoader, add_bookmark, remove_bookmark
-from .theme import dialog_style
+from .theme import dialog_style, scrollbar_style, theme_colors
+
+
+class BookmarkBar(QWidget):
+    """地址栏下方的动态收藏栏，空间不足时把剩余项目放入溢出面板。"""
+
+    open_url = pyqtSignal(str)
+
+    def __init__(self, owner, parent=None):
+        super().__init__(parent)
+        self._owner = owner
+        self._items: List[dict] = []
+        self._visible_buttons = []
+        self._overflow_items: List[dict] = []
+        self._layout = QHBoxLayout(self)
+        self._layout.setContentsMargins(8, 2, 8, 2)
+        self._layout.setSpacing(4)
+        self._more_btn = QToolButton(self)
+        self._more_btn.setText("»")
+        self._more_btn.setToolTip("更多收藏")
+        self._more_btn.clicked.connect(self._toggle_overflow)
+        self._overflow = self._build_overflow(owner)
+        self.setFixedHeight(34)
+        self.hide()
+
+    def _build_overflow(self, parent):
+        panel = QFrame(parent)
+        panel.setObjectName("bookmarkOverflow")
+        panel.setFixedSize(280, 300)
+        root = QVBoxLayout(panel)
+        root.setContentsMargins(6, 6, 6, 6)
+        scroll = QScrollArea(panel)
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        body = QWidget(scroll)
+        self._overflow_layout = QVBoxLayout(body)
+        self._overflow_layout.setContentsMargins(0, 0, 0, 0)
+        self._overflow_layout.setSpacing(2)
+        self._overflow_layout.addStretch(1)
+        scroll.setWidget(body)
+        root.addWidget(scroll)
+        self._overflow_scroll = scroll
+        panel.hide()
+        return panel
+
+    def set_items(self, items):
+        self._items = list(items)
+        self.setVisible(bool(self._items))
+        self._rebuild()
+
+    def apply_theme(self):
+        c = theme_colors(self._owner)
+        button = (
+            "QToolButton { border: none; border-radius: 6px; padding: 3px 8px;"
+            f" color: {c['text']}; background: transparent; text-align: left; }}"
+            "QToolButton:hover { background: rgba(128,128,128,0.18); }"
+        )
+        self.setStyleSheet(button)
+        self._overflow.setStyleSheet(
+            f"QFrame#bookmarkOverflow {{ background: {c['surface']}; border: 1px solid {c['border']}; border-radius: 8px; }}"
+            + button + scrollbar_style(self._owner)
+        )
+
+    def _clear_layout(self):
+        while self._layout.count():
+            item = self._layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None and widget is not self._more_btn:
+                widget.deleteLater()
+        self._visible_buttons.clear()
+
+    def _make_button(self, item, parent):
+        title = item.get("title") or item.get("url") or "收藏"
+        btn = QToolButton(parent)
+        btn.setText(title)
+        btn.setToolTip(f"{title}\n{item.get('url', '')}")
+        btn.setMaximumWidth(160)
+        btn.clicked.connect(lambda checked=False, url=item.get("url", ""): self._open(url))
+        return btn
+
+    def _rebuild(self):
+        self._clear_layout()
+        if not self._items:
+            self._overflow.hide()
+            return
+        available = max(80, self.width() - 30)
+        used = 0
+        visible, overflow = [], []
+        for item in self._items:
+            probe = self._make_button(item, self)
+            width = min(160, max(60, probe.sizeHint().width())) + self._layout.spacing()
+            if used + width <= available:
+                visible.append((item, probe))
+                used += width
+            else:
+                probe.deleteLater()
+                overflow.append(item)
+        for item, button in visible:
+            self._layout.addWidget(button)
+            self._visible_buttons.append(button)
+        self._overflow_items = overflow
+        self._layout.addStretch(1)
+        if overflow:
+            self._layout.addWidget(self._more_btn)
+            self._more_btn.show()
+        else:
+            self._more_btn.hide()
+            self._overflow.hide()
+        self._rebuild_overflow()
+        self.apply_theme()
+
+    def _rebuild_overflow(self):
+        while self._overflow_layout.count() > 1:
+            item = self._overflow_layout.takeAt(0)
+            if item.widget() is not None:
+                item.widget().deleteLater()
+        for bookmark in self._overflow_items:
+            self._overflow_layout.insertWidget(
+                self._overflow_layout.count() - 1,
+                self._make_button(bookmark, self._overflow),
+            )
+
+    def _toggle_overflow(self):
+        visible = not self._overflow.isVisible()
+        if visible:
+            anchor = self._more_btn.mapTo(self._owner, self._more_btn.rect().bottomRight())
+            x = max(8, anchor.x() - self._overflow.width())
+            self._overflow.move(x, anchor.y() + 4)
+            self._overflow.raise_()
+        self._overflow.setVisible(visible)
+
+    def _open(self, url):
+        if url:
+            self._overflow.hide()
+            self.open_url.emit(url)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._rebuild()
 
 
 class BookmarksPanel(QDialog):
@@ -76,7 +215,7 @@ class BookmarksPanel(QDialog):
         footer.addWidget(self._btn_close)
         root.addLayout(footer)
 
-        self.setStyleSheet(dialog_style(self._owner))
+        self.setStyleSheet(dialog_style(self._owner) + scrollbar_style(self._owner))
 
     # ── H2 修复：异步加载 ──
 
@@ -148,7 +287,7 @@ def show_bookmarks_panel(owner):
     """从浏览器卡片打开收藏面板（单例复用）"""
     if not hasattr(owner, "_bookmarks_panel") or owner._bookmarks_panel is None:
         owner._bookmarks_panel = BookmarksPanel(owner)
-    owner._bookmarks_panel.setStyleSheet(dialog_style(owner))
+    owner._bookmarks_panel.setStyleSheet(dialog_style(owner) + scrollbar_style(owner))
     owner._bookmarks_panel._reload()
     owner._bookmarks_panel.show()
     owner._bookmarks_panel.raise_()

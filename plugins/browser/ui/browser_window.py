@@ -21,6 +21,7 @@
 """
 
 from typing import List, Optional, Tuple
+from urllib.parse import urlparse
 
 from PyQt5.QtCore import QPoint, Qt, pyqtSignal
 from PyQt5.QtGui import QFont
@@ -35,7 +36,8 @@ from PyQt5.QtWidgets import (
 )
 
 from ._page_factory import create_page
-from .data import AsyncDataLoader, record_history
+from .bookmarks import BookmarkBar
+from .data import AsyncDataLoader, add_bookmark, record_history, remove_bookmark
 from .profile_manager import get_browser_profile, reset_profiles
 from .tab_widget import ChromeTabBar, MAX_ALIVE_TABS
 from .url_bar import UrlBar, is_blank_page, normalize_url
@@ -67,6 +69,7 @@ class BrowserWindowCard(QWidget):
         self._views = []  # [{view, url, title, placeholder}]
         # H2 修复：地址栏补全数据走异步加载，主线程读内存缓存
         self._suggestions_cache: List[Tuple[str, str]] = []
+        self._bookmarks_cache: List[dict] = []
 
         self._setup_ui()
         self._setup_shortcuts()
@@ -121,6 +124,11 @@ class BrowserWindowCard(QWidget):
         self._url_bar.set_completer_source(self._get_suggestions)
         tly.addWidget(self._url_bar, 1)
 
+        # 收藏星标
+        self._btn_bookmark = self._make_tool_btn("☆", "收藏当前网页")
+        self._btn_bookmark.clicked.connect(self._toggle_current_bookmark)
+        tly.addWidget(self._btn_bookmark)
+
         # 新标签按钮
         self._btn_new_tab = self._make_tool_btn("＋", "新建标签")
         self._btn_new_tab.clicked.connect(self._new_tab)
@@ -131,7 +139,16 @@ class BrowserWindowCard(QWidget):
         self._btn_menu.clicked.connect(self._toggle_menu)
         tly.addWidget(self._btn_menu)
 
+        self._btn_close = self._make_tool_btn("✕", "关闭浏览器")
+        self._btn_close.clicked.connect(self._close_card)
+        tly.addWidget(self._btn_close)
+
         root.addWidget(toolbar)
+
+        # ── 收藏栏（有收藏时显示）──
+        self._bookmark_bar = BookmarkBar(self, self)
+        self._bookmark_bar.open_url.connect(self._navigate_to_url)
+        root.addWidget(self._bookmark_bar)
 
         # ── 标签栏 ──
         tab_row = QWidget(self)
@@ -144,6 +161,7 @@ class BrowserWindowCard(QWidget):
         self._tab_bar.tabCloseRequested.connect(self._close_tab)
         self._tab_bar.new_tab_requested.connect(self._new_tab)
         self._tab_bar.close_others_requested.connect(self._close_others)
+        self._tab_bar.tabMoved.connect(self._on_tab_moved)
         trly.addWidget(self._tab_bar, 1)
 
         # 隐身标识（默认隐藏）
@@ -210,7 +228,7 @@ class BrowserWindowCard(QWidget):
 
         self._tab_bar.addTab("新标签页")
         self._tab_bar.setCurrentIndex(idx)
-        self._stack.setCurrentIndex(idx)
+        self._stack.setCurrentWidget(placeholder)
 
         if url:
             self._ensure_view(idx)
@@ -230,7 +248,7 @@ class BrowserWindowCard(QWidget):
         from PyQt5.QtWebEngineWidgets import QWebEngineView
 
         view = QWebEngineView()
-        view.setPage(create_page(view, get_browser_profile(), self._new_popup_page))
+        view.setPage(create_page(view, get_browser_profile(), self._new_popup_page, self._is_dark))
         entry["view"] = view
 
         # 替换占位
@@ -238,15 +256,15 @@ class BrowserWindowCard(QWidget):
         entry["placeholder"].deleteLater()
         entry["placeholder"] = None
         self._stack.insertWidget(idx, view)
-        self._stack.setCurrentIndex(idx)
+        self._stack.setCurrentWidget(view)
 
         # 信号连接
-        view.urlChanged.connect(lambda u, i=idx: self._on_url_changed(i, u))
-        view.titleChanged.connect(lambda t, i=idx: self._on_title_changed(i, t))
-        view.loadStarted.connect(lambda i=idx: self._on_load_started(i))
-        view.loadProgress.connect(lambda p, i=idx: self._on_load_progress(i, p))
-        view.loadFinished.connect(lambda ok, i=idx: self._on_load_finished(i, ok))
-        view.iconChanged.connect(lambda ic, i=idx: self._on_icon_changed(i, ic))
+        view.urlChanged.connect(lambda u, v=view: self._on_url_changed(v, u))
+        view.titleChanged.connect(lambda t, v=view: self._on_title_changed(v, t))
+        view.loadStarted.connect(lambda v=view: self._on_load_started(v))
+        view.loadProgress.connect(lambda p, v=view: self._on_load_progress(v, p))
+        view.loadFinished.connect(lambda ok, v=view: self._on_load_finished(v, ok))
+        view.iconChanged.connect(lambda ic, v=view: self._on_icon_changed(v, ic))
 
         # 下载托管（M2）
         from .downloads import attach_download_handler
@@ -254,7 +272,7 @@ class BrowserWindowCard(QWidget):
         attach_download_handler(view, self)
 
         # 历史记录（M2）：加载完成后记录，避免重复
-        view.loadFinished.connect(lambda ok, i=idx: self._on_page_loaded(i, ok))
+        view.loadFinished.connect(lambda ok, v=view: self._on_page_loaded(v, ok))
 
         target = entry["url"]
         if target:
@@ -299,37 +317,63 @@ class BrowserWindowCard(QWidget):
             if i != keep_idx:
                 self._close_tab(i)
 
+    def _on_tab_moved(self, from_idx: int, to_idx: int):
+        if from_idx == to_idx or not (0 <= from_idx < len(self._views)):
+            return
+        entry = self._views.pop(from_idx)
+        self._views.insert(to_idx, entry)
+        widget = entry.get("view") or entry.get("placeholder")
+        if widget is not None:
+            self._stack.setCurrentWidget(widget)
+        self._sync_url_bar(to_idx)
+        self._update_bookmark_state()
+        self._update_tab_buttons()
+
     def _on_tab_changed(self, idx: int):
         if 0 <= idx < len(self._views):
             entry = self._views[idx]
             if entry["view"] is None:
                 self._ensure_view(idx)
             else:
-                self._stack.setCurrentIndex(idx)
+                self._stack.setCurrentWidget(entry["view"])
                 # 激活标签恢复 Active，后台标签重新评估冻结
                 self._apply_tab_limits()
                 self._sync_url_bar(idx)
-                self._update_tab_buttons()
+            self._update_bookmark_state()
+            self._update_tab_buttons()
 
-    def _on_url_changed(self, idx: int, url):
+    def _index_for_view(self, view) -> int:
+        for idx, entry in enumerate(self._views):
+            if entry.get("view") is view:
+                return idx
+        return -1
+
+    def _on_url_changed(self, view, url):
+        idx = self._index_for_view(view)
         if idx < 0 or idx >= len(self._views):
             return
         self._views[idx]["url"] = url.toString()
         if idx == self._tab_bar.currentIndex():
             self._sync_url_bar(idx)
+            self._update_bookmark_state()
+            self._update_tab_buttons()
 
-    def _on_title_changed(self, idx: int, title: str):
+    def _on_title_changed(self, view, title: str):
+        idx = self._index_for_view(view)
         if idx < 0 or idx >= len(self._views):
             return
         if not title:
             title = self._views[idx].get("url") or "新标签页"
         self._views[idx]["title"] = title
+        if idx == self._tab_bar.currentIndex():
+            self._update_bookmark_state()
         loading = self._views[idx].get("loading", False)
         display = f"● {title}" if loading else title
         self._tab_bar.setTabText(idx, display)
         self._tab_bar.setTabToolTip(idx, self._views[idx].get("url", ""))
 
-    def _on_icon_changed(self, idx: int, icon):
+    def _on_icon_changed(self, view, icon):
+        idx = self._index_for_view(view)
         if idx < 0 or idx >= len(self._views):
             return
         try:
@@ -344,33 +388,38 @@ class BrowserWindowCard(QWidget):
 
     # ── 加载状态（80ms 合并）──
 
-    def _on_load_started(self, idx: int):
+    def _on_load_started(self, view):
+        idx = self._index_for_view(view)
         if idx < 0 or idx >= len(self._views):
             return
         self._views[idx]["loading"] = True
         self._set_status("加载中…")
         self._tab_bar.setTabText(idx, f"● {self._views[idx].get('title', '')}")
-        self._btn_reload.setVisible(False)
-        self._btn_stop.setVisible(True)
-        self._url_bar.set_loading(True, 5)
-        self._update_tab_buttons()
+        if idx == self._tab_bar.currentIndex():
+            self._btn_reload.setVisible(False)
+            self._btn_stop.setVisible(True)
+            self._url_bar.set_loading(True, 5)
+            self._update_tab_buttons()
 
-    def _on_load_progress(self, idx: int, progress: int):
+    def _on_load_progress(self, view, progress: int):
+        idx = self._index_for_view(view)
         if idx == self._tab_bar.currentIndex():
             self._url_bar.set_loading(True, progress)
 
-    def _on_load_finished(self, idx: int, ok: bool):
+    def _on_load_finished(self, view, ok: bool):
+        idx = self._index_for_view(view)
         if idx < 0 or idx >= len(self._views):
             return
         self._views[idx]["loading"] = False
-        self._btn_reload.setVisible(True)
-        self._btn_stop.setVisible(False)
-        self._url_bar.set_loading(False, 100 if ok else 0)
+        if idx == self._tab_bar.currentIndex():
+            self._btn_reload.setVisible(True)
+            self._btn_stop.setVisible(False)
+            self._url_bar.set_loading(False, 100 if ok else 0)
+            self._update_tab_buttons()
         self._set_status("完成" if ok else "加载失败")
         # 刷新标题（去掉 ● 前缀）
         title = self._views[idx].get("title", "")
         self._tab_bar.setTabText(idx, title)
-        self._update_tab_buttons()
 
     # ── 导航 ──
 
@@ -385,13 +434,15 @@ class BrowserWindowCard(QWidget):
 
     def _go_back(self):
         view = self._current_view()
-        if view and view.history().canGoBack():
+        if view:
             view.back()
+            view.setFocus()
 
     def _go_forward(self):
         view = self._current_view()
-        if view and view.history().canGoForward():
+        if view:
             view.forward()
+            view.setFocus()
 
     def _reload(self):
         view = self._current_view()
@@ -411,8 +462,14 @@ class BrowserWindowCard(QWidget):
 
     def _update_tab_buttons(self):
         view = self._current_view()
-        can_back = bool(view and view.history().canGoBack())
-        can_forward = bool(view and view.history().canGoForward())
+        can_back, can_forward = False, False
+        if view is not None:
+            try:
+                can_back = view.history().canGoBack()
+                can_forward = view.history().canGoForward()
+            except Exception:
+                # 历史状态未知时允许点击，由 back()/forward() 自行处理
+                can_back = can_forward = True
         self._btn_back.setEnabled(can_back)
         self._btn_forward.setEnabled(can_forward)
 
@@ -491,7 +548,7 @@ class BrowserWindowCard(QWidget):
             f"QToolButton:disabled {{ color: {secondary}; }}"
         )
         for button in (self._btn_back, self._btn_forward, self._btn_reload, self._btn_stop,
-                       self._btn_new_tab, self._btn_menu):
+                       self._btn_bookmark, self._btn_new_tab, self._btn_menu, self._btn_close):
             button.setStyleSheet(button_style)
 
         self._menu_panel.setStyleSheet(
@@ -503,6 +560,7 @@ class BrowserWindowCard(QWidget):
         )
         self._url_bar.apply_theme(text, surface, border)
         self._tab_bar.apply_theme(text, surface)
+        self._bookmark_bar.apply_theme()
         for entry in self._views:
             placeholder = entry.get("placeholder")
             if placeholder is not None:
@@ -585,8 +643,55 @@ class BrowserWindowCard(QWidget):
 
     # ── 数据接口 ──
 
-    def _on_page_loaded(self, idx: int, ok: bool):
+    def _current_bookmark_url(self) -> str:
+        view = self._current_view()
+        return view.url().toString() if view is not None else ""
+
+    def _update_bookmark_state(self):
+        url = self._current_bookmark_url()
+        valid = bool(url and not is_blank_page(url))
+        saved = valid and any(item.get("url") == url for item in self._bookmarks_cache)
+        self._btn_bookmark.setEnabled(valid)
+        self._btn_bookmark.setText("★" if saved else "☆")
+        self._btn_bookmark.setToolTip("取消收藏" if saved else "收藏当前网页")
+
+    def _toggle_current_bookmark(self):
+        url = self._current_bookmark_url()
+        if not url or is_blank_page(url):
+            return
+        existing = next((item for item in self._bookmarks_cache if item.get("url") == url), None)
+        if existing is not None:
+            if not remove_bookmark(url):
+                self._set_status("取消收藏失败")
+                return
+        else:
+            idx = self._tab_bar.currentIndex()
+            title = self._views[idx].get("title", "") if 0 <= idx < len(self._views) else ""
+            if not title or title == "新标签页":
+                title = urlparse(url).hostname or url
+            if not add_bookmark(url, title):
+                self._set_status("收藏失败")
+                return
+        self._refresh_bookmarks()
+        self._async_refresh_suggestions()
+
+    def _refresh_bookmarks(self):
+        self._loader.load("bookmarks", self._on_bookmarks_ready, limit=500)
+
+    def _on_bookmarks_ready(self, items):
+        self._bookmarks_cache = list(items)
+        self._bookmark_bar.set_items(self._bookmarks_cache)
+        self._update_bookmark_state()
+
+    def _close_card(self):
+        self._menu_panel.hide()
+        self._bookmark_bar._overflow.hide()
+        self.hide()
+        self.closed.emit()
+
+    def _on_page_loaded(self, view, ok: bool):
         """页面加载完成后记录历史（url + 标题）"""
+        idx = self._index_for_view(view)
         if not ok:
             return
         if idx < 0 or idx >= len(self._views):
@@ -629,8 +734,9 @@ class BrowserWindowCard(QWidget):
         self._url_bar.update_completer()
 
     def _refresh_panels(self):
-        """show_card 时触发异步补全刷新（H2 修复：不在主线程查询 SQLite）"""
+        """show_card 时异步刷新补全与收藏数据。"""
         self._async_refresh_suggestions()
+        self._refresh_bookmarks()
 
     def _set_status(self, text: str):
         self._status_lb.setText(text)

@@ -22,7 +22,7 @@ from PyQt5.QtWidgets import (
 from loguru import logger
 
 from .data import AsyncDataLoader, clear_history
-from .theme import dialog_style, theme_colors
+from .theme import dialog_style, scrollbar_style, theme_colors
 
 
 class HistoryPanel(QFrame):
@@ -79,6 +79,7 @@ class HistoryPanel(QFrame):
             f"QFrame#historyPanel {{ background: {colors['surface']}; border: 1px solid {colors['border']};"
             " border-radius: 8px; }}"
             + dialog_style(self._owner, include_line_edit=True)
+            + scrollbar_style(self._owner)
         )
 
     # ── H2 修复：异步加载 ──
@@ -176,6 +177,7 @@ def show_history_panel(owner):
         f"QFrame#historyPanel {{ background: {colors['surface']}; border: 1px solid {colors['border']};"
         " border-radius: 8px; }}"
         + dialog_style(owner, include_line_edit=True)
+        + scrollbar_style(owner)
     )
     owner._history_panel._reload()
     owner._history_panel.show()

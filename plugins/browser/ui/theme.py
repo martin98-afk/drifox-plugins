@@ -19,6 +19,7 @@ def theme_colors(owner=None) -> dict:
             pass
     colors = ctx.get("colors", {})
     return {
+        "is_dark": is_dark,
         "text": colors.get("text_primary") or ("rgba(255,255,255,0.90)" if is_dark else "rgba(0,0,0,0.85)"),
         "secondary": colors.get("text_secondary") or ("rgba(255,255,255,0.58)" if is_dark else "rgba(0,0,0,0.55)"),
         "border": colors.get("border") or "rgba(128,128,128,0.25)",
@@ -26,6 +27,23 @@ def theme_colors(owner=None) -> dict:
         "raised": colors.get("card") or ("#252525" if is_dark else "#f5f5f5"),
         "hover": "#333333" if is_dark else "#e8e8e8",
     }
+
+
+def scrollbar_style(owner=None) -> str:
+    """现代窄滚动条，供收藏、历史和下载列表复用。"""
+    c = theme_colors(owner)
+    return (
+        "QScrollBar:vertical { width: 10px; background: transparent; margin: 2px; }"
+        f"QScrollBar::handle:vertical {{ background: {c['border']}; min-height: 28px; border-radius: 4px; }}"
+        "QScrollBar::handle:vertical:hover { background: rgba(100,140,210,0.75); }"
+        "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
+        "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }"
+        "QScrollBar:horizontal { height: 10px; background: transparent; margin: 2px; }"
+        f"QScrollBar::handle:horizontal {{ background: {c['border']}; min-width: 28px; border-radius: 4px; }}"
+        "QScrollBar::handle:horizontal:hover { background: rgba(100,140,210,0.75); }"
+        "QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }"
+        "QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: transparent; }"
+    )
 
 
 def dialog_style(owner=None, include_line_edit=False) -> str:

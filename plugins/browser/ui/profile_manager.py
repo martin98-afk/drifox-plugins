@@ -34,6 +34,13 @@ def _ensure_dirs() -> None:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
+_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+)
+_ACCEPT_LANG = "zh-CN,zh;q=0.9,en;q=0.8"
+
+
 def get_browser_profile():
     """获取浏览器持久 Profile（单例，延迟初始化）
 
@@ -58,8 +65,10 @@ def get_browser_profile():
     profile.setCachePath(str(CACHE_DIR))
     profile.setPersistentCookiesPolicy(QWebEngineProfile.ForcePersistentCookies)
     profile.setHttpCacheType(QWebEngineProfile.DiskHttpCache)
-    profile.setHttpCacheMaximumSize(256 * 1024 * 1024)  # 256MB 上限
+    profile.setHttpCacheMaximumSize(256 * 1024 * 1024)
     profile.setDownloadPath(str(DOWNLOAD_DIR))
+    profile.setHttpUserAgent(_UA)
+    profile.setHttpAcceptLanguage(_ACCEPT_LANG)
 
     _browser_profile = profile
     return profile
@@ -78,10 +87,12 @@ def get_incognito_profile():
     from PyQt5.QtWebEngineWidgets import QWebEngineProfile
 
     profile = QWebEngineProfile()  # 匿名 → OTR，无 storageName
-    # OTR 三件套：禁持久 cookies + 内存缓存 + 禁用持久化（兜底 NoCache）
+    # OTR 三件套：禁持久 cookies + 内存缓存
     profile.setPersistentCookiesPolicy(QWebEngineProfile.NoPersistentCookies)
     profile.setHttpCacheType(QWebEngineProfile.MemoryHttpCache)
     profile.setDownloadPath(str(DOWNLOAD_DIR))
+    profile.setHttpUserAgent(_UA)
+    profile.setHttpAcceptLanguage(_ACCEPT_LANG)
     return profile
 
 

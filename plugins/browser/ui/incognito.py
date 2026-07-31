@@ -54,6 +54,7 @@ class IncognitoWindow(QMainWindow):
         # 隐身横幅
         banner = QLabel("🕶 您已进入隐身模式 — 不会保存浏览历史、Cookie、表单数据", central)
         colors = theme_colors()
+        self._is_dark = colors["is_dark"]
         banner.setStyleSheet(
             "background: #6f42c1; color: #ffffff; padding: 6px 12px; font-size: 13px;"
         )
@@ -105,7 +106,7 @@ class IncognitoWindow(QMainWindow):
 
         view = QWebEngineView()
         # N2 修复：统一通过 _page_factory.create_page() 创建（共享 browser_window）
-        view.setPage(create_page(view, self._profile, self._new_popup_page))
+        view.setPage(create_page(view, self._profile, self._new_popup_page, self._is_dark))
 
         idx = len(self._views)
         self._views.append({"view": view, "url": url, "title": "新标签页"})

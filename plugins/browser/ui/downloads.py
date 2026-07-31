@@ -26,8 +26,8 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-from .data import AsyncDataLoader, query_downloads, update_download_state, upsert_download
-from .theme import dialog_style, theme_colors
+from .data import AsyncDataLoader, update_download_state, upsert_download
+from .theme import dialog_style, scrollbar_style, theme_colors
 
 # M1 修复：用 dict 存 profile → partial 引用，便于热重载时精确 disconnect
 _HANDLED_PROFILES: dict = {}
@@ -141,7 +141,7 @@ class DownloadsPanel(QDialog):
         self._list = QListWidget(self)
         root.addWidget(self._list, 1)
 
-        self.setStyleSheet(dialog_style(self._owner))
+        self.setStyleSheet(dialog_style(self._owner) + scrollbar_style(self._owner))
 
     def _reload(self):
         """H2 修复：异步加载下载列表（主线程不阻塞）"""
@@ -254,7 +254,7 @@ def show_downloads_panel(owner):
     """从浏览器卡片打开下载面板（单例复用）"""
     if not hasattr(owner, "_downloads_panel") or owner._downloads_panel is None:
         owner._downloads_panel = DownloadsPanel(owner)
-    owner._downloads_panel.setStyleSheet(dialog_style(owner))
+    owner._downloads_panel.setStyleSheet(dialog_style(owner) + scrollbar_style(owner))
     owner._downloads_panel._reload()
     owner._downloads_panel.show()
     owner._downloads_panel.raise_()
