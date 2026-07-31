@@ -56,6 +56,37 @@
             }
         },
         {
+            "name": "browser",
+            "description": "内置浏览器 — 一比一还原 Chrome 体验的多标签网页浏览器（标签页/收藏/历史/下载/DevTools/隐身）。",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/browser",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true,
+                "ui": true
+            },
+            "keywords": [
+                "drifox",
+                "browser",
+                "web",
+                "chrome",
+                "tab",
+                "devtools"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            }
+        },
+        {
             "name": "code-reviewer",
             "description": "自动化代码审查 — 基于 checklist 的 PR 审查、代码质量评分、审查报告生成，提升代码质量保障效率。",
             "version": "1.0.0",
