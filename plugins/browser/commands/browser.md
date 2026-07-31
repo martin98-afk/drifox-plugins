@@ -1,0 +1,27 @@
+---
+description: 打开内置浏览器（可选传入网址直接导航）
+type: function
+parameters:
+  - name: "<url>"
+    description: "要打开的网址（可选，如 localhost:8080 / example.com）"
+    param_type: positional
+shortcut: Ctrl+Shift+B
+---
+
+# /browser — 打开 DriFox 内置浏览器
+
+打开内置浏览器浮动卡片。可传入 URL 直接导航：
+
+- `/browser` — 打开浏览器（若已打开则聚焦）
+- `/browser localhost:8080` — 打开并导航到 http://localhost:8080
+- `/browser example.com` — 打开并导航到 https://example.com
+- `/browser 搜索词` — 打开并搜索该词
+
+## 功能
+
+- Chrome 风格多标签浏览（Ctrl+T 新建 / Ctrl+W 关闭 / Ctrl+Tab 切换）
+- 地址栏（Ctrl+L 聚焦），历史/收藏自动补全
+- 收藏（Ctrl+D）、历史（Ctrl+H）、下载管理
+- DevTools（F12 / /browser-devtools）、隐身窗口（Ctrl+Shift+N / /browser-incognito）
+
+> 这是 `type: function` 命令：由 Python 处理器直接执行，不经过 AI。

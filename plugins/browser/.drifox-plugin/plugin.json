@@ -1,0 +1,18 @@
+{
+    "name": "browser",
+    "description": "内置浏览器 — 一比一还原 Chrome 体验的多标签网页浏览器（标签页/收藏/历史/下载/DevTools/隐身）。",
+    "version": "1.0.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": ["drifox", "browser", "web", "chrome", "tab", "devtools"],
+    "components": {
+        "commands": true,
+        "ui": true
+    }
+}
