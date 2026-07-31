@@ -1,0 +1,20 @@
+{
+    "name": "knowledge-base-skills",
+    "description": "本地知识库检索技能——面向本地知识库目录的分层检索和问答助手，支持 Markdown/PDF/Excel 渐进式检索。",
+    "version": "1.0.0",
+    "author": {
+        "name": "ConardLi"
+    },
+    "license": "MIT",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "knowledge-base", "retrieval", "pdf", "excel",
+        "知识库", "检索", "RAG"
+    ],
+    "components": {
+        "skills": true
+    }
+}

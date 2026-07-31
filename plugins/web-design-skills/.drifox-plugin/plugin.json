@@ -1,0 +1,20 @@
+{
+    "name": "web-design-skills",
+    "description": "网页设计技能——使用 HTML/CSS/JavaScript/React 构建和重新设计高质量的视觉网页作品。",
+    "version": "1.0.0",
+    "author": {
+        "name": "ConardLi"
+    },
+    "license": "MIT",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "web-design", "frontend", "html", "css", "react",
+        "网页设计", "前端", "视觉设计"
+    ],
+    "components": {
+        "skills": true
+    }
+}

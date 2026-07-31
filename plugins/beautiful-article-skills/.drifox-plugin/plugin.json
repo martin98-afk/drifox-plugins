@@ -1,0 +1,20 @@
+{
+    "name": "beautiful-article-skills",
+    "description": "精美文章技能——将任意素材（URL/PDF/DOCX/Markdown/文本/截图）编辑设计成美丽的单文件 HTML 网页文章。",
+    "version": "1.0.0",
+    "author": {
+        "name": "ConardLi"
+    },
+    "license": "MIT",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "article", "editorial", "html", "reacticle",
+        "文章", "编辑", "排版", "网页文章"
+    ],
+    "components": {
+        "skills": true
+    }
+}
