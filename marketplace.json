@@ -544,6 +544,42 @@
             }
         },
         {
+            "name": "nuwa-skill",
+            "description": "女娲·Skill造人术——输入人名自动深度调研并提炼出可运行的人物思维Skill，附14个已蒸馏人物视角。",
+            "version": "1.0.0",
+            "author": "Huashu (花叔)",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/nuwa-skill",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "nuwa",
+                "skill",
+                "perspective",
+                "distill",
+                "mind-model",
+                "女娲",
+                "造人",
+                "蒸馏",
+                "思维模型",
+                "人物视角",
+                "心智模型"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/alchaincyf/nuwa-skill"
+        },
+        {
             "name": "omml-docx",
             "description": "OMML 公式 docx 生成——用 Python 脚本生成规范 Word 数学公式并嵌入 .docx，附辅助函数库与结构验证，纯标准库零依赖。当用户需要在 Word 文档（专利交底书/论文/报告）插入数学公式或询问如何用 Python 写 Word 公式时使用。",
             "version": "1.0.0",

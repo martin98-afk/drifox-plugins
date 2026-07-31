@@ -12,6 +12,7 @@
 | [`example-plugin`](example-plugin/) | 最小参考实现，定义官方插件结构与全部 8 类组件约定 | 全部 8 类 | 1.0.0 |
 | [`frontend-pro`](frontend-pro/) | 前端开发增强 — 组件规范、a11y 检查、性能最佳实践 | commands + skills | 1.0.0 |
 | [`git-workflow`](git-workflow/) | Git 工作流增强 — 分支检查、提交规范、PR 模板生成 | commands + hooks + skills | 1.0.0 |
+| [`nuwa-skill`](nuwa-skill/) | 女娲·Skill造人术 — 蒸馏任何人思维框架，附 14 个人物视角 Skill | skills | 1.0.0 |
 | [`plugin-manager`](plugin-manager/) | 插件管理面板 — 在 DriFox 窗口内启 / 禁 / 卸已安装插件 | ui | 0.1.0 |
 | [`plugin-marketplace`](plugin-marketplace/) | 官方插件市场 — 浏览 / 安装 / 管理 drifox-plugins 全部插件 | ui | 0.1.0 |
 | [`python-pro`](python-pro/) | Python 开发增强 — PEP 8 / 类型标注 / lint 自动检查 | skills + hooks | 1.0.0 |
@@ -27,6 +28,7 @@
 | example-plugin | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | frontend-pro | ✅ | — | ✅ | — | — | — | — | — |
 | git-workflow | ✅ | — | ✅ | — | ✅ | — | — | — |
+| nuwa-skill | — | — | ✅ | — | — | — | — | — |
 | plugin-manager | — | — | — | — | — | — | — | ✅ |
 | plugin-marketplace | — | — | — | — | — | — | — | ✅ |
 | python-pro | — | — | ✅ | — | ✅ | — | — | — |

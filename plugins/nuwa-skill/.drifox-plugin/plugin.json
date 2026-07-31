@@ -1,0 +1,22 @@
+{
+    "name": "nuwa-skill",
+    "description": "女娲·Skill造人术——输入人名自动深度调研并提炼出可运行的人物思维Skill，附14个已蒸馏人物视角。",
+    "version": "1.0.0",
+    "author": {
+        "name": "Huashu (花叔)"
+    },
+    "homepage": "https://github.com/alchaincyf/nuwa-skill",
+    "repository": "https://github.com/alchaincyf/nuwa-skill",
+    "license": "MIT",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "nuwa", "skill", "perspective", "distill", "mind-model",
+        "女娲", "造人", "蒸馏", "思维模型", "人物视角", "心智模型"
+    ],
+    "components": {
+        "skills": true
+    }
+}
