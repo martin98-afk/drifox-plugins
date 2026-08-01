@@ -20,11 +20,12 @@
 - 地址栏进度合并：url_bar 内置 QTimer 合并 80ms 内连续进度更新（无需主卡片介入）
 """
 
+import os
 from typing import List, Optional, Tuple
 from urllib.parse import urlparse
 
-from PyQt5.QtCore import QPoint, Qt, pyqtSignal
-from PyQt5.QtGui import QFont
+from PyQt5.QtCore import QPoint, QSize, Qt, pyqtSignal
+from PyQt5.QtGui import QFont, QIcon
 from PyQt5.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -41,6 +42,14 @@ from .data import AsyncDataLoader, add_bookmark, record_history, remove_bookmark
 from .profile_manager import get_browser_profile, reset_profiles
 from .tab_widget import ChromeTabBar, MAX_ALIVE_TABS
 from .url_bar import UrlBar, is_blank_page, normalize_url
+
+# 图标资源目录（ui/assets/）
+_ICON_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+
+
+def _icon_path(name: str, is_dark: bool) -> str:
+    """返回 assets 下图标路径：深色主题用 _dark 后缀版本"""
+    return os.path.join(_ICON_DIR, f"{name}_dark.svg" if is_dark else f"{name}.svg")
 
 # 模块级单例引用（供 function 命令 handler 访问，热重载时更新）
 _CURRENT_CARD: Optional["BrowserWindowCard"] = None
@@ -139,6 +148,13 @@ class BrowserWindowCard(QWidget):
         self._btn_menu.clicked.connect(self._toggle_menu)
         tly.addWidget(self._btn_menu)
 
+        # 在外部浏览器打开（系统默认浏览器，绕过内置浏览器重定向）
+        self._btn_external = self._make_icon_btn(
+            QIcon(_icon_path("external_open", self._is_dark)), "在外部浏览器打开"
+        )
+        self._btn_external.clicked.connect(self._open_in_system_browser)
+        tly.addWidget(self._btn_external)
+
         self._btn_close = self._make_tool_btn("✕", "关闭浏览器")
         self._btn_close.clicked.connect(self._close_card)
         tly.addWidget(self._btn_close)
@@ -212,6 +228,22 @@ class BrowserWindowCard(QWidget):
             "QToolButton:hover { background: rgba(128,128,128,0.18); }"
             "QToolButton:pressed { background: rgba(128,128,128,0.28); }"
             "QToolButton:disabled { color: rgba(150,150,150,0.4); }"
+        )
+        return btn
+
+    def _make_icon_btn(self, icon, tip: str) -> QToolButton:
+        """图标按钮（SVG 图标，与文本按钮同尺寸同悬停样式）"""
+        btn = QToolButton(self)
+        btn.setIcon(icon)
+        btn.setIconSize(QSize(16, 16))
+        btn.setToolTip(tip)
+        btn.setFixedSize(30, 30)
+        btn.setStyleSheet(
+            "QToolButton {"
+            "  border: none; border-radius: 15px;"
+            "}"
+            "QToolButton:hover { background: rgba(128,128,128,0.18); }"
+            "QToolButton:pressed { background: rgba(128,128,128,0.28); }"
         )
         return btn
 
@@ -548,8 +580,12 @@ class BrowserWindowCard(QWidget):
             f"QToolButton:disabled {{ color: {secondary}; }}"
         )
         for button in (self._btn_back, self._btn_forward, self._btn_reload, self._btn_stop,
-                       self._btn_bookmark, self._btn_new_tab, self._btn_menu, self._btn_close):
+                       self._btn_bookmark, self._btn_new_tab, self._btn_menu,
+                       self._btn_external, self._btn_close):
             button.setStyleSheet(button_style)
+
+        # 外部打开按钮图标随主题切换（深色主题用浅色线条版本）
+        self._btn_external.setIcon(QIcon(_icon_path("external_open", is_dark)))
 
         self._menu_panel.setStyleSheet(
             f"QFrame {{ background: {popup}; border: 1px solid {border}; border-radius: 8px; }}"
@@ -654,6 +690,7 @@ class BrowserWindowCard(QWidget):
         self._btn_bookmark.setEnabled(valid)
         self._btn_bookmark.setText("★" if saved else "☆")
         self._btn_bookmark.setToolTip("取消收藏" if saved else "收藏当前网页")
+        self._btn_external.setEnabled(valid)
 
     def _toggle_current_bookmark(self):
         url = self._current_bookmark_url()
@@ -682,6 +719,16 @@ class BrowserWindowCard(QWidget):
         self._bookmarks_cache = list(items)
         self._bookmark_bar.set_items(self._bookmarks_cache)
         self._update_bookmark_state()
+
+    def _open_in_system_browser(self):
+        """在系统默认浏览器中打开当前标签页 URL（绕过内置浏览器重定向）"""
+        url = self._current_bookmark_url()
+        if not url or is_blank_page(url):
+            return
+        if open_in_system_browser(url):
+            self._set_status("已在系统默认浏览器打开")
+        else:
+            self._set_status("打开系统浏览器失败")
 
     def _close_card(self):
         self._menu_panel.hide()
@@ -841,6 +888,29 @@ def _to_qurl(url: str):
     from PyQt5.QtCore import QUrl
 
     return QUrl(url)
+
+
+def open_in_system_browser(url: str) -> bool:
+    """在系统默认浏览器中打开 URL
+
+    ⚠️ 不能直接用 webbrowser.open / QDesktopServices.openUrl：
+    它们已被 external_open 重定向到内置浏览器，会形成回环。
+    Windows 用 os.startfile，其他平台用系统 opener 命令。
+    """
+    if not url:
+        return False
+    try:
+        if hasattr(os, "startfile"):
+            os.startfile(url)  # type: ignore[attr-defined]  # noqa: S606
+        else:
+            import subprocess
+            import sys
+
+            opener = "open" if sys.platform == "darwin" else "xdg-open"
+            subprocess.Popen([opener, url])
+        return True
+    except Exception:
+        return False
 
 
 def _search_url(query: str) -> str:
