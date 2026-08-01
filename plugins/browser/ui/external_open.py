@@ -26,10 +26,56 @@ import re
 import webbrowser
 from typing import Any, Optional
 
+from loguru import logger
+from PyQt5.QtCore import QObject, pyqtSignal
+
 # ── 幂等标记 ──────────────────────────────────────────────
 _installed = False
 _orig_webbrowser_open: Any = None
 _orig_qdesktop_openurl: Any = None
+
+
+class _MainThreadDispatcher(QObject):
+    """跨线程派发器：信号 AutoConnection 自动投递到接收者（主线程）事件循环。
+
+    ⚠️ QTimer.singleShot 的定时器依附于调用线程，在无事件循环的工作线程里
+    永远不会触发；必须用信号投递到主线程，才能保证 UI 操作真正执行。
+    """
+
+    _requested = pyqtSignal(object)
+
+    def __init__(self):
+        super().__init__()
+        self._requested.connect(self._handle)
+
+    def _handle(self, fn):
+        try:
+            fn()
+        except Exception:
+            logger.exception("[browser-redirect] 主线程派发任务异常")
+
+    def call(self, fn):
+        self._requested.emit(fn)
+
+
+_dispatcher: Optional[_MainThreadDispatcher] = None
+
+
+def _get_dispatcher() -> Optional[_MainThreadDispatcher]:
+    """获取主线程派发器（须在主线程创建，否则返回 None 走直接调用）"""
+    global _dispatcher
+    if _dispatcher is None:
+        try:
+            from PyQt5.QtCore import QThread
+            from PyQt5.QtWidgets import QApplication
+
+            app = QApplication.instance()
+            if app is None or QThread.currentThread() != app.thread():
+                return None  # 不在主线程，不能安全创建
+            _dispatcher = _MainThreadDispatcher()
+        except Exception:
+            return None
+    return _dispatcher
 
 
 def _is_http(url: str) -> bool:
@@ -51,6 +97,7 @@ def _open_in_browser(url: str) -> bool:
 
         registry = UIPluginRegistry.get_instance()
         if "browser" not in getattr(registry, "_floating_cards", {}):
+            logger.warning(f"[browser-redirect] browser 卡片未注册，回退系统浏览器: {url}")
             return False  # 浏览器插件未注册 → 回退系统浏览器
 
         target = normalize_url(url) or url
@@ -58,28 +105,56 @@ def _open_in_browser(url: str) -> bool:
         # 确保浏览器卡片可见（已可见则不重复触发 toggle 关闭）
         cm = CardManager.get_instance()
         visible = any(cm.is_card_visible("browser", wid) for wid in cm.get_all_windows())
+        logger.debug(f"[browser-redirect] 打开 {target}，浏览器当前可见={visible}")
         if not visible:
             registry.toggle_floating_card("browser")
 
         card = _get_current_card()
         if card is None:
+            logger.warning(f"[browser-redirect] 浏览器卡片实例不可用，回退系统浏览器: {url}")
             return False
         card._new_tab(target)  # 总是新开标签页
+        logger.info(f"[browser-redirect] 已在内置浏览器新标签打开: {target}")
         return True
     except Exception:
+        logger.exception(f"[browser-redirect] 打开内置浏览器异常，回退系统浏览器: {url}")
         return False
 
 
-def _open_in_browser_threadsafe(url: str) -> bool:
-    """线程安全入口：非 UI 线程调用时调度到主线程再打开"""
+def _open_in_browser_threadsafe(url: str, timeout: float = 8.0) -> bool:
+    """线程安全入口：非 UI 线程调用时派发到主线程执行并同步等待结果
+
+    返回真实结果：主线程成功打开 → True；失败 → False（调用方回退系统浏览器）。
+    避免异步"假成功"（QTimer.singleShot 在工作线程永远不会触发）。
+    """
+    import threading
+
     try:
-        from PyQt5.QtCore import QThread, QTimer
+        from PyQt5.QtCore import QThread
         from PyQt5.QtWidgets import QApplication
 
         app = QApplication.instance()
         if app is not None and QThread.currentThread() != app.thread():
-            QTimer.singleShot(0, lambda: _open_in_browser(url))
-            return True  # 已接管，稍后异步在主线程打开
+            dispatcher = _get_dispatcher()
+            if dispatcher is None:
+                # ⚠️ 绝不能直接调用：跨线程创建 QWidget 会导致 Qt 崩溃。
+                # 派发器不可用（应只在插件安装前出现）→ 回退系统浏览器。
+                logger.warning("[browser-redirect] 派发器不可用且当前非主线程，回退系统浏览器（避免跨线程 UI 崩溃）")
+                return False
+            event = threading.Event()
+            result = {"ok": False}
+
+            def _do():
+                try:
+                    result["ok"] = _open_in_browser(url)
+                finally:
+                    event.set()
+
+            dispatcher.call(_do)
+            event.wait(timeout)
+            if not event.is_set():
+                logger.warning(f"[browser-redirect] 主线程响应超时，回退系统浏览器: {url}")
+            return result["ok"]
     except Exception:
         pass
     return _open_in_browser(url)
@@ -138,9 +213,14 @@ def install_redirect() -> bool:
         _qtgui.QDesktopServices = _RedirectDesktopServices
 
     # 3) patch TerminalTools.execute_bash：拦截 start <url> 等命令
-    install_bash_redirect()
+    bash_ok = install_bash_redirect()
+
+    # 4) 预创建主线程派发器（register_ui 在主线程执行，必须在此创建，
+    #    否则工作线程首次调用 _get_dispatcher 会因不在主线程而拒绝创建）
+    _get_dispatcher()
 
     _installed = True
+    logger.info(f"[browser-redirect] 外部链接重定向已安装 (bash拦截={'OK' if bash_ok else '跳过'}, 派发器={'OK' if _dispatcher is not None else '不可用'})")
     return True
 
 
@@ -249,10 +329,12 @@ def install_bash_redirect() -> bool:
             except Exception:
                 url = None
             if url is not None:
+                logger.info(f"[browser-redirect] bash 拦截 start 命令: {command!r} → {url}")
                 if _open_in_browser_threadsafe(url):
                     from app.tools.result import ToolResult
 
                     return ToolResult(True, content=f"🌐 已在 DriFox 内置浏览器打开: {url}")
+                logger.warning(f"[browser-redirect] 内置浏览器打开失败，回退原始命令: {command!r}")
         return orig(self, command, timeout)
 
     _redirect_execute_bash._drifox_redirect = True  # type: ignore[attr-defined]
