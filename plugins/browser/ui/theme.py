@@ -34,12 +34,12 @@ def scrollbar_style(owner=None) -> str:
     c = theme_colors(owner)
     return (
         "QScrollBar:vertical { width: 10px; background: transparent; margin: 2px; }"
-        f"QScrollBar::handle:vertical {{ background: {c['border']}; min-height: 28px; border-radius: 4px; }}"
+        f"QScrollBar::handle:vertical {{ background: rgba(180,180,180,0.45); min-height: 28px; border-radius: 4px; }}"
         "QScrollBar::handle:vertical:hover { background: rgba(100,140,210,0.75); }"
         "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
         "QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: transparent; }"
         "QScrollBar:horizontal { height: 10px; background: transparent; margin: 2px; }"
-        f"QScrollBar::handle:horizontal {{ background: {c['border']}; min-width: 28px; border-radius: 4px; }}"
+        f"QScrollBar::handle:horizontal {{ background: rgba(180,180,180,0.45); min-width: 28px; border-radius: 4px; }}"
         "QScrollBar::handle:horizontal:hover { background: rgba(100,140,210,0.75); }"
         "QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal { width: 0; }"
         "QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal { background: transparent; }"

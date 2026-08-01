@@ -25,7 +25,7 @@ def create_page(view, profile, new_page_callback=None, is_dark=True):
     settings.setAttribute(QWebEngineSettings.PluginsEnabled, True)
     settings.setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)
 
-    thumb = "rgba(255,255,255,.28)" if is_dark else "rgba(60,70,85,.32)"
+    thumb = "rgba(255,255,255,.55)" if is_dark else "rgba(60,70,85,.55)"
     hover = "rgba(100,150,230,.78)"
     scrollbar_css = (
         "::-webkit-scrollbar{width:10px;height:10px}"

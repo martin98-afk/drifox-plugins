@@ -22,6 +22,5 @@ shortcut: Ctrl+Shift+B
 - Chrome 风格多标签浏览（Ctrl+T 新建 / Ctrl+W 关闭 / Ctrl+Tab 切换）
 - 地址栏（Ctrl+L 聚焦），历史/收藏自动补全
 - 收藏（Ctrl+D）、历史（Ctrl+H）、下载管理
-- DevTools（F12 / /browser-devtools）、隐身窗口（Ctrl+Shift+N / /browser-incognito）
 
 > 这是 `type: function` 命令：由 Python 处理器直接执行，不经过 AI。
