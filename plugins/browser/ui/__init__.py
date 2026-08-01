@@ -30,6 +30,14 @@ def register_ui(registry):
     - 清理 function handlers 残留（M2 修复）
     - 清理 downloads 挂载的 profile 信号（M1 修复）
     """
+    # 0) 安装外部链接重定向：主程序 http/https 外链默认打开到内置浏览器
+    try:
+        from .external_open import install_redirect
+
+        install_redirect()
+    except Exception:
+        logger.exception("[browser] 外部链接重定向安装失败（不影响其余功能）")
+
     # 1) 清理旧子模块缓存
     prefix = "ui_plugin_browser."
     stale = [k for k in sys.modules if k.startswith(prefix)]

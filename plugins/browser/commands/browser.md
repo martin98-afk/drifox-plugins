@@ -22,5 +22,6 @@ shortcut: Ctrl+Shift+B
 - Chrome 风格多标签浏览（Ctrl+T 新建 / Ctrl+W 关闭 / Ctrl+Tab 切换）
 - 地址栏（Ctrl+L 聚焦），历史/收藏自动补全
 - 收藏（Ctrl+D）、历史（Ctrl+H）、下载管理
+- **外部链接接管**：主程序（DriFox）中所有 http/https 外链（AI 消息链接、OAuth 授权、API 文档、设置页外链等）默认在插件浏览器新标签页打开；浏览器插件不可用时自动回退系统浏览器。本地文件（file://）仍走系统默认。
 
 > 这是 `type: function` 命令：由 Python 处理器直接执行，不经过 AI。
