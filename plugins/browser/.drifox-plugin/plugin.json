@@ -1,7 +1,7 @@
 {
     "name": "browser",
-    "description": "内置浏览器 — 一比一还原 Chrome 体验的多标签网页浏览器（标签页/收藏/历史/下载/DevTools/隐身）。",
-    "version": "1.0.0",
+    "description": "内置浏览器 — 一比一还原 Chrome 体验的多标签网页浏览器（标签页/收藏/历史/下载，外部链接与 bash start 自动接管）。",
+    "version": "1.1.0",
     "author": {
         "name": "DriFox Contributors"
     },
