@@ -2,8 +2,9 @@
   "mcpServers": {
     "browser": {
       "type": "stdio",
-      "command": "python",
+      "command": "py",
       "args": [
+        "-3",
         "${CLAUDE_PLUGIN_ROOT}/mcp/server.py"
       ],
       "env": {},
