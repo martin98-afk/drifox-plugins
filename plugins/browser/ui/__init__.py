@@ -38,6 +38,16 @@ def register_ui(registry):
     except Exception:
         logger.exception("[browser] 外部链接重定向安装失败（不影响其余功能）")
 
+    # 0.5) 启动浏览器控制 HTTP 端点（供 MCP 服务器控制浏览器）
+    try:
+        from pathlib import Path as _Path
+        from .control_server import start_control_server
+
+        plugin_root = _Path(__file__).resolve().parent.parent
+        start_control_server(plugin_root)
+    except Exception:
+        logger.exception("[browser] 控制端点启动失败（不影响其余功能）")
+
     # 1) 清理旧子模块缓存
     prefix = "ui_plugin_browser."
     stale = [k for k in sys.modules if k.startswith(prefix)]

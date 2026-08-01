@@ -194,6 +194,8 @@ def install_redirect() -> bool:
 
     # 已注入标记（本模块实例 / 热重载遗留代理）
     if _installed or getattr(webbrowser.open, "_drifox_redirect", False):
+        # 热重载后本模块是新的，_dispatcher 为 None，需确保重建（register_ui 在主线程）
+        _get_dispatcher()
         return True
     try:
         import PyQt5.QtGui as _qtgui
