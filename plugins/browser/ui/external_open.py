@@ -10,6 +10,9 @@
   message_card.py / update_checker.py 均为函数内延迟 import，
   patch 后拿到代理类；main_widget.py 顶层 import 的旧引用不受影响
   （本地文件打开本就走系统，且非 http 协议会放行）。
+- patch ``TerminalTools.execute_bash``：拦截大模型通过 bash 执行的
+  ``start <url>`` / ``cmd /c start <url>`` / ``explorer <url>``，
+  同样转交内置浏览器（用户明确要求大模型 start 开网页也走插件浏览器）。
 
 拦截规则：
 - 仅 http/https 拦截 → 打开浏览器浮动卡片并新开标签页导航
@@ -19,8 +22,9 @@
 幂等：热重载时 register_ui 再次执行，通过标记检测避免重复嵌套 patch。
 """
 
+import re
 import webbrowser
-from typing import Any
+from typing import Any, Optional
 
 # ── 幂等标记 ──────────────────────────────────────────────
 _installed = False
@@ -133,5 +137,125 @@ def install_redirect() -> bool:
         _orig_qdesktop_openurl = _qtgui.QDesktopServices.openUrl
         _qtgui.QDesktopServices = _RedirectDesktopServices
 
+    # 3) patch TerminalTools.execute_bash：拦截 start <url> 等命令
+    install_bash_redirect()
+
     _installed = True
+    return True
+
+
+# ── bash start 命令拦截（大模型用 bash 执行 start xxx 打开网页）── ──
+
+_START_RE = re.compile(
+    r"^\s*(?:cmd(?:\.exe)?\s*/c\s+)?(?P<cmd>start|explorer(?:\.exe)?)\b\s*(?P<rest>.*)$",
+    re.IGNORECASE,
+)
+_START_OPT_WITH_ARG_RE = re.compile(r"^/(?:d|w)\s+\S+\s*", re.IGNORECASE)
+_START_OPT_BARE_RE = re.compile(r"^/[a-z]+\s*", re.IGNORECASE)
+
+
+def _strip_start_title(rest: str, is_start: bool) -> str:
+    """start 命令第一个引号参数是窗口标题（可为空），剥掉它；explorer 无此语法"""
+    if is_start and rest.startswith('"'):
+        end = rest.find('"', 1)
+        if end != -1:
+            return rest[end + 1 :].strip()
+    return rest
+
+
+def _strip_start_options(rest: str) -> str:
+    """剥掉 start 的选项（/d path、/w title、/min /max /b 等）"""
+    while True:
+        m = _START_OPT_WITH_ARG_RE.match(rest)
+        if m:
+            rest = rest[m.end() :]
+            continue
+        m = _START_OPT_BARE_RE.match(rest)
+        if m:
+            rest = rest[m.end() :]
+            continue
+        break
+    return rest
+
+
+def _extract_start_url(command: str) -> Optional[str]:
+    """从 start / explorer 命令中提取 URL，非 URL 场景返回 None
+
+    支持形态：
+    - start https://example.com
+    - start "" https://example.com
+    - start /min https://example.com
+    - cmd /c start http://localhost:8080
+    - explorer "https://example.com"
+    非 URL（start notepad.exe / explorer D:\\folder）→ None，不拦截。
+    """
+    m = _START_RE.match(command.strip())
+    if not m:
+        return None
+    is_start = m.group("cmd").lower().startswith("start")
+    rest = m.group("rest").strip()
+    rest = _strip_start_title(rest, is_start)
+    rest = _strip_start_options(rest)
+    tok = rest.split(None, 1)[0].strip().strip('"') if rest else ""
+    if not tok:
+        return None
+    # 可执行/脚本文件不是 URL（notepad.exe / run.bat 等）。
+    # 注意不含 .com：它是合法域名后缀（example.com）。
+    if re.search(r"\.(?:exe|bat|cmd|msi|lnk|dll|ps1|vbs|jar)$", tok, re.IGNORECASE):
+        return None
+    # 规范化：localhost/裸域名补 scheme；非 URL（本地路径/可执行文件）→ 空
+    try:
+        from .url_bar import normalize_url
+    except ImportError:
+        try:
+            from url_bar import normalize_url
+        except Exception:
+            normalize_url = None
+    if normalize_url is not None:
+        try:
+            return normalize_url(tok) or None
+        except Exception:
+            return tok if _is_http(tok) else None
+    return tok if _is_http(tok) else None
+
+
+_bash_installed = False
+
+
+def install_bash_redirect() -> bool:
+    """patch TerminalTools.execute_bash：拦截 start/explorer <url> 转交内置浏览器
+
+    幂等：已注入过（含热重载遗留代理）→ 直接返回。
+    """
+    global _bash_installed
+    if _bash_installed:
+        return True
+    try:
+        from app.tools.terminal_tools import TerminalTools
+    except Exception:
+        return False  # 主程序版本无该模块（如测试环境）→ 跳过，不影响其他功能
+
+    if getattr(TerminalTools.execute_bash, "_drifox_redirect", False):
+        _bash_installed = True
+        return True
+
+    orig = TerminalTools.execute_bash
+
+    def _redirect_execute_bash(self, command: str, timeout: int = 120):
+        """代理 execute_bash：start/explorer <url> → 内置浏览器；其余照常执行"""
+        if isinstance(command, str):
+            try:
+                url = _extract_start_url(command)
+            except Exception:
+                url = None
+            if url is not None:
+                if _open_in_browser_threadsafe(url):
+                    from app.tools.result import ToolResult
+
+                    return ToolResult(True, content=f"🌐 已在 DriFox 内置浏览器打开: {url}")
+        return orig(self, command, timeout)
+
+    _redirect_execute_bash._drifox_redirect = True  # type: ignore[attr-defined]
+    TerminalTools.execute_bash = _redirect_execute_bash
+    _bash_installed = True
     return True
