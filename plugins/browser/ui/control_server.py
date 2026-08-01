@@ -371,6 +371,17 @@ class _Handler(BaseHTTPRequestHandler):
         self.wfile.write(payload)
 
 
+def _nowindow_kwargs() -> dict:
+    """Windows 下隐藏子进程控制台窗口（CREATE_NO_WINDOW），避免闪黑窗"""
+    if os.name == "nt":
+        import subprocess as _sp
+
+        flag = getattr(_sp, "CREATE_NO_WINDOW", 0)
+        if flag:
+            return {"creationflags": flag}
+    return {}
+
+
 def _find_python() -> str:
     """寻找能 import mcp 的 python 解释器（供 MCP 服务器自引导），找不到返回空串"""
     import shutil
@@ -390,7 +401,7 @@ def _find_python() -> str:
     ):
         if p.exists():
             candidates.append(str(p))
-    # 3. PATH 中的 python
+    # 3. PATH 中的 python（WindowsApps stub 会被下方 import mcp 测试天然排除）
     for name in ("python", "python3", "py"):
         p = shutil.which(name)
         if p and p not in candidates:
@@ -399,7 +410,10 @@ def _find_python() -> str:
     for c in candidates:
         try:
             r = subprocess.run(
-                [c, "-c", "import mcp, httpx"], capture_output=True, timeout=10
+                [c, "-c", "import mcp, httpx"],
+                capture_output=True,
+                timeout=10,
+                **_nowindow_kwargs(),
             )
             if r.returncode == 0:
                 return c

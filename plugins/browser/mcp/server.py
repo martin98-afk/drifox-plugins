@@ -35,9 +35,17 @@ def _can_import_mcp(python: str) -> bool:
     """验证解释器能 import mcp（subprocess 测试，避免 execv 到错误解释器）"""
     import subprocess
 
+    kwargs = {}
+    if os.name == "nt":
+        flag = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        if flag:
+            kwargs["creationflags"] = flag
     try:
         r = subprocess.run(
-            [python, "-c", "import mcp, httpx"], capture_output=True, timeout=10
+            [python, "-c", "import mcp, httpx"],
+            capture_output=True,
+            timeout=10,
+            **kwargs,
         )
         return r.returncode == 0
     except Exception:
