@@ -105,4 +105,4 @@ def register_ui(registry: UIPluginRegistry) -> None:
 - DriFox UI 插件注册表：[DriFoxx/app/core/ui_plugin_registry.py](../../../../D:/work/DriFoxx/app/core/ui_plugin_registry.py)
 - context_provider 机制：[DriFoxx/app/main_widget.py](../../../../D:/work/DriFoxx/app/main_widget.py) `_build_ui_context`
 - 浮动卡片管理：[DriFoxx/app/widgets/cards/card_manager.py](../../../../D:/work/DriFoxx/app/widgets/cards/card_manager.py)
-- 同类插件：[context-usage-stats](../context-usage-stats/)（数据驱动仪表盘）
+- 同类插件：[git-panel](../git-panel/)（Git 控制面板）

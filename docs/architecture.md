@@ -15,7 +15,7 @@ DriFox 的插件系统是一套「manifest + 组件目录」约定。任何遵�
 > - lsp: `plugins/system/.lsp.json`
 > - ui: `plugins/system/ui/`（DriFox 启动时由 `UIPluginRegistry` 加载）
 >
-> 本仓库中的 [`plugins/example-plugin/`](../plugins/example-plugin/) 给出最小化的可工作版本；`plugins/evolver/` 给出真实生产插件；`plugins/context-usage-stats/` 给出 ui 组件的真实示例。所有约定以 system 插件为准。
+> 本仓库中的 [`plugins/example-plugin/`](../plugins/example-plugin/) 给出最小化的可工作版本；`plugins/evolver/` 给出真实生产插件；`plugins/git-panel/` 给出 ui 组件的真实示例。所有约定以 system 插件为准。
 
 ## 设计目标
 
@@ -86,9 +86,9 @@ ui 组件由 DriFox 启动时通过 `UIPluginRegistry.load_plugin` 加载，调�
 
 参考实现：
 
-- [`plugins/context-usage-stats/`](../plugins/context-usage-stats/) — 浮动卡片（user 插件，data-driven dashboard）
-- [`plugins/plugin-marketplace/`](../plugins/plugin-marketplace/) — 浮动卡片 + 2 个内容块渲染器（system 插件，完整生态入口）
-- [`plugins/plugin-manager/`](../plugins/plugin-manager/) — 浮动卡片（system 插件，启/禁/卸闭环）
+- [`plugins/git-panel/`](../plugins/git-panel/) — 浮动卡片（user 插件，Git 控制面板）
+- [`plugins/git-dashboard/`](../plugins/git-dashboard/) — 浮动卡片（user 插件，Git 仪表盘）
+- DriFox 运行时内置的 `plugin-marketplace` / `plugin-manager` / `context-usage-stats` 等（随 DriFox 分发，不在本仓库市场）
 
 ## 目录约定（强制）
 

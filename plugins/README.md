@@ -7,36 +7,32 @@
 | 插件 | 描述 | 组件 | 版本 |
 |------|------|------|------|
 | [`code-reviewer`](code-reviewer/) | 自动化代码审查 — checklist 审查、质量评分、报告生成 | commands + agents + skills | 1.0.0 |
-| [`context-usage-stats`](context-usage-stats/) | 对话上下文用量统计 — token/消息量趋势、会话活跃度图表 | ui | 0.1.0 |
 | [`evolver`](evolver/) | Evolver 自进化引擎 — 基于 GEP 协议沉淀 Agent 经验 | commands + hooks + skills | 1.0.0 |
 | [`example-plugin`](example-plugin/) | 最小参考实现，定义官方插件结构与全部 8 类组件约定 | 全部 8 类 | 1.0.0 |
 | [`frontend-pro`](frontend-pro/) | 前端开发增强 — 组件规范、a11y 检查、性能最佳实践 | commands + skills | 1.0.0 |
 | [`git-workflow`](git-workflow/) | Git 工作流增强 — 分支检查、提交规范、PR 模板生成 | commands + hooks + skills | 1.0.0 |
 | [`nuwa-skill`](nuwa-skill/) | 女娲·Skill造人术 — 蒸馏任何人思维框架，附 14 个人物视角 Skill | skills | 1.0.0 |
-| [`plugin-manager`](plugin-manager/) | 插件管理面板 — 在 DriFox 窗口内启 / 禁 / 卸已安装插件 | ui | 0.1.0 |
-| [`plugin-marketplace`](plugin-marketplace/) | 官方插件市场 — 浏览 / 安装 / 管理 drifox-plugins 全部插件 | ui | 0.1.0 |
 | [`python-pro`](python-pro/) | Python 开发增强 — PEP 8 / 类型标注 / lint 自动检查 | skills + hooks | 1.0.0 |
 | [`test-scaffold`](test-scaffold/) | 测试脚手架生成 — 测试骨架、覆盖率分析、边界场景推荐 | commands + skills | 1.0.0 |
+
+> **DriFox 运行时内置插件**（`plugin-manager`、`plugin-marketplace`、`context-usage-stats`、`file-tree` 等）随 DriFox 分发，不收录在本仓库市场，避免重复安装造成困惑。
 
 ## 组件覆盖矩阵
 
 | | commands | agents | skills | themes | hooks | mcp | lsp | ui |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | code-reviewer | ✅ | ✅ | ✅ | — | — | — | — | — |
-| context-usage-stats | — | — | — | — | — | — | — | ✅ |
 | evolver | ✅ | — | ✅ | — | ✅ | — | — | — |
 | example-plugin | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | frontend-pro | ✅ | — | ✅ | — | — | — | — | — |
 | git-workflow | ✅ | — | ✅ | — | ✅ | — | — | — |
 | nuwa-skill | — | — | ✅ | — | — | — | — | — |
-| plugin-manager | — | — | — | — | — | — | — | ✅ |
-| plugin-marketplace | — | — | — | — | — | — | — | ✅ |
 | python-pro | — | — | ✅ | — | ✅ | — | — | — |
 | test-scaffold | ✅ | — | ✅ | — | — | — | — | — |
 
 > **ui 组件说明**：ui 插件通过 `ui/__init__.py` 中的 `register_ui(registry)` 函数注册可视化组件（浮动卡片 / 内容块渲染器 / 消息元素工厂），由 DriFox 启动时 `UIPluginRegistry.load_plugin` 加载。详见 [docs/architecture.md](../docs/architecture.md#ui-组件)。
 >
-> **官方 UI 三件套**：`plugin-marketplace`（找 / 装）+ `plugin-manager`（启 / 禁 / 卸）+ `context-usage-stats`（看用量），覆盖完整的插件生命周期。
+> **ui 插件参考**：ui 组件的真实示例（浮动卡片、渲染器、工厂）见 DriFox 运行时内置插件（`plugin-marketplace` / `plugin-manager` / `context-usage-stats` 等），它们随 DriFox 分发，不在本仓库市场内。
 
 ## 添加新插件
 

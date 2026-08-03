@@ -47,6 +47,19 @@ SUPPORTED_EVENTS = {
     "PostToolUse",
 }
 
+# DriFox 运行时内置插件（D:/work/DriFox/plugins/ 下的插件）。
+# 它们随 DriFox 分发，不进入本仓库插件市场，marketplace 一致性检查时跳过。
+DRIFOX_BUILTIN_PLUGINS = {
+    "context-usage-stats",
+    "file-tree",
+    "plugin-manager",
+    "plugin-marketplace",
+    "share-history",
+    "shortcut-manager",
+    "system",
+    "system-cleaner",
+}
+
 VALID_COMMAND_TYPES = {"prompt", "function", "agent"}
 VALID_AGENT_MODES = {"all", "subagent", "primary"}
 
@@ -853,8 +866,10 @@ def check_marketplace_consistency(
         if name not in actual_names:
             errors.append(f"marketplace.json 引用了不存在的插件: {name}")
 
-    # 检查实际插件未收录到 marketplace.json
+    # 检查实际插件未收录到 marketplace.json（跳过 DriFox 运行时内置插件）
     for name in actual_names:
+        if name in DRIFOX_BUILTIN_PLUGINS:
+            continue
         if name not in mp_plugins:
             errors.append(f"插件 {name} 未收录到 marketplace.json（运行 generate_marketplace.py 更新）")
 

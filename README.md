@@ -69,11 +69,8 @@ drifox-plugins/
 └── plugins/                         # 官方插件集合
     ├── README.md                    # 插件索引
     ├── code-reviewer/               # 自动化代码审查
-    ├── context-usage-stats/         # 上下文用量统计面板（ui 组件示例）
     ├── evolver/                     # 首个官方插件：Evolver 自进化引擎
-    ├── example-plugin/              # 最小参考插件，定义官方约定（含全部 8 类组件）
-    ├── plugin-manager/              # 插件管理面板（启 / 禁 / 卸）
-    └── plugin-marketplace/          # 插件市场面板（浏览 / 安装）
+    └── example-plugin/              # 最小参考插件，定义官方约定（含全部 8 类组件）
 ```
 
 ## 官方插件
@@ -81,17 +78,16 @@ drifox-plugins/
 | 名称 | 描述 | 类型 | 组件覆盖 |
 |------|------|------|----------|
 | [`code-reviewer`](plugins/code-reviewer/) | 自动化代码审查 — checklist 审查、质量评分、报告生成 | user | commands + agents + skills |
-| [`context-usage-stats`](plugins/context-usage-stats/) | 对话上下文用量统计 — token/消息量趋势、会话活跃度图表 | user | ui |
 | [`evolver`](plugins/evolver/) | Evolver 自进化引擎 — 通过 GEP 协议沉淀 Agent 经验 | user | commands + hooks + skills |
 | [`example-plugin`](plugins/example-plugin/) | 最小参考实现，展示全部 8 类组件的标准写法 | user | 全部 8 类 |
 | [`frontend-pro`](plugins/frontend-pro/) | 前端开发增强 — 组件规范、a11y 检查、性能最佳实践 | user | commands + skills |
 | [`git-workflow`](plugins/git-workflow/) | Git 工作流增强 — 分支检查、提交规范、PR 模板 | user | commands + hooks + skills |
-| [`plugin-manager`](plugins/plugin-manager/) | 插件管理面板 — 在 DriFox 窗口内启 / 禁 / 卸已安装插件 | system | ui |
-| [`plugin-marketplace`](plugins/plugin-marketplace/) | 官方插件市场 — 浏览 / 安装 / 管理 drifox-plugins 全部插件 | system | ui |
 | [`python-pro`](plugins/python-pro/) | Python 开发增强 — PEP 8 / 类型标注 / lint 自动检查 | user | skills + hooks |
 | [`test-scaffold`](plugins/test-scaffold/) | 测试脚手架生成 — 测试骨架、覆盖率分析 | user | commands + skills |
 
 完整索引见 [plugins/README.md](plugins/README.md)。
+
+> **DriFox 运行时内置插件**（如 `plugin-manager`、`plugin-marketplace`、`context-usage-stats`、`file-tree` 等）随 DriFox 分发，**不收录在插件市场中**，避免用户重复安装造成困惑。它们由 DriFox 自带，无需手动安装。
 
 ## 快速开始
 

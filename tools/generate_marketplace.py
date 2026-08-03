@@ -37,6 +37,20 @@ REPO_URL = "https://github.com/martin98-afk/drifox-plugins"
 DEFAULT_REF = "main"
 DEFAULT_LICENSE = "GPL-3.0-or-later"
 
+# DriFox 运行时内置插件（D:/work/DriFox/plugins/ 下的插件）。
+# 这些插件随 DriFox 分发，无需从市场安装，出现在市场中会让用户困惑，
+# 因此生成 marketplace.json 时一律跳过。
+DRIFOX_BUILTIN_PLUGINS = {
+    "context-usage-stats",
+    "file-tree",
+    "plugin-manager",
+    "plugin-marketplace",
+    "share-history",
+    "shortcut-manager",
+    "system",
+    "system-cleaner",
+}
+
 # ============================================================
 # 输出样式
 # ============================================================
@@ -201,6 +215,9 @@ def generate_marketplace() -> dict:
         manifest = load_manifest(plugin_dir)
         if manifest is None:
             print(f"  {_yellow('SKIP')} {plugin_dir.name} — 无有效 manifest")
+            continue
+        if manifest.get("name") in DRIFOX_BUILTIN_PLUGINS:
+            print(f"  {_yellow('SKIP')} {plugin_dir.name} — DriFox 运行时内置插件，不进市场")
             continue
         entries.append(build_plugin_entry(plugin_dir, manifest))
 

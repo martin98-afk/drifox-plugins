@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.3.0 (2026-08-03)
+
+### 🗑️ 移除 DriFox 运行时内置插件
+
+- **背景**：`plugin-manager`、`plugin-marketplace`、`context-usage-stats`、`file-tree` 等插件已随 DriFox 运行时内置分发（`D:/work/DriFox/plugins/`），继续出现在插件市场中会让用户困惑（误以为需要额外安装 / 重复安装）。
+- **移除内容**：
+  - 删除 `plugins/plugin-marketplace/`、`plugins/plugin-manager/`、`plugins/context-usage-stats/`、`plugins/file-tree/` 四个插件目录
+  - `marketplace.json` 同步重新生成，市场不再收录 DriFox 内置插件
+- **机制保护**：
+  - `tools/generate_marketplace.py` 新增 `DRIFOX_BUILTIN_PLUGINS` 名单，生成时跳过 DriFox 运行时内置插件
+  - `tools/validate_plugins.py` 的 marketplace 一致性检查同步跳过内置插件
+- **文档同步**：`README.md`、`plugins/README.md`、`docs/architecture.md`、`docs/plugin-development.md`、`plugins/git-dashboard/README.md` 更新插件索引与 ui 参考实现指引
+
 ## 1.2.0 (2026-07-01)
 
 ### ✨ 新增 ui 组件类型（第 8 类）
