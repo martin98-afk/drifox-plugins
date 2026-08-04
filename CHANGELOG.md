@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.0 (2026-08-04)
+### Added
+- ip-switcher 插件：免费模型限流自动换 IP（429 检测 + 代理池轮换 + 仪表盘）
+  - monkey patch openai SDK：白名单模型请求走本地代理池
+  - 429 自动换 IP + 自动重试（默认 3 次，2s 退避）
+  - 仪表盘浮动卡片：当前出口 IP、换绑历史、统计、手动换 IP
+  - 代理池内置管理（shadow1ng/ProxyPool vendor 打包，sticky 模式）
+  - 配置存 user-custom 插件（随云端备份恢复）
+
 ## 1.3.0 (2026-08-03)
 
 ### 🗑️ 移除 DriFox 运行时内置插件
