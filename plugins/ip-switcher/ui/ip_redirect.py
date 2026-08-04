@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """ip-switcher monkey patch — 白名单模型走代理池 + 429 自动换 IP 重试
 
 原理（对齐 browser/external_open.py 模式）：
@@ -55,12 +55,12 @@ def _is_rate_limit_error(exc: BaseException) -> bool:
     return any(kw in msg for kw in _RATE_LIMIT_KEYWORDS)
 
 
-def _is_whitelisted(model: str = "", base_url: str = "") -> bool:
-    """白名单判定：model 名或 base_url 命中任一即可"""
+def _is_opencode_free(model: str = "", base_url: str = "") -> bool:
+    """opencode 免费模型判定：model 名或 base_url 命中系统内置 opencode 免费 provider"""
     cfg = get_config()
-    if model and cfg.is_whitelisted_model(model):
+    if model and cfg.is_opencode_free_model(model):
         return True
-    if base_url and cfg.is_whitelisted_base_url(base_url):
+    if base_url and cfg.is_opencode_free_base_url(base_url):
         return True
     return False
 
@@ -183,7 +183,7 @@ def _patched_openai_init(self, *args, **kwargs):
     cfg = get_config()
     base_url = kwargs.get("base_url") or ""
     model = kwargs.get("model") or ""
-    if cfg.get("enabled") and _is_whitelisted(model=model, base_url=base_url):
+    if cfg.get("enabled") and _is_opencode_free(model=model, base_url=base_url):
         if "http_client" not in kwargs:
             try:
                 port = cfg.get("proxy_pool_port", 8082)
@@ -203,7 +203,7 @@ def _patched_async_openai_init(self, *args, **kwargs):
     cfg = get_config()
     base_url = kwargs.get("base_url") or ""
     model = kwargs.get("model") or ""
-    if cfg.get("enabled") and _is_whitelisted(model=model, base_url=base_url):
+    if cfg.get("enabled") and _is_opencode_free(model=model, base_url=base_url):
         if "http_client" not in kwargs:
             try:
                 port = cfg.get("proxy_pool_port", 8082)
@@ -228,7 +228,7 @@ def _wrap_chat_create(orig_create):
         cfg = get_config()
         model = kwargs.get("model") or getattr(self, "_model", "")
         base_url = str(getattr(self, "base_url", "") or "")
-        if not (cfg.get("enabled") and _is_whitelisted(model=model, base_url=base_url)):
+        if not (cfg.get("enabled") and _is_opencode_free(model=model, base_url=base_url)):
             return orig_create(self, *args, **kwargs)  # 非白名单零开销
 
         retry_limit = int(cfg.get("retry_limit", 3))
@@ -263,7 +263,7 @@ def _wrap_chat_acreate(orig_acreate):
         cfg = get_config()
         model = kwargs.get("model") or getattr(self, "_model", "")
         base_url = str(getattr(self, "base_url", "") or "")
-        if not (cfg.get("enabled") and _is_whitelisted(model=model, base_url=base_url)):
+        if not (cfg.get("enabled") and _is_opencode_free(model=model, base_url=base_url)):
             return await orig_acreate(self, *args, **kwargs)
 
         retry_limit = int(cfg.get("retry_limit", 3))

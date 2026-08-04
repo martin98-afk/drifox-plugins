@@ -20,13 +20,20 @@ from loguru import logger
 
 def register_ui(registry):
     """注册 ip-switcher 插件的 UI 组件（浮动卡片 + monkey patch）"""
-    # 0) 自动发现系统免费模型白名单（首次运行白名单为空时）
+    # 0) 探测系统内置 opencode 免费 provider（仅日志提示，不写任何配置）
     try:
-        from .config import auto_fill_free_whitelist
+        from .config import discover_opencode_free_provider
 
-        auto_fill_free_whitelist()
+        free_provider = discover_opencode_free_provider()
+        if free_provider:
+            logger.info(
+                "[ip-switcher] 发现内置 opencode 免费 provider: "
+                f"{len(free_provider['models'])} 模型 / {free_provider['url']}"
+            )
+        else:
+            logger.warning("[ip-switcher] 未发现系统内置 opencode 免费 provider")
     except Exception:
-        logger.exception("[ip-switcher] 免费模型白名单自动发现失败（不影响其余功能）")
+        logger.exception("[ip-switcher] opencode 免费 provider 探测失败（不影响其余功能）")
 
     # 0.5) 安装 monkey patch：白名单模型走代理 + 429 换 IP 重试
     try:

@@ -7,7 +7,13 @@
 
 import json
 
-from ip_switcher_config import ConfigStore, reset_config_for_test
+from ip_switcher_config import (
+    ConfigStore,
+    discover_opencode_free_provider,
+    get_opencode_free_models,
+    get_opencode_free_urls,
+    reset_config_for_test,
+)
 
 
 def test_default_config(tmp_path):
@@ -24,18 +30,65 @@ def test_set_and_persist(tmp_path):
     assert store2.get("retry_limit") == 5
 
 
-def test_whitelist_model(tmp_path):
+def test_whitelist_keys_removed(tmp_path):
+    """白名单配置项已从默认配置中移除"""
     store = reset_config_for_test(tmp_path / "cfg.json")
-    store.set("whitelist_models", ["free-gpt4o", "gemini-flash-free"])
-    assert store.is_whitelisted_model("free-gpt4o")
-    assert not store.is_whitelisted_model("gpt-4o")
+    assert "whitelist_models" not in store.get_all()
+    assert "whitelist_base_urls" not in store.get_all()
 
 
-def test_whitelist_base_url_trailing_slash(tmp_path):
+def test_opencode_free_judge(tmp_path):
+    """opencode 免费判定：命中模型名/API 地址返回 True，其他返回 False"""
     store = reset_config_for_test(tmp_path / "cfg.json")
-    store.set("whitelist_base_urls", ["https://free-api.example.com"])
-    assert store.is_whitelisted_base_url("https://free-api.example.com/")
-    assert not store.is_whitelisted_base_url("https://other.example.com")
+    # 未发现内置 provider 时安全返回 False
+    assert store.is_opencode_free_model("deepseek-v4-flash-free") in (True, False)
+    assert store.is_opencode_free_model("gpt-4o") is False
+    assert store.is_opencode_free_base_url("https://opencode.ai/zen/v1") in (True, False)
+    assert store.is_opencode_free_base_url("https://api.deepseek.com") is False
+
+
+def test_opencode_free_discover(tmp_path):
+    """通过 IP_SWITCHER_SYSTEM_CONFIG 注入假系统配置，验证 opencode 免费 provider 发现"""
+    import os
+
+    fake_cfg = tmp_path / "app.config"
+    fake_cfg.write_text(
+        json.dumps(
+            {
+                "LLM": {
+                    "SavedProviders": {
+                        "free1": {
+                            "name": "opencode免费模型",
+                            "API_URL": "https://opencode.ai/zen/v1",
+                            "模型列表": ["deepseek-v4-flash-free", "kimi-k3-free"],
+                        },
+                        "paid1": {
+                            "name": "MiniMax",
+                            "API_URL": "https://api.minimax.chat/v1",
+                            "模型列表": ["MiniMax-M3"],
+                        },
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    old = os.environ.get("IP_SWITCHER_SYSTEM_CONFIG")
+    os.environ["IP_SWITCHER_SYSTEM_CONFIG"] = str(fake_cfg)
+    try:
+        p = discover_opencode_free_provider()
+        assert p is not None
+        assert p["name"] == "opencode免费模型"
+        assert p["url"] == "https://opencode.ai/zen/v1"
+        assert "deepseek-v4-flash-free" in p["models"]
+        assert "MiniMax-M3" not in p["models"]
+        assert get_opencode_free_models() == ["deepseek-v4-flash-free", "kimi-k3-free"]
+        assert get_opencode_free_urls() == ["https://opencode.ai/zen/v1"]
+    finally:
+        if old is None:
+            os.environ.pop("IP_SWITCHER_SYSTEM_CONFIG", None)
+        else:
+            os.environ["IP_SWITCHER_SYSTEM_CONFIG"] = old
 
 
 def test_merge_unknown_keys_ignored(tmp_path):

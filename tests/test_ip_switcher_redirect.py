@@ -5,8 +5,8 @@ import types
 from unittest.mock import MagicMock, patch
 
 from ip_switcher_redirect import (
+    _is_opencode_free,
     _is_rate_limit_error,
-    _is_whitelisted,
 )
 
 
@@ -48,10 +48,30 @@ def test_is_rate_limit_error_other():
     assert _is_rate_limit_error(ValueError("bad request")) is False
 
 
-def test_is_whitelisted_model():
+def test_is_opencode_free_model():
     with patch("ip_switcher_redirect.get_config") as mock_cfg:
         cfg = MagicMock()
-        cfg.is_whitelisted_model.return_value = True
-        cfg.is_whitelisted_base_url.return_value = False
+        cfg.is_opencode_free_model.return_value = True
+        cfg.is_opencode_free_base_url.return_value = False
         mock_cfg.return_value = cfg
-        assert _is_whitelisted(model="free-gpt4o") is True
+        assert _is_opencode_free(model="deepseek-v4-flash-free") is True
+
+
+def test_is_opencode_free_base_url():
+    with patch("ip_switcher_redirect.get_config") as mock_cfg:
+        cfg = MagicMock()
+        cfg.is_opencode_free_model.return_value = False
+        cfg.is_opencode_free_base_url.return_value = True
+        mock_cfg.return_value = cfg
+        assert _is_opencode_free(base_url="https://opencode.ai/zen/v1") is True
+
+
+def test_is_opencode_free_miss():
+    """非 opencode 免费模型不命中（走直连）"""
+    with patch("ip_switcher_redirect.get_config") as mock_cfg:
+        cfg = MagicMock()
+        cfg.is_opencode_free_model.return_value = False
+        cfg.is_opencode_free_base_url.return_value = False
+        mock_cfg.return_value = cfg
+        assert _is_opencode_free(model="MiniMax-M3") is False
+        assert _is_opencode_free(model="", base_url="") is False

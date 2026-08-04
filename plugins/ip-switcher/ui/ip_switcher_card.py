@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """ip-switcher 仪表盘浮动卡片（对齐系统插件 UI 规范）
 
 ┌──────────────────────────────────────────┐
@@ -29,7 +29,6 @@ from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QFrame,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
     QPushButton,
     QScrollArea,
@@ -241,7 +240,10 @@ class IPSwitcherCard(QWidget):
         except RuntimeError:
             pass
         try:
-            self._wl_edit_btn.setStyleSheet(self._wl_edit_btn_style(fs, ff))
+            if get_manager().is_running():
+                self._pool_btn.setStyleSheet(self._stop_btn_style(fs, ff))
+            else:
+                self._pool_btn.setStyleSheet(self._auto_btn_style(fs, ff))
         except RuntimeError:
             pass
         try:
@@ -319,21 +321,19 @@ class IPSwitcherCard(QWidget):
             f"QPushButton:hover {{ background: {hover_bg}; }}"
         )
 
-    def _wl_edit_btn_style(self, fs: int, ff: str = "") -> str:
-        dark = isDarkTheme()
-        color = "rgba(255,255,255,0.7)" if dark else "rgba(0,0,0,0.6)"
-        border = "rgba(128,128,128,0.2)"
-        hover_bg = "rgba(255,255,255,0.12)" if dark else "rgba(0,0,0,0.08)"
+    def _stop_btn_style(self, fs: int, ff: str = "") -> str:
+        """停止代理按钮（红色危险样式，提示停用代理池）"""
         font_qss = f"font-family: '{ff}';" if ff else ""
         return (
-            f"QPushButton {{ background: transparent; color: {color};"
-            f" border: 1px solid {border}; border-radius: 6px;"
-            f" {font_qss} font-size: {max(9, fs - 4)}px; font-weight: 400; padding: 0 8px; }}"
-            f"QPushButton:hover {{ background: {hover_bg}; }}"
+            f"QPushButton {{ background: rgba(239,68,68,0.10); color: #ef4444;"
+            f" border: 1px solid rgba(239,68,68,0.45); border-radius: 6px;"
+            f" {font_qss} font-size: {max(10, fs - 2)}px; font-weight: 600; padding: 0 10px; }}"
+            "QPushButton:hover { background: rgba(239,68,68,0.22); }"
+            "QPushButton:disabled { background: rgba(128,128,128,0.15);"
+            " color: rgba(128,128,128,0.5); border: 1px solid rgba(128,128,128,0.2); }"
         )
 
     # ── UI 搭建 ──
-
     def _setup_ui(self):
         self.setMinimumSize(360, 320)
         self.setAttribute(Qt.WA_TranslucentBackground)
@@ -355,7 +355,7 @@ class IPSwitcherCard(QWidget):
         self._build_ip_section(root)
         self._build_stats_section(root)
         self._build_actions_section(root)
-        self._build_whitelist_section(root)
+        self._build_opencode_section(root)
         self._build_history_section(root)
 
     def _build_header(self, root: QVBoxLayout):
@@ -477,39 +477,39 @@ class IPSwitcherCard(QWidget):
         )
         self._auto_btn.clicked.connect(self._on_toggle_auto)
         bly.addWidget(self._auto_btn, 1)
+        self._pool_btn = QPushButton("停止代理", btns)
+        self._pool_btn.setCursor(Qt.PointingHandCursor)
+        self._pool_btn.setMinimumHeight(32)
+        self._pool_btn.setStyleSheet(
+            self._stop_btn_style(self._cached_fs, self._cached_ff)
+        )
+        self._pool_btn.setToolTip("停止代理池子进程，白名单请求将直连")
+        self._pool_btn.clicked.connect(self._on_toggle_pool)
+        bly.addWidget(self._pool_btn, 1)
         root.addWidget(btns)
 
-    def _build_whitelist_section(self, root: QVBoxLayout):
-        """白名单区（模型名胶囊 + 编辑按钮）"""
+    def _build_opencode_section(self, root: QVBoxLayout):
+        """内置 opencode 免费模型区（只读展示，无需用户配置）"""
         wl = QWidget(self)
         wl.setStyleSheet("background: transparent;")
         wly = QHBoxLayout(wl)
         wly.setContentsMargins(16, 2, 16, 2)
         wly.setSpacing(8)
 
-        self._wl_hint = QLabel("白名单", wl)
+        self._wl_hint = QLabel("opencode 免费模型", wl)
         self._wl_hint.setStyleSheet(
             f"color: {self._cached_tcs}; background: transparent;"
             f" font-size: {max(10, self._cached_fs - 3)}px; letter-spacing: 2px;"
         )
         wly.addWidget(self._wl_hint)
 
-        self._wl_label = QLabel("未配置", wl)
+        self._wl_label = QLabel("未发现", wl)
         self._wl_label.setStyleSheet(
             f"color: {self._cached_tcs}; background: transparent;"
             f" font-size: {max(10, self._cached_fs - 2)}px;"
         )
         self._wl_label.setWordWrap(True)
         wly.addWidget(self._wl_label, 1)
-
-        self._wl_edit_btn = QPushButton("编辑", wl)
-        self._wl_edit_btn.setCursor(Qt.PointingHandCursor)
-        self._wl_edit_btn.setMinimumHeight(24)
-        self._wl_edit_btn.setStyleSheet(
-            self._wl_edit_btn_style(self._cached_fs, self._cached_ff)
-        )
-        self._wl_edit_btn.clicked.connect(self._on_edit_whitelist)
-        wly.addWidget(self._wl_edit_btn)
         root.addWidget(wl)
 
     def _build_history_section(self, root: QVBoxLayout):
@@ -592,26 +592,43 @@ class IPSwitcherCard(QWidget):
         pool_stats = manager.get_stats()
         pool_size = pool_stats.get("pool_size", "-") if pool_stats else "-"
         self._stat_labels["pool_size"].setText(str(pool_size))
+        # 代理池运行状态 → 停止/启动按钮 + 立即换IP 联动
+        running = manager.is_running()
+        self._pool_btn.setText("停止代理" if running else "启动代理")
+        self._pool_btn.setToolTip(
+            "停止代理池子进程，白名单请求将直连" if running else "启动代理池子进程"
+        )
+        if running:
+            self._pool_btn.setStyleSheet(
+                self._stop_btn_style(self._cached_fs, self._cached_ff)
+            )
+        else:
+            self._pool_btn.setStyleSheet(
+                self._auto_btn_style(self._cached_fs, self._cached_ff)
+            )
+        # 代理池未运行时不提供手动换 IP
+        self._switch_btn.setEnabled(running and not self._is_busy)
         # 白名单
-        self._refresh_whitelist()
+        self._refresh_opencode()
         # 历史（最近 8 条，占满区域可滚动）
         self._render_history(st.history()[:8])
         # 按钮
         self._auto_btn.setText("恢复自动" if not st.is_auto_switch() else "暂停自动")
 
-    def _refresh_whitelist(self):
-        models = self._config.get("whitelist_models", []) or []
-        urls = self._config.get("whitelist_base_urls", []) or []
-        parts = list(models) + list(urls)
-        if parts:
+    def _refresh_opencode(self):
+        """展示系统内置 opencode 免费模型列表（只读）"""
+        from config import get_opencode_free_models
+
+        models = get_opencode_free_models()
+        if models:
             # 最多显示 4 个，多余折叠
-            shown = "、".join(parts[:4])
-            more = f" 等{len(parts)}项" if len(parts) > 4 else ""
+            shown = "、".join(models[:4])
+            more = f" 等{len(models)}项" if len(models) > 4 else ""
             self._wl_label.setText(shown + more)
-            self._wl_label.setToolTip("\n".join(parts))
+            self._wl_label.setToolTip("\n".join(models))
         else:
-            self._wl_label.setText("未配置（点击编辑）")
-            self._wl_label.setToolTip("添加免费模型名或 API 地址，命中才走代理池")
+            self._wl_label.setText("未发现（系统无 opencode 免费 provider）")
+            self._wl_label.setToolTip("")
 
     # ── 历史渲染 ──
 
@@ -701,54 +718,56 @@ class IPSwitcherCard(QWidget):
         self._config.set("auto_switch", st.is_auto_switch())
         self._refresh_all()
 
-    def _on_edit_whitelist(self):
-        """弹出文本编辑框编辑白名单（每行一项：模型名或 API 地址）
-
-        白名单为空时自动预填系统发现的免费模型列表，方便直接确认。
-        """
-        from config import get_system_model_options
-
-        models = self._config.get("whitelist_models", []) or []
-        urls = self._config.get("whitelist_base_urls", []) or []
-        current = "\n".join(list(models) + list(urls))
-        if not current:
-            # 预填系统发现的免费模型（用户要求的"获取系统有哪些模型"）
-            free_options = [
-                o for o in get_system_model_options() if o.get("is_free")
-            ]
-            if free_options:
-                current = "\n".join(o["model"] for o in free_options)
-                # 附上对应 API 地址（去重）
-                for o in free_options:
-                    if o.get("url") and o["url"] not in urls:
-                        urls.append(o["url"])
-                if urls:
-                    current += "\n" + "\n".join(urls)
-        text, ok = QInputDialog.getMultiLineText(
-            self,
-            "编辑白名单",
-            "每行一个模型名或 API 地址（命中才走代理池并自动换 IP）\n"
-            "已自动列出系统发现的免费模型，可按需增删：",
-            current,
-        )
-        if not ok:
+    def _on_toggle_pool(self):
+        """停止/启动代理池（停止：杀子进程；启动：后台线程拉起）"""
+        manager = get_manager()
+        st = self._state
+        if manager.is_running():
+            # ── 停止代理 ──
+            try:
+                manager.stop()
+                st.set_pool_state("stopped")
+                logger.info("[ip-switcher] 手动停止代理池")
+            except Exception:
+                logger.exception("[ip-switcher] 停止代理池异常")
+            self._refresh_all()
             return
-        # 解析：http 前缀为 URL，其余按模型名
-        new_models: list = []
-        new_urls: list = []
-        for line in text.splitlines():
-            s = line.strip()
-            if not s:
-                continue
-            if s.startswith("http://") or s.startswith("https://"):
-                new_urls.append(s)
-            else:
-                new_models.append(s)
-        self._config.update(
-            {"whitelist_models": new_models, "whitelist_base_urls": new_urls}
-        )
-        logger.info(f"[ip-switcher] 白名单已更新: models={new_models} urls={new_urls}")
-        self._refresh_whitelist()
+        # ── 启动代理（后台，避免阻塞 UI） ──
+        self._pool_btn.setEnabled(False)
+        self._pool_btn.setText("启动中…")
+        st.set_pool_state("starting")
+        logger.info("[ip-switcher] 手动启动代理池…")
+
+        def _boot():
+            try:
+                ok = manager.start(fetch_and_check=True)
+                if ok:
+                    manager.set_mode("sticky")
+                    stats = manager.get_stats()
+                    cur = (stats or {}).get("current")
+                    if cur:
+                        st.set_current_ip(cur)
+                    st.set_pool_state("ok")
+                    logger.info("[ip-switcher] 代理池手动启动成功")
+                else:
+                    st.set_pool_state("error")
+                    logger.error("[ip-switcher] 代理池手动启动失败")
+            except Exception:
+                logger.exception("[ip-switcher] 代理池手动启动异常")
+                st.set_pool_state("error")
+            finally:
+                # 恢复按钮并刷新（跨线程，Qt 信号自动投递主线程）
+                from PyQt5.QtCore import QTimer
+
+                def _done():
+                    self._pool_btn.setEnabled(True)
+                    self._refresh_all()
+
+                QTimer.singleShot(0, _done)
+
+        import threading
+
+        threading.Thread(target=_boot, daemon=True).start()
 
     # ── 比例高度（与系统卡片一致） ──
 

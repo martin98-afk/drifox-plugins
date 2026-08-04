@@ -20,8 +20,6 @@ from loguru import logger
 # 默认配置（与设计文档 §9 一致）
 DEFAULT_CONFIG: Dict[str, Any] = {
     "enabled": True,
-    "whitelist_models": [],
-    "whitelist_base_urls": [],
     "proxy_pool_port": 8082,
     "retry_limit": 3,
     "retry_backoff_seconds": 2,
@@ -101,57 +99,38 @@ def discover_system_providers() -> List[Dict[str, Any]]:
         return []
 
 
-def auto_fill_free_whitelist() -> bool:
-    """自动发现系统免费模型并填入白名单（白名单为空时）
+def discover_opencode_free_provider() -> Optional[Dict[str, Any]]:
+    """发现系统自带的 opencode 免费模型 provider（软件初始化内置）
 
-    返回 True 表示本次填充了白名单；False 表示无需填充（已配置或无可发现）。
+    判定：provider name 同时包含 "opencode"（忽略大小写）和 "免费"。
+    命中则返回 {name, url, models: [...]}，否则返回 None。
     """
-    cfg = get_config()
-    existing_models = cfg.get("whitelist_models", []) or []
-    existing_urls = cfg.get("whitelist_base_urls", []) or []
-    if existing_models or existing_urls:
-        return False  # 用户已手动配置，不覆盖
     providers = discover_system_providers()
-    free_providers = [p for p in providers if p.get("is_free")]
-    if not free_providers:
-        return False
-    models: List[str] = []
-    urls: List[str] = []
-    for p in free_providers:
-        for m in p.get("models", []):
-            if m not in models:
-                models.append(m)
-        if p.get("url") and p["url"] not in urls:
-            urls.append(p["url"])
-    if not models and not urls:
-        return False
-    cfg.update({"whitelist_models": models, "whitelist_base_urls": urls})
-    logger.info(
-        f"[ip-switcher] 已自动发现免费模型白名单: {len(models)} 模型 / {len(urls)} API"
-    )
-    return True
-
-
-def get_system_model_options() -> List[Dict[str, Any]]:
-    """供 UI 展示的完整系统模型列表（含免费标记，便于用户手动勾选）"""
-    providers = discover_system_providers()
-    options: List[Dict[str, Any]] = []
-    seen = set()
     for p in providers:
-        for m in p.get("models", []):
-            key = (m, p.get("url", ""))
-            if key in seen:
-                continue
-            seen.add(key)
-            options.append(
-                {
-                    "model": m,
-                    "url": p.get("url", ""),
-                    "provider": p.get("name", ""),
-                    "is_free": p.get("is_free", False),
-                }
-            )
-    return options
+        name = str(p.get("name") or "")
+        if "opencode" in name.lower() and "免费" in name:
+            return {
+                "name": name,
+                "url": p.get("url", ""),
+                "models": list(p.get("models", []) or []),
+            }
+    return None
+
+
+def get_opencode_free_models() -> List[str]:
+    """系统内置 opencode 免费模型列表（供卡片展示）"""
+    p = discover_opencode_free_provider()
+    if not p:
+        return []
+    return p["models"]
+
+
+def get_opencode_free_urls() -> List[str]:
+    """系统内置 opencode 免费 API 地址列表"""
+    p = discover_opencode_free_provider()
+    if not p:
+        return []
+    return [p["url"]] if p.get("url") else []
 
 
 class ConfigStore:
@@ -220,25 +199,22 @@ class ConfigStore:
                     self._data[k] = v
         self.save()
 
-    # ── 白名单快捷方法 ──
+    # ── opencode 免费模型判定（内置，无需用户配置） ──
 
-    def is_whitelisted_model(self, model: str) -> bool:
-        """模型名命中白名单"""
+    def is_opencode_free_model(self, model: str) -> bool:
+        """模型名是否属于系统内置 opencode 免费模型"""
         if not model:
             return False
         with self._lock:
-            return model in self._data.get("whitelist_models", [])
+            return model in get_opencode_free_models()
 
-    def is_whitelisted_base_url(self, base_url: str) -> bool:
-        """API 地址命中白名单（精确匹配，容错去掉尾部斜杠）"""
+    def is_opencode_free_base_url(self, base_url: str) -> bool:
+        """API 地址是否匹配系统内置 opencode 免费 API（容错尾部斜杠）"""
         if not base_url:
             return False
         norm = base_url.rstrip("/")
         with self._lock:
-            return any(
-                str(u).rstrip("/") == norm
-                for u in self._data.get("whitelist_base_urls", [])
-            )
+            return any(str(u).rstrip("/") == norm for u in get_opencode_free_urls())
 
 
 # 模块级单例（热重载时重建）
