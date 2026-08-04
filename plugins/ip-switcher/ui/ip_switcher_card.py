@@ -280,13 +280,34 @@ class IPSwitcherCard(QWidget):
     # ── 信号连接 ──
 
     def _connect_signals(self):
-        self._state.switched.connect(lambda _ev: self._refresh_all())
-        self._state.status_changed.connect(lambda _f, _v: self._refresh_all())
-        self._state.pool_state_changed.connect(lambda _s: self._refresh_all())
+        self._signal_conns = [
+            (self._state.switched, lambda _ev: self._refresh_all()),
+            (self._state.status_changed, lambda _f, _v: self._refresh_all()),
+            (self._state.pool_state_changed, lambda _s: self._refresh_all()),
+        ]
+        for sig, slot in self._signal_conns:
+            sig.connect(slot)
+
+    def _disconnect_signals(self):
+        """断开 state 信号（卡片销毁前调用，防 lambda 访问已删控件）"""
+        for sig, slot in getattr(self, "_signal_conns", []):
+            try:
+                sig.disconnect(slot)
+            except Exception:
+                pass
+        self._signal_conns = []
 
     # ── 刷新 ──
 
     def _refresh_all(self):
+        # Qt 生命周期防护：卡片已被销毁时控件可能已 C++ 删除
+        try:
+            import sip
+
+            if sip.isdeleted(self._badge_label):
+                return
+        except Exception:
+            pass
         st = self._state
         # 徽章
         text, _ = self._badge_state()
@@ -379,6 +400,11 @@ class IPSwitcherCard(QWidget):
 
     # ── 生命周期 ──
 
+    def deleteLater(self):
+        self._disconnect_signals()
+        super().deleteLater()
+
     def _on_close(self):
+        self._disconnect_signals()
         self.setVisible(False)
         self.closed.emit()
