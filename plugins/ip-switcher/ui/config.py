@@ -2,12 +2,18 @@
 """ip-switcher 配置 — 存于 user-custom 插件目录（随云端备份恢复）
 
 路径：.drifox/plugins/user-custom/ip-switcher/ip-switcher.json
+
+系统模型自动发现：
+- 首次运行时若白名单为空，自动从 DriFox 主配置（.drifox/app.config）
+  的 LLM.SavedProviders 中发现"免费"provider（名字含 免费/free 或
+  模型名含 -free），将其模型列表 + API_URL 自动填入白名单，实现
+  "装上就能用"，无需手改配置。
 """
 
 import json
 import threading
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from loguru import logger
 
@@ -37,6 +43,115 @@ def _get_user_custom_dir() -> Path:
     if not hasattr(sys, "_MEIPASS") and not getattr(sys, "frozen", False):
         return Path(".drifox") / "plugins" / "user-custom"
     return Path.home() / ".drifox" / "plugins" / "user-custom"
+
+
+# ── 系统模型自动发现 ──────────────────────────────────────
+
+
+def _get_system_config_path() -> Path:
+    """定位 DriFox 主应用配置（.drifox/app.config）"""
+    env = __import__("os").environ.get("IP_SWITCHER_SYSTEM_CONFIG")
+    if env:
+        return Path(env)
+    import sys
+
+    if not hasattr(sys, "_MEIPASS") and not getattr(sys, "frozen", False):
+        return Path(".drifox") / "app.config"
+    return Path.home() / ".drifox" / "app.config"
+
+
+def discover_system_providers() -> List[Dict[str, Any]]:
+    """扫描 DriFox 主配置的 LLM.SavedProviders，返回 provider 信息列表
+
+    返回：[{name, provider_name, url, models: [str, ...], is_free: bool}]
+    is_free：provider 名含 免费/free 或任一模型名含 -free 判定为免费。
+    读取失败 / 配置不存在 → 返回空列表（不抛异常）。
+    """
+    cfg_path = _get_system_config_path()
+    if not cfg_path.exists():
+        return []
+    try:
+        with cfg_path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        providers = (data.get("LLM", {}) or {}).get("SavedProviders", {}) or {}
+        result: List[Dict[str, Any]] = []
+        for cid, p in providers.items():
+            if not isinstance(p, dict):
+                continue
+            name = p.get("name") or p.get("provider_name") or cid
+            url = p.get("API_URL") or ""
+            models = list(p.get("模型列表") or []) or (
+                [p.get("模型名称")] if p.get("模型名称") else []
+            )
+            is_free = ("免费" in str(name)) or ("free" in str(name).lower()) or any(
+                "-free" in str(m).lower() for m in models
+            )
+            result.append(
+                {
+                    "name": name,
+                    "provider_name": p.get("provider_name") or name,
+                    "url": url,
+                    "models": models,
+                    "is_free": is_free,
+                }
+            )
+        return result
+    except (OSError, ValueError) as e:
+        logger.debug(f"[ip-switcher] 系统配置读取失败: {e}")
+        return []
+
+
+def auto_fill_free_whitelist() -> bool:
+    """自动发现系统免费模型并填入白名单（白名单为空时）
+
+    返回 True 表示本次填充了白名单；False 表示无需填充（已配置或无可发现）。
+    """
+    cfg = get_config()
+    existing_models = cfg.get("whitelist_models", []) or []
+    existing_urls = cfg.get("whitelist_base_urls", []) or []
+    if existing_models or existing_urls:
+        return False  # 用户已手动配置，不覆盖
+    providers = discover_system_providers()
+    free_providers = [p for p in providers if p.get("is_free")]
+    if not free_providers:
+        return False
+    models: List[str] = []
+    urls: List[str] = []
+    for p in free_providers:
+        for m in p.get("models", []):
+            if m not in models:
+                models.append(m)
+        if p.get("url") and p["url"] not in urls:
+            urls.append(p["url"])
+    if not models and not urls:
+        return False
+    cfg.update({"whitelist_models": models, "whitelist_base_urls": urls})
+    logger.info(
+        f"[ip-switcher] 已自动发现免费模型白名单: {len(models)} 模型 / {len(urls)} API"
+    )
+    return True
+
+
+def get_system_model_options() -> List[Dict[str, Any]]:
+    """供 UI 展示的完整系统模型列表（含免费标记，便于用户手动勾选）"""
+    providers = discover_system_providers()
+    options: List[Dict[str, Any]] = []
+    seen = set()
+    for p in providers:
+        for m in p.get("models", []):
+            key = (m, p.get("url", ""))
+            if key in seen:
+                continue
+            seen.add(key)
+            options.append(
+                {
+                    "model": m,
+                    "url": p.get("url", ""),
+                    "provider": p.get("name", ""),
+                    "is_free": p.get("is_free", False),
+                }
+            )
+    return options
 
 
 class ConfigStore:

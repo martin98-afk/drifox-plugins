@@ -20,7 +20,15 @@ from loguru import logger
 
 def register_ui(registry):
     """注册 ip-switcher 插件的 UI 组件（浮动卡片 + monkey patch）"""
-    # 0) 安装 monkey patch：白名单模型走代理 + 429 换 IP 重试
+    # 0) 自动发现系统免费模型白名单（首次运行白名单为空时）
+    try:
+        from .config import auto_fill_free_whitelist
+
+        auto_fill_free_whitelist()
+    except Exception:
+        logger.exception("[ip-switcher] 免费模型白名单自动发现失败（不影响其余功能）")
+
+    # 0.5) 安装 monkey patch：白名单模型走代理 + 429 换 IP 重试
     try:
         from .ip_redirect import install_redirect
 
@@ -90,3 +98,28 @@ def register_ui(registry):
     )
 
     logger.info("[ip-switcher] UI components registered")
+
+
+def unload_ui(registry):
+    """插件卸载/热重载回调（由 UIPluginRegistry.unload_plugin 调用）
+
+    在注册表清理前执行，用于释放外部资源：
+    1. 停止代理池子进程（杀残留进程）
+    2. 卸载 monkey patch（恢复 openai 原始方法）
+
+    ⚠️ 此函数在旧模块上下文中执行——热重载时 sys.modules 里
+    还是旧模块实例，get_manager()/uninstall_redirect() 均访问旧单例，
+    因此能拿到旧子进程句柄并正确停止。
+    """
+    try:
+        from .proxy_pool import get_manager
+
+        get_manager().stop()
+    except Exception as e:
+        logger.warning(f"[ip-switcher] unload_ui 停止代理池失败: {e}")
+    try:
+        from .ip_redirect import uninstall_redirect
+
+        uninstall_redirect()
+    except Exception as e:
+        logger.warning(f"[ip-switcher] unload_ui 卸载 patch 失败: {e}")

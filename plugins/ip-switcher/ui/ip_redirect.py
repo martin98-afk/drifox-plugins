@@ -104,8 +104,12 @@ def _get_dispatcher() -> Optional[_MainThreadDispatcher]:
     return _dispatcher
 
 
-def _switch_ip_threadsafe(timeout: float = 20.0) -> Optional[str]:
-    """线程安全换 IP：非 UI 线程 → 派发到主线程同步等待结果"""
+def _switch_ip_threadsafe(trigger: str = "manual", timeout: float = 20.0) -> Optional[str]:
+    """线程安全换 IP：非 UI 线程 → 派发到主线程同步等待结果
+
+    Args:
+        trigger: 触发类型 "manual"（手动按钮）或 "ratelimit"（429 自动）
+    """
     import threading as _t
 
     try:
@@ -123,7 +127,7 @@ def _switch_ip_threadsafe(timeout: float = 20.0) -> Optional[str]:
 
             def _do():
                 try:
-                    result["ip"] = _do_switch_ip()
+                    result["ip"] = _do_switch_ip(trigger)
                 finally:
                     event.set()
 
@@ -132,13 +136,17 @@ def _switch_ip_threadsafe(timeout: float = 20.0) -> Optional[str]:
             return result["ip"]
     except Exception:
         pass
-    return _do_switch_ip()
+    return _do_switch_ip(trigger)
 
 
-def _do_switch_ip() -> Optional[str]:
-    """执行换 IP（主线程）：代理池 rotate → 验证出口 IP → 更新 state"""
+def _do_switch_ip(trigger: str = "manual") -> Optional[str]:
+    """执行换 IP（主线程）：代理池 rotate → 验证出口 IP → 更新 state
+
+    Args:
+        trigger: "manual"（手动按钮）或 "ratelimit"（429 自动）
+    """
     state = get_state()
-    if not state.is_auto_switch():
+    if not state.is_auto_switch() and trigger == "ratelimit":
         logger.info("[ip-switcher] 自动切换已暂停，跳过换 IP")
         return None
     old_ip = state.current_ip()
@@ -151,11 +159,13 @@ def _do_switch_ip() -> Optional[str]:
     # 验证出口 IP
     outbound = manager.get_outbound_ip()
     new_ip = outbound or new_proxy.split(":")[0]
-    state.record_switch(
-        "ratelimit" if old_ip != "未使用" else "startup", old_ip, new_ip
-    )
+    if old_ip == "未使用":
+        effective_trigger = "startup"
+    else:
+        effective_trigger = trigger  # manual / ratelimit 如实记录
+    state.record_switch(effective_trigger, old_ip, new_ip)
     state.set_pool_state("ok")
-    logger.info(f"[ip-switcher] 已切换 IP: {old_ip} → {new_ip}")
+    logger.info(f"[ip-switcher] 已切换 IP ({effective_trigger}): {old_ip} → {new_ip}")
     return new_ip
 
 
@@ -234,7 +244,7 @@ def _wrap_chat_create(orig_create):
                 )
                 if attempt >= retry_limit:
                     break
-                new_ip = _switch_ip_threadsafe()
+                new_ip = _switch_ip_threadsafe(trigger="ratelimit")
                 if new_ip is None:
                     logger.warning("[ip-switcher] 换 IP 失败，不再重试")
                     break
@@ -269,7 +279,7 @@ def _wrap_chat_acreate(orig_acreate):
                 )
                 if attempt >= retry_limit:
                     break
-                new_ip = _switch_ip_threadsafe()
+                new_ip = _switch_ip_threadsafe(trigger="ratelimit")
                 if new_ip is None:
                     break
                 await __import__("asyncio").sleep(backoff)

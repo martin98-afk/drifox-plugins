@@ -81,6 +81,70 @@ class ProxyPoolManager:
     def is_running(self) -> bool:
         return self._proc is not None and self._proc.poll() is None
 
+    # ── PID 文件跟踪（热重载/复用分支也能定位并杀旧进程） ──
+
+    def _pid_file(self) -> Path:
+        return self.data_dir / "proxy_pool.pid"
+
+    def _write_pid_file(self, pid: int) -> None:
+        """把代理池子进程 PID 写入数据目录（供热重载/异常残留后清理）"""
+        try:
+            self.data_dir.mkdir(parents=True, exist_ok=True)
+            self._pid_file().write_text(str(pid), encoding="utf-8")
+        except OSError as e:
+            logger.warning(f"[ip-switcher] PID 文件写入失败: {e}")
+
+    def _read_pid_file(self) -> Optional[int]:
+        """读取 PID 文件，返回 PID 或 None"""
+        try:
+            p = self._pid_file()
+            if p.exists():
+                return int(p.read_text(encoding="utf-8").strip())
+        except Exception:
+            pass
+        return None
+
+    def _delete_pid_file(self) -> None:
+        try:
+            p = self._pid_file()
+            if p.exists():
+                p.unlink()
+        except OSError:
+            pass
+
+    def _kill_pid(self, pid: int) -> bool:
+        """按 PID 终止进程（psutil 校验命令行防误杀）
+
+        校验条件（任一命中即视为代理池进程）：
+        1. 命令行含 "proxypool"（vendor 路径或关键词）
+        2. 含 "main.py" 且带 serve/run 子命令（开发/测试直跑场景）
+        """
+        try:
+            import psutil
+
+            proc = psutil.Process(pid)
+            cmdline = " ".join(proc.cmdline()) or ""
+            is_pool = "proxypool" in cmdline or (
+                "main.py" in cmdline and ("serve" in cmdline or "run" in cmdline)
+            )
+            if not is_pool:
+                logger.warning(
+                    f"[ip-switcher] PID {pid} 非 proxypool 进程，跳过（防误杀）"
+                )
+                return False
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except psutil.TimeoutExpired:
+                proc.kill()
+            logger.info(f"[ip-switcher] 已终止残留代理池进程 PID={pid}")
+            return True
+        except psutil.NoSuchProcess:
+            return False  # 进程已不存在，视为清理成功
+        except Exception as e:
+            logger.warning(f"[ip-switcher] PID {pid} 终止失败: {e}")
+            return False
+
     def start(self, fetch_and_check: bool = True, wait_ready: float = 8.0) -> bool:
         """启动代理池子进程。
 
@@ -92,8 +156,15 @@ class ProxyPoolManager:
         # 防重复启动：端口已被占用 → 视为已有实例在跑，直接复用
         # （热重载后模块级单例失效，不能依赖内存状态判断）
         if _probe_port(self.stats_port):
-            logger.info(f"[ip-switcher] 控制台端口 {self.stats_port} 已占用，复用现有代理池")
-            self._proc = None  # 本实例未持有子进程，stop() 不杀别人的
+            logger.info(
+                f"[ip-switcher] 控制台端口 {self.stats_port} 已占用，复用现有代理池"
+            )
+            # 复用时不持有 _proc（不杀别人的），
+            # 但保留 PID 文件以便本实例 stop() 时可定位并清理旧进程
+            pid = self._read_pid_file()
+            self._proc = None
+            if pid and self._is_pid_alive(pid):
+                logger.info(f"[ip-switcher] 接管现有代理池 PID={pid}")
             return True
         with self._lock:
             if self.is_running():
@@ -118,6 +189,7 @@ class ProxyPoolManager:
                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
                     env=_build_subprocess_env(),
                 )
+                self._write_pid_file(self._proc.pid)
                 logger.info(
                     f"[ip-switcher] 代理池已启动 (pid={self._proc.pid}, port={self.proxy_port})"
                 )
@@ -137,6 +209,16 @@ class ProxyPoolManager:
         logger.warning("[ip-switcher] 代理池控制台未就绪")
         return False
 
+    @staticmethod
+    def _is_pid_alive(pid: int) -> bool:
+        """进程是否存活"""
+        try:
+            import psutil
+
+            return psutil.pid_exists(pid)
+        except Exception:
+            return False
+
     def _trigger_fetch_check_async(self) -> None:
         """后台线程触发 fetch + check（不阻塞启动流程）"""
 
@@ -150,7 +232,12 @@ class ProxyPoolManager:
         threading.Thread(target=_run, daemon=True).start()
 
     def stop(self) -> None:
-        """停止代理池子进程"""
+        """停止代理池子进程（双重兜底）
+
+        1. 优先按 self._proc 终止（本实例启动的进程）
+        2. 无论 _proc 是否为 None，都通过 PID 文件定位并清理残留进程
+           （覆盖热重载后新实例 _proc=None 但旧进程仍存活的场景）
+        """
         with self._lock:
             if self._proc is not None:
                 try:
@@ -162,6 +249,11 @@ class ProxyPoolManager:
                     except Exception:
                         pass
                 self._proc = None
+        # PID 文件兜底清理（复用分支 _proc=None 时依然能杀旧进程；主程序退出时同样生效）
+        pid = self._read_pid_file()
+        if pid:
+            self._kill_pid(pid)
+            self._delete_pid_file()
         logger.info("[ip-switcher] 代理池已停止")
 
     # ── HTTP 控制 API ──

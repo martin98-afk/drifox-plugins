@@ -702,19 +702,38 @@ class IPSwitcherCard(QWidget):
         self._refresh_all()
 
     def _on_edit_whitelist(self):
-        """弹出文本编辑框编辑白名单（每行一项：模型名或 API 地址）"""
+        """弹出文本编辑框编辑白名单（每行一项：模型名或 API 地址）
+
+        白名单为空时自动预填系统发现的免费模型列表，方便直接确认。
+        """
+        from config import get_system_model_options
+
         models = self._config.get("whitelist_models", []) or []
         urls = self._config.get("whitelist_base_urls", []) or []
         current = "\n".join(list(models) + list(urls))
+        if not current:
+            # 预填系统发现的免费模型（用户要求的"获取系统有哪些模型"）
+            free_options = [
+                o for o in get_system_model_options() if o.get("is_free")
+            ]
+            if free_options:
+                current = "\n".join(o["model"] for o in free_options)
+                # 附上对应 API 地址（去重）
+                for o in free_options:
+                    if o.get("url") and o["url"] not in urls:
+                        urls.append(o["url"])
+                if urls:
+                    current += "\n" + "\n".join(urls)
         text, ok = QInputDialog.getMultiLineText(
             self,
             "编辑白名单",
-            "每行一个模型名或 API 地址（命中才走代理池并自动换 IP）：",
+            "每行一个模型名或 API 地址（命中才走代理池并自动换 IP）\n"
+            "已自动列出系统发现的免费模型，可按需增删：",
             current,
         )
         if not ok:
             return
-        # 解析：首行 @ 开头为 URL，其余按 http 前缀判别
+        # 解析：http 前缀为 URL，其余按模型名
         new_models: list = []
         new_urls: list = []
         for line in text.splitlines():
