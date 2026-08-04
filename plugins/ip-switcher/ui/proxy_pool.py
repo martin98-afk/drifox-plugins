@@ -11,6 +11,7 @@
 - GET  /reset   → 重置熔断
 """
 
+import os
 import subprocess
 import sys
 import threading
@@ -22,7 +23,28 @@ import httpx
 from loguru import logger
 
 _VENDOR_DIR = Path(__file__).resolve().parent / "_vendor" / "proxypool"
+_PYSOCKS_DIR = Path(__file__).resolve().parent / "_vendor" / "pysocks"
 _PROXY_MAIN = _VENDOR_DIR / "main.py"
+
+
+def _build_subprocess_env() -> Dict[str, str]:
+    """构建子进程环境：注入当前 venv site-packages + _vendor/pysocks
+
+    ⚠️ uv shim 的 sys.executable 在 subprocess 中会解析成裸 Python
+    （不带 venv 的 site-packages），导致 requests/PySocks 不可用。
+    必须显式通过 PYTHONPATH 注入，否则 ProxyPool 的 fetch/check 全失败。
+    """
+    env = dict(os.environ)
+    parts: list[str] = []
+    # 1) 当前进程的 site-packages（requests 等）
+    for p in sys.path:
+        if "site-packages" in p and p not in parts:
+            parts.append(p)
+    # 2) vendor 的 PySocks（import socks 需要）
+    parts.append(str(_PYSOCKS_DIR))
+    old = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = os.pathsep.join(parts) + (os.pathsep + old if old else "")
+    return env
 
 
 class ProxyPoolManager:
@@ -83,6 +105,7 @@ class ProxyPoolManager:
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                    env=_build_subprocess_env(),
                 )
                 logger.info(
                     f"[ip-switcher] 代理池已启动 (pid={self._proc.pid}, port={self.proxy_port})"
@@ -173,13 +196,19 @@ class ProxyPoolManager:
     # ── 出口 IP 验证 ──
 
     def get_outbound_ip(self, timeout: float = 8.0) -> Optional[str]:
-        """通过代理请求 ipify 拿出口 IP（验证代理连通性）"""
+        """通过代理请求 ipify 拿出口 IP（验证代理连通性）
+
+        ⚠️ 免费代理转发 https 常报 CERTIFICATE_VERIFY_FAILED（代理做 MITM），
+        因此用 http 端点 + verify=False，避免误判代理不可用。
+        """
+        proxy_url = f"http://127.0.0.1:{self.proxy_port}"
         try:
-            proxies = {
-                "http://": f"http://127.0.0.1:{self.proxy_port}",
-                "https://": f"http://127.0.0.1:{self.proxy_port}",
-            }
-            r = httpx.get("https://api.ipify.org", proxies=proxies, timeout=timeout)
+            r = httpx.get(
+                "http://api.ipify.org",
+                proxy=proxy_url,
+                timeout=timeout,
+                verify=False,
+            )
             if r.status_code == 200:
                 ip = r.text.strip()
                 return ip if ip else None
