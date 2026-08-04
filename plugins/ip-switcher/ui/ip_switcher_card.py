@@ -194,6 +194,14 @@ class IPSwitcherCard(QWidget):
 
         # 关键控件专属样式
         try:
+            self._header_title.setStyleSheet(
+                f"color: {tc}; background: transparent; font-family: '{ff}';"
+                f" font-size: {max(12, fs + 1)}px; font-weight: 600;"
+            )
+            self._header_title.setFont(QFont(ff, max(12, fs + 1)))
+        except RuntimeError:
+            pass
+        try:
             self._ip_label.setStyleSheet(
                 f"color: {tc}; background: transparent; font-family: '{ff}';"
                 f" font-size: {fs + 6}px; font-weight: 600;"
@@ -224,11 +232,11 @@ class IPSwitcherCard(QWidget):
         except RuntimeError:
             pass
         try:
-            self._switch_btn.setStyleSheet(self._switch_btn_style(accent, fs))
+            self._switch_btn.setStyleSheet(self._switch_btn_style(accent, fs, ff))
         except RuntimeError:
             pass
         try:
-            self._auto_btn.setStyleSheet(self._auto_btn_style(fs))
+            self._auto_btn.setStyleSheet(self._auto_btn_style(fs, ff))
         except RuntimeError:
             pass
         # 统计格
@@ -271,28 +279,30 @@ class IPSwitcherCard(QWidget):
 
     # ── 按钮样式（对齐 system-cleaner 渐变按钮） ──
 
-    def _switch_btn_style(self, accent: str, fs: int) -> str:
+    def _switch_btn_style(self, accent: str, fs: int, ff: str = "") -> str:
+        font_qss = f"font-family: '{ff}';" if ff else ""
         return (
-            "QPushButton { background: qlineargradient("
+            f"QPushButton {{ background: qlineargradient("
             f"x1:0, y1:0, x2:1, y2:1, stop:0 {accent}, stop:1 {_adjust_color(accent, -20)}"
             "); color: white; border: none; border-radius: 6px;"
-            f" font-size: {max(10, fs - 2)}px; font-weight: 600; padding: 0 10px; }}"
+            f" {font_qss} font-size: {max(10, fs - 2)}px; font-weight: 600; padding: 0 10px; }}"
             "QPushButton:hover { background: qlineargradient("
             f"x1:0, y1:0, x2:1, y2:1, stop:0 {_adjust_color(accent, 10)}, stop:1 {accent}"
             "); }"
             "QPushButton:disabled { background: rgba(128,128,128,0.3); color: rgba(255,255,255,0.5); }"
         )
 
-    def _auto_btn_style(self, fs: int) -> str:
+    def _auto_btn_style(self, fs: int, ff: str = "") -> str:
         dark = isDarkTheme()
         bg = "rgba(255,255,255,0.08)" if dark else "rgba(0,0,0,0.06)"
         color = "rgba(255,255,255,0.85)" if dark else "rgba(0,0,0,0.85)"
         border = "rgba(255,255,255,0.12)" if dark else "rgba(0,0,0,0.12)"
         hover_bg = "rgba(255,255,255,0.14)" if dark else "rgba(0,0,0,0.10)"
+        font_qss = f"font-family: '{ff}';" if ff else ""
         return (
             f"QPushButton {{ background: {bg}; color: {color};"
             f" border: 1px solid {border}; border-radius: 6px;"
-            f" font-size: {max(10, fs - 2)}px; font-weight: 500; padding: 0 10px; }}"
+            f" {font_qss} font-size: {max(10, fs - 2)}px; font-weight: 500; padding: 0 10px; }}"
             f"QPushButton:hover {{ background: {hover_bg}; }}"
         )
 
@@ -335,6 +345,8 @@ class IPSwitcherCard(QWidget):
         self._header_title = StrongBodyLabel("IP 换绑监控", header)
         self._header_title.setStyleSheet(
             f"color: {self._cached_tc}; background: transparent;"
+            f" font-family: '{self._cached_ff}';"
+            f" font-size: {max(12, self._cached_fs + 1)}px; font-weight: 600;"
         )
         hly.addWidget(self._header_title)
 
@@ -424,14 +436,18 @@ class IPSwitcherCard(QWidget):
         self._switch_btn.setCursor(Qt.PointingHandCursor)
         self._switch_btn.setMinimumHeight(32)
         self._switch_btn.setStyleSheet(
-            self._switch_btn_style(self._cached_accent, self._cached_fs)
+            self._switch_btn_style(
+                self._cached_accent, self._cached_fs, self._cached_ff
+            )
         )
         self._switch_btn.clicked.connect(self._on_manual_switch)
         bly.addWidget(self._switch_btn, 1)
         self._auto_btn = QPushButton("暂停自动", btns)
         self._auto_btn.setCursor(Qt.PointingHandCursor)
         self._auto_btn.setMinimumHeight(32)
-        self._auto_btn.setStyleSheet(self._auto_btn_style(self._cached_fs))
+        self._auto_btn.setStyleSheet(
+            self._auto_btn_style(self._cached_fs, self._cached_ff)
+        )
         self._auto_btn.clicked.connect(self._on_toggle_auto)
         bly.addWidget(self._auto_btn, 1)
         root.addWidget(btns)
