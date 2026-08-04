@@ -104,7 +104,9 @@ def _get_dispatcher() -> Optional[_MainThreadDispatcher]:
     return _dispatcher
 
 
-def _switch_ip_threadsafe(trigger: str = "manual", timeout: float = 20.0) -> Optional[str]:
+def _switch_ip_threadsafe(
+    trigger: str = "manual", timeout: float = 20.0
+) -> Optional[str]:
     """线程安全换 IP：非 UI 线程 → 派发到主线程同步等待结果
 
     Args:
@@ -301,33 +303,56 @@ def install_redirect() -> bool:
         logger.warning("[ip-switcher] openai SDK 不可用，跳过 patch")
         return False
 
-    # 幂等：热重载遗留代理检测
+    # 幂等：热重载遗留代理检测。
+    # ⚠️ 此时原始方法引用必须从已 patch 的函数对象上取回（_orig 属性），
+    # 不能依赖本模块的 _orig_*（热重载后新模块里它们是 None）！
     if getattr(openai.OpenAI.__init__, "_drifox_ip_switch", False):
+        _orig_openai_init = getattr(openai.OpenAI.__init__, "_orig", None)
+        if hasattr(openai, "AsyncOpenAI"):
+            _orig_async_openai_init = getattr(
+                openai.AsyncOpenAI.__init__, "_orig", None
+            )
+        try:
+            from openai.resources.chat.completions import Completions
+
+            _orig_chat_create = getattr(Completions.create, "_orig", None)
+            if hasattr(Completions, "acreate"):
+                _orig_chat_acreate = getattr(Completions.acreate, "_orig", None)
+        except Exception:
+            pass
         _installed = True
         return True
 
     try:
-        # 1) patch OpenAI.__init__
+        # 1) patch OpenAI.__init__（原始方法挂到函数对象，热重载后仍可找回）
         _orig_openai_init = openai.OpenAI.__init__
         _patched_openai_init._drifox_ip_switch = True  # type: ignore[attr-defined]
+        _patched_openai_init._orig = _orig_openai_init  # type: ignore[attr-defined]
         openai.OpenAI.__init__ = _patched_openai_init  # type: ignore[assignment]
 
         # 2) patch AsyncOpenAI.__init__
         if hasattr(openai, "AsyncOpenAI"):
             _orig_async_openai_init = openai.AsyncOpenAI.__init__
             _patched_async_openai_init._drifox_ip_switch = True  # type: ignore[attr-defined]
+            _patched_async_openai_init._orig = _orig_async_openai_init  # type: ignore[attr-defined]
             openai.AsyncOpenAI.__init__ = _patched_async_openai_init  # type: ignore[assignment]
 
         # 3) patch chat.completions.create
         from openai.resources.chat.completions import Completions
 
         _orig_chat_create = Completions.create
-        Completions.create = _wrap_chat_create(_orig_chat_create)  # type: ignore[assignment]
+        _wrapped = _wrap_chat_create(_orig_chat_create)
+        _wrapped._drifox_ip_switch = True  # type: ignore[attr-defined]
+        _wrapped._orig = _orig_chat_create  # type: ignore[attr-defined]
+        Completions.create = _wrapped  # type: ignore[assignment]
 
         # 4) patch chat.completions.acreate
         if hasattr(Completions, "acreate"):
             _orig_chat_acreate = Completions.acreate
-            Completions.acreate = _wrap_chat_acreate(_orig_chat_acreate)  # type: ignore[assignment]
+            _wrapped_async = _wrap_chat_acreate(_orig_chat_acreate)
+            _wrapped_async._drifox_ip_switch = True  # type: ignore[attr-defined]
+            _wrapped_async._orig = _orig_chat_acreate  # type: ignore[attr-defined]
+            Completions.acreate = _wrapped_async  # type: ignore[assignment]
 
         # 5) 预创建主线程派发器（register_ui 在主线程执行）
         _get_dispatcher()
@@ -341,24 +366,50 @@ def install_redirect() -> bool:
 
 
 def uninstall_redirect() -> None:
-    """卸载 patch（插件卸载/禁用时调用）"""
+    """卸载 patch（插件卸载/禁用时调用）
+
+    优先从当前被 patch 的函数对象上取回原始方法（_orig 属性），
+    兼容热重载后本模块 _orig_* 为 None 的情况。
+    """
     global _installed, _orig_openai_init, _orig_async_openai_init
     global _orig_chat_create, _orig_chat_acreate
     try:
         import openai
 
-        if _orig_openai_init is not None:
+        # OpenAI.__init__：从 patch 函数对象取原始引用
+        cur = openai.OpenAI.__init__
+        orig = getattr(cur, "_orig", None)
+        if orig is not None:
+            openai.OpenAI.__init__ = orig  # type: ignore[assignment]
+        elif _orig_openai_init is not None:
             openai.OpenAI.__init__ = _orig_openai_init  # type: ignore[assignment]
-        if _orig_async_openai_init is not None and hasattr(openai, "AsyncOpenAI"):
-            openai.AsyncOpenAI.__init__ = _orig_async_openai_init  # type: ignore[assignment]
-        if _orig_chat_create is not None:
-            from openai.resources.chat.completions import Completions
 
+        # AsyncOpenAI.__init__
+        if hasattr(openai, "AsyncOpenAI"):
+            cur_a = openai.AsyncOpenAI.__init__
+            orig_a = getattr(cur_a, "_orig", None)
+            if orig_a is not None:
+                openai.AsyncOpenAI.__init__ = orig_a  # type: ignore[assignment]
+            elif _orig_async_openai_init is not None:
+                openai.AsyncOpenAI.__init__ = _orig_async_openai_init  # type: ignore[assignment]
+
+        # chat.completions.create / acreate
+        from openai.resources.chat.completions import Completions
+
+        cur_c = Completions.create
+        orig_c = getattr(cur_c, "_orig", None)
+        if orig_c is not None:
+            Completions.create = orig_c  # type: ignore[assignment]
+        elif _orig_chat_create is not None:
             Completions.create = _orig_chat_create  # type: ignore[assignment]
-        if _orig_chat_acreate is not None:
-            from openai.resources.chat.completions import Completions
 
-            Completions.acreate = _orig_chat_acreate  # type: ignore[assignment]
+        if hasattr(Completions, "acreate"):
+            cur_ac = Completions.acreate
+            orig_ac = getattr(cur_ac, "_orig", None)
+            if orig_ac is not None:
+                Completions.acreate = orig_ac  # type: ignore[assignment]
+            elif _orig_chat_acreate is not None:
+                Completions.acreate = _orig_chat_acreate  # type: ignore[assignment]
     except Exception as e:
         logger.warning(f"[ip-switcher] 卸载 patch 异常: {e}")
     _installed = False
