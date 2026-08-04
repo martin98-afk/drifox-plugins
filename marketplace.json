@@ -435,6 +435,35 @@
             }
         },
         {
+            "name": "ip-switcher",
+            "description": "IP 切换监控 — 免费模型限流自动换 IP（429 检测 + 代理池轮换 + 仪表盘）。",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/ip-switcher",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true
+            },
+            "keywords": [
+                "drifox",
+                "ip",
+                "proxy",
+                "rate-limit",
+                "free-model"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            }
+        },
+        {
             "name": "knowledge-base-skills",
             "description": "本地知识库检索技能——面向本地知识库目录的分层检索和问答助手，支持 Markdown/PDF/Excel 渐进式检索。",
             "version": "1.0.0",
