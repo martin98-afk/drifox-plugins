@@ -29,6 +29,7 @@ from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QFrame,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QPushButton,
     QScrollArea,
@@ -239,6 +240,18 @@ class IPSwitcherCard(QWidget):
             self._auto_btn.setStyleSheet(self._auto_btn_style(fs, ff))
         except RuntimeError:
             pass
+        try:
+            self._wl_edit_btn.setStyleSheet(self._wl_edit_btn_style(fs, ff))
+        except RuntimeError:
+            pass
+        try:
+            self._wl_hint.setStyleSheet(
+                f"color: {tcs}; background: transparent; font-family: '{ff}';"
+                f" font-size: {max(10, fs - 3)}px; letter-spacing: 2px;"
+                f" padding: 10px 16px 4px;"
+            )
+        except RuntimeError:
+            pass
         # 统计格
         for cell, val_lb, name_lb in self._stat_cells:
             try:
@@ -284,7 +297,7 @@ class IPSwitcherCard(QWidget):
         return (
             f"QPushButton {{ background: qlineargradient("
             f"x1:0, y1:0, x2:1, y2:1, stop:0 {accent}, stop:1 {_adjust_color(accent, -20)}"
-            "); color: white; border: none; border-radius: 6px;"
+            f"); color: white; border: none; border-radius: 6px;"
             f" {font_qss} font-size: {max(10, fs - 2)}px; font-weight: 600; padding: 0 10px; }}"
             "QPushButton:hover { background: qlineargradient("
             f"x1:0, y1:0, x2:1, y2:1, stop:0 {_adjust_color(accent, 10)}, stop:1 {accent}"
@@ -303,6 +316,19 @@ class IPSwitcherCard(QWidget):
             f"QPushButton {{ background: {bg}; color: {color};"
             f" border: 1px solid {border}; border-radius: 6px;"
             f" {font_qss} font-size: {max(10, fs - 2)}px; font-weight: 500; padding: 0 10px; }}"
+            f"QPushButton:hover {{ background: {hover_bg}; }}"
+        )
+
+    def _wl_edit_btn_style(self, fs: int, ff: str = "") -> str:
+        dark = isDarkTheme()
+        color = "rgba(255,255,255,0.7)" if dark else "rgba(0,0,0,0.6)"
+        border = "rgba(128,128,128,0.2)"
+        hover_bg = "rgba(255,255,255,0.12)" if dark else "rgba(0,0,0,0.08)"
+        font_qss = f"font-family: '{ff}';" if ff else ""
+        return (
+            f"QPushButton {{ background: transparent; color: {color};"
+            f" border: 1px solid {border}; border-radius: 6px;"
+            f" {font_qss} font-size: {max(9, fs - 4)}px; font-weight: 400; padding: 0 8px; }}"
             f"QPushButton:hover {{ background: {hover_bg}; }}"
         )
 
@@ -329,6 +355,7 @@ class IPSwitcherCard(QWidget):
         self._build_ip_section(root)
         self._build_stats_section(root)
         self._build_actions_section(root)
+        self._build_whitelist_section(root)
         self._build_history_section(root)
 
     def _build_header(self, root: QVBoxLayout):
@@ -426,7 +453,7 @@ class IPSwitcherCard(QWidget):
         root.addWidget(stats)
 
     def _build_actions_section(self, root: QVBoxLayout):
-        """操作按钮（上移：统计格下方、历史上方）"""
+        """操作按钮（上移：统计格下方、白名单上方）"""
         btns = QWidget(self)
         btns.setStyleSheet("background: transparent;")
         bly = QHBoxLayout(btns)
@@ -451,6 +478,39 @@ class IPSwitcherCard(QWidget):
         self._auto_btn.clicked.connect(self._on_toggle_auto)
         bly.addWidget(self._auto_btn, 1)
         root.addWidget(btns)
+
+    def _build_whitelist_section(self, root: QVBoxLayout):
+        """白名单区（模型名胶囊 + 编辑按钮）"""
+        wl = QWidget(self)
+        wl.setStyleSheet("background: transparent;")
+        wly = QHBoxLayout(wl)
+        wly.setContentsMargins(16, 2, 16, 2)
+        wly.setSpacing(8)
+
+        self._wl_hint = QLabel("白名单", wl)
+        self._wl_hint.setStyleSheet(
+            f"color: {self._cached_tcs}; background: transparent;"
+            f" font-size: {max(10, self._cached_fs - 3)}px; letter-spacing: 2px;"
+        )
+        wly.addWidget(self._wl_hint)
+
+        self._wl_label = QLabel("未配置", wl)
+        self._wl_label.setStyleSheet(
+            f"color: {self._cached_tcs}; background: transparent;"
+            f" font-size: {max(10, self._cached_fs - 2)}px;"
+        )
+        self._wl_label.setWordWrap(True)
+        wly.addWidget(self._wl_label, 1)
+
+        self._wl_edit_btn = QPushButton("编辑", wl)
+        self._wl_edit_btn.setCursor(Qt.PointingHandCursor)
+        self._wl_edit_btn.setMinimumHeight(24)
+        self._wl_edit_btn.setStyleSheet(
+            self._wl_edit_btn_style(self._cached_fs, self._cached_ff)
+        )
+        self._wl_edit_btn.clicked.connect(self._on_edit_whitelist)
+        wly.addWidget(self._wl_edit_btn)
+        root.addWidget(wl)
 
     def _build_history_section(self, root: QVBoxLayout):
         """换绑历史（占满剩余空间：ScrollArea + stretch）"""
@@ -532,10 +592,28 @@ class IPSwitcherCard(QWidget):
         pool_stats = manager.get_stats()
         pool_size = pool_stats.get("pool_size", "-") if pool_stats else "-"
         self._stat_labels["pool_size"].setText(str(pool_size))
+        # 白名单
+        self._refresh_whitelist()
         # 历史（最近 8 条，占满区域可滚动）
         self._render_history(st.history()[:8])
         # 按钮
         self._auto_btn.setText("恢复自动" if not st.is_auto_switch() else "暂停自动")
+
+    def _refresh_whitelist(self):
+        models = self._config.get("whitelist_models", []) or []
+        urls = self._config.get("whitelist_base_urls", []) or []
+        parts = list(models) + list(urls)
+        if parts:
+            # 最多显示 4 个，多余折叠
+            shown = "、".join(parts[:4])
+            more = f" 等{len(parts)}项" if len(parts) > 4 else ""
+            self._wl_label.setText(shown + more)
+            self._wl_label.setToolTip("\n".join(parts))
+        else:
+            self._wl_label.setText("未配置（点击编辑）")
+            self._wl_label.setToolTip("添加免费模型名或 API 地址，命中才走代理池")
+
+    # ── 历史渲染 ──
 
     def _render_history(self, events):
         while self._history_layout.count():
@@ -622,6 +700,36 @@ class IPSwitcherCard(QWidget):
         st.set_auto_switch(not st.is_auto_switch())
         self._config.set("auto_switch", st.is_auto_switch())
         self._refresh_all()
+
+    def _on_edit_whitelist(self):
+        """弹出文本编辑框编辑白名单（每行一项：模型名或 API 地址）"""
+        models = self._config.get("whitelist_models", []) or []
+        urls = self._config.get("whitelist_base_urls", []) or []
+        current = "\n".join(list(models) + list(urls))
+        text, ok = QInputDialog.getMultiLineText(
+            self,
+            "编辑白名单",
+            "每行一个模型名或 API 地址（命中才走代理池并自动换 IP）：",
+            current,
+        )
+        if not ok:
+            return
+        # 解析：首行 @ 开头为 URL，其余按 http 前缀判别
+        new_models: list = []
+        new_urls: list = []
+        for line in text.splitlines():
+            s = line.strip()
+            if not s:
+                continue
+            if s.startswith("http://") or s.startswith("https://"):
+                new_urls.append(s)
+            else:
+                new_models.append(s)
+        self._config.update(
+            {"whitelist_models": new_models, "whitelist_base_urls": new_urls}
+        )
+        logger.info(f"[ip-switcher] 白名单已更新: models={new_models} urls={new_urls}")
+        self._refresh_whitelist()
 
     # ── 比例高度（与系统卡片一致） ──
 
