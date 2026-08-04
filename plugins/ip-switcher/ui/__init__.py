@@ -85,7 +85,7 @@ def register_ui(registry):
         card_id="ip-switcher",
         widget_class=IPSwitcherCard,
         container="right",
-        title="IP 换绑监控",
+        title="IP自动换绑",
         default_visible=False,
     )
 

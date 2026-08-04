@@ -2,7 +2,7 @@
 """ip-switcher 仪表盘浮动卡片（对齐系统插件 UI 规范）
 
 ┌──────────────────────────────────────────┐
-│ [🌐] IP 换绑监控              [正常][×]  │  ← 头部：svg 图标 + 徽章(固定高) + 关闭
+│ [🌐] IP自动换绑             [正常][×]  │  ← 头部：svg 图标 + 徽章(固定高) + 关闭
 ├──────────────────────────────────────────┤
 │ 当前出口 IP                              │
 │  103.216.72.14                           │  ← 大字等宽
@@ -105,7 +105,7 @@ _TRIGGER_COLOR = {"ratelimit": "#ef4444", "manual": "#3b82f6"}
 
 
 class IPSwitcherCard(QWidget):
-    """IP 换绑监控仪表盘浮动卡片"""
+    """IP自动换绑仪表盘浮动卡片"""
 
     closed = pyqtSignal()
 
@@ -342,7 +342,7 @@ class IPSwitcherCard(QWidget):
         self._header_icon.setFixedSize(22, 22)
         hly.addWidget(self._header_icon)
 
-        self._header_title = StrongBodyLabel("IP 换绑监控", header)
+        self._header_title = StrongBodyLabel("IP自动换绑", header)
         self._header_title.setStyleSheet(
             f"color: {self._cached_tc}; background: transparent;"
             f" font-family: '{self._cached_ff}';"
