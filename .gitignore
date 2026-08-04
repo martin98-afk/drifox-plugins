@@ -11,6 +11,9 @@ __pycache__/
 .coverage
 htmlcov/
 
+# 临时调试/探测脚本（connection error 根因排查等一次性脚本）
+.test/
+
 # 虚拟环境
 .venv/
 venv/
