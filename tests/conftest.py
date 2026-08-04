@@ -37,5 +37,12 @@ if "ip_switcher_config" not in sys.modules:
     _load_module("ip_switcher_config", "config.py")
 if "ip_switcher_state" not in sys.modules:
     _load_module("ip_switcher_state", "state.py")
+
+# ip_redirect.py 需要先加载 config/state/proxy_pool（同目录），把 ui 目录加入 sys.path
+if "ip_switcher_redirect" not in sys.modules:
+    # 确保同目录的 config/state/proxy_pool 可被绝对导入找到
+    if str(_UI_DIR) not in sys.path:
+        sys.path.insert(0, str(_UI_DIR))
+    _load_module("ip_switcher_redirect", "ip_redirect.py")
 if "ip_switcher_proxy_pool" not in sys.modules:
     _load_module("ip_switcher_proxy_pool", "proxy_pool.py")
