@@ -6,8 +6,9 @@
 browser 插件的 ui_plugin_browser.* 前缀），测试同样走 importlib。
 
 提供 sys.modules 中的模块别名：
-- ip_switcher_config → plugins/ip-switcher/ui/config.py
-- ip_switcher_state  → plugins/ip-switcher/ui/state.py
+- ip_switcher_config   → plugins/ip-switcher/ui/config.py
+- ip_switcher_state    → plugins/ip-switcher/ui/state.py
+- ip_switcher_proxy_pool → plugins/ip-switcher/ui/proxy_pool.py
 """
 
 import importlib.util
@@ -36,3 +37,5 @@ if "ip_switcher_config" not in sys.modules:
     _load_module("ip_switcher_config", "config.py")
 if "ip_switcher_state" not in sys.modules:
     _load_module("ip_switcher_state", "state.py")
+if "ip_switcher_proxy_pool" not in sys.modules:
+    _load_module("ip_switcher_proxy_pool", "proxy_pool.py")
