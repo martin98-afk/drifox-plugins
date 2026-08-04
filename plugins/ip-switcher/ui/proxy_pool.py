@@ -12,6 +12,7 @@
 """
 
 import os
+import socket
 import subprocess
 import sys
 import threading
@@ -25,6 +26,15 @@ from loguru import logger
 _VENDOR_DIR = Path(__file__).resolve().parent / "_vendor" / "proxypool"
 _PYSOCKS_DIR = Path(__file__).resolve().parent / "_vendor" / "pysocks"
 _PROXY_MAIN = _VENDOR_DIR / "main.py"
+
+
+def _probe_port(port: int, host: str = "127.0.0.1", timeout: float = 0.5) -> bool:
+    """探测端口是否已被占用（有进程监听）"""
+    try:
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
 
 
 def _build_subprocess_env() -> Dict[str, str]:
@@ -72,33 +82,34 @@ class ProxyPoolManager:
         return self._proc is not None and self._proc.poll() is None
 
     def start(self, fetch_and_check: bool = True, wait_ready: float = 8.0) -> bool:
-        """启动代理池子进程。fetch_and_check=True 时先抓取+检测代理。"""
+        """启动代理池子进程。
+
+        策略（避免 run 模式 fetch/check 阻塞控制台）：
+        1. 先探测 stats_port：已占用 → 复用现有实例（防热重载重复启动）
+        2. 否则直接 serve（几秒内控制台就绪）
+        3. 再通过控制 API 后台触发 fetch + check（不阻塞）
+        """
+        # 防重复启动：端口已被占用 → 视为已有实例在跑，直接复用
+        # （热重载后模块级单例失效，不能依赖内存状态判断）
+        if _probe_port(self.stats_port):
+            logger.info(f"[ip-switcher] 控制台端口 {self.stats_port} 已占用，复用现有代理池")
+            self._proc = None  # 本实例未持有子进程，stop() 不杀别人的
+            return True
         with self._lock:
             if self.is_running():
                 return True
             self.data_dir.mkdir(parents=True, exist_ok=True)
             try:
-                if fetch_and_check:
-                    # run = fetch → check → serve（一键全流程）
-                    cmd = [
-                        sys.executable,
-                        str(_PROXY_MAIN),
-                        "run",
-                        "--port",
-                        str(self.proxy_port),
-                        "--stats-port",
-                        str(self.stats_port),
-                    ]
-                else:
-                    cmd = [
-                        sys.executable,
-                        str(_PROXY_MAIN),
-                        "serve",
-                        "--port",
-                        str(self.proxy_port),
-                        "--stats-port",
-                        str(self.stats_port),
-                    ]
+                # 直接 serve（控制台秒级就绪），fetch/check 后续异步触发
+                cmd = [
+                    sys.executable,
+                    str(_PROXY_MAIN),
+                    "serve",
+                    "--port",
+                    str(self.proxy_port),
+                    "--stats-port",
+                    str(self.stats_port),
+                ]
                 self._proc = subprocess.Popen(
                     cmd,
                     cwd=str(self.data_dir),
@@ -118,10 +129,25 @@ class ProxyPoolManager:
         deadline = time.time() + wait_ready
         while time.time() < deadline:
             if self._request("GET", "/stats") is not None:
+                # 后台异步触发抓取 + 检测（不阻塞，ProxyPool 支持后台任务）
+                if fetch_and_check:
+                    self._trigger_fetch_check_async()
                 return True
             time.sleep(0.5)
-        logger.warning("[ip-switcher] 代理池控制台未就绪（可能仍在抓取/检测）")
-        return True  # 进程在跑，只是没就绪；后续调用会重试
+        logger.warning("[ip-switcher] 代理池控制台未就绪")
+        return False
+
+    def _trigger_fetch_check_async(self) -> None:
+        """后台线程触发 fetch + check（不阻塞启动流程）"""
+
+        def _run():
+            try:
+                self.fetch_proxies()
+                self.check_proxies()
+            except Exception as e:
+                logger.warning(f"[ip-switcher] 后台抓取/检测触发失败: {e}")
+
+        threading.Thread(target=_run, daemon=True).start()
 
     def stop(self) -> None:
         """停止代理池子进程"""
