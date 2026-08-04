@@ -10,8 +10,6 @@
 - 线程安全：429 可能发生在 worker 线程，经 _MainThreadDispatcher 回主线程换 IP
 """
 
-import re
-import threading
 import time
 from typing import Any, Optional
 
@@ -153,7 +151,9 @@ def _do_switch_ip() -> Optional[str]:
     # 验证出口 IP
     outbound = manager.get_outbound_ip()
     new_ip = outbound or new_proxy.split(":")[0]
-    state.record_switch("ratelimit" if old_ip != "未使用" else "startup", old_ip, new_ip)
+    state.record_switch(
+        "ratelimit" if old_ip != "未使用" else "startup", old_ip, new_ip
+    )
     state.set_pool_state("ok")
     logger.info(f"[ip-switcher] 已切换 IP: {old_ip} → {new_ip}")
     return new_ip
@@ -175,8 +175,12 @@ def _patched_openai_init(self, *args, **kwargs):
         if "http_client" not in kwargs:
             try:
                 port = cfg.get("proxy_pool_port", 8082)
-                kwargs["http_client"] = _make_proxied_http_client(f"http://127.0.0.1:{port}")
-                logger.debug(f"[ip-switcher] 白名单命中注入代理 client: base={base_url} model={model}")
+                kwargs["http_client"] = _make_proxied_http_client(
+                    f"http://127.0.0.1:{port}"
+                )
+                logger.debug(
+                    f"[ip-switcher] 白名单命中注入代理 client: base={base_url} model={model}"
+                )
             except Exception as e:
                 logger.warning(f"[ip-switcher] 注入代理 client 失败，回退直连: {e}")
     return _orig_openai_init(self, *args, **kwargs)
@@ -197,7 +201,9 @@ def _patched_async_openai_init(self, *args, **kwargs):
                     proxy=f"http://127.0.0.1:{port}",
                     timeout=httpx.Timeout(60.0, connect=10.0),
                 )
-                logger.debug(f"[ip-switcher] 白名单命中注入异步代理 client: base={base_url}")
+                logger.debug(
+                    f"[ip-switcher] 白名单命中注入异步代理 client: base={base_url}"
+                )
             except Exception as e:
                 logger.warning(f"[ip-switcher] 注入异步代理 client 失败，回退直连: {e}")
     return _orig_async_openai_init(self, *args, **kwargs)
@@ -223,7 +229,9 @@ def _wrap_chat_create(orig_create):
                 if not _is_rate_limit_error(e):
                     raise  # 非限流错误直接抛
                 last_exc = e
-                logger.warning(f"[ip-switcher] 429 限流 (第 {attempt + 1} 次)，换 IP 后重试")
+                logger.warning(
+                    f"[ip-switcher] 429 限流 (第 {attempt + 1} 次)，换 IP 后重试"
+                )
                 if attempt >= retry_limit:
                     break
                 new_ip = _switch_ip_threadsafe()
@@ -256,7 +264,9 @@ def _wrap_chat_acreate(orig_acreate):
                 if not _is_rate_limit_error(e):
                     raise
                 last_exc = e
-                logger.warning(f"[ip-switcher] 429 限流 (异步, 第 {attempt + 1} 次)，换 IP 后重试")
+                logger.warning(
+                    f"[ip-switcher] 429 限流 (异步, 第 {attempt + 1} 次)，换 IP 后重试"
+                )
                 if attempt >= retry_limit:
                     break
                 new_ip = _switch_ip_threadsafe()

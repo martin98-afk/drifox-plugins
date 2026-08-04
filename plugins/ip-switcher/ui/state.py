@@ -31,15 +31,15 @@ class IPState(QObject):
     """全局状态总线（QObject 以便信号跨线程）"""
 
     # 信号：换绑事件、状态变化（供 UI 刷新）
-    switched = pyqtSignal(object)          # SwitchEvent
+    switched = pyqtSignal(object)  # SwitchEvent
     status_changed = pyqtSignal(str, str)  # (field, value)
-    pool_state_changed = pyqtSignal(str)   # "ok" | "error" | "starting"
+    pool_state_changed = pyqtSignal(str)  # "ok" | "error" | "starting"
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._lock = __import__("threading").RLock()
         self._current_ip: str = "未使用"
-        self._mode: str = "auto"          # auto/sticky/manual
+        self._mode: str = "auto"  # auto/sticky/manual
         self._auto_switch: bool = True
         self._pool_state: str = "stopped"  # stopped/starting/ok/error
         self._history: Deque[SwitchEvent] = deque(maxlen=50)
@@ -105,7 +105,14 @@ class IPState(QObject):
             self._pool_state = state
         self.pool_state_changed.emit(state)
 
-    def record_switch(self, trigger: str, old_ip: str, new_ip: str, success: bool = True, note: str = "") -> None:
+    def record_switch(
+        self,
+        trigger: str,
+        old_ip: str,
+        new_ip: str,
+        success: bool = True,
+        note: str = "",
+    ) -> None:
         """记录一次换绑事件并广播"""
         ev = SwitchEvent(
             timestamp=time.time(),

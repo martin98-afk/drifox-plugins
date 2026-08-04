@@ -97,9 +97,7 @@ class ProxyPoolManager:
             if self._request("GET", "/stats") is not None:
                 return True
             time.sleep(0.5)
-        logger.warning(
-            "[ip-switcher] 代理池控制台未就绪（可能仍在抓取/检测）"
-        )
+        logger.warning("[ip-switcher] 代理池控制台未就绪（可能仍在抓取/检测）")
         return True  # 进程在跑，只是没就绪；后续调用会重试
 
     def stop(self) -> None:

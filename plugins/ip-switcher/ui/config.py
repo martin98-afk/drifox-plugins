@@ -45,7 +45,9 @@ class ConfigStore:
     _lock = threading.RLock()
 
     def __init__(self, path: Path | None = None):
-        self.path = path or (_get_user_custom_dir() / "ip-switcher" / "ip-switcher.json")
+        self.path = path or (
+            _get_user_custom_dir() / "ip-switcher" / "ip-switcher.json"
+        )
         self._data: Dict[str, Any] = dict(DEFAULT_CONFIG)
         self.load()
 
@@ -57,7 +59,9 @@ class ConfigStore:
                     saved = json.load(f)
                 if isinstance(saved, dict):
                     merged = dict(DEFAULT_CONFIG)
-                    merged.update({k: v for k, v in saved.items() if k in DEFAULT_CONFIG})
+                    merged.update(
+                        {k: v for k, v in saved.items() if k in DEFAULT_CONFIG}
+                    )
                     with self._lock:
                         self._data = merged
                     return
@@ -116,7 +120,10 @@ class ConfigStore:
             return False
         norm = base_url.rstrip("/")
         with self._lock:
-            return any(str(u).rstrip("/") == norm for u in self._data.get("whitelist_base_urls", []))
+            return any(
+                str(u).rstrip("/") == norm
+                for u in self._data.get("whitelist_base_urls", [])
+            )
 
 
 # 模块级单例（热重载时重建）
