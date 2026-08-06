@@ -10,6 +10,8 @@
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import QMenu, QTabBar
 
+from .theme import theme_colors
+
 # 后台标签冻结阈值：超过此数量的标签，非活跃标签冻结释放内存
 MAX_ALIVE_TABS = 6
 
@@ -22,6 +24,7 @@ class ChromeTabBar(QTabBar):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self._c = theme_colors(None)  # 主题派生色缓存（apply_theme 前默认观感）
         self.setTabsClosable(True)
         self.setMovable(True)
         self.setExpanding(False)
@@ -30,7 +33,7 @@ class ChromeTabBar(QTabBar):
         self.setUsesScrollButtons(True)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_context_menu)
-        self.setStyleSheet(_tab_bar_style())
+        self.setStyleSheet(_tab_bar_style(self._c))
         self._menu_style = ""
 
         # 拖到空白处新建标签（Chrome 行为）
@@ -53,41 +56,48 @@ class ChromeTabBar(QTabBar):
         if idx >= 0:
             menu.addSeparator()
             menu.addAction("关闭标签", lambda: self.tabCloseRequested.emit(idx))
-            menu.addAction("关闭其他标签", lambda: self.close_others_requested.emit(idx))
+            menu.addAction(
+                "关闭其他标签", lambda: self.close_others_requested.emit(idx)
+            )
         menu.exec_(self.mapToGlobal(pos))
 
-    def apply_theme(self, text: str, surface: str):
-        """应用标签栏及右键菜单主题。"""
-        self.setStyleSheet(_tab_bar_style(text))
+    def apply_theme(self, c: dict):
+        """应用主题派生色字典（来自 theme.theme_colors(owner)）。"""
+        self._c = c
+        self.setStyleSheet(_tab_bar_style(c))
         self._menu_style = (
-            f"QMenu {{ background: {surface}; color: {text}; border: 1px solid rgba(128,128,128,0.25); }}"
+            f"QMenu {{ background: {c['card']}; color: {c['text']};"
+            f" border: 1px solid {c['border']}; }}"
             "QMenu::item { padding: 6px 24px 6px 10px; }"
-            "QMenu::item:selected { background: rgba(128,128,128,0.20); }"
+            f"QMenu::item:selected {{ background: {c['selected']}; }}"
         )
 
 
-def _tab_bar_style(text: str = "rgba(220,220,220,0.9)") -> str:
-    return """
-    QTabBar::tab {
+def _tab_bar_style(c: dict) -> str:
+    text = c["text"]
+    fs = c["fs"]
+    return f"""
+    QTabBar::tab {{
         background: transparent;
         border: none;
         padding: 0 8px;
         min-width: 150px;
         max-width: 280px;
         height: 36px;
-        font-size: 14px;
-        color: __TEXT_COLOR__;
-        border-top-left-radius: 8px;
-        border-top-right-radius: 8px;
-    }
-    QTabBar::tab:selected {
-        background: rgba(128,128,128,0.22);
-        color: __TEXT_COLOR__;
-    }
-    QTabBar::tab:hover:!selected {
-        background: rgba(128,128,128,0.10);
-    }
-    QTabBar::close-button {
+        font-family: '{c["ff"]}';
+        font-size: {fs}px;
+        color: {text};
+        border-top-left-radius: 6px;
+        border-top-right-radius: 6px;
+    }}
+    QTabBar::tab:selected {{
+        background: {c["selected"]};
+        color: {text};
+    }}
+    QTabBar::tab:hover:!selected {{
+        background: {c["hover"]};
+    }}
+    QTabBar::close-button {{
         border: none;
         border-radius: 8px;
         width: 16px;
@@ -95,8 +105,8 @@ def _tab_bar_style(text: str = "rgba(220,220,220,0.9)") -> str:
         margin: 2px;
         subcontrol-origin: padding;
         subcontrol-position: right;
-    }
-    QTabBar::close-button:hover {
+    }}
+    QTabBar::close-button:hover {{
         background: rgba(255,80,80,0.8);
-    }
-    """.replace("__TEXT_COLOR__", text)
+    }}
+    """
