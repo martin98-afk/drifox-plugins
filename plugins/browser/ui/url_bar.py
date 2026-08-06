@@ -19,6 +19,8 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
+from .theme import font_css, list_item_style, theme_colors
+
 # ── URL 规范化 ──────────────────────────────────────────
 
 _SCHEME_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*://")
@@ -79,6 +81,7 @@ class UrlBar(QWidget):
         self._loading = False
         self._progress = 0
         self._completer_source: Callable[[], List[Tuple[str, str]]] = lambda: []
+        self._c = theme_colors(None)  # 主题派生色缓存（apply_theme 前的默认观感）
         self._setup_ui()
 
     def _setup_ui(self):
@@ -93,21 +96,8 @@ class UrlBar(QWidget):
         self._edit.setClearButtonEnabled(True)
         self._edit.returnPressed.connect(self._on_return_pressed)
         self._edit.setMinimumHeight(34)
+        self._edit.setStyleSheet(self._edit_style(self._c))
 
-        # 圆角 + 内嵌进度条
-        self._edit.setStyleSheet(
-            "QLineEdit {"
-            "  border: 1px solid rgba(128,128,128,0.3);"
-            "  border-radius: 17px;"
-            "  padding: 0 12px;"
-            "  background: rgba(128,128,128,0.12);"
-            "  selection-background-color: rgba(0,120,215,0.6);"
-            "}"
-            "QLineEdit:focus {"
-            "  border: 1px solid rgba(0,120,215,0.7);"
-            "  background: rgba(128,128,128,0.08);"
-            "}"
-        )
         layout.addWidget(self._edit, 1)
 
         # 内嵌进度条（叠在输入框底部）
@@ -116,17 +106,7 @@ class UrlBar(QWidget):
         self._progress_bar.setValue(0)
         self._progress_bar.setTextVisible(False)
         self._progress_bar.setFixedHeight(3)
-        self._progress_bar.setStyleSheet(
-            "QProgressBar {"
-            "  border: none;"
-            "  border-radius: 1px;"
-            "  background: transparent;"
-            "}"
-            "QProgressBar::chunk {"
-            "  border-radius: 1px;"
-            "  background: #2f9df0;"
-            "}"
-        )
+        self._progress_bar.setStyleSheet(self._progress_style(self._c))
         self._progress_bar.setVisible(False)
 
         # 用 QTimer 合并 80ms 内的连续进度更新（渲染合并，减少重绘）
@@ -135,18 +115,43 @@ class UrlBar(QWidget):
         self._render_timer.setSingleShot(True)
         self._render_timer.timeout.connect(self._apply_progress)
 
-    def apply_theme(self, text: str, surface: str, border: str):
-        """应用由浏览器卡片传入的主题颜色。"""
-        self._edit.setStyleSheet(
-            "QLineEdit {"
-            f" color: {text}; border: 1px solid {border};"
-            " border-radius: 17px; padding: 0 12px;"
-            " background: rgba(128,128,128,0.12);"
-            " selection-background-color: rgba(0,120,215,0.6);"
-            "}"
-            "QLineEdit:focus { border: 1px solid rgba(0,120,215,0.7);"
-            f" background: {surface}; }}"
+    # ── 样式构建（对齐主程序输入框观感） ──
+
+    def _edit_style(self, c: dict) -> str:
+        """输入框 QSS：content_bg 底 + input_border/focus_border + 8px 圆角"""
+        return (
+            f"QLineEdit {{ {font_css(c['ff'], c['fs'])} color: {c['text']};"
+            f" border: 1px solid {c['input_border']}; border-radius: 8px;"
+            f" padding: 0 12px; background: {c['raised']};"
+            f" selection-background-color: {c['selected']}; }}"
+            f"QLineEdit:focus {{ border: 1px solid {c['focus_border']};"
+            f" background: {c['raised']}; }}"
         )
+
+    def _progress_style(self, c: dict) -> str:
+        """内嵌进度条：accent chunk + 2px 圆角 + 透明底"""
+        return (
+            "QProgressBar { border: none; border-radius: 2px; background: transparent; }"
+            f"QProgressBar::chunk {{ border-radius: 2px; background: {c['accent']}; }}"
+        )
+
+    def _completer_style(self, c: dict) -> str:
+        """补全弹出列表：content_bg 容器 + item hover/selected"""
+        return (
+            f"QAbstractItemView {{ background: {c['raised']}; color: {c['text']};"
+            f" border: 1px solid {c['border']}; border-radius: 8px;"
+            f" {font_css(c['ff'], c['fs'])} padding: 4px; }}"
+            + list_item_style(c["ff"], c["fs"], c["hover"], c["selected"])
+        )
+
+    def apply_theme(self, c: dict):
+        """应用主题派生色字典（来自 theme.theme_colors(owner)）。"""
+        self._c = c
+        self._edit.setStyleSheet(self._edit_style(c))
+        self._progress_bar.setStyleSheet(self._progress_style(c))
+        completer = self._edit.completer()
+        if completer is not None:
+            completer.popup().setStyleSheet(self._completer_style(c))
 
     def _sync_placeholder(self, text: str):
         """避免部分高 DPI/主题组合下 placeholder 与 URL 同时绘制。"""
@@ -224,6 +229,7 @@ class UrlBar(QWidget):
         completer = QCompleter(entries, self._edit)
         completer.setCaseSensitivity(Qt.CaseInsensitive)
         completer.setFilterMode(Qt.MatchContains)
+        completer.popup().setStyleSheet(self._completer_style(self._c))
         self._edit.setCompleter(completer)
 
 
