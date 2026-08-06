@@ -91,3 +91,71 @@ def register_ui(registry):
     FunctionCommandHandlers.register("browser-incognito", BrowserWindowCard.handle_browser_incognito)
 
     logger.info("[browser] UI components registered")
+
+
+def unload_ui(registry):
+    """插件卸载/热重载回调（由 UIPluginRegistry.unload_plugin 调用）
+
+    在注册表清理前执行，用于释放外部资源（以通读代码发现的实际资源为准）：
+    1. 停止浏览器控制 HTTP 服务器（daemon 线程 + 随机端口占用 + bridge.json）
+    2. 清理 downloads 挂载的 profile 下载信号连接
+    3. 关闭所有隐身窗口（释放 OTR profile）
+    4. 关闭所有 DevTools 窗口（释放 devtools page 关联）
+    5. 清空持久 Profile 单例引用（热重载避免旧 Profile 悬空）
+
+    ⚠️ 此函数在旧模块上下文中执行——热重载时 sys.modules 里
+    还是旧模块实例，from .xxx import ... 均访问旧模块资源，
+    因此能拿到旧服务器句柄并正确停止（与 ip-switcher unload_ui 同语义）。
+
+    注：external_open 的外部链接重定向 patch 保持幂等长期生效
+    （浏览器不可用时自动回退系统浏览器 _orig_webbrowser_open），
+    且 QDesktopServices 原 sip 类引用未保存、无法可靠还原，
+    故不强行恢复，避免破坏主程序外链行为。
+    """
+    # 1) 停止浏览器控制 HTTP 服务器（幂等：未启动则跳过）
+    try:
+        from .control_server import _server_ref
+
+        server = _server_ref.get("server")
+        if server is not None:
+            server.shutdown()
+            server.server_close()
+            _server_ref.clear()
+    except Exception as e:
+        logger.warning(f"[browser] unload_ui 停止控制端点失败: {e}")
+
+    # 2) 清理下载 profile 信号连接（幂等）
+    try:
+        from .downloads import reset_handled_profiles
+
+        reset_handled_profiles()
+    except Exception as e:
+        logger.warning(f"[browser] unload_ui 清理下载信号失败: {e}")
+
+    # 3) 关闭所有隐身窗口（释放 OTR profile）
+    try:
+        from .incognito import close_all_incognito_windows
+
+        close_all_incognito_windows()
+    except Exception as e:
+        logger.warning(f"[browser] unload_ui 关闭隐身窗口失败: {e}")
+
+    # 4) 关闭所有 DevTools 窗口（destroyed 钩子会自动移除列表引用）
+    try:
+        from .devtools import _open_devtools
+
+        for win in list(_open_devtools):
+            try:
+                win.close()
+            except RuntimeError:
+                pass
+    except Exception as e:
+        logger.warning(f"[browser] unload_ui 关闭 DevTools 失败: {e}")
+
+    # 5) 清空持久 Profile 单例（热重载后新实例重新延迟创建）
+    try:
+        from .profile_manager import reset_profiles
+
+        reset_profiles()
+    except Exception as e:
+        logger.warning(f"[browser] unload_ui 重置 Profile 失败: {e}")
