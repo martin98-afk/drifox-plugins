@@ -64,35 +64,22 @@ def create_page(view, profile, new_page_callback=None, is_dark=True):
     )
     page.scripts().insert(nav_script)
 
-    # 覆盖 navigator.* 为现代 Chrome，防止网站按 JS UA 拒绝 HTML5 播放
-    # ⚠️ 必须注入 MainWorld：页面脚本在此上下文读取 navigator，
-    #    ApplicationWorld 有独立的 navigator 对象，修改对页面不可见。
-    ua_script = QWebEngineScript()
-    ua_script.setName("drifox-chrome-ua")
-    ua_script.setInjectionPoint(QWebEngineScript.DocumentCreation)
-    ua_script.setWorldId(QWebEngineScript.MainWorld)
-    ua_script.setRunsOnSubFrames(True)
-    ua_script.setSourceCode(
-        "(function(){"
-        "var ua='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-        "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';"
-        "try{Object.defineProperty(navigator,'userAgent',{get:function(){return ua;},configurable:true});"
-        "Object.defineProperty(navigator,'vendor',{get:function(){return 'Google Inc.';},configurable:true});"
-        "Object.defineProperty(navigator,'platform',{get:function(){return 'Win32';},configurable:true});"
-        "}catch(e){}"
-        "if('userAgentData' in navigator){try{"
-        "var d={brands:[{brand:'Chromium',version:'131'},{brand:'Google Chrome',version:'131'},"
-        "{brand:'Not_A Brand',version:'24'}],mobile:false,platform:'Windows'};"
-        "Object.defineProperty(navigator,'userAgentData',{get:function(){return d;},configurable:true});"
-        "}catch(e){}}"
-        "})();"
-    )
-    page.scripts().insert(ua_script)
-
     def show_context_menu(pos):
         data = page.contextMenuData()
         link_url = QUrl(data.linkUrl())
         menu = QMenu(view)
+
+        # A1 blind spot：右键菜单走主题 token（card 底 + 主程序 QMenu 规格）
+        from .theme import menu_style, theme_colors
+
+        owner = getattr(new_page_callback, "__self__", None)
+        if owner is None:  # 兜底：向上找带上下文提供者的宿主
+            w = view.parentWidget()
+            while w is not None and not hasattr(w, "_context_provider"):
+                w = w.parentWidget()
+            owner = w
+        _c = theme_colors(owner)
+        menu.setStyleSheet(menu_style(_c["ff"], _c["fs"], _c["card"], _c["border"], _c["hover"], _c["text"]))
 
         if link_url.isValid() and not link_url.isEmpty():
             menu.addAction("在当前标签打开", lambda: view.setUrl(link_url))

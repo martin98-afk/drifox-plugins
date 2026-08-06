@@ -181,6 +181,19 @@ def list_item_style(ff, fs, hover, selected) -> str:
     )
 
 
+def menu_style(ff, fs, surface, border, hover, text="") -> str:
+    """QMenu 右键菜单样式：card 底 + 1px 边框 + 6px 圆角 + 4px 内边距（对齐主程序 QMenu 规格）。"""
+    fs = max(10, (fs or 14) - 1)
+    color = f" color: {text};" if text else ""
+    return (
+        f"QMenu {{ background: {surface};{color}"
+        f" border: 1px solid {border}; border-radius: 6px; padding: 4px;"
+        f" {font_css(ff, fs)} }}"
+        "QMenu::item { padding: 6px 20px; border-radius: 4px; }"
+        f"QMenu::item:selected {{ background: {hover}; }}"
+    )
+
+
 # ══════════════════════════════════════════════════════════════════
 # 组合样式
 # ══════════════════════════════════════════════════════════════════

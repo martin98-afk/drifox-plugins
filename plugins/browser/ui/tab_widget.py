@@ -10,7 +10,7 @@
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import QMenu, QTabBar
 
-from .theme import theme_colors
+from .theme import menu_style, theme_colors
 
 # 后台标签冻结阈值：超过此数量的标签，非活跃标签冻结释放内存
 MAX_ALIVE_TABS = 6
@@ -65,12 +65,9 @@ class ChromeTabBar(QTabBar):
         """应用主题派生色字典（来自 theme.theme_colors(owner)）。"""
         self._c = c
         self.setStyleSheet(_tab_bar_style(c))
-        self._menu_style = (
-            f"QMenu {{ background: {c['card']}; color: {c['text']};"
-            f" border: 1px solid {c['border']}; }}"
-            "QMenu::item { padding: 6px 24px 6px 10px; }"
-            f"QMenu::item:selected {{ background: {c['selected']}; }}"
-        )
+        # 收敛到 menu_style 组合器：selected 背景用 hover（对齐主程序 QMenu 规格，
+        # 弱化选中感避免与浏览器页面右键菜单观感割裂）
+        self._menu_style = menu_style(c["ff"], c["fs"], c["card"], c["border"], c["hover"], c["text"])
 
 
 def _tab_bar_style(c: dict) -> str:
