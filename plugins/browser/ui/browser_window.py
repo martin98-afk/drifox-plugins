@@ -50,7 +50,7 @@ _ICON_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 
 # 内核 H.264 解码能力（内核级属性，与页面无关 → 只探测一次，缓存结果）
 _H264_SUPPORTED: Optional[bool] = None
-_NO_H264_HINT = "⚠ 当前内核不支持 H.264 视频播放，可点右上角用外部浏览器打开"
+_NO_H264_HINT = "当前内核不支持 H.264 视频播放，可点右上角用外部浏览器打开"
 
 
 def _icon_path(name: str, is_dark: bool) -> str:
@@ -655,7 +655,7 @@ class BrowserWindowCard(QWidget):
         self._btn_external.setIcon(QIcon(_icon_path("external_open", c["is_dark"])))
 
         self._menu_panel.setStyleSheet(
-            f"QFrame {{ background: {c['card']}; border: 1px solid {c['border']}; border-radius: 8px; }}"
+            f"QFrame {{ background: {c['surface']}; border: 1px solid {c['border']}; border-radius: 8px; }}"
             f"QLabel {{ color: {c['text']}; {font_css(c['ff'], max(10, c['fs'] - 1))} padding: 4px 8px; }}"
             f"QToolButton {{ border: none; color: {c['text']}; {font_css(c['ff'], max(10, c['fs'] - 1))}"
             " padding: 4px 10px; border-radius: 6px; text-align: left; }"
@@ -1021,6 +1021,8 @@ def _start_page_html(c: dict) -> str:
     text = c["text"]
     secondary = c["secondary"]
     hover = c["hover"]
+    border = c["border"]
+    raised = c["raised"]
     return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
 html {{ background:{surface}; }}
@@ -1029,17 +1031,17 @@ body {{ background:{surface}; color:{text};
        display:flex; align-items:center; justify-content:center;
        height:100vh; margin:0; }}
 .card {{ text-align:center; }}
-h1 {{ font-size:{fs + 10}px; font-weight:300; color:{text}; margin:0 0 18px 0; }}
+h1 {{ font-size:{fs + 10}px; font-weight:300; color:{text}; margin:0 0 16px 0; }}
 h1 .brand {{ font-weight:600; color:{accent}; }}
-p.hint {{ color:{secondary}; font-size:{fs}px; padding:6px 14px; border-radius:8px; }}
-p.hint:hover {{ background:{hover}; }}
-kbd {{ background:{hover}; border:1px solid {secondary};
+p.hint {{ color:{secondary}; font-size:{fs}px; padding:8px 14px;
+         border:1px solid {border}; background:{hover}; border-radius:8px; }}
+kbd {{ background:{raised}; border:1px solid {border}; color:{text};
        border-radius:4px; padding:1px 6px;
        font-family:'{ff}','Microsoft YaHei',sans-serif; font-size:{max(10, fs - 2)}px; }}
 </style></head><body>
 <div class="card">
   <h1><span class="brand">DriFox</span> 浏览器</h1>
-  <p class="hint">在上方地址栏输入网址，或按 <kbd>Ctrl</kbd>+<kbd>L</kbd> 快速定位</p>
+  <p class="hint"><kbd>Ctrl</kbd>+<kbd>L</kbd> 聚焦地址栏 · <kbd>Ctrl</kbd>+<kbd>T</kbd> 新建标签</p>
 </div>
 </body></html>
 """
