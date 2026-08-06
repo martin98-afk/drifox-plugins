@@ -93,6 +93,22 @@ def register_ui(registry):
     logger.info("[browser] UI components registered")
 
 
+def _get_loaded_submodule(name: str):
+    """获取已加载的插件子模块对象（热重载安全）
+
+    优先 sys.modules 缓存；缓存被 register_ui 清理后（其清理逻辑把
+    control_server 等先行 import 的子模块一并删除），回退到父模块属性
+    （from .xxx import ... 会把子模块挂到父模块 __dict__，清理 sys.modules
+    缓存不影响该引用）。未加载过的惰性模块（如从未打开的 incognito/
+    devtools）返回 None → 调用方跳过清理即可，保持幂等。
+    """
+    mod = sys.modules.get(f"{__name__}.{name}")
+    if mod is not None:
+        return mod
+    pkg = sys.modules.get(__name__)
+    return getattr(pkg, name, None) if pkg is not None else None
+
+
 def unload_ui(registry):
     """插件卸载/热重载回调（由 UIPluginRegistry.unload_plugin 调用）
 
@@ -104,8 +120,13 @@ def unload_ui(registry):
     5. 清空持久 Profile 单例引用（热重载避免旧 Profile 悬空）
 
     ⚠️ 此函数在旧模块上下文中执行——热重载时 sys.modules 里
-    还是旧模块实例，from .xxx import ... 均访问旧模块资源，
+    还是旧模块实例，从模块属性取到的仍是旧资源句柄，
     因此能拿到旧服务器句柄并正确停止（与 ip-switcher unload_ui 同语义）。
+
+    注：不采用 from .xxx import ... 相对导入：register_ui 的缓存清理会
+    删除 control_server 等子模块的 sys.modules 缓存，热重载时相对导入
+    会重新从磁盘加载而报 No module named；此处改为直接读模块属性，
+    未加载的惰性子模块跳过（幂等，无残留也无误报）。
 
     注：external_open 的外部链接重定向 patch 保持幂等长期生效
     （浏览器不可用时自动回退系统浏览器 _orig_webbrowser_open），
@@ -114,48 +135,50 @@ def unload_ui(registry):
     """
     # 1) 停止浏览器控制 HTTP 服务器（幂等：未启动则跳过）
     try:
-        from .control_server import _server_ref
-
-        server = _server_ref.get("server")
-        if server is not None:
-            server.shutdown()
-            server.server_close()
-            _server_ref.clear()
+        cs = _get_loaded_submodule("control_server")
+        if cs is not None:
+            server_ref = getattr(cs, "_server_ref", None)
+            if server_ref:
+                server = server_ref.get("server")
+                if server is not None:
+                    server.shutdown()
+                    server.server_close()
+                server_ref.clear()
     except Exception as e:
         logger.warning(f"[browser] unload_ui 停止控制端点失败: {e}")
 
     # 2) 清理下载 profile 信号连接（幂等）
     try:
-        from .downloads import reset_handled_profiles
-
-        reset_handled_profiles()
+        dl = _get_loaded_submodule("downloads")
+        if dl is not None:
+            dl.reset_handled_profiles()
     except Exception as e:
         logger.warning(f"[browser] unload_ui 清理下载信号失败: {e}")
 
     # 3) 关闭所有隐身窗口（释放 OTR profile）
     try:
-        from .incognito import close_all_incognito_windows
-
-        close_all_incognito_windows()
+        inc = _get_loaded_submodule("incognito")
+        if inc is not None:
+            inc.close_all_incognito_windows()
     except Exception as e:
         logger.warning(f"[browser] unload_ui 关闭隐身窗口失败: {e}")
 
     # 4) 关闭所有 DevTools 窗口（destroyed 钩子会自动移除列表引用）
     try:
-        from .devtools import _open_devtools
-
-        for win in list(_open_devtools):
-            try:
-                win.close()
-            except RuntimeError:
-                pass
+        dt = _get_loaded_submodule("devtools")
+        if dt is not None:
+            for win in list(dt._open_devtools):
+                try:
+                    win.close()
+                except RuntimeError:
+                    pass
     except Exception as e:
         logger.warning(f"[browser] unload_ui 关闭 DevTools 失败: {e}")
 
-    # 5) 清空持久 Profile 单例（热重载后新实例重新延迟创建）
+    # 5) 清空持久 Profile 缓存（热重载后新实例重新延迟创建）
     try:
-        from .profile_manager import reset_profiles
-
-        reset_profiles()
+        pm = _get_loaded_submodule("profile_manager")
+        if pm is not None:
+            pm.reset_profiles()
     except Exception as e:
         logger.warning(f"[browser] unload_ui 重置 Profile 失败: {e}")
