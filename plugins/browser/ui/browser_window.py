@@ -3,7 +3,7 @@
 
 结构（Chrome 风格）：
 ┌──────────────────────────────────────────┐
-│ [◀][▶][⟳][✕]  [ 地址栏(加载指示) ]  [+][☰] │  ← 工具栏
+│ [<][>][reload][stop] [ 地址栏 ] [+][menu] │  ← 工具栏
 │ ┌────┐┌────┐┌────┐                       │  ← 标签栏
 │ │Tab1││Tab2││Tab3│                       │
 │ └────┘└────┘└────┘                       │
@@ -11,7 +11,7 @@
 │ │          QStackedWidget              │ │  ← 页面区
 │ │      (每个标签一个 QWebEngineView)    │ │
 │ └──────────────────────────────────────┘ │
-│ [收藏 ★] [历史] [下载] [DevTools] [隐身]   │  ← 底部状态栏
+│ [收藏] [历史] [下载] [DevTools] [隐身]    │  ← 底部状态栏
 └──────────────────────────────────────────┘
 
 性能设计（M3 强化）：
@@ -25,7 +25,7 @@ from typing import List, Optional, Tuple
 from urllib.parse import urlparse
 
 from PyQt5.QtCore import QPoint, QSize, Qt, pyqtSignal
-from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtGui import QColor, QFont, QIcon
 from PyQt5.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -35,12 +35,14 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from qfluentwidgets import FluentIcon
 
 from ._page_factory import create_page
 from .bookmarks import BookmarkBar
 from .data import AsyncDataLoader, add_bookmark, record_history, remove_bookmark
 from .profile_manager import get_browser_profile, reset_profiles
 from .tab_widget import ChromeTabBar, MAX_ALIVE_TABS
+from .theme import font_css, theme_colors
 from .url_bar import UrlBar, is_blank_page, normalize_url
 
 # 图标资源目录（ui/assets/）
@@ -54,6 +56,19 @@ _NO_H264_HINT = "⚠ 当前内核不支持 H.264 视频播放，可点右上角�
 def _icon_path(name: str, is_dark: bool) -> str:
     """返回 assets 下图标路径：深色主题用 _dark 后缀版本"""
     return os.path.join(_ICON_DIR, f"{name}_dark.svg" if is_dark else f"{name}.svg")
+
+
+def _tool_btn_style(c: dict) -> str:
+    """工具栏按钮 QSS：28×28 布局 + 6px 圆角 + fs 字号 + hover token。"""
+    return (
+        "QToolButton { border: none; border-radius: 6px;"
+        f" {font_css(c['ff'], max(10, c['fs'] - 1))} color: {c['text']};"
+        " background: transparent; }"
+        f"QToolButton:hover {{ background: {c['hover']}; }}"
+        f"QToolButton:pressed {{ background: {c['hover']}; }}"
+        f"QToolButton:disabled {{ color: {c['secondary']}; }}"
+    )
+
 
 # 模块级单例引用（供 function 命令 handler 访问，热重载时更新）
 _CURRENT_CARD: Optional["BrowserWindowCard"] = None
@@ -78,6 +93,7 @@ class BrowserWindowCard(QWidget):
 
         self._context_provider = None
         self._is_dark = True
+        self._c = theme_colors(None)  # 主题派生色缓存（apply_theme 前的默认观感）
         self._loader = AsyncDataLoader(self)
         self._views = []  # [{view, url, title, placeholder}]
         # H2 修复：地址栏补全数据走异步加载，主线程读内存缓存
@@ -87,15 +103,34 @@ class BrowserWindowCard(QWidget):
         self._setup_ui()
         self._setup_shortcuts()
         self._new_tab()
+        # 主题实时刷新：主程序 theme_manager reload 时回调 refresh_theme()
+        try:
+            from app.utils.theme_manager import theme_manager
+
+            theme_manager.register_refresh_target(self)
+        except Exception:
+            pass
 
     def set_context_provider(self, provider):
         self._context_provider = provider
 
     def show_card(self):
         """浮动卡片显示时调用（registry 拉模型）"""
-        self._apply_theme()
+        self.refresh_theme()
         self._refresh_panels()
         self.setVisible(True)
+
+    def refresh_theme(self):
+        """主题实时刷新入口：_apply_theme + 已加载 WebEngine 页面背景重设。"""
+        self._apply_theme()
+        c = theme_colors(self)
+        for entry in self._views:
+            view = entry.get("view")
+            if view is not None:
+                try:
+                    view.page().setBackgroundColor(QColor(c["surface"]))
+                except Exception:
+                    pass
 
     # ── UI 搭建 ──
 
@@ -113,13 +148,13 @@ class BrowserWindowCard(QWidget):
         toolbar.setObjectName("browserToolbar")
         toolbar.setStyleSheet("#browserToolbar { background: transparent; }")
         tly = QHBoxLayout(toolbar)
-        tly.setContentsMargins(8, 6, 8, 2)
+        tly.setContentsMargins(12, 8, 12, 4)
         tly.setSpacing(2)
 
-        self._btn_back = self._make_tool_btn("◀", "后退")
-        self._btn_forward = self._make_tool_btn("▶", "前进")
-        self._btn_reload = self._make_tool_btn("⟳", "刷新")
-        self._btn_stop = self._make_tool_btn("✕", "停止")
+        self._btn_back = self._make_tool_btn(FluentIcon.LEFT_ARROW, "后退")
+        self._btn_forward = self._make_tool_btn(FluentIcon.RIGHT_ARROW, "前进")
+        self._btn_reload = self._make_tool_btn(FluentIcon.SYNC, "刷新")
+        self._btn_stop = self._make_tool_btn(FluentIcon.CANCEL, "停止")
         self._btn_stop.setVisible(False)
         tly.addWidget(self._btn_back)
         tly.addWidget(self._btn_forward)
@@ -137,29 +172,29 @@ class BrowserWindowCard(QWidget):
         self._url_bar.set_completer_source(self._get_suggestions)
         tly.addWidget(self._url_bar, 1)
 
-        # 收藏星标
+        # 收藏星标（★/☆ 保留字符，_update_bookmark_state 动态切换）
         self._btn_bookmark = self._make_tool_btn("☆", "收藏当前网页")
         self._btn_bookmark.clicked.connect(self._toggle_current_bookmark)
         tly.addWidget(self._btn_bookmark)
 
         # 新标签按钮
-        self._btn_new_tab = self._make_tool_btn("＋", "新建标签")
+        self._btn_new_tab = self._make_tool_btn(FluentIcon.ADD, "新建标签")
         self._btn_new_tab.clicked.connect(self._new_tab)
         tly.addWidget(self._btn_new_tab)
 
         # 菜单按钮（收藏/历史/下载）
-        self._btn_menu = self._make_tool_btn("☰", "菜单")
+        self._btn_menu = self._make_tool_btn(FluentIcon.MENU, "菜单")
         self._btn_menu.clicked.connect(self._toggle_menu)
         tly.addWidget(self._btn_menu)
 
         # 在外部浏览器打开（系统默认浏览器，绕过内置浏览器重定向）
-        self._btn_external = self._make_icon_btn(
+        self._btn_external = self._make_tool_btn(
             QIcon(_icon_path("external_open", self._is_dark)), "在外部浏览器打开"
         )
         self._btn_external.clicked.connect(self._open_in_system_browser)
         tly.addWidget(self._btn_external)
 
-        self._btn_close = self._make_tool_btn("✕", "关闭浏览器")
+        self._btn_close = self._make_tool_btn(FluentIcon.CLOSE, "关闭浏览器")
         self._btn_close.clicked.connect(self._close_card)
         tly.addWidget(self._btn_close)
 
@@ -173,7 +208,7 @@ class BrowserWindowCard(QWidget):
         # ── 标签栏 ──
         tab_row = QWidget(self)
         trly = QHBoxLayout(tab_row)
-        trly.setContentsMargins(8, 0, 8, 0)
+        trly.setContentsMargins(12, 0, 12, 0)
         trly.setSpacing(4)
 
         self._tab_bar = ChromeTabBar(tab_row)
@@ -185,10 +220,11 @@ class BrowserWindowCard(QWidget):
         trly.addWidget(self._tab_bar, 1)
 
         # 隐身标识（默认隐藏）
-        self._incognito_badge = QLabel("🕶 隐身", tab_row)
+        self._incognito_badge = QLabel("隐身", tab_row)
         self._incognito_badge.setVisible(False)
         self._incognito_badge.setStyleSheet(
-            "color: rgba(180,140,255,0.9); font-size: 12px; padding: 0 8px;"
+            f"{font_css(self._c['ff'], max(10, self._c['fs'] - 2))}"
+            f" color: {self._c['tag_purple']}; padding: 0 8px;"
         )
         trly.addWidget(self._incognito_badge)
 
@@ -196,18 +232,21 @@ class BrowserWindowCard(QWidget):
 
         # ── 页面区（QStackedWidget）──
         self._stack = QStackedWidget(self)
-        self._stack.setStyleSheet("QStackedWidget { background: #1e1e1e; border: none; }")
+        self._stack.setStyleSheet(
+            f"QStackedWidget {{ background: {self._c['surface']}; border: none; }}"
+        )
         root.addWidget(self._stack, 1)
 
         # ── 底部状态栏 ──
         status = QWidget(self)
         sly = QHBoxLayout(status)
-        sly.setContentsMargins(8, 2, 8, 4)
+        sly.setContentsMargins(12, 2, 12, 6)
         sly.setSpacing(4)
 
         self._status_lb = QLabel("就绪", status)
         self._status_lb.setStyleSheet(
-            "color: rgba(180,180,180,0.8); font-size: 12px; background: transparent;"
+            f"{font_css(self._c['ff'], max(10, self._c['fs'] - 1))}"
+            f" color: {self._c['secondary']}; background: transparent;"
         )
         sly.addWidget(self._status_lb)
         sly.addStretch(1)
@@ -219,36 +258,19 @@ class BrowserWindowCard(QWidget):
         status.setVisible(False)
         root.addWidget(status)
 
-    def _make_tool_btn(self, text: str, tip: str) -> QToolButton:
+    def _make_tool_btn(self, icon, tip: str) -> QToolButton:
+        """工具栏按钮：支持 FluentIcon/qicon、QIcon 或文本（★/☆ 收藏星标）。"""
         btn = QToolButton(self)
-        btn.setText(text)
+        if isinstance(icon, str):
+            btn.setText(icon)
+        else:
+            if hasattr(icon, "qicon"):
+                icon = icon.qicon()
+            btn.setIcon(icon)
+            btn.setIconSize(QSize(16, 16))
         btn.setToolTip(tip)
-        btn.setFixedSize(30, 30)
-        btn.setStyleSheet(
-            "QToolButton {"
-            "  border: none; border-radius: 15px;"
-            "  color: rgba(220,220,220,0.95); font-size: 15px;"
-            "}"
-            "QToolButton:hover { background: rgba(128,128,128,0.18); }"
-            "QToolButton:pressed { background: rgba(128,128,128,0.28); }"
-            "QToolButton:disabled { color: rgba(150,150,150,0.4); }"
-        )
-        return btn
-
-    def _make_icon_btn(self, icon, tip: str) -> QToolButton:
-        """图标按钮（SVG 图标，与文本按钮同尺寸同悬停样式）"""
-        btn = QToolButton(self)
-        btn.setIcon(icon)
-        btn.setIconSize(QSize(16, 16))
-        btn.setToolTip(tip)
-        btn.setFixedSize(30, 30)
-        btn.setStyleSheet(
-            "QToolButton {"
-            "  border: none; border-radius: 15px;"
-            "}"
-            "QToolButton:hover { background: rgba(128,128,128,0.18); }"
-            "QToolButton:pressed { background: rgba(128,128,128,0.28); }"
-        )
+        btn.setFixedSize(28, 28)
+        btn.setStyleSheet(_tool_btn_style(self._c))
         return btn
 
     # ── 标签管理 ──
@@ -257,10 +279,17 @@ class BrowserWindowCard(QWidget):
         """新建标签（懒创建：先占位，激活时才创建 WebEngineView）"""
         # 懒渲染：占位 widget 直到真正显示
         placeholder = QWidget(self._stack)
-        placeholder.setStyleSheet("background: #1e1e1e;")
+        placeholder.setStyleSheet(f"background: {self._c['surface']};")
 
         idx = self._stack.addWidget(placeholder)
-        self._views.append({"view": None, "url": url or "", "title": "新标签页", "placeholder": placeholder})
+        self._views.append(
+            {
+                "view": None,
+                "url": url or "",
+                "title": "新标签页",
+                "placeholder": placeholder,
+            }
+        )
 
         self._tab_bar.addTab("新标签页")
         self._tab_bar.setCurrentIndex(idx)
@@ -284,8 +313,18 @@ class BrowserWindowCard(QWidget):
         from PyQt5.QtWebEngineWidgets import QWebEngineView
 
         view = QWebEngineView()
-        view.setPage(create_page(view, get_browser_profile(), self._new_popup_page, self._is_dark))
+        view.setPage(
+            create_page(
+                view, get_browser_profile(), self._new_popup_page, self._is_dark
+            )
+        )
         entry["view"] = view
+
+        # WebEngine 防白闪：页面背景色跟随主题（主题切换时 refresh_theme 重设）
+        try:
+            view.page().setBackgroundColor(QColor(self._c["surface"]))
+        except Exception:
+            pass
 
         # 替换占位
         self._stack.removeWidget(entry["placeholder"])
@@ -315,7 +354,7 @@ class BrowserWindowCard(QWidget):
             entry["url"] = ""
             view.setUrl(_to_qurl(target))
         else:
-            view.setHtml(_start_page_html(self._is_dark), _to_qurl("about:blank"))
+            view.setHtml(_start_page_html(theme_colors(self)), _to_qurl("about:blank"))
         return view
 
     def _new_popup_page(self, url=None):
@@ -579,65 +618,63 @@ class BrowserWindowCard(QWidget):
     # ── 主题 ──
 
     def _apply_theme(self):
-        """应用主程序主题；上下文不可用时跟随 FluentWidgets 当前主题。"""
-        try:
-            from qfluentwidgets import isDarkTheme
+        """拉取最新主题派生色并应用到全部控件（无 ctx 时跟随 FluentWidgets 主题）。"""
+        c = theme_colors(self)
+        self._c = c
+        self._is_dark = c["is_dark"]
 
-            is_dark = isDarkTheme()
-        except Exception:
-            is_dark = True
-
-        ctx = {}
-        if self._context_provider is not None:
-            try:
-                ctx = self._context_provider() or {}
-            except Exception:
-                pass
-
-        colors = ctx.get("colors", {})
-        self._is_dark = is_dark
-        text = colors.get("text_primary") or ("rgba(255,255,255,0.90)" if is_dark else "rgba(0,0,0,0.85)")
-        secondary = colors.get("text_secondary") or ("rgba(255,255,255,0.58)" if is_dark else "rgba(0,0,0,0.55)")
-        border = colors.get("border") or "rgba(128,128,128,0.25)"
-        surface = colors.get("surface") or ("#1e1e1e" if is_dark else "#ffffff")
-        popup = colors.get("card") or ("#2a2a2a" if is_dark else "#ffffff")
-
-        font = QFont(ctx.get("font_family", "Microsoft YaHei"))
-        font.setPixelSize(max(12, int(ctx.get("font_size", 14) or 14)))
+        font = QFont(c["ff"])
+        font.setPixelSize(c["fs"])
         self.setFont(font)
-        self._stack.setStyleSheet(f"QStackedWidget {{ background: {surface}; border: none; }}")
-        self._status_lb.setStyleSheet(f"color: {secondary}; font-size: 12px; background: transparent;")
-        self._incognito_badge.setStyleSheet("color: #9b72e8; font-size: 12px; padding: 0 8px;")
 
-        button_style = (
-            "QToolButton { border: none; border-radius: 15px;"
-            f" color: {text}; font-size: 15px; }}"
-            "QToolButton:hover { background: rgba(128,128,128,0.18); }"
-            "QToolButton:pressed { background: rgba(128,128,128,0.28); }"
-            f"QToolButton:disabled {{ color: {secondary}; }}"
+        self._stack.setStyleSheet(
+            f"QStackedWidget {{ background: {c['surface']}; border: none; }}"
         )
-        for button in (self._btn_back, self._btn_forward, self._btn_reload, self._btn_stop,
-                       self._btn_bookmark, self._btn_new_tab, self._btn_menu,
-                       self._btn_external, self._btn_close):
+        self._status_lb.setStyleSheet(
+            f"{font_css(c['ff'], max(10, c['fs'] - 1))} color: {c['secondary']}; background: transparent;"
+        )
+        self._incognito_badge.setStyleSheet(
+            f"{font_css(c['ff'], max(10, c['fs'] - 2))} color: {c['tag_purple']}; padding: 0 8px;"
+        )
+
+        button_style = _tool_btn_style(c)
+        for button in (
+            self._btn_back,
+            self._btn_forward,
+            self._btn_reload,
+            self._btn_stop,
+            self._btn_bookmark,
+            self._btn_new_tab,
+            self._btn_menu,
+            self._btn_external,
+            self._btn_close,
+        ):
             button.setStyleSheet(button_style)
 
         # 外部打开按钮图标随主题切换（深色主题用浅色线条版本）
-        self._btn_external.setIcon(QIcon(_icon_path("external_open", is_dark)))
+        self._btn_external.setIcon(QIcon(_icon_path("external_open", c["is_dark"])))
 
         self._menu_panel.setStyleSheet(
-            f"QFrame {{ background: {popup}; border: 1px solid {border}; border-radius: 8px; }}"
-            f"QLabel {{ color: {text}; font-size: 13px; padding: 4px 8px; }}"
-            f"QToolButton {{ border: none; color: {text}; font-size: 13px;"
-            " padding: 4px 10px; border-radius: 6px; text-align: left; }}"
-            "QToolButton:hover { background: rgba(128,128,128,0.20); }"
+            f"QFrame {{ background: {c['card']}; border: 1px solid {c['border']}; border-radius: 8px; }}"
+            f"QLabel {{ color: {c['text']}; {font_css(c['ff'], max(10, c['fs'] - 1))} padding: 4px 8px; }}"
+            f"QToolButton {{ border: none; color: {c['text']}; {font_css(c['ff'], max(10, c['fs'] - 1))}"
+            " padding: 4px 10px; border-radius: 6px; text-align: left; }"
+            f"QToolButton:hover {{ background: {c['hover']}; }}"
         )
-        self._url_bar.apply_theme(text, surface, border)
-        self._tab_bar.apply_theme(text, surface)
+        self._url_bar.apply_theme(c)
+        self._tab_bar.apply_theme(c)
         self._bookmark_bar.apply_theme()
         for entry in self._views:
             placeholder = entry.get("placeholder")
             if placeholder is not None:
-                placeholder.setStyleSheet(f"background: {surface};")
+                placeholder.setStyleSheet(f"background: {c['surface']};")
+            view = entry.get("view")
+            if view is not None:
+                # 已加载页面背景色跟随主题（防白闪）
+                try:
+                    view.page().setBackgroundColor(QColor(c["surface"]))
+                except Exception:
+                    pass
 
     # ── 菜单面板（收藏/历史/下载 管理）──
 
@@ -648,20 +685,25 @@ class BrowserWindowCard(QWidget):
         ply.setContentsMargins(6, 6, 6, 6)
         ply.setSpacing(2)
 
-        for text, slot in (
-            ("★ 收藏夹", self._toggle_bookmarks),
-            ("🕘 历史记录", self._toggle_history),
-            ("⬇ 下载管理", self._toggle_downloads),
+        for icon, text, slot in (
+            (FluentIcon.BOOK_SHELF, "收藏夹", self._toggle_bookmarks),
+            (FluentIcon.HISTORY, "历史记录", self._toggle_history),
+            (FluentIcon.DOWNLOAD, "下载管理", self._toggle_downloads),
         ):
             btn = QToolButton(panel)
+            btn.setIcon(icon.qicon())
+            btn.setIconSize(QSize(16, 16))
             btn.setText(text)
+            btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
             btn.clicked.connect(slot)
             ply.addWidget(btn)
         return panel
 
     def _position_popup(self, panel):
         panel.adjustSize()
-        anchor = self._btn_menu.mapTo(self, QPoint(self._btn_menu.width(), self._btn_menu.height()))
+        anchor = self._btn_menu.mapTo(
+            self, QPoint(self._btn_menu.width(), self._btn_menu.height())
+        )
         x = max(8, anchor.x() - panel.width())
         panel.move(x, anchor.y() + 4)
         panel.raise_()
@@ -733,14 +775,18 @@ class BrowserWindowCard(QWidget):
         url = self._current_bookmark_url()
         if not url or is_blank_page(url):
             return
-        existing = next((item for item in self._bookmarks_cache if item.get("url") == url), None)
+        existing = next(
+            (item for item in self._bookmarks_cache if item.get("url") == url), None
+        )
         if existing is not None:
             if not remove_bookmark(url):
                 self._set_status("取消收藏失败")
                 return
         else:
             idx = self._tab_bar.currentIndex()
-            title = self._views[idx].get("title", "") if 0 <= idx < len(self._views) else ""
+            title = (
+                self._views[idx].get("title", "") if 0 <= idx < len(self._views) else ""
+            )
             if not title or title == "新标签页":
                 title = urlparse(url).hostname or url
             if not add_bookmark(url, title):
@@ -838,6 +884,13 @@ class BrowserWindowCard(QWidget):
         global _CURRENT_CARD
         if _CURRENT_CARD is self:
             _CURRENT_CARD = None
+        # 主题刷新目标注销（weakref 注册，显式移除避免脏引用）
+        try:
+            from app.utils.theme_manager import theme_manager
+
+            theme_manager.unregister_refresh_target(self)
+        except Exception:
+            pass
         # N12 修复：释放持久 Profile 单例引用（避免热重载/卸载时 Qt 端 C++ 对象悬空）
         try:
             reset_profiles()
@@ -956,23 +1009,37 @@ def _search_url(query: str) -> str:
     return f"https://www.bing.com/search?q={quote(query)}"
 
 
-def _start_page_html(is_dark: bool) -> str:
-    background = "#1e1e1e" if is_dark else "#ffffff"
-    text = "#dddddd" if is_dark else "#242424"
-    heading = "#ffffff" if is_dark else "#111111"
-    secondary = "#999999" if is_dark else "#666666"
-    return f"""
-<!DOCTYPE html>
+def _start_page_html(c: dict) -> str:
+    """起始页 HTML：双色标题 + hover 提示行 + kbd 键帽 + 双背景防白闪。
+
+    ff 做单引号转义防御（主题字体名可能含 ' ）。
+    """
+    ff = c["ff"].replace("'", "\\'")
+    fs = c["fs"]
+    accent = c["accent"]
+    surface = c["surface"]
+    text = c["text"]
+    secondary = c["secondary"]
+    hover = c["hover"]
+    return f"""<!DOCTYPE html>
 <html><head><meta charset="utf-8"><style>
-body {{ background:{background}; color:{text}; font-family:'Microsoft YaHei',sans-serif;
-       display:flex; align-items:center; justify-content:center; height:100vh; margin:0; }}
+html {{ background:{surface}; }}
+body {{ background:{surface}; color:{text};
+       font-family:'{ff}','Microsoft YaHei','Segoe UI',sans-serif;
+       display:flex; align-items:center; justify-content:center;
+       height:100vh; margin:0; }}
 .card {{ text-align:center; }}
-h1 {{ font-size:28px; font-weight:300; color:{heading}; }}
-p {{ color:{secondary}; }}
+h1 {{ font-size:{fs + 10}px; font-weight:300; color:{text}; margin:0 0 18px 0; }}
+h1 .brand {{ font-weight:600; color:{accent}; }}
+p.hint {{ color:{secondary}; font-size:{fs}px; padding:6px 14px; border-radius:8px; }}
+p.hint:hover {{ background:{hover}; }}
+kbd {{ background:{hover}; border:1px solid {secondary};
+       border-radius:4px; padding:1px 6px;
+       font-family:'{ff}','Microsoft YaHei',sans-serif; font-size:{max(10, fs - 2)}px; }}
 </style></head><body>
 <div class="card">
-  <h1>🌐 DriFox 浏览器</h1>
-  <p>在上方地址栏输入网址，或使用 Ctrl+L 快速定位</p>
+  <h1><span class="brand">DriFox</span> 浏览器</h1>
+  <p class="hint">在上方地址栏输入网址，或按 <kbd>Ctrl</kbd>+<kbd>L</kbd> 快速定位</p>
 </div>
 </body></html>
 """
