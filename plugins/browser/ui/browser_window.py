@@ -46,6 +46,10 @@ from .url_bar import UrlBar, is_blank_page, normalize_url
 # 图标资源目录（ui/assets/）
 _ICON_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
 
+# 内核 H.264 解码能力（内核级属性，与页面无关 → 只探测一次，缓存结果）
+_H264_SUPPORTED: Optional[bool] = None
+_NO_H264_HINT = "⚠ 当前内核不支持 H.264 视频播放，可点右上角用外部浏览器打开"
+
 
 def _icon_path(name: str, is_dark: bool) -> str:
     """返回 assets 下图标路径：深色主题用 _dark 后缀版本"""
@@ -452,6 +456,39 @@ class BrowserWindowCard(QWidget):
         # 刷新标题（去掉 ● 前缀）
         title = self._views[idx].get("title", "")
         self._tab_bar.setTabText(idx, title)
+        if ok:
+            self._maybe_check_h264(view)
+
+    # ── 视频解码能力探测（H.264 缺失提示）──
+
+    def _maybe_check_h264(self, view):
+        """页面加载成功后探测内核 H.264 解码能力（仅首次探测）
+
+        内核能力是全局属性，与具体页面无关 → 探测一次并缓存结果，
+        避免每个页面反复 runJavaScript 的开销与状态栏刷屏。
+        探测失败按"支持"处理（不打扰用户，仅失去提示机会）。
+        """
+        global _H264_SUPPORTED
+        if _H264_SUPPORTED is not None:
+            return
+        try:
+            page = view.page()
+            page.runJavaScript(
+                "document.createElement('video').canPlayType('video/mp4; codecs=\"avc1.42E01E\"')",
+                self._on_h264_probe,
+            )
+        except RuntimeError:
+            _H264_SUPPORTED = True  # view 已销毁，按支持处理避免反复探测
+
+    def _on_h264_probe(self, result):
+        """canPlayType 探测回调：空串 = 无 H.264 解码器 → 状态栏提示外部浏览器"""
+        global _H264_SUPPORTED
+        _H264_SUPPORTED = bool(result and result != "")
+        if not _H264_SUPPORTED:
+            try:
+                self._set_status(_NO_H264_HINT)
+            except RuntimeError:
+                pass  # 窗口已销毁
 
     # ── 导航 ──
 

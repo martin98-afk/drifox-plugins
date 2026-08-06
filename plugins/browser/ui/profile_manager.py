@@ -34,10 +34,8 @@ def _ensure_dirs() -> None:
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
-_UA = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
-)
+# 不使用自定义 HTTP User-Agent：让 QtWebEngine 暴露真实 Chromium 83 内核
+# （UA 伪装成过新版本会误导网站按新内核下发内容，反而加剧渲染差异）。
 _ACCEPT_LANG = "zh-CN,zh;q=0.9,en;q=0.8"
 
 
@@ -67,7 +65,6 @@ def get_browser_profile():
     profile.setHttpCacheType(QWebEngineProfile.DiskHttpCache)
     profile.setHttpCacheMaximumSize(256 * 1024 * 1024)
     profile.setDownloadPath(str(DOWNLOAD_DIR))
-    profile.setHttpUserAgent(_UA)
     profile.setHttpAcceptLanguage(_ACCEPT_LANG)
 
     _browser_profile = profile
@@ -91,7 +88,6 @@ def get_incognito_profile():
     profile.setPersistentCookiesPolicy(QWebEngineProfile.NoPersistentCookies)
     profile.setHttpCacheType(QWebEngineProfile.MemoryHttpCache)
     profile.setDownloadPath(str(DOWNLOAD_DIR))
-    profile.setHttpUserAgent(_UA)
     profile.setHttpAcceptLanguage(_ACCEPT_LANG)
     return profile
 
