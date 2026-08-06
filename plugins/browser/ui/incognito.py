@@ -7,21 +7,27 @@ H1 修复：
 - closeEvent 显式调用 purge_incognito_profile() 清空 Cookie/HttpCache/ServiceWorker 残留
 - 释放 self._profile 引用让 Qt 端销毁 OTR profile
 
+样式改造（子任务 #18，遵循 frontend-architect 架构守则）：
+- 主题 token 化：颜色/字号全部由 theme.theme_colors() 派生（真 token，QSS 收口 theme.py）
+- owner ctx：继承浏览器主卡片（BrowserWindowCard）的 _context_provider，ctx 真正生效
+- 去 emoji：banner/窗口标题改纯文字；「＋」换 FluentIcon.ADD SVG 图标
+- 统一刷新入口 _apply_theme()：所有控件（横幅/按钮/窗口/复用组件）一次收敛
+
 - 独立 QMainWindow（带工具栏/地址栏/标签栏，复用浏览器组件）
 - QWebEngineProfile() 匿名实例 → OTR：无 Cookie/历史/缓存持久化
-- 窗口标题带 🕶 隐身标识
 - 关闭窗口即销毁 Profile，无痕迹
 """
 
 from typing import Optional
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtWidgets import QMainWindow, QWidget
+from qfluentwidgets import FluentIcon
 
 from ._page_factory import create_page
 from .profile_manager import get_incognito_profile, purge_incognito_profile
 from .tab_widget import ChromeTabBar
-from .theme import theme_colors
+from .theme import _adjust_color, font_css, theme_colors
 from .url_bar import UrlBar
 
 # 保持窗口引用（防止 GC）
@@ -31,16 +37,54 @@ _open_windows = []
 class IncognitoWindow(QMainWindow):
     """隐身浏览器窗口（每次全新 OTR Profile）"""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, owner=None):
         super().__init__(parent)
-        self.setWindowTitle("🕶 隐身窗口 — DriFox 浏览器")
+        # 继承浏览器主卡片上下文（深色/字号/colors），未提供时按 isDarkTheme fallback
+        self._context_provider = getattr(owner, "_context_provider", None)
+        self._c = theme_colors(self)  # 主题派生色缓存（供动态控件复用）
+        self._is_dark = self._c["is_dark"]
+        self.setWindowTitle("隐身窗口 — DriFox 浏览器")
         self.resize(1100, 720)
         self.setWindowFlag(Qt.Window)
         # 每次全新匿名 OTR profile（H1：不缓存、不复用）
         self._profile = get_incognito_profile()
         self._views = []  # [{view, url, title}]
         self._setup_ui()
+        self._apply_theme()
         self._new_tab()
+
+    # ── 主题（统一刷新入口） ──
+
+    def _apply_theme(self):
+        """拉取最新 ctx，收敛刷新全部控件样式（主题/字号切换后调用）。"""
+        c = theme_colors(self)
+        self._c = c
+        self._is_dark = c["is_dark"]
+
+        # 隐身横幅：tag_purple 系，调深一档保证白字对比度（深色主题 #b388ff 偏亮）
+        banner_bg = _adjust_color(c["tag_purple"], -30)
+        self._banner.setStyleSheet(
+            f"background: {banner_bg}; color: #ffffff; padding: 6px 12px;"
+            f" {font_css(c['ff'], max(11, c['fs'] - 1))}"
+        )
+
+        # 工具栏：窗口背景 + 新标签按钮（28×28 / 圆角 6px / fs 字号 / hover_bg）
+        self.setStyleSheet(f"QMainWindow {{ background: {c['surface']}; }}")
+        self._btn_new_tab.setStyleSheet(
+            f"QToolButton {{ border: none; border-radius: 6px; {font_css(c['ff'], max(11, c['fs'] - 1))}"
+            f" color: {c['text']}; }}"
+            f"QToolButton:hover {{ background: {c['hover']}; }}"
+            f"QToolButton:pressed {{ background: {c['selected']}; }}"
+        )
+
+        # 页面区背景
+        self._stack.setStyleSheet(f"QStackedWidget {{ background: {c['surface']}; }}")
+
+        # 复用组件：新签名统一传完整主题 dict
+        self._url_bar.apply_theme(c)
+        self._tab_bar.apply_theme(c)
+
+    # ── UI 搭建 ──
 
     def _setup_ui(self):
         from PyQt5.QtWidgets import QHBoxLayout, QLabel, QStackedWidget, QToolButton, QVBoxLayout
@@ -51,14 +95,9 @@ class IncognitoWindow(QMainWindow):
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # 隐身横幅
-        banner = QLabel("🕶 您已进入隐身模式 — 不会保存浏览历史、Cookie、表单数据", central)
-        colors = theme_colors()
-        self._is_dark = colors["is_dark"]
-        banner.setStyleSheet(
-            "background: #6f42c1; color: #ffffff; padding: 6px 12px; font-size: 13px;"
-        )
-        root.addWidget(banner)
+        # 隐身横幅（样式由 _apply_theme 统一收敛）
+        self._banner = QLabel("您已进入隐身模式 — 不会保存浏览历史、Cookie、表单数据", central)
+        root.addWidget(self._banner)
 
         # 工具栏
         toolbar = QWidget(central)
@@ -70,11 +109,14 @@ class IncognitoWindow(QMainWindow):
         self._url_bar.navigate_requested.connect(self._navigate)
         tly.addWidget(self._url_bar, 1)
 
-        btn_new = QToolButton(toolbar)
-        btn_new.setText("＋")
-        btn_new.setToolTip("新建标签")
-        btn_new.clicked.connect(self._new_tab)
-        tly.addWidget(btn_new)
+        # 新标签按钮（SVG 图标，样式由 _apply_theme 收敛）
+        self._btn_new_tab = QToolButton(toolbar)
+        self._btn_new_tab.setIcon(FluentIcon.ADD.qicon())
+        self._btn_new_tab.setIconSize(QSize(16, 16))
+        self._btn_new_tab.setFixedSize(28, 28)
+        self._btn_new_tab.setToolTip("新建标签")
+        self._btn_new_tab.clicked.connect(self._new_tab)
+        tly.addWidget(self._btn_new_tab)
 
         root.addWidget(toolbar)
 
@@ -87,17 +129,7 @@ class IncognitoWindow(QMainWindow):
 
         # 页面区
         self._stack = QStackedWidget(central)
-        self._stack.setStyleSheet(f"QStackedWidget {{ background: {colors['surface']}; }}")
         root.addWidget(self._stack, 1)
-
-        self.setStyleSheet(
-            f"QMainWindow {{ background: {colors['surface']}; }}"
-            f"QToolButton {{ border: none; border-radius: 15px; color: {colors['text']}; font-size: 15px;"
-            " width: 30px; height: 30px; }"
-            "QToolButton:hover { background: rgba(128,128,128,0.2); }"
-        )
-        self._url_bar.apply_theme(colors["text"], colors["surface"], colors["border"])
-        self._tab_bar.apply_theme(colors["text"], colors["surface"])
 
     # ── 标签管理 ──
 
@@ -205,7 +237,7 @@ def _to_qurl(url: str):
 
 def open_incognito_window(owner=None) -> Optional[IncognitoWindow]:
     """打开新的隐身窗口（每次独立 OTR Profile，H1 修复后无 Cookie 残留）"""
-    win = IncognitoWindow()
+    win = IncognitoWindow(owner=owner)
     _open_windows.append(win)
     win.show()
     win.raise_()
