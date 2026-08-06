@@ -115,11 +115,31 @@ def font_css(ff, size) -> str:
     return f"font-family: '{ff}'; font-size: {size}px;"
 
 
+def _hex_to_rgba(color: str, alpha: float) -> str:
+    """把 6 位 hex 转成 rgba 半透明写法。
+
+    Qt 5.15 的 QSS 不认 #RRGGBBAA 8 位后缀（按 #AARRGGBB 解析 → 颜色错位），
+    半透明一律显式拼 rgba(r,g,b,0.xx)。非 6 位 hex（如已是 rgba）原样返回。
+    """
+    h = color.lstrip("#")
+    if len(h) == 6:
+        try:
+            r, g, b = (int(h[i : i + 2], 16) for i in (0, 2, 4))
+            return f"rgba({r},{g},{b},{alpha})"
+        except ValueError:
+            pass
+    return color
+
+
 def badge_style(color, ff, fs=None) -> str:
-    """状态徽章：color 纯色文字 + {color}22 底 + {color}55 边框 + 圆角(高度一半)。"""
+    """状态徽章：color 纯色文字 + 13% 半透明底 + 33% 半透明边框 + 圆角(高度一半)。
+
+    半透明用 rgba(r,g,b,0.xx) 显式写法（Qt 5.15 QSS 不认 #RRGGBBAA 8 位后缀）。
+    """
     fs = max(10, (fs or 14) - 2)
     return (
-        f"color: {color}; background: {color}22; border: 1px solid {color}55;"
+        f"color: {color}; background: {_hex_to_rgba(color, 0.13)};"
+        f" border: 1px solid {_hex_to_rgba(color, 0.33)};"
         f" border-radius: 11px; padding: 0 10px; {font_css(ff, fs)}"
     )
 

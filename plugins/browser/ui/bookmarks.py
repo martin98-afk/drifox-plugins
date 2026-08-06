@@ -23,9 +23,10 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+from qfluentwidgets import FluentIcon, IconWidget
 
 from .data import AsyncDataLoader, add_bookmark, remove_bookmark
-from .theme import dialog_style, scrollbar_style, theme_colors
+from .theme import dialog_style, font_css, scrollbar_style, theme_colors
 
 
 class BookmarkBar(QWidget):
@@ -43,7 +44,7 @@ class BookmarkBar(QWidget):
         self._layout.setContentsMargins(8, 2, 8, 2)
         self._layout.setSpacing(4)
         self._more_btn = QToolButton(self)
-        self._more_btn.setText("»")
+        self._more_btn.setIcon(FluentIcon.MORE.qicon())
         self._more_btn.setToolTip("更多收藏")
         self._more_btn.clicked.connect(self._toggle_overflow)
         self._overflow = self._build_overflow(owner)
@@ -78,14 +79,16 @@ class BookmarkBar(QWidget):
     def apply_theme(self):
         c = theme_colors(self._owner)
         button = (
-            "QToolButton { border: none; border-radius: 6px; padding: 3px 8px;"
-            f" color: {c['text']}; background: transparent; text-align: left; }}"
-            "QToolButton:hover { background: rgba(128,128,128,0.18); }"
+            "QToolButton { border: none; border-radius: 6px; padding: 3px 10px;"
+            f" {font_css(c['ff'], c['fs'] - 1)} color: {c['text']};"
+            " background: transparent; text-align: left; }"
+            f"QToolButton:hover {{ background: {c['hover']}; }}"
         )
         self.setStyleSheet(button)
         self._overflow.setStyleSheet(
             f"QFrame#bookmarkOverflow {{ background: {c['surface']}; border: 1px solid {c['border']}; border-radius: 8px; }}"
-            + button + scrollbar_style(self._owner)
+            + button
+            + scrollbar_style(self._owner)
         )
 
     def _clear_layout(self):
@@ -102,7 +105,9 @@ class BookmarkBar(QWidget):
         btn.setText(title)
         btn.setToolTip(f"{title}\n{item.get('url', '')}")
         btn.setMaximumWidth(160)
-        btn.clicked.connect(lambda checked=False, url=item.get("url", ""): self._open(url))
+        btn.clicked.connect(
+            lambda checked=False, url=item.get("url", ""): self._open(url)
+        )
         return btn
 
     def _rebuild(self):
@@ -150,7 +155,9 @@ class BookmarkBar(QWidget):
     def _toggle_overflow(self):
         visible = not self._overflow.isVisible()
         if visible:
-            anchor = self._more_btn.mapTo(self._owner, self._more_btn.rect().bottomRight())
+            anchor = self._more_btn.mapTo(
+                self._owner, self._more_btn.rect().bottomRight()
+            )
             x = max(8, anchor.x() - self._overflow.width())
             self._overflow.move(x, anchor.y() + 4)
             self._overflow.raise_()
@@ -187,13 +194,19 @@ class BookmarksPanel(QDialog):
         root.setContentsMargins(12, 12, 12, 12)
         root.setSpacing(8)
 
+        colors = theme_colors(self._owner)
         header = QHBoxLayout()
-        title = QLabel("★ 收藏夹")
-        title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        icon = IconWidget(FluentIcon.BOOK_SHELF, self)
+        icon.setFixedSize(16, 16)
+        header.addWidget(icon)
+        title = QLabel("收藏夹")
+        title.setStyleSheet(
+            f"{font_css(colors['ff'], colors['fs'] + 2)} font-weight: 600;"
+        )
         header.addWidget(title)
         header.addStretch(1)
 
-        self._btn_add = QPushButton("＋ 收藏当前页")
+        self._btn_add = QPushButton("收藏当前页")
         self._btn_add.clicked.connect(self._add_current)
         header.addWidget(self._btn_add)
         root.addLayout(header)
@@ -244,7 +257,7 @@ class BookmarksPanel(QDialog):
             return
         for bm in self._items_cache:
             title = bm.get("title") or bm.get("url")
-            item = QListWidgetItem(f"★ {title}\n   {bm.get('url')}")
+            item = QListWidgetItem(f"{title}\n   {bm.get('url')}")
             item.setData(Qt.UserRole, bm.get("url"))
             item.setToolTip(bm.get("url"))
             self._list.addItem(item)

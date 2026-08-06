@@ -26,8 +26,19 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
+from qfluentwidgets import FluentIcon, IconWidget
+
+from app.utils.design_tokens import Colors
+
 from .data import AsyncDataLoader, update_download_state, upsert_download
-from .theme import dialog_style, scrollbar_style, theme_colors
+from .theme import dialog_style, font_css, scrollbar_style, theme_colors
+
+# 状态色（design_tokens 常量，仅状态文字用，不作主题主色）
+_STATE_COLORS = {
+    "finished": Colors.SUCCESS,
+    "cancelled": Colors.WARNING,
+    "interrupted": Colors.ERROR,
+}
 
 # M1 修复：用 dict 存 profile → partial 引用，便于热重载时精确 disconnect
 _HANDLED_PROFILES: dict = {}
@@ -81,22 +92,28 @@ def _on_download_requested(owner, item) -> None:
         # 进度信号
         def _on_download_progress(received, total):
             update_download_state(download_id, "downloading", received, total)
-            owner._set_status(f"⬇ 下载中: {filename} ({received // 1024}KB)")
+            owner._set_status(f"下载中: {filename} ({received // 1024}KB)")
 
         def _on_download_finished():
-            update_download_state(download_id, "finished", item.receivedBytes(), item.totalBytes())
-            owner._set_status(f"✅ 下载完成: {filename}")
+            update_download_state(
+                download_id, "finished", item.receivedBytes(), item.totalBytes()
+            )
+            owner._set_status(f"下载完成: {filename}")
             owner._refresh_download_panel()
 
         def _on_download_state_changed(state):
             from PyQt5.QtWebEngineCore import QWebEngineDownloadItem
 
             if state == QWebEngineDownloadItem.DownloadCancelled:
-                update_download_state(download_id, "cancelled", item.receivedBytes(), item.totalBytes())
-                owner._set_status(f"⛔ 下载取消: {filename}")
+                update_download_state(
+                    download_id, "cancelled", item.receivedBytes(), item.totalBytes()
+                )
+                owner._set_status(f"下载取消: {filename}")
             elif state == QWebEngineDownloadItem.DownloadInterrupted:
-                update_download_state(download_id, "interrupted", item.receivedBytes(), item.totalBytes())
-                owner._set_status(f"⚠️ 下载中断: {filename}")
+                update_download_state(
+                    download_id, "interrupted", item.receivedBytes(), item.totalBytes()
+                )
+                owner._set_status(f"下载中断: {filename}")
 
         item.downloadProgress.connect(_on_download_progress)
         item.finished.connect(_on_download_finished)
@@ -124,9 +141,15 @@ class DownloadsPanel(QDialog):
         root.setContentsMargins(12, 12, 12, 12)
         root.setSpacing(8)
 
+        colors = theme_colors(self._owner)
         header = QHBoxLayout()
-        title = QLabel("⬇ 下载管理")
-        title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        icon = IconWidget(FluentIcon.DOWNLOAD, self)
+        icon.setFixedSize(16, 16)
+        header.addWidget(icon)
+        title = QLabel("下载管理")
+        title.setStyleSheet(
+            f"{font_css(colors['ff'], colors['fs'] + 2)} font-weight: 600;"
+        )
         header.addWidget(title)
         header.addStretch(1)
 
@@ -202,7 +225,7 @@ class _DownloadItemWidget(QWidget):
 
     def __init__(self, data: dict, owner=None, parent=None):
         super().__init__(parent)
-        colors = theme_colors(owner)
+        c = theme_colors(owner)
         self._path = data.get("path", "")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 4, 8, 4)
@@ -211,21 +234,32 @@ class _DownloadItemWidget(QWidget):
         name = os.path.basename(self._path) or data.get("url", "下载")
         state_map = {
             "downloading": "下载中",
-            "finished": "✅ 完成",
-            "cancelled": "⛔ 已取消",
-            "interrupted": "⚠️ 中断",
+            "finished": "完成",
+            "cancelled": "已取消",
+            "interrupted": "中断",
         }
         state = state_map.get(data.get("state", ""), data.get("state", ""))
 
         row = QHBoxLayout()
-        label = QLabel(f"{name}  [{state}]")
-        label.setStyleSheet(f"color: {colors['text']}; font-size: 13px;")
+        label = QLabel(name)
+        label.setStyleSheet(f"{font_css(c['ff'], c['fs'])} color: {c['text']};")
         row.addWidget(label, 1)
+
+        state_label = QLabel(f"[{state}]")
+        state_color = _STATE_COLORS.get(data.get("state", ""))
+        state_label.setStyleSheet(
+            f"{font_css(c['ff'], c['fs'])} color: {state_color or c['secondary']};"
+        )
+        row.addWidget(state_label)
 
         received = data.get("bytes_received", 0)
         total = data.get("bytes_total", 0)
         pct = int(received / total * 100) if total > 0 else 0
-        size_txt = f"{received // 1024}KB / {total // 1024}KB" if total > 0 else f"{received // 1024}KB"
+        size_txt = (
+            f"{received // 1024}KB / {total // 1024}KB"
+            if total > 0
+            else f"{received // 1024}KB"
+        )
 
         self._progress = QProgressBar(self)
         self._progress.setRange(0, 100)
@@ -234,16 +268,21 @@ class _DownloadItemWidget(QWidget):
         self._progress.setFormat(f"{size_txt}")
         self._progress.setFixedHeight(16)
         self._progress.setStyleSheet(
-            f"QProgressBar {{ background: {colors['raised']}; border: none; border-radius: 4px;"
-            f" color: {colors['secondary']}; font-size: 11px; text-align: center; }}"
-            "QProgressBar::chunk { background: #2f9df0; border-radius: 4px; }"
+            f"QProgressBar {{ background: {c['raised']}; border: none; border-radius: 4px;"
+            f" {font_css(c['ff'], c['fs'] - 2)} color: {c['secondary']}; text-align: center; }}"
+            f"QProgressBar::chunk {{ background: {c['accent']}; border-radius: 4px; }}"
         )
         row.addWidget(self._progress, 2)
 
         if data.get("state") == "finished" and self._path:
-            btn = QPushButton("📂")
+            btn = QPushButton()
+            btn.setIcon(FluentIcon.FOLDER.qicon())
             btn.setToolTip("打开所在文件夹")
-            btn.setFixedSize(28, 24)
+            btn.setFixedSize(28, 28)
+            btn.setStyleSheet(
+                f"QPushButton {{ background: transparent; border: none; border-radius: 6px; }}"
+                f"QPushButton:hover {{ background: {c['hover']}; }}"
+            )
             btn.clicked.connect(lambda: open_folder(self._path))
             row.addWidget(btn)
 

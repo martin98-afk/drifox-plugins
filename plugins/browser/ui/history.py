@@ -19,10 +19,12 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
 )
 
+from qfluentwidgets import FluentIcon, IconWidget
+
 from loguru import logger
 
 from .data import AsyncDataLoader, clear_history
-from .theme import dialog_style, scrollbar_style, theme_colors
+from .theme import dialog_style, font_css, scrollbar_style, theme_colors
 
 
 class HistoryPanel(QFrame):
@@ -43,9 +45,15 @@ class HistoryPanel(QFrame):
         root.setContentsMargins(12, 12, 12, 12)
         root.setSpacing(8)
 
+        colors = theme_colors(self._owner)
         header = QHBoxLayout()
-        title = QLabel("🕘 历史记录")
-        title.setStyleSheet("font-size: 16px; font-weight: bold;")
+        icon = IconWidget(FluentIcon.HISTORY, self)
+        icon.setFixedSize(16, 16)
+        header.addWidget(icon)
+        title = QLabel("历史记录")
+        title.setStyleSheet(
+            f"{font_css(colors['ff'], colors['fs'] + 2)} font-weight: 600;"
+        )
         header.addWidget(title)
         header.addStretch(1)
 
@@ -74,7 +82,6 @@ class HistoryPanel(QFrame):
         footer.addWidget(self._btn_close)
         root.addLayout(footer)
 
-        colors = theme_colors(self._owner)
         self.setStyleSheet(
             f"QFrame#historyPanel {{ background: {colors['surface']}; border: 1px solid {colors['border']};"
             " border-radius: 8px; }}"
@@ -162,7 +169,10 @@ class HistoryPanel(QFrame):
     def _clear(self):
         from PyQt5.QtWidgets import QMessageBox
 
-        if QMessageBox.question(self, "清空历史", "确定要清空全部历史记录吗？") == QMessageBox.Yes:
+        if (
+            QMessageBox.question(self, "清空历史", "确定要清空全部历史记录吗？")
+            == QMessageBox.Yes
+        ):
             n = clear_history()
             self._reload()
             self._owner._set_status(f"已清空 {n} 条历史记录")
