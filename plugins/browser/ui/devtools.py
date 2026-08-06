@@ -68,7 +68,7 @@ def open_devtools_for(owner) -> None:
 
     except Exception as e:
         logger.error(f"[browser] 打开 DevTools 失败: {e}")
-        owner._set_status(f"⚠️ DevTools 打开失败: {e}")
+        owner._set_status(f"DevTools 打开失败: {e}")
 
 
 def _focus_existing_devtools() -> bool:
