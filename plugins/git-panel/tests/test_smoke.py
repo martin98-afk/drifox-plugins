@@ -105,6 +105,23 @@ class TestGitRepoEndToEnd(TempRepoMixin, unittest.TestCase):
         names = [b["name"] for b in self.g.branch_list()]
         self.assertNotIn("dev", names)
 
+    def test_branch_list_names_not_truncated(self):
+        """回归：git branch 首行为非当前分支时，前导空格被 strip 吞掉
+        导致 line[2:] 截断分支名（如 master → ster）"""
+        self._write("a.txt", "x\n")
+        self.g.add(["."])
+        self.g.commit("init")
+        # aaa 字母序在 main 之前 → 位于 git branch 输出首行且非当前分支
+        self.assertTrue(self.g.branch_create("aaa").ok)
+        self.assertTrue(self.g.branch_checkout("main").ok)
+        names = [b["name"] for b in self.g.branch_list()]
+        self.assertIn("aaa", names)
+        self.assertIn("main", names)
+        self.assertEqual(len(names), 2)
+        # 直接切换必须成功（旧 bug：会去 checkout "a"）
+        self.assertTrue(self.g.branch_checkout("aaa").ok)
+        self.assertEqual(self.g.branch(), "aaa")
+
     def test_show_commit(self):
         self._write("a.txt", "x\n")
         self.g.add(["."])

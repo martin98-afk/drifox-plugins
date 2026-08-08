@@ -276,17 +276,11 @@ class _FileRowWidget(QWidget):
         if self._info["status"] not in _CONFLICT_STATUS:
             ly.addWidget(btn)
 
-        # 放弃修改按钮（冲突文件改用「解决冲突」菜单，避免误操作）
+        # 放弃修改按钮（SVG 图标；冲突文件改用「解决冲突」菜单，避免误操作）
         if self._info["status"] not in _CONFLICT_STATUS:
-            discard_btn = QPushButton("↩", self)
+            discard_btn = TransparentToolButton(FluentIcon.ERASE_TOOL, self)
             discard_btn.setFixedSize(22, 22)
             discard_btn.setToolTip("放弃修改")
-            discard_btn.setStyleSheet(
-                "QPushButton { background: transparent; border: none; "
-                f"color: {_text_color(secondary=True)}; font-size: 12px; "
-                "padding: 0; }"
-                "QPushButton:hover { color: #f14c4c; }"
-            )
             discard_btn.clicked.connect(self._on_discard)
             ly.addWidget(discard_btn)
 
@@ -563,6 +557,14 @@ class _FileRowWidget(QWidget):
 # ========================================================================
 
 
+def _card_bg_rgba() -> str:
+    """弹窗卡片不透明背景色（取自 fallback 主题色）"""
+    bg = _fallback_colors().get("card_bg", "rgba(33,33,38,240)")
+    if isinstance(bg, str):
+        return bg
+    return f"rgba({bg.red()}, {bg.green()}, {bg.blue()}, {bg.alpha()})"
+
+
 class _DiffDialog(QDialog):
     """Diff 预览对话框"""
 
@@ -578,12 +580,24 @@ class _DiffDialog(QDialog):
         self._load_diff()
 
     def _setup_ui(self):
-        ly = QVBoxLayout(self)
+        self.setStyleSheet("QDialog { background: transparent; }")
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+
+        # 不透明卡片背景（WA_TranslucentBackground 下必须垫底，
+        # 否则半透明 diff 区叠在底层窗口上会呈现全黑）
+        card = QWidget(self)
+        card.setObjectName("diffCard")
+        card.setStyleSheet(
+            f"#diffCard {{ background: {_card_bg_rgba()}; "
+            "border: 1px solid rgba(128,128,128,0.15); border-radius: 12px; }"
+        )
+        ly = QVBoxLayout(card)
         ly.setContentsMargins(16, 16, 16, 16)
         ly.setSpacing(8)
 
         # 头部
-        hdr = QWidget(self)
+        hdr = QWidget(card)
         hdr.setStyleSheet("background: transparent;")
         hl = QHBoxLayout(hdr)
         hl.setContentsMargins(0, 0, 0, 0)
@@ -598,7 +612,7 @@ class _DiffDialog(QDialog):
         hl.addWidget(status_lb)
 
         # Diff 内容
-        self._diff_area = QTextEdit(self)
+        self._diff_area = QTextEdit(card)
         self._diff_area.setReadOnly(True)
         self._diff_area.setStyleSheet(
             "QTextEdit { background: rgba(0,0,0,0.2); border: 1px solid rgba(128,128,128,0.15); "
@@ -611,11 +625,13 @@ class _DiffDialog(QDialog):
         # 关闭按钮
         btn_row = QHBoxLayout()
         btn_row.addStretch(1)
-        close_btn = QPushButton("关闭", self)
+        close_btn = QPushButton("关闭", card)
         close_btn.setFixedWidth(80)
         close_btn.clicked.connect(self.accept)
         btn_row.addWidget(close_btn)
         ly.addLayout(btn_row)
+
+        root.addWidget(card)
 
     def _load_diff(self):
         """异步加载 diff，避免大文件 diff 阻塞主线程"""
@@ -1038,7 +1054,7 @@ class _CommitRowWidget(QWidget):
         date_lb.setStyleSheet(
             f"background: transparent; color: {_text_color(secondary=True)}; font-size: 11px;"
         )
-        date_lb.setFixedWidth(80)
+        date_lb.setFixedWidth(110)
         ly.addWidget(date_lb)
 
         # 提交信息
@@ -1086,12 +1102,24 @@ class _CommitDetailDialog(QDialog):
         self._load()
 
     def _setup_ui(self):
-        ly = QVBoxLayout(self)
+        self.setStyleSheet("QDialog { background: transparent; }")
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+
+        # 不透明卡片背景（WA_TranslucentBackground 下必须垫底，
+        # 否则半透明 diff 区叠在底层窗口上会呈现全黑）
+        card = QWidget(self)
+        card.setObjectName("commitCard")
+        card.setStyleSheet(
+            f"#commitCard {{ background: {_card_bg_rgba()}; "
+            "border: 1px solid rgba(128,128,128,0.15); border-radius: 12px; }"
+        )
+        ly = QVBoxLayout(card)
         ly.setContentsMargins(16, 16, 16, 16)
         ly.setSpacing(8)
 
         # 元信息条
-        self._hash_lb = QLabel(self._hash, self)
+        self._hash_lb = QLabel(self._hash, card)
         self._hash_lb.setStyleSheet(
             "background: transparent; color: #62a0ea; font-size: 13px; "
             "font-family: 'Consolas', monospace;"
@@ -1101,13 +1129,13 @@ class _CommitDetailDialog(QDialog):
         self._hash_lb.mousePressEvent = self._on_hash_click
         ly.addWidget(self._hash_lb)
 
-        self._meta_lb = QLabel("加载中…", self)
+        self._meta_lb = QLabel("加载中…", card)
         self._meta_lb.setStyleSheet(
             f"background: transparent; color: {_text_color(secondary=True)}; font-size: 12px;"
         )
         ly.addWidget(self._meta_lb)
 
-        self._msg_lb = QLabel("", self)
+        self._msg_lb = QLabel("", card)
         self._msg_lb.setWordWrap(True)
         self._msg_lb.setStyleSheet(
             f"background: transparent; color: {_text_color()}; font-size: 13px;"
@@ -1115,7 +1143,7 @@ class _CommitDetailDialog(QDialog):
         ly.addWidget(self._msg_lb)
 
         # Diff 区
-        self._diff_area = QTextEdit(self)
+        self._diff_area = QTextEdit(card)
         self._diff_area.setReadOnly(True)
         self._diff_area.setStyleSheet(
             "QTextEdit { background: rgba(0,0,0,0.2); border: 1px solid rgba(128,128,128,0.15); "
@@ -1127,11 +1155,13 @@ class _CommitDetailDialog(QDialog):
         # 关闭按钮
         btn_row = QHBoxLayout()
         btn_row.addStretch(1)
-        close_btn = QPushButton("关闭", self)
+        close_btn = QPushButton("关闭", card)
         close_btn.setFixedWidth(80)
         close_btn.clicked.connect(self.accept)
         btn_row.addWidget(close_btn)
         ly.addLayout(btn_row)
+
+        root.addWidget(card)
 
     def _on_hash_click(self, event):
         from PyQt5.QtWidgets import QApplication

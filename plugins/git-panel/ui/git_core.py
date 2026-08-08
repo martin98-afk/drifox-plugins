@@ -117,14 +117,18 @@ def _get_stashes(cwd: str) -> List[dict]:
 
 def _get_branches(cwd: str) -> List[dict]:
     """获取分支列表 [{"name", "current"}]"""
-    stdout, _, code = _run_git(cwd, "branch")
+    # strip=False：非当前分支行以两个空格开头，整体 strip 会吞掉首行
+    # 前导空格，导致 line[2:] 错误截断分支名（如 master → ster）
+    stdout, _, code = _run_git(cwd, "branch", strip=False)
     if code != 0 or not stdout:
         return []
-    current_branch = _get_branch(cwd)
     result = []
     for line in stdout.splitlines():
+        line = line.strip()
+        if not line:
+            continue
         is_current = line.startswith("*")
-        name = line[2:].strip()
+        name = line[1:].strip() if is_current else line
         result.append({"name": name, "current": is_current})
     return result
 
