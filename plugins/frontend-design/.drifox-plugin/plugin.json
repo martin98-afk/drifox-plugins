@@ -1,0 +1,17 @@
+{
+    "name": "frontend-design",
+    "description": "Anthropic 官方前端设计 — 创作有辨识度的网页 UI：大胆配色、刻意字体、意图动效、风格统一。helloianneo 必装 Top 10 第 1 名。",
+    "version": "1.0.0",
+    "author": { "name": "Anthropic", "url": "https://github.com/anthropics/skills/tree/main/skills/frontend-design" },
+    "license": "MIT",
+    "type": "user",
+    "drifox": { "min_version": "0.5.0" },
+    "keywords": [
+        "frontend-design", "design", "anthropic", "ui", "tailwind",
+        "前端设计", "视觉", "配色", "字体", "动效"
+    ],
+    "components": {
+        "skills": true
+    },
+    "homepage": "https://github.com/anthropics/skills/tree/main/skills/frontend-design"
+}

@@ -1,0 +1,19 @@
+{
+    "name": "doc-coauthoring",
+    "description": "文档协作写作助手 — 起草、迭代、定稿三阶段流程，结构化访谈、风格统一、决策追踪。",
+    "version": "1.0.0",
+    "author": { "name": "Anthropic", "url": "https://github.com/anthropics/skills/tree/main/skills/doc-coauthoring" },
+    "license": "MIT",
+    "type": "user",
+    "drifox": { "min_version": "0.5.0" },
+    "keywords": [
+        "doc-coauthoring", "writing", "drafting", "documentation",
+        "collaboration", "structured-interview",
+        "文档协作", "草稿", "迭代", "定稿"
+    ],
+    "components": {
+        "commands": true,
+        "skills": true
+    },
+    "homepage": "https://github.com/anthropics/skills"
+}

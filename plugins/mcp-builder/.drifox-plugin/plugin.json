@@ -1,0 +1,18 @@
+{
+    "name": "mcp-builder",
+    "description": "MCP 服务器构建助手 — 教用户从零创建 MCP（Model Context Protocol）服务器，连接任意工具/数据源到 DriFox / Claude Code / Cursor。",
+    "version": "1.0.0",
+    "author": { "name": "Anthropic", "url": "https://github.com/anthropics/skills/tree/main/skills/mcp-builder" },
+    "license": "MIT",
+    "type": "user",
+    "drifox": { "min_version": "0.5.0" },
+    "keywords": [
+        "mcp", "model-context-protocol", "mcp-server", "tool",
+        "anthropic", "context7", "MCP 服务器", "工具集成"
+    ],
+    "components": {
+        "commands": true,
+        "skills": true
+    },
+    "homepage": "https://modelcontextprotocol.io"
+}

@@ -230,6 +230,43 @@
             "homepage": "https://github.com/anthropics/skills/tree/main/skills/canvas-design"
         },
         {
+            "name": "claude-api",
+            "description": "Claude API 最佳实践 — SDK 用法、Prompt Caching、Streaming、Tool Use、Batch API、Token 优化。",
+            "version": "1.0.0",
+            "author": "Anthropic",
+            "license": "MIT",
+            "categories": [
+                "workflow",
+                "language"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/claude-api",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true,
+                "skills": true
+            },
+            "keywords": [
+                "claude-api",
+                "anthropic",
+                "sdk",
+                "prompt-cache",
+                "tool-use",
+                "streaming",
+                "batch-api",
+                "prompt-engineering",
+                "Claude API",
+                "Anthropic SDK"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://docs.anthropic.com"
+        },
+        {
             "name": "code-reviewer",
             "description": "自动化代码审查 — 基于 checklist 的 PR 审查、代码质量评分、审查报告生成，提升代码质量保障效率。",
             "version": "1.0.0",
@@ -326,6 +363,42 @@
                 "min_version": "0.5.0"
             },
             "homepage": "https://context7.com"
+        },
+        {
+            "name": "doc-coauthoring",
+            "description": "文档协作写作助手 — 起草、迭代、定稿三阶段流程，结构化访谈、风格统一、决策追踪。",
+            "version": "1.0.0",
+            "author": "Anthropic",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/doc-coauthoring",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true,
+                "skills": true
+            },
+            "keywords": [
+                "doc-coauthoring",
+                "writing",
+                "drafting",
+                "documentation",
+                "collaboration",
+                "structured-interview",
+                "文档协作",
+                "草稿",
+                "迭代",
+                "定稿"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/anthropics/skills"
         },
         {
             "name": "ecc",
@@ -491,6 +564,42 @@
                 "min_version": "0.5.0"
             },
             "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/feature-dev"
+        },
+        {
+            "name": "frontend-design",
+            "description": "Anthropic 官方前端设计 — 创作有辨识度的网页 UI：大胆配色、刻意字体、意图动效、风格统一。helloianneo 必装 Top 10 第 1 名。",
+            "version": "1.0.0",
+            "author": "Anthropic",
+            "license": "MIT",
+            "categories": [
+                "workflow",
+                "design"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/frontend-design",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "frontend-design",
+                "design",
+                "anthropic",
+                "ui",
+                "tailwind",
+                "前端设计",
+                "视觉",
+                "配色",
+                "字体",
+                "动效"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/anthropics/skills/tree/main/skills/frontend-design"
         },
         {
             "name": "frontend-pro",
@@ -774,6 +883,43 @@
             }
         },
         {
+            "name": "internal-comms",
+            "description": "内部沟通模板 — 3P 沟通（进度/计划/问题）、状态报告、事件复盘、决策通知、产品更新、客户邮件。",
+            "version": "1.0.0",
+            "author": "Anthropic",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/internal-comms",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true,
+                "skills": true
+            },
+            "keywords": [
+                "internal-comms",
+                "communication",
+                "3p",
+                "status-report",
+                "postmortem",
+                "decision-notice",
+                "product-update",
+                "内部沟通",
+                "状态报告",
+                "复盘",
+                "决策通知"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/anthropics/skills"
+        },
+        {
             "name": "knowledge-base-skills",
             "description": "本地知识库检索技能——面向本地知识库目录的分层检索和问答助手，支持 Markdown/PDF/Excel 渐进式检索。",
             "version": "1.0.0",
@@ -803,6 +949,41 @@
             "drifox": {
                 "min_version": "0.5.0"
             }
+        },
+        {
+            "name": "mcp-builder",
+            "description": "MCP 服务器构建助手 — 教用户从零创建 MCP（Model Context Protocol）服务器，连接任意工具/数据源到 DriFox / Claude Code / Cursor。",
+            "version": "1.0.0",
+            "author": "Anthropic",
+            "license": "MIT",
+            "categories": [
+                "workflow",
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/mcp-builder",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true,
+                "skills": true
+            },
+            "keywords": [
+                "mcp",
+                "model-context-protocol",
+                "mcp-server",
+                "tool",
+                "anthropic",
+                "context7",
+                "MCP 服务器",
+                "工具集成"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://modelcontextprotocol.io"
         },
         {
             "name": "memory-match",
@@ -879,6 +1060,47 @@
                 "min_version": "0.5.0"
             },
             "homepage": "https://github.com/alchaincyf/nuwa-skill"
+        },
+        {
+            "name": "office-docs",
+            "description": "Office 文档处理 — docx / pdf / pptx / xlsx 4 类文档读、写、转换、生成，Python 脚本 + LibreOffice 模板。",
+            "version": "1.0.0",
+            "author": "Anthropic",
+            "license": "MIT",
+            "categories": [
+                "workflow",
+                "language"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/office-docs",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true,
+                "skills": true
+            },
+            "keywords": [
+                "docx",
+                "pdf",
+                "pptx",
+                "xlsx",
+                "word",
+                "excel",
+                "powerpoint",
+                "document",
+                "spreadsheet",
+                "presentation",
+                "文档",
+                "表格",
+                "演示",
+                "LibreOffice"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/anthropics/skills"
         },
         {
             "name": "omml-docx",
