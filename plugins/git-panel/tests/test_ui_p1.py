@@ -208,6 +208,36 @@ class TestConflictRow(P1UITestBase):
             self.assertEqual(f.read(), "theirs\n")
 
 
+class TestPathElide(P1UITestBase):
+    """文件路径用 _ElidedLabel：超长省略 + tooltip 完整路径，不撑宽行"""
+
+    def test_path_label_elided_and_tooltip(self):
+        long = ("src/very/very/very/long/path/to/a/file/that/definitely/"
+                "overflows/the/row/width/definitely.py")
+        row = cards._FileRowWidget({"path": long, "status": "M", "staged": False})
+        lb = row.findChild(cards._ElidedLabel)
+        self.assertIsNotNone(lb, "文件路径应使用 _ElidedLabel")
+        self.assertEqual(lb.toolTip(), long, "tooltip 必须为完整路径")
+        # 窄宽度下省略（中间省略号）
+        row.resize(200, 32)
+        row.show()
+        _APP.processEvents()
+        self.assertLess(len(lb.text()), len(long))
+        self.assertIn("…", lb.text())
+        row.deleteLater()
+        _APP.processEvents()
+
+    def test_path_label_not_elided_short(self):
+        row = cards._FileRowWidget({"path": "short.py", "status": "M", "staged": False})
+        lb = row.findChild(cards._ElidedLabel)
+        row.resize(300, 32)
+        row.show()
+        _APP.processEvents()
+        self.assertEqual(lb.text(), "short.py")
+        row.deleteLater()
+        _APP.processEvents()
+
+
 class TestContextMenu(P1UITestBase):
     def test_menu_construction(self):
         # 普通文件行：暂存/放弃/复制/.gitignore/文件管理器

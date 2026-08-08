@@ -57,6 +57,7 @@ from qfluentwidgets import (
 from loguru import logger
 
 from .diff_renderer import render_diff_html
+from .elided_label import _ElidedLabel
 from .git_core import GitRepo, GitResult
 
 PLUGIN_NAME = "git-panel"
@@ -236,20 +237,18 @@ class _FileRowWidget(QWidget):
         status_lb.setToolTip(f"{desc} ({st})")
         ly.addWidget(status_lb)
 
-        # 文件路径（自动换行，避免撑宽侧栏）
-        path_lb = QLabel(self._info["path"], self)
-        path_lb.setWordWrap(True)
+        # 文件路径（超长自动省略 + tooltip 显示完整路径，不撑宽侧栏/不挤掉按钮）
+        path_lb = _ElidedLabel(self._info["path"], self)
         path_lb.setStyleSheet(
             f"background: transparent; color: {_text_color()}; "
             f"font-size: 13px;"
         )
-        path_lb.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         path_lb.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         path_lb.setCursor(Qt.PointingHandCursor)
         path_lb.mousePressEvent = lambda e: self.diff_requested.emit(
             self._info["path"], self._info["staged"]
         )
-        ly.addWidget(path_lb)
+        ly.addWidget(path_lb, 1)
 
         # 暂存/取消暂存按钮（冲突文件用「解决冲突」菜单代替）
         if self._info["status"] in _CONFLICT_STATUS:
