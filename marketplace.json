@@ -213,6 +213,43 @@
             "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/code-simplifier"
         },
         {
+            "name": "context7",
+            "description": "Context7 — 实时拉取任意库的最新 API 文档与代码示例，省去贴文档链接。",
+            "version": "1.0.0",
+            "author": "upstash",
+            "license": "MIT",
+            "categories": [
+                "workflow",
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/context7",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true,
+                "skills": true,
+                "mcp": true
+            },
+            "keywords": [
+                "context7",
+                "docs",
+                "api",
+                "documentation",
+                "library",
+                "upstash",
+                "文档",
+                "API",
+                "实时拉取"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://context7.com"
+        },
+        {
             "name": "ecc",
             "description": "Everything Claude Code (ECC) — 社区 25k★ 工程工作流全集：67 个专业智能体、284 个领域技能、94 个开发命令（TDD/代码审查/安全/架构等），适配 DriFox 提示词层。",
             "version": "2.2.0",
@@ -380,7 +417,7 @@
         {
             "name": "frontend-pro",
             "description": "前端开发增强 — 组件设计规范、无障碍(a11y)检查、性能最佳实践注入，让前端代码兼顾质量与体验。",
-            "version": "1.0.0",
+            "version": "1.1.0",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -400,6 +437,7 @@
                 "frontend",
                 "a11y",
                 "accessibility",
+                "wcag",
                 "react",
                 "vue",
                 "css",
@@ -863,6 +901,43 @@
             }
         },
         {
+            "name": "react-pro",
+            "description": "React / Next.js 性能优化与最佳实践 — 45 条 RSC 边界、Server Components、App Router、缓存策略、Streaming、Bundle 优化。",
+            "version": "1.0.0",
+            "author": "Vercel Labs",
+            "license": "MIT",
+            "categories": [
+                "language",
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/react-pro",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true,
+                "skills": true
+            },
+            "keywords": [
+                "react",
+                "nextjs",
+                "next-js",
+                "rsc",
+                "server-components",
+                "app-router",
+                "performance",
+                "bundle",
+                "web-vitals",
+                "react-pro"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://nextjs.org"
+        },
+        {
             "name": "security-guidance",
             "description": "AI 生成代码安全审查 — PostToolUse 静态模式检查，识别注入攻击、XSS、SQL 注入、硬编码密钥、不安全反序列化等 25+ 类漏洞风险。",
             "version": "2.0.6",
@@ -893,6 +968,43 @@
                 "min_version": "0.5.0"
             },
             "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/security-guidance"
+        },
+        {
+            "name": "seo-audit",
+            "description": "SEO 审计 + 落地页文案 — 五优先级 SEO 审查框架与高转化文案撰写方法论，覆盖主页/落地页/定价页。",
+            "version": "1.0.0",
+            "author": "Corey Haines",
+            "license": "MIT",
+            "categories": [
+                "workflow",
+                "marketing"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/seo-audit",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true,
+                "skills": true
+            },
+            "keywords": [
+                "seo",
+                "audit",
+                "copywriting",
+                "landing-page",
+                "marketing",
+                "SEO",
+                "审计",
+                "文案",
+                "落地页",
+                "转化"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/coreyhaines31/marketingskills"
         },
         {
             "name": "skill-creator",
@@ -1006,6 +1118,43 @@
                 "min_version": "0.5.0"
             },
             "homepage": "https://github.com/obra/superpowers"
+        },
+        {
+            "name": "tailwind-pro",
+            "description": "Tailwind CSS v4 完整支持 — 类型/类名/任意值/设计系统/主题映射，配合 Tailwind LSP 实时校验。",
+            "version": "1.0.0",
+            "author": "hairyf",
+            "license": "MIT",
+            "categories": [
+                "language",
+                "workflow",
+                "lsp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/tailwind-pro",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true,
+                "skills": true,
+                "lsp": true
+            },
+            "keywords": [
+                "tailwindcss",
+                "tailwind",
+                "css",
+                "v4",
+                "utility-first",
+                "design-system",
+                "lsp",
+                "tailwind-pro"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://tailwindcss.com"
         },
         {
             "name": "teach",
@@ -1206,7 +1355,7 @@
         {
             "name": "web-design-skills",
             "description": "网页设计技能——使用 HTML/CSS/JavaScript/React 构建和重新设计高质量的视觉网页作品。",
-            "version": "1.0.0",
+            "version": "1.1.0",
             "author": "ConardLi",
             "license": "MIT",
             "categories": [
@@ -1229,6 +1378,9 @@
                 "react",
                 "网页设计",
                 "前端",
+                "design-guidelines",
+                "design-review",
+                "vercel-labs",
                 "视觉设计"
             ],
             "drifox": {
@@ -1237,3 +1389,4 @@
         }
     ]
 }
+

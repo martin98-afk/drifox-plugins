@@ -1,0 +1,19 @@
+{
+    "name": "tailwind-pro",
+    "description": "Tailwind CSS v4 完整支持 — 类型/类名/任意值/设计系统/主题映射，配合 Tailwind LSP 实时校验。",
+    "version": "1.0.0",
+    "author": { "name": "hairyf", "url": "https://github.com/hairyf/skills" },
+    "license": "MIT",
+    "type": "user",
+    "drifox": { "min_version": "0.5.0" },
+    "keywords": [
+        "tailwindcss", "tailwind", "css", "v4", "utility-first",
+        "design-system", "lsp", "tailwind-pro"
+    ],
+    "components": {
+        "commands": true,
+        "skills": true,
+        "lsp": true
+    },
+    "homepage": "https://tailwindcss.com"
+}

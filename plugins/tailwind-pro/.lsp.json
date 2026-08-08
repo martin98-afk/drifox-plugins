@@ -1,0 +1,40 @@
+{
+    "tailwindcss": {
+        "command": "npx",
+        "args": ["-y", "@tailwindcss/language-server", "--stdio"],
+        "extensionToLanguage": {
+            ".html": "tailwindcss",
+            ".css": "tailwindcss",
+            ".js": "tailwindcss",
+            ".jsx": "tailwindcss",
+            ".ts": "tailwindcss",
+            ".tsx": "tailwindcss",
+            ".vue": "tailwindcss",
+            ".svelte": "tailwindcss"
+        },
+        "initializationOptions": {
+            "userLanguages": {
+                "html": "html",
+                "css": "css",
+                "javascript": "javascript",
+                "javascriptreact": "javascriptreact",
+                "typescript": "typescript",
+                "typescriptreact": "typescriptreact",
+                "vue": "vue",
+                "svelte": "svelte"
+            },
+            "colorDecorators": true,
+            "hoverReveal": true,
+            "suggestAll": true
+        },
+        "settings": {
+            "tailwindCSS": {
+                "emmetCompletions": true
+            }
+        },
+        "startupTimeout": 30000,
+        "maxRestarts": 3,
+        "transport": "stdio",
+        "installHint": "npm install -g @tailwindcss/language-server"
+    }
+}
