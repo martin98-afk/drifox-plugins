@@ -219,7 +219,6 @@
             "author": "upstash",
             "license": "MIT",
             "categories": [
-                "workflow",
                 "mcp"
             ],
             "source": {
@@ -437,7 +436,6 @@
                 "frontend",
                 "a11y",
                 "accessibility",
-                "wcag",
                 "react",
                 "vue",
                 "css",
@@ -907,8 +905,7 @@
             "author": "Vercel Labs",
             "license": "MIT",
             "categories": [
-                "language",
-                "workflow"
+                "language"
             ],
             "source": {
                 "type": "git-subdir",
@@ -976,8 +973,7 @@
             "author": "Corey Haines",
             "license": "MIT",
             "categories": [
-                "workflow",
-                "marketing"
+                "workflow"
             ],
             "source": {
                 "type": "git-subdir",
@@ -1126,8 +1122,6 @@
             "author": "hairyf",
             "license": "MIT",
             "categories": [
-                "language",
-                "workflow",
                 "lsp"
             ],
             "source": {
@@ -1378,9 +1372,6 @@
                 "react",
                 "网页设计",
                 "前端",
-                "design-guidelines",
-                "design-review",
-                "vercel-labs",
                 "视觉设计"
             ],
             "drifox": {
@@ -1389,4 +1380,3 @@
         }
     ]
 }
-
