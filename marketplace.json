@@ -4,6 +4,87 @@
     "homepage": "https://github.com/martin98-afk/drifox-plugins",
     "plugins": [
         {
+            "name": "ai-image-gen",
+            "description": "AI 图片生成 — 主流文生图与图编辑模型统一封装（Gemini / DALL-E / Imagen / Midjourney / Stable Diffusion / FLUX），4K 输出。",
+            "version": "1.0.0",
+            "author": "inference.sh",
+            "license": "MIT",
+            "categories": [
+                "workflow",
+                "media"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/ai-image-gen",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true
+            },
+            "keywords": [
+                "ai-image",
+                "image-generation",
+                "t2i",
+                "image-to-image",
+                "gemini",
+                "nano-banana",
+                "dall-e",
+                "imagen",
+                "midjourney",
+                "stable-diffusion",
+                "flux",
+                "文生图",
+                "图编辑"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://inference.sh"
+        },
+        {
+            "name": "ai-video-gen",
+            "description": "AI 视频生成 — 40+ 视频模型统一封装（Veo / Wan / Grok / Sora / Runway / Pika / Kling / Luma / 可灵 / 即梦...），文本/图片转视频。",
+            "version": "1.0.0",
+            "author": "inference.sh",
+            "license": "MIT",
+            "categories": [
+                "workflow",
+                "media"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/ai-video-gen",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true
+            },
+            "keywords": [
+                "ai-video",
+                "video-generation",
+                "veo",
+                "wan",
+                "grok",
+                "sora",
+                "runway",
+                "pika",
+                "kling",
+                "luma",
+                "可灵",
+                "即梦",
+                "t2v",
+                "i2v",
+                "text-to-video",
+                "image-to-video"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://inference.sh"
+        },
+        {
             "name": "algorithmic-art",
             "description": "程序化艺术生成 — p5.js 创意编码，种子随机 + 交互参数探索（流动场/粒子系统）。",
             "version": "1.0.0",
@@ -416,7 +497,7 @@
         {
             "name": "frontend-pro",
             "description": "前端开发增强 — 组件设计规范、无障碍(a11y)检查、性能最佳实践注入，让前端代码兼顾质量与体验。",
-            "version": "1.1.0",
+            "version": "1.2.0",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -969,7 +1050,7 @@
         {
             "name": "seo-audit",
             "description": "SEO 审计 + 落地页文案 — 五优先级 SEO 审查框架与高转化文案撰写方法论，覆盖主页/落地页/定价页。",
-            "version": "1.0.0",
+            "version": "1.1.0",
             "author": "Corey Haines",
             "license": "MIT",
             "categories": [
@@ -1349,7 +1430,7 @@
         {
             "name": "web-design-skills",
             "description": "网页设计技能——使用 HTML/CSS/JavaScript/React 构建和重新设计高质量的视觉网页作品。",
-            "version": "1.1.0",
+            "version": "1.2.0",
             "author": "ConardLi",
             "license": "MIT",
             "categories": [

@@ -1,0 +1,18 @@
+{
+    "name": "ai-image-gen",
+    "description": "AI 图片生成 — 主流文生图与图编辑模型统一封装（Gemini / DALL-E / Imagen / Midjourney / Stable Diffusion / FLUX），4K 输出。",
+    "version": "1.0.0",
+    "author": { "name": "inference.sh", "url": "https://github.com/inferen-sh/skills" },
+    "license": "MIT",
+    "type": "user",
+    "drifox": { "min_version": "0.5.0" },
+    "keywords": [
+        "ai-image", "image-generation", "t2i", "image-to-image",
+        "gemini", "nano-banana", "dall-e", "imagen", "midjourney",
+        "stable-diffusion", "flux", "文生图", "图编辑"
+    ],
+    "components": {
+        "commands": true
+    },
+    "homepage": "https://inference.sh"
+}
