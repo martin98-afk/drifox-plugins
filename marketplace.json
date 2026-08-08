@@ -4,6 +4,36 @@
     "homepage": "https://github.com/martin98-afk/drifox-plugins",
     "plugins": [
         {
+            "name": "algorithmic-art",
+            "description": "程序化艺术生成 — p5.js 创意编码，种子随机 + 交互参数探索（流动场/粒子系统）。",
+            "version": "1.0.0",
+            "author": "Anthropic",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/algorithmic-art",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "art",
+                "p5js",
+                "generative",
+                "creative-coding",
+                "algorithmic"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/anthropics/skills/tree/main/skills/algorithmic-art"
+        },
+        {
             "name": "beautiful-article-skills",
             "description": "精美文章技能——将任意素材（URL/PDF/DOCX/Markdown/文本/截图）编辑设计成美丽的单文件 HTML 网页文章。",
             "version": "1.0.0",
@@ -87,6 +117,38 @@
             "drifox": {
                 "min_version": "0.5.0"
             }
+        },
+        {
+            "name": "canvas-design",
+            "description": "设计感海报生成 — 用设计哲学将需求变成 PNG/PDF 视觉作品（构图/字体/色彩体系）。",
+            "version": "1.0.0",
+            "author": "Anthropic",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/canvas-design",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "poster",
+                "design",
+                "canvas",
+                "art",
+                "visual",
+                "海报",
+                "平面设计"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/anthropics/skills/tree/main/skills/canvas-design"
         },
         {
             "name": "code-reviewer",
@@ -248,6 +310,39 @@
             "drifox": {
                 "min_version": "0.5.0"
             }
+        },
+        {
+            "name": "excalidraw-diagram",
+            "description": "Excalidraw 手绘风格图表生成 — 流程图/时序图/ER 图/类图/思维导图，含视觉论证方法论与模板库。",
+            "version": "1.0.0",
+            "author": "GitHub Awesome Copilot Contributors",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/excalidraw-diagram",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "excalidraw",
+                "diagram",
+                "diagram-generator",
+                "flowchart",
+                "sequence",
+                "visualization",
+                "手绘",
+                "架构图"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/github/awesome-copilot/tree/main/skills/excalidraw-diagram-generator"
         },
         {
             "name": "feature-dev",
@@ -706,6 +801,36 @@
             }
         },
         {
+            "name": "playground",
+            "description": "交互式 HTML 练习场 — 单文件探索器：可视化控件 + 实时预览 + 提示词复制。",
+            "version": "1.0.0",
+            "author": "Anthropic",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/playground",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "playground",
+                "html",
+                "interactive",
+                "prototype",
+                "练习场"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/playground"
+        },
+        {
             "name": "python-pro",
             "description": "Python 开发增强 — 注入 PEP 8 / 类型标注 / 异步最佳实践，PostToolUse 自动 lint 检查，让 Python 代码质量持续达标。",
             "version": "1.0.0",
@@ -798,6 +923,35 @@
                 "min_version": "0.5.0"
             },
             "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/skill-creator"
+        },
+        {
+            "name": "slack-gif-creator",
+            "description": "动画 GIF 生成 — 面向 Slack 尺寸的动图制作，含约束校验与动画概念工具。",
+            "version": "1.0.0",
+            "author": "Anthropic",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/slack-gif-creator",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "gif",
+                "animation",
+                "slack",
+                "动图"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/anthropics/skills/tree/main/skills/slack-gif-creator"
         },
         {
             "name": "snake",
@@ -936,6 +1090,35 @@
             }
         },
         {
+            "name": "theme-factory",
+            "description": "主题换肤工厂 — 10 套预设主题 + 即时生成新主题，给任何 HTML artifact 换肤。",
+            "version": "1.0.0",
+            "author": "Anthropic",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/theme-factory",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "theme",
+                "styling",
+                "换肤",
+                "主题"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/anthropics/skills/tree/main/skills/theme-factory"
+        },
+        {
             "name": "voice-reply",
             "description": "将 AI 回复转为语音播放（使用 pyttsx3 Windows SAPI5 离线 TTS）",
             "version": "1.0.0",
@@ -953,6 +1136,37 @@
             "components": {
                 "hooks": true
             }
+        },
+        {
+            "name": "web-artifacts-builder",
+            "description": "复杂交互式 HTML 页面构建 — React + Tailwind + shadcn/ui，含状态管理/路由。",
+            "version": "1.0.0",
+            "author": "Anthropic",
+            "license": "MIT",
+            "categories": [
+                "language"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/web-artifacts-builder",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "artifact",
+                "react",
+                "tailwind",
+                "shadcn",
+                "frontend",
+                "前端"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/anthropics/skills/tree/main/skills/web-artifacts-builder"
         },
         {
             "name": "web-design-skills",

@@ -1,0 +1,27 @@
+{
+    "name": "excalidraw-diagram",
+    "description": "Excalidraw 手绘风格图表生成 — 流程图/时序图/ER 图/类图/思维导图，含视觉论证方法论与模板库。",
+    "version": "1.0.0",
+    "type": "user",
+    "license": "MIT",
+    "author": {
+        "name": "GitHub Awesome Copilot Contributors"
+    },
+    "homepage": "https://github.com/github/awesome-copilot/tree/main/skills/excalidraw-diagram-generator",
+    "keywords": [
+        "excalidraw",
+        "diagram",
+        "diagram-generator",
+        "flowchart",
+        "sequence",
+        "visualization",
+        "手绘",
+        "架构图"
+    ],
+    "components": {
+        "skills": true
+    },
+    "drifox": {
+        "min_version": "0.5.0"
+    }
+}

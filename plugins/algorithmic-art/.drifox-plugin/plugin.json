@@ -1,0 +1,25 @@
+{
+    "name": "algorithmic-art",
+    "description": "程序化艺术生成 — p5.js 创意编码，种子随机 + 交互参数探索（流动场/粒子系统）。",
+    "version": "1.0.0",
+    "type": "user",
+    "license": "MIT",
+    "author": {
+        "name": "Anthropic",
+        "email": "support@anthropic.com"
+    },
+    "homepage": "https://github.com/anthropics/skills/tree/main/skills/algorithmic-art",
+    "keywords": [
+        "art",
+        "p5js",
+        "generative",
+        "creative-coding",
+        "algorithmic"
+    ],
+    "components": {
+        "skills": true
+    },
+    "drifox": {
+        "min_version": "0.5.0"
+    }
+}

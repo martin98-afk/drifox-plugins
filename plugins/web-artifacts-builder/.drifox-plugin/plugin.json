@@ -1,0 +1,26 @@
+{
+    "name": "web-artifacts-builder",
+    "description": "复杂交互式 HTML 页面构建 — React + Tailwind + shadcn/ui，含状态管理/路由。",
+    "version": "1.0.0",
+    "type": "user",
+    "license": "MIT",
+    "author": {
+        "name": "Anthropic",
+        "email": "support@anthropic.com"
+    },
+    "homepage": "https://github.com/anthropics/skills/tree/main/skills/web-artifacts-builder",
+    "keywords": [
+        "artifact",
+        "react",
+        "tailwind",
+        "shadcn",
+        "frontend",
+        "前端"
+    ],
+    "components": {
+        "skills": true
+    },
+    "drifox": {
+        "min_version": "0.5.0"
+    }
+}

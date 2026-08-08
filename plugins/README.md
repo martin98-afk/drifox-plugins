@@ -28,6 +28,18 @@
 | [`security-guidance`](security-guidance/) | AI 生成代码安全审查 — 静态模式检查 25+ 类漏洞风险 | hooks | 2.0.6 | Anthropic 官方 |
 | [`feature-dev`](feature-dev/) | 功能开发工作流 — 探索→架构→实现→审查，3 个专业智能体 | commands + agents | 1.0.0 | Anthropic 官方 |
 
+### 创意与趣味插件
+
+| 插件 | 描述 | 组件 | 版本 | 来源 |
+|------|------|------|------|------|
+| [`algorithmic-art`](algorithmic-art/) | 程序化艺术生成 — p5.js 创意编码（流动场/粒子系统） | skills | 1.0.0 | Anthropic 官方 |
+| [`canvas-design`](canvas-design/) | 设计海报生成 — 设计哲学变成 PNG/PDF 视觉作品 | skills | 1.0.0 | Anthropic 官方 |
+| [`slack-gif-creator`](slack-gif-creator/) | 动画 GIF 生成 — Slack 尺寸约束 + 校验工具 | skills | 1.0.0 | Anthropic 官方 |
+| [`theme-factory`](theme-factory/) | 主题换肤工厂 — 10 套预设主题 + 即时造新主题 | skills | 1.0.0 | Anthropic 官方 |
+| [`web-artifacts-builder`](web-artifacts-builder/) | 复杂交互式 HTML 构建 — React + Tailwind + shadcn/ui | skills | 1.0.0 | Anthropic 官方 |
+| [`playground`](playground/) | 交互式 HTML 练习场 — 控件 + 实时预览 + 提示词输出 | skills | 1.0.0 | Anthropic 官方 |
+| [`excalidraw-diagram`](excalidraw-diagram/) | 手绘风格图表 — 流程图/时序图/ER 图/思维导图 + 模板库 | skills | 1.0.0 | github/awesome-copilot |
+
 > **DriFox 运行时内置插件**（`plugin-manager`、`plugin-marketplace`、`context-usage-stats`、`file-tree` 等）随 DriFox 分发，不收录在本仓库市场，避免重复安装造成困惑。
 
 ## 组件覆盖矩阵
@@ -48,6 +60,13 @@
 | code-simplifier | — | ✅ | — | — | — | — | — | — |
 | security-guidance | — | — | — | — | ✅ | — | — | — |
 | feature-dev | ✅ | ✅ | — | — | — | — | — | — |
+| algorithmic-art | — | — | ✅ | — | — | — | — | — |
+| canvas-design | — | — | ✅ | — | — | — | — | — |
+| slack-gif-creator | — | — | ✅ | — | — | — | — | — |
+| theme-factory | — | — | ✅ | — | — | — | — | — |
+| web-artifacts-builder | — | — | ✅ | — | — | — | — | — |
+| playground | — | — | ✅ | — | — | — | — | — |
+| excalidraw-diagram | — | — | ✅ | — | — | — | — | — |
 
 > **ui 组件说明**：ui 插件通过 `ui/__init__.py` 中的 `register_ui(registry)` 函数注册可视化组件（浮动卡片 / 内容块渲染器 / 消息元素工厂），由 DriFox 启动时 `UIPluginRegistry.load_plugin` 加载。详见 [docs/architecture.md](../docs/architecture.md#ui-组件)。
 >

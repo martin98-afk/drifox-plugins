@@ -1,0 +1,7 @@
+{
+  "name": "theme-factory",
+  "description": "主题换肤工厂 — 10 套预设主题 + 即时生成新主题，给任何 HTML artifact 换肤。",
+  "author": {
+    "name": "Anthropic"
+  }
+}

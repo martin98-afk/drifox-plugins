@@ -98,6 +98,18 @@ drifox-plugins/
 | [`security-guidance`](plugins/security-guidance/) | AI 生成代码安全审查（静态模式检查） | hooks | Anthropic 官方 |
 | [`feature-dev`](plugins/feature-dev/) | 功能开发工作流 — 探索→架构→实现→审查 | commands + agents | Anthropic 官方 |
 
+### 创意与趣味插件（Claude 生态）
+
+| 名称 | 描述 | 组件覆盖 | 来源 |
+|------|------|----------|------|
+| [`algorithmic-art`](plugins/algorithmic-art/) | 程序化艺术生成 — p5.js 流动场/粒子系统 | skills | Anthropic 官方 |
+| [`canvas-design`](plugins/canvas-design/) | 设计海报生成 — PNG/PDF 视觉作品 | skills | Anthropic 官方 |
+| [`slack-gif-creator`](plugins/slack-gif-creator/) | 动画 GIF 生成 — Slack 尺寸约束 + 校验 | skills | Anthropic 官方 |
+| [`theme-factory`](plugins/theme-factory/) | 主题换肤工厂 — 10 套预设主题 + 即时造新 | skills | Anthropic 官方 |
+| [`web-artifacts-builder`](plugins/web-artifacts-builder/) | 复杂交互 HTML 构建 — React + Tailwind + shadcn | skills | Anthropic 官方 |
+| [`playground`](plugins/playground/) | 交互式 HTML 练习场 — 控件 + 实时预览 | skills | Anthropic 官方 |
+| [`excalidraw-diagram`](plugins/excalidraw-diagram/) | 手绘风格图表 — 流程图/时序图/ER 图/思维导图 | skills | github/awesome-copilot |
+
 完整索引见 [plugins/README.md](plugins/README.md)。
 
 > **DriFox 运行时内置插件**（如 `plugin-manager`、`plugin-marketplace`、`context-usage-stats`、`file-tree` 等）随 DriFox 分发，**不收录在插件市场中**，避免用户重复安装造成困惑。它们由 DriFox 自带，无需手动安装。

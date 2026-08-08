@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.1.0 (2026-08-08)
+
+### ✨ 新增创意趣味插件（7 个，Claude 生态）
+
+- **`algorithmic-art`**（Anthropic 官方）— p5.js 程序化艺术生成（流动场/粒子系统/种子随机）
+- **`canvas-design`**（Anthropic 官方）— 设计哲学产出 PNG/PDF 海报视觉作品，内置设计字体库
+- **`slack-gif-creator`**（Anthropic 官方）— 动画 GIF 生成（Slack 尺寸约束 + 校验工具，依赖 pillow/imageio）
+- **`theme-factory`**（Anthropic 官方）— 10 套预设主题 + 即时生成新主题，给 HTML artifact 换肤
+- **`web-artifacts-builder`**（Anthropic 官方）— 复杂交互式 HTML 构建（React + Tailwind + shadcn/ui）
+- **`playground`**（Anthropic 官方插件）— 交互式 HTML 练习场（控件 + 实时预览 + 提示词复制）
+- **`excalidraw-diagram`**（github/awesome-copilot）— 手绘风格图表生成（流程图/时序图/ER 图/思维导图 + 模板库 + Python 工具）
+
+- **机制**：`marketplace.json` 重新生成（34→41 个插件），全部通过 `validate_plugins.py`（新增插件零 error/warning）
+
 ## 2.0.0 (2026-08-08)
 
 ### ✨ 新增 Claude Code 市场适配插件（6 个）

@@ -1,0 +1,27 @@
+{
+    "name": "canvas-design",
+    "description": "设计感海报生成 — 用设计哲学将需求变成 PNG/PDF 视觉作品（构图/字体/色彩体系）。",
+    "version": "1.0.0",
+    "type": "user",
+    "license": "MIT",
+    "author": {
+        "name": "Anthropic",
+        "email": "support@anthropic.com"
+    },
+    "homepage": "https://github.com/anthropics/skills/tree/main/skills/canvas-design",
+    "keywords": [
+        "poster",
+        "design",
+        "canvas",
+        "art",
+        "visual",
+        "海报",
+        "平面设计"
+    ],
+    "components": {
+        "skills": true
+    },
+    "drifox": {
+        "min_version": "0.5.0"
+    }
+}

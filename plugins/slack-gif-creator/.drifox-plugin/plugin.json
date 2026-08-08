@@ -1,0 +1,24 @@
+{
+    "name": "slack-gif-creator",
+    "description": "动画 GIF 生成 — 面向 Slack 尺寸的动图制作，含约束校验与动画概念工具。",
+    "version": "1.0.0",
+    "type": "user",
+    "license": "MIT",
+    "author": {
+        "name": "Anthropic",
+        "email": "support@anthropic.com"
+    },
+    "homepage": "https://github.com/anthropics/skills/tree/main/skills/slack-gif-creator",
+    "keywords": [
+        "gif",
+        "animation",
+        "slack",
+        "动图"
+    ],
+    "components": {
+        "skills": true
+    },
+    "drifox": {
+        "min_version": "0.5.0"
+    }
+}
