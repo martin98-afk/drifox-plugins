@@ -1119,6 +1119,41 @@
             "homepage": "https://github.com/anthropics/skills/tree/main/skills/theme-factory"
         },
         {
+            "name": "voice-clone",
+            "description": "MiniMax 语音克隆 — 上传 10s+ 音频样本，克隆指定音色 voice_id，用克隆音色朗读任意文本（含试听与 TTS 合成）。",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/voice-clone",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true,
+                "skills": true
+            },
+            "keywords": [
+                "voice",
+                "tts",
+                "voice-clone",
+                "clone",
+                "audio",
+                "speech",
+                "minimax",
+                "语音克隆",
+                "音色"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/martin98-afk/drifox-plugins"
+        },
+        {
             "name": "voice-reply",
             "description": "将 AI 回复转为语音播放（使用 pyttsx3 Windows SAPI5 离线 TTS）",
             "version": "1.0.0",

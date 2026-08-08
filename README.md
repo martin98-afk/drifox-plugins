@@ -109,6 +109,7 @@ drifox-plugins/
 | [`web-artifacts-builder`](plugins/web-artifacts-builder/) | 复杂交互 HTML 构建 — React + Tailwind + shadcn | skills | Anthropic 官方 |
 | [`playground`](plugins/playground/) | 交互式 HTML 练习场 — 控件 + 实时预览 | skills | Anthropic 官方 |
 | [`excalidraw-diagram`](plugins/excalidraw-diagram/) | 手绘风格图表 — 流程图/时序图/ER 图/思维导图 | skills | github/awesome-copilot |
+| [`voice-clone`](plugins/voice-clone/) | MiniMax 语音克隆 — 音频样本克隆音色 + TTS 合成 | commands + skills | DriFox 原生 |
 
 完整索引见 [plugins/README.md](plugins/README.md)。
 

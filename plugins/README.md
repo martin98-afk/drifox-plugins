@@ -40,6 +40,12 @@
 | [`playground`](playground/) | 交互式 HTML 练习场 — 控件 + 实时预览 + 提示词输出 | skills | 1.0.0 | Anthropic 官方 |
 | [`excalidraw-diagram`](excalidraw-diagram/) | 手绘风格图表 — 流程图/时序图/ER 图/思维导图 + 模板库 | skills | 1.0.0 | github/awesome-copilot |
 
+### 语音与多媒体
+
+| 插件 | 描述 | 组件 | 版本 | 来源 |
+|------|------|------|------|------|
+| [`voice-clone`](voice-clone/) | MiniMax 语音克隆 — 上传音频样本克隆音色 + 克隆音色 TTS 合成 | commands + skills | 1.0.0 | DriFox 原生 |
+
 > **DriFox 运行时内置插件**（`plugin-manager`、`plugin-marketplace`、`context-usage-stats`、`file-tree` 等）随 DriFox 分发，不收录在本仓库市场，避免重复安装造成困惑。
 
 ## 组件覆盖矩阵
@@ -67,6 +73,7 @@
 | web-artifacts-builder | — | — | ✅ | — | — | — | — | — |
 | playground | — | — | ✅ | — | — | — | — | — |
 | excalidraw-diagram | — | — | ✅ | — | — | — | — | — |
+| voice-clone | ✅ | — | ✅ | — | — | — | — | — |
 
 > **ui 组件说明**：ui 插件通过 `ui/__init__.py` 中的 `register_ui(registry)` 函数注册可视化组件（浮动卡片 / 内容块渲染器 / 消息元素工厂），由 DriFox 启动时 `UIPluginRegistry.load_plugin` 加载。详见 [docs/architecture.md](../docs/architecture.md#ui-组件)。
 >

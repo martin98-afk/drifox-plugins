@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.2.0 (2026-08-08)
+
+### ✨ 新增 voice-clone 插件（DriFox 原生）
+
+- **`voice-clone`** — MiniMax 语音克隆：上传 10s+ 音频样本 → 克隆为永久 voice_id → 用克隆音色合成 TTS
+  - `/voice-clone` 命令引导完整流程（采集样本 → 克隆 → 合成）
+  - `scripts/voice_clone.py` 三个子命令：clone / tts / upload
+  - API Key 从环境变量 `MINIMAX_API_KEY` 或 `~/.minimax/api_key` 读取（与 guizang-ppt-skill 约定一致）
+  - 实测验证：上传 ✓、TTS 合成 ✓（克隆接口受账号权限限制，需开通 voice clone 权限的 key）
+  - 授权提醒：仅克隆用户有权使用的声音，不得用于冒充或欺诈
+
 ## 2.1.0 (2026-08-08)
 
 ### ✨ 新增创意趣味插件（7 个，Claude 生态）

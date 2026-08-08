@@ -1,0 +1,29 @@
+{
+    "name": "voice-clone",
+    "description": "MiniMax 语音克隆 — 上传 10s+ 音频样本，克隆指定音色 voice_id，用克隆音色朗读任意文本（含试听与 TTS 合成）。",
+    "version": "1.0.0",
+    "type": "user",
+    "license": "MIT",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "homepage": "https://github.com/martin98-afk/drifox-plugins",
+    "keywords": [
+        "voice",
+        "tts",
+        "voice-clone",
+        "clone",
+        "audio",
+        "speech",
+        "minimax",
+        "语音克隆",
+        "音色"
+    ],
+    "components": {
+        "commands": true,
+        "skills": true
+    },
+    "drifox": {
+        "min_version": "0.5.0"
+    }
+}

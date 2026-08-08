@@ -1,0 +1,7 @@
+{
+    "name": "voice-clone",
+    "description": "MiniMax 语音克隆 — 上传音频样本克隆音色并用克隆音色合成语音",
+    "author": {
+        "name": "DriFox Contributors"
+    }
+}
