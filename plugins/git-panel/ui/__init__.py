@@ -25,7 +25,7 @@ def register_ui(registry):
         plugin_name="git-panel",
         card_id="git-panel",
         widget_class=GitPanelCard,
-        container="bottom",
+        container="left",
         title="Git 面板",
         default_visible=False,
     )

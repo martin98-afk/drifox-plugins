@@ -45,6 +45,7 @@ from qfluentwidgets import (
     FluentLabelBase,
     IconWidget,
     InfoBar,
+    InfoBarPosition,
     PrimaryPushButton,
     RoundMenu,
     ScrollArea,
@@ -148,25 +149,50 @@ class _Worker(QObject):
             self.error.emit(f"{e}\n{traceback.format_exc()}")
 
 
+class _InfoBarStack:
+    """InfoBar 悬浮管理容器
+
+    InfoBar 不加入任何布局（加入布局会实际占位），而是交给
+    InfoBarManager 按 position 悬浮定位在父控件上（带滑入动画）。
+    本类仅维护活动 InfoBar 列表，兼容旧版 `_info_bar_layout` 的
+    addWidget / count / removeWidget 接口（测试依赖）。
+    """
+
+    def __init__(self):
+        self._bars: list = []
+
+    def addWidget(self, bar):
+        if bar not in self._bars:
+            self._bars.append(bar)
+
+    def removeWidget(self, bar):
+        if bar in self._bars:
+            self._bars.remove(bar)
+
+    def count(self) -> int:
+        return len(self._bars)
+
+
 # ========================================================================
 # 4. 文件变更行控件
 # ========================================================================
 
 _STATUS_MAP = {
-    "M": ("📝", "#e2c08d", "修改"),
-    "A": ("➕", "#50e3c2", "新增"),
-    "D": ("🗑", "#f14c4c", "删除"),
-    "R": ("🔁", "#62a0ea", "重命名"),
-    "C": ("📋", "#62a0ea", "复制"),
-    "??": ("❓", "#f0a030", "未跟踪"),
+    # VSCode 风格字母标记（非 emoji），颜色区分类型
+    "M": ("M", "#e2c08d", "修改"),
+    "A": ("A", "#50e3c2", "新增"),
+    "D": ("D", "#f14c4c", "删除"),
+    "R": ("R", "#62a0ea", "重命名"),
+    "C": ("C", "#62a0ea", "复制"),
+    "??": ("U", "#f0a030", "未跟踪"),
     # 两位组合冲突码
-    "UU": ("⚠️", "#f0a030", "双方修改冲突"),
-    "AA": ("⚠️", "#f0a030", "双方新增冲突"),
-    "DD": ("⚠️", "#f0a030", "双方删除冲突"),
-    "DU": ("⚠️", "#f0a030", "删除/修改冲突"),
-    "UD": ("⚠️", "#f0a030", "修改/删除冲突"),
-    "AU": ("⚠️", "#f0a030", "新增/修改冲突"),
-    "UA": ("⚠️", "#f0a030", "修改/新增冲突"),
+    "UU": ("!", "#f0a030", "双方修改冲突"),
+    "AA": ("!", "#f0a030", "双方新增冲突"),
+    "DD": ("!", "#f0a030", "双方删除冲突"),
+    "DU": ("!", "#f0a030", "删除/修改冲突"),
+    "UD": ("!", "#f0a030", "修改/删除冲突"),
+    "AU": ("!", "#f0a030", "新增/修改冲突"),
+    "UA": ("!", "#f0a030", "修改/新增冲突"),
 }
 
 _CONFLICT_STATUS = {"UU", "AA", "DD", "DU", "UD", "AU", "UA"}
@@ -185,32 +211,40 @@ class _FileRowWidget(QWidget):
         self._setup_ui()
 
     def _setup_ui(self):
-        self.setFixedHeight(32)
+        self.setMinimumHeight(32)
         self.setStyleSheet(
             "#FileRow { background: transparent; }"
             "#FileRow:hover { background: rgba(128,128,128,0.06); border-radius: 4px; }"
         )
 
         ly = QHBoxLayout(self)
-        ly.setContentsMargins(8, 0, 8, 0)
+        ly.setContentsMargins(8, 3, 8, 3)
         ly.setSpacing(6)
 
-        # 状态图标
+        # 状态字母（VSCode 风格：M/A/D/R/U/!，颜色区分类型）
         st = self._info["status"]
-        icon_text, color, desc = _STATUS_MAP.get(st, ("❔", "#888", "未知"))
-        status_lb = QLabel(icon_text, self)
+        letter, color, desc = _STATUS_MAP.get(st, ("?", "#888", "未知"))
+        status_lb = QLabel(letter, self)
         status_lb.setFixedWidth(22)
-        status_lb.setStyleSheet("background: transparent; font-size: 13px;")
+        status_lb.setAlignment(Qt.AlignCenter)
+        status_lb.setProperty("keepColor", True)  # 主题刷新时保留语义色
+        status_lb.setStyleSheet(
+            "background: transparent; font-size: 12px; font-weight: 700; "
+            "font-family: 'Consolas', 'Courier New', monospace; "
+            f"color: {color};"
+        )
         status_lb.setToolTip(f"{desc} ({st})")
         ly.addWidget(status_lb)
 
-        # 文件路径
+        # 文件路径（自动换行，避免撑宽侧栏）
         path_lb = QLabel(self._info["path"], self)
+        path_lb.setWordWrap(True)
         path_lb.setStyleSheet(
             f"background: transparent; color: {_text_color()}; "
             f"font-size: 13px;"
         )
         path_lb.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        path_lb.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         path_lb.setCursor(Qt.PointingHandCursor)
         path_lb.mousePressEvent = lambda e: self.diff_requested.emit(
             self._info["path"], self._info["staged"]
@@ -219,12 +253,12 @@ class _FileRowWidget(QWidget):
 
         # 暂存/取消暂存按钮（冲突文件用「解决冲突」菜单代替）
         if self._info["status"] in _CONFLICT_STATUS:
-            conflict_btn = QPushButton("⚠️", self)
+            conflict_btn = QPushButton("!", self)
             conflict_btn.setFixedSize(24, 22)
             conflict_btn.setToolTip("解决冲突")
             conflict_btn.setStyleSheet(
                 "QPushButton { background: rgba(240,160,48,0.15); border: none; border-radius: 4px; "
-                "font-size: 12px; padding: 0; }"
+                "color: #f0a030; font-size: 13px; font-weight: 700; padding: 0; }"
                 "QPushButton:hover { background: rgba(240,160,48,0.3); }"
             )
             conflict_btn.clicked.connect(self._on_conflict_menu)
@@ -554,7 +588,7 @@ class _DiffDialog(QDialog):
         hl = QHBoxLayout(hdr)
         hl.setContentsMargins(0, 0, 0, 0)
 
-        title = StrongBodyLabel(f"📄 {self._file_path}", hdr)
+        title = StrongBodyLabel(self._file_path, hdr)
         hl.addWidget(title)
         hl.addStretch(1)
 
@@ -759,10 +793,10 @@ class _CollapsibleSection(QWidget):
         hl.setContentsMargins(10, 7, 10, 7)
         hl.setSpacing(6)
 
-        self._arrow_lb = QLabel("▶" if self._collapsed else "▼", self._header)
+        self._arrow_lb = QLabel("▸" if self._collapsed else "▾", self._header)
         self._arrow_lb.setFixedWidth(14)
         self._arrow_lb.setStyleSheet(
-            f"background: transparent; color: {_text_color(secondary=True)}; font-size: 10px;"
+            f"background: transparent; color: {_text_color(secondary=True)}; font-size: 11px;"
         )
         hl.addWidget(self._arrow_lb)
 
@@ -793,7 +827,7 @@ class _CollapsibleSection(QWidget):
 
     def _toggle(self):
         self._collapsed = not self._collapsed
-        self._arrow_lb.setText("▶" if self._collapsed else "▼")
+        self._arrow_lb.setText("▸" if self._collapsed else "▾")
         self._content_widget.setVisible(not self._collapsed)
 
     def set_content(self, widget: QWidget):
@@ -825,20 +859,20 @@ class _StashRowWidget(QWidget):
     def __init__(self, stash_info: dict, parent=None):
         super().__init__(parent)
         self._info = stash_info
-        self.setFixedHeight(32)
+        self.setMinimumHeight(32)
         self.setObjectName("StashRow")
         self.setStyleSheet(
             "#StashRow { background: transparent; }"
             "#StashRow:hover { background: rgba(128,128,128,0.06); border-radius: 4px; }"
         )
         ly = QHBoxLayout(self)
-        ly.setContentsMargins(16, 0, 8, 0)
+        ly.setContentsMargins(16, 2, 8, 2)
         ly.setSpacing(6)
 
         # 图标
-        icon = QLabel("📦", self)
-        icon.setFixedWidth(20)
-        icon.setStyleSheet("background: transparent; font-size: 12px;")
+        icon = IconWidget(FluentIcon.SAVE, self)
+        icon.setFixedSize(16, 16)
+        icon.setStyleSheet("background: transparent;")
         ly.addWidget(icon)
 
         # 描述
@@ -898,21 +932,22 @@ class _BranchRowWidget(QWidget):
     def __init__(self, branch_info: dict, parent=None):
         super().__init__(parent)
         self._info = branch_info
-        self.setFixedHeight(30)
+        self.setMinimumHeight(30)
         self.setObjectName("BranchRow")
         self.setStyleSheet(
             "#BranchRow { background: transparent; }"
             "#BranchRow:hover { background: rgba(128,128,128,0.06); border-radius: 4px; }"
         )
         ly = QHBoxLayout(self)
-        ly.setContentsMargins(16, 0, 8, 0)
+        ly.setContentsMargins(16, 2, 8, 2)
         ly.setSpacing(6)
 
-        # 图标
+        # 图标（当前分支实心点）
         marker = "●" if branch_info["current"] else "○"
         marker_color = "#50e3c2" if branch_info["current"] else _text_color(secondary=True)
         icon = QLabel(marker, self)
         icon.setFixedWidth(14)
+        icon.setProperty("keepColor", True)
         icon.setStyleSheet(f"background: transparent; color: {marker_color}; font-size: 14px;")
         ly.addWidget(icon)
 
@@ -921,12 +956,15 @@ class _BranchRowWidget(QWidget):
         if branch_info["current"]:
             text += " (当前)"
         name_lb = QLabel(text, self)
-        name_lb.setStyleSheet(
-            f"background: transparent; color: {_text_color()}; font-size: 12px;"
-        )
+        name_lb.setWordWrap(True)
         if branch_info["current"]:
+            name_lb.setProperty("keepColor", True)
             name_lb.setStyleSheet(
                 "background: transparent; color: #50e3c2; font-size: 12px; font-weight: 600;"
+            )
+        else:
+            name_lb.setStyleSheet(
+                f"background: transparent; color: {_text_color()}; font-size: 12px;"
             )
         name_lb.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         ly.addWidget(name_lb)
@@ -967,7 +1005,7 @@ class _CommitRowWidget(QWidget):
     def __init__(self, commit_info: dict, parent=None):
         super().__init__(parent)
         self._info = commit_info
-        self.setFixedHeight(26)
+        self.setMinimumHeight(26)
         self.setObjectName("CommitRow")
         self.setCursor(Qt.PointingHandCursor)
         self.setToolTip("双击查看提交详情")
@@ -976,17 +1014,19 @@ class _CommitRowWidget(QWidget):
             "#CommitRow:hover { background: rgba(128,128,128,0.06); border-radius: 4px; }"
         )
         ly = QHBoxLayout(self)
-        ly.setContentsMargins(16, 0, 8, 0)
+        ly.setContentsMargins(16, 1, 8, 1)
         ly.setSpacing(6)
 
         # 点
-        dot = QLabel("*", self)
+        dot = QLabel("●", self)
         dot.setFixedWidth(12)
-        dot.setStyleSheet("background: transparent; color: #62a0ea; font-size: 12px;")
+        dot.setProperty("keepColor", True)
+        dot.setStyleSheet("background: transparent; color: #62a0ea; font-size: 10px;")
         ly.addWidget(dot)
 
         # Hash
         hash_lb = QLabel(commit_info["hash"], self)
+        hash_lb.setProperty("keepColor", True)
         hash_lb.setStyleSheet(
             "background: transparent; color: #62a0ea; font-size: 11px; font-family: 'Consolas', monospace;"
         )
@@ -1003,6 +1043,7 @@ class _CommitRowWidget(QWidget):
 
         # 提交信息
         subject_lb = QLabel(commit_info["subject"], self)
+        subject_lb.setWordWrap(True)
         subject_lb.setStyleSheet(
             f"background: transparent; color: {_text_color()}; font-size: 12px;"
         )
@@ -1050,7 +1091,7 @@ class _CommitDetailDialog(QDialog):
         ly.setSpacing(8)
 
         # 元信息条
-        self._hash_lb = QLabel(f"🔗 {self._hash}", self)
+        self._hash_lb = QLabel(self._hash, self)
         self._hash_lb.setStyleSheet(
             "background: transparent; color: #62a0ea; font-size: 13px; "
             "font-family: 'Consolas', monospace;"
@@ -1096,7 +1137,7 @@ class _CommitDetailDialog(QDialog):
         from PyQt5.QtWidgets import QApplication
 
         QApplication.clipboard().setText(self._hash)
-        self._hash_lb.setText(f"🔗 {self._hash}  ✅ 已复制")
+        self._hash_lb.setText(f"{self._hash}  ·  已复制")
 
     def _load(self):
         """异步加载 git show 输出"""
@@ -1160,7 +1201,7 @@ class _CommitDetailDialog(QDialog):
             return
         info = self._parse_show_output(res.stdout)
         if info["hash"]:
-            self._hash_lb.setText(f"🔗 {info['hash']}")
+            self._hash_lb.setText(info["hash"])
             self._hash = info["hash"]
         meta = " · ".join(x for x in (info["author"], info["date"]) if x)
         if meta:
@@ -1175,7 +1216,7 @@ class _CommitDetailDialog(QDialog):
             diff = "\n".join(lines) + "\n"
             self._diff_area.setPlainText("")
             self._diff_area.append(
-                f"⚠️ diff 过大，仅显示前 {_COMMIT_DIFF_LIMIT} 行（共 {total} 行）\n"
+                f"diff 过大，仅显示前 {_COMMIT_DIFF_LIMIT} 行（共 {total} 行）\n"
             )
         if not diff.strip():
             self._diff_area.setPlainText("(无文件变更)")
@@ -1348,6 +1389,9 @@ class GitPanelCard(QWidget):
 
         # Labels 样式更新
         for child in self.findChildren(QLabel):
+            if child.property("keepColor"):
+                # 语义色标签（状态字母/分支标记/hash 等）保留自身颜色
+                continue
             try:
                 from qfluentwidgets import FluentLabelBase
                 if isinstance(child, FluentLabelBase) and ff:
@@ -1382,11 +1426,9 @@ class GitPanelCard(QWidget):
         content.setContentsMargins(16, 12, 16, 12)
         content.setSpacing(0)
 
-        # InfoBar 容器（操作结果提示，显示在卡片顶部）
-        self._info_bar_layout = QVBoxLayout()
-        self._info_bar_layout.setContentsMargins(0, 0, 0, 4)
-        self._info_bar_layout.setSpacing(4)
-        content.addLayout(self._info_bar_layout)
+        # InfoBar 悬浮层（不占布局空间）：InfoBar 由 InfoBarManager 按
+        # position 自动定位在卡片顶部，带滑入动画，关闭后自动清理。
+        self._info_bar_layout = _InfoBarStack()
 
         self._build_header(content)
 
@@ -1411,10 +1453,10 @@ class GitPanelCard(QWidget):
         hl.setContentsMargins(16, 10, 16, 6)
         hl.setSpacing(8)
 
-        # Git 图标
-        self._repo_icon = QLabel("🔀", self._header_widget)
-        self._repo_icon.setFixedSize(22, 22)
-        self._repo_icon.setStyleSheet("background: transparent; font-size: 18px;")
+        # Git 仓库图标
+        self._repo_icon = IconWidget(FluentIcon.CODE, self._header_widget)
+        self._repo_icon.setFixedSize(20, 20)
+        self._repo_icon.setStyleSheet("background: transparent;")
         hl.addWidget(self._repo_icon)
 
         # 标题
@@ -1422,14 +1464,14 @@ class GitPanelCard(QWidget):
         self._title_lb.setStyleSheet(f"color: {self._cached_tc}; background: transparent; font-weight: 600;")
         hl.addWidget(self._title_lb)
 
-        # 分支名
+        # 分支名（长分支名自动换行，不撑宽侧栏）
         self._branch_lb = QLabel("", self._header_widget)
+        self._branch_lb.setWordWrap(True)
         self._branch_lb.setStyleSheet(
             f"background: transparent; color: {_text_color(secondary=True)}; font-size: 12px;"
         )
-        hl.addWidget(self._branch_lb)
-
-        hl.addStretch(1)
+        self._branch_lb.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        hl.addWidget(self._branch_lb, 1)
 
         # 状态
         self._status_lb = QLabel("", self._header_widget)
@@ -1445,19 +1487,19 @@ class GitPanelCard(QWidget):
         sl.setContentsMargins(0, 0, 0, 0)
         sl.setSpacing(4)
 
-        self._push_btn = QPushButton("⬆ Push", sync_widget)
+        self._push_btn = QPushButton("Push", sync_widget)
         self._push_btn.setToolTip("推送本地提交到远程")
         self._push_btn.setCursor(Qt.PointingHandCursor)
         self._push_btn.clicked.connect(self._do_push)
         sl.addWidget(self._push_btn)
 
-        self._pull_btn = QPushButton("⬇ Pull", sync_widget)
+        self._pull_btn = QPushButton("Pull", sync_widget)
         self._pull_btn.setToolTip("拉取远程更新")
         self._pull_btn.setCursor(Qt.PointingHandCursor)
         self._pull_btn.clicked.connect(self._do_pull)
         sl.addWidget(self._pull_btn)
 
-        self._fetch_btn = QPushButton("🔄 Fetch", sync_widget)
+        self._fetch_btn = QPushButton("Fetch", sync_widget)
         self._fetch_btn.setToolTip("获取远程所有分支更新")
         self._fetch_btn.setCursor(Qt.PointingHandCursor)
         self._fetch_btn.clicked.connect(self._do_fetch)
@@ -1511,7 +1553,7 @@ class GitPanelCard(QWidget):
         tly.addWidget(self._amend_btn)
 
         # Stash 按钮
-        self._stash_btn = QPushButton("↻ Stash", tb)
+        self._stash_btn = QPushButton("Stash", tb)
         self._stash_btn.setFixedHeight(28)
         self._stash_btn.setCursor(Qt.PointingHandCursor)
         self._stash_btn.setToolTip("保存当前工作进度")
@@ -1519,7 +1561,7 @@ class GitPanelCard(QWidget):
         tly.addWidget(self._stash_btn)
 
         # 新建分支按钮
-        self._new_branch_btn = QPushButton("🌿 新建分支", tb)
+        self._new_branch_btn = QPushButton("新建分支", tb)
         self._new_branch_btn.setFixedHeight(28)
         self._new_branch_btn.setCursor(Qt.PointingHandCursor)
         self._new_branch_btn.setToolTip("创建并切换到新分支")
@@ -1905,14 +1947,14 @@ class GitPanelCard(QWidget):
     def _on_commit_done(self, result: Optional[GitResult] = None):
         if result is not None:
             if result.ok:
-                self._status_lb.setText("✅ 提交成功")
+                self._status_lb.setText("提交成功")
             else:
-                self._status_lb.setText(f"❌ 提交失败: {result.stderr[:50]}")
+                self._status_lb.setText(f"提交失败: {result.stderr[:50]}")
                 logger.error(f"[git-panel] commit 失败: {result.error_message}")
                 QTimer.singleShot(3000, lambda: self._reset_status() if not self._is_loading else None)
                 return
         else:
-            self._status_lb.setText("✅ 提交成功")
+            self._status_lb.setText("提交成功")
         self._commit_input.setText("")
         QTimer.singleShot(1000, self._async_refresh)
 
@@ -2081,27 +2123,35 @@ class GitPanelCard(QWidget):
             if not result.ok:
                 self._show_info_bar("error", "操作失败", result.error_message)
                 logger.error(f"[git-panel] {msg} 失败: {result.error_message}")
-                self._status_lb.setText(f"❌ 失败: {result.stderr[:50]}")
+                self._status_lb.setText(f"失败: {result.stderr[:50]}")
                 QTimer.singleShot(4000, lambda: self._reset_status() if not self._is_loading else None)
                 return
         self._show_info_bar("success", msg, "")
-        self._status_lb.setText(f"✅ {msg}")
+        self._status_lb.setText(msg)
         QTimer.singleShot(2000, lambda: self._reset_status() if not self._is_loading else None)
         QTimer.singleShot(300, self._async_refresh)
 
     # ── InfoBar 提示 ──
 
     def _show_info_bar(self, kind: str, title: str, content: str = ""):
-        """在卡片顶部显示 InfoBar（success 3s / error 5s / info 不自动消失）"""
+        """在卡片顶部显示悬浮 InfoBar（success 3s / error 5s / info 不自动消失）
+
+        InfoBar 不加入布局（避免占位），由 InfoBarManager 按 TOP 位置
+        悬浮定位在卡片顶部，带动画，自动/手动关闭后清理。
+        """
         try:
             if kind == "success":
-                bar = InfoBar.success(title, content, parent=self, duration=3000)
+                bar = InfoBar.success(title, content, parent=self, duration=3000,
+                                      position=InfoBarPosition.TOP)
             elif kind == "error":
-                bar = InfoBar.error(title, content, parent=self, duration=5000)
+                bar = InfoBar.error(title, content, parent=self, duration=5000,
+                                    position=InfoBarPosition.TOP)
             else:
-                bar = InfoBar.info(title, content, parent=self, duration=0)
+                bar = InfoBar.info(title, content, parent=self, duration=0,
+                                   position=InfoBarPosition.TOP)
             self._info_bar_layout.addWidget(bar)
             bar.closedSignal.connect(lambda: self._cleanup_info_bar(bar))
+            bar.show()
         except Exception as e:
             logger.error(f"[git-panel] InfoBar 显示失败: {e}")
 
@@ -2141,7 +2191,7 @@ class GitPanelCard(QWidget):
         self._set_sync_busy(False)
         logger.error(f"[git-panel] 后台操作异常: {err}")
         self._show_info_bar("error", "操作异常", err[:200])
-        self._status_lb.setText("❌ 操作异常")
+        self._status_lb.setText("操作异常")
         QTimer.singleShot(4000, lambda: self._reset_status() if not self._is_loading else None)
 
     # ── 关闭 ──

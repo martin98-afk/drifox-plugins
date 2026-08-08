@@ -6,17 +6,17 @@
 
 | 功能 | 说明 |
 |------|------|
-| 📝 **文件变更列表** | `git status --porcelain` 实时展示已暂存 / 未暂存变更，状态图标区分 修改/新增/删除/重命名/冲突/未跟踪 |
+| 📝 **文件变更列表** | `git status --porcelain` 实时展示已暂存 / 未暂存变更，**VSCode 风格状态字母**（M/A/D/R/U/! + 颜色）区分类型，长路径自动换行不撑宽侧栏 |
 | ➕ **暂存 / 取消暂存 / 放弃** | 单文件与「全部」批量操作，放弃修改有确认弹窗保护 |
 | 💬 **提交 / Amend** | 提交消息输入框，支持 `--amend` 修改上次提交 |
 | 📦 **Stash 管理** | 创建 / 列表 / 应用 / 弹出 / 删除，一键保存工作进度 |
-| 🌿 **分支管理** | 查看当前分支、创建并切换、切换分支、删除分支 |
+| 🌿 **分支管理** | 查看当前分支、创建并切换、切换分支、删除分支（长分支名自动换行） |
 | ⬆⬇🔄 **远程同步** | Push（无 upstream 自动 `--set-upstream`）、Pull（`--rebase --autostash` 失败回退普通 pull）、Fetch（`--all --prune`），头部显示 ahead/behind 数量 |
 | 📜 **提交历史** | 最近 30 条 commit，彩色 hash + 作者 + 日期 + 描述 + 引用标签；**双击查看详情**（元信息 + 完整 diff，hash 点击复制） |
 | 👁 **Diff 预览** | 点击文件路径弹出语法着色 Diff 对话框，**词级高亮**（difflib 计算 +/- 行新增/删除词） |
 | ⚔️ **冲突解决** | 冲突文件（UU/AA/DU 等）显示「解决冲突」菜单：使用 ours / theirs、标记已解决、打开文件 |
 | 🖱 **文件右键菜单** | 暂存/取消暂存、放弃修改/未跟踪、复制相对路径、添加到 .gitignore（去重）、在文件管理器中显示 |
-| 🔔 **InfoBar 反馈** | 操作结果以 qfluentwidgets InfoBar 提示（成功 3s / 失败 5s / 信息不消失），展示完整错误信息 |
+| 🔔 **悬浮 InfoBar** | 操作结果以 qfluentwidgets InfoBar **悬浮**提示（成功 3s / 失败 5s / 信息不消失，不占卡片布局，顶部居中滑入） |
 | ⚡ **全异步** | 所有 git 命令在 `QThread` 后台执行，不阻塞 UI；同步操作按钮置灰防重复 |
 | 🌓 **主题适配** | 颜色方案自动跟随浅色/深色主题切换 |
 | 🔁 **热重载** | 子模块缓存自动清理，避免热重载 NameError |
@@ -38,7 +38,7 @@ xcopy plugins\git-panel %USERPROFILE%\.drifox\plugins\git-panel /E /I /Y
 cp -r plugins/git-panel ~/.drifox/plugins/
 ```
 
-启动 DriFox，输入 `/git-panel` 打开控制面板。
+启动 DriFox，输入 `/git-panel` 打开控制面板（默认停靠在**左侧边栏**，VSCode 同款体验，宽度可拖拽调节）。
 
 ## 目录结构
 
@@ -69,7 +69,7 @@ def register_ui(registry: UIPluginRegistry) -> None:
         plugin_name="git-panel",
         card_id="git-panel",
         widget_class=GitPanelCard,
-        container="bottom",
+        container="left",   # 默认停靠左侧边栏（VSCode 同款体验，可 move_floating_card 换位）
         title="Git 面板",
         default_visible=False,
     )
