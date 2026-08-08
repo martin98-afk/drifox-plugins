@@ -1,0 +1,25 @@
+{
+    "name": "skill-creator",
+    "description": "技能创作专家 — 从零创建技能、修改优化既有技能、评测技能性能。含基准测试、描述优化、性能方差分析完整方法论。",
+    "version": "1.0.0",
+    "type": "user",
+    "license": "MIT",
+    "author": {
+        "name": "Anthropic",
+        "email": "support@anthropic.com"
+    },
+    "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/skill-creator",
+    "keywords": [
+        "skill",
+        "skill-creator",
+        "eval",
+        "benchmark",
+        "agent-skills"
+    ],
+    "components": {
+        "skills": true
+    },
+    "drifox": {
+        "min_version": "0.5.0"
+    }
+}

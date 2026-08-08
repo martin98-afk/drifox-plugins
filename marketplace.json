@@ -121,6 +121,73 @@
             }
         },
         {
+            "name": "code-simplifier",
+            "description": "代码简化重构智能体 — 在不改变功能的前提下简化、精炼代码，提升清晰度、一致性、可维护性。",
+            "version": "1.0.0",
+            "author": "Anthropic",
+            "license": "MIT",
+            "categories": [
+                "agent"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/code-simplifier",
+                "ref": "main"
+            },
+            "components": {
+                "agents": true
+            },
+            "keywords": [
+                "refactor",
+                "simplify",
+                "code-quality",
+                "maintainability",
+                "clean-code"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/code-simplifier"
+        },
+        {
+            "name": "ecc",
+            "description": "Everything Claude Code (ECC) — 社区 25k★ 工程工作流全集：67 个专业智能体、284 个领域技能、94 个开发命令（TDD/代码审查/安全/架构等），适配 DriFox 提示词层。",
+            "version": "2.2.0",
+            "author": "Affaan Mustafa",
+            "license": "MIT",
+            "categories": [
+                "agent",
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/ecc",
+                "ref": "main"
+            },
+            "components": {
+                "agents": true,
+                "skills": true,
+                "commands": true
+            },
+            "keywords": [
+                "agents",
+                "skills",
+                "commands",
+                "tdd",
+                "code-review",
+                "security",
+                "workflow",
+                "automation",
+                "best-practices"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://ecc.tools"
+        },
+        {
             "name": "evolver",
             "description": "Evolver 自进化引擎集成插件 — 基于 GEP 协议的 AI Agent 进化能力。捕获会话经验，通过 Hook 自动触发进化循环，让 DriFox 越用越强。",
             "version": "1.0.0",
@@ -181,6 +248,39 @@
             "drifox": {
                 "min_version": "0.5.0"
             }
+        },
+        {
+            "name": "feature-dev",
+            "description": "功能开发工作流 — 理解代码库、澄清需求、设计架构、实现与审查的完整流程，内置 code-explorer/code-architect/code-reviewer 三个专业智能体。",
+            "version": "1.0.0",
+            "author": "Anthropic",
+            "license": "MIT",
+            "categories": [
+                "agent",
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/feature-dev",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true,
+                "agents": true
+            },
+            "keywords": [
+                "feature",
+                "development",
+                "architecture",
+                "workflow",
+                "exploration",
+                "code-review"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/feature-dev"
         },
         {
             "name": "frontend-pro",
@@ -638,6 +738,68 @@
             }
         },
         {
+            "name": "security-guidance",
+            "description": "AI 生成代码安全审查 — PostToolUse 静态模式检查，识别注入攻击、XSS、SQL 注入、硬编码密钥、不安全反序列化等 25+ 类漏洞风险。",
+            "version": "2.0.6",
+            "author": "David Dworken",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/security-guidance",
+                "ref": "main"
+            },
+            "components": {
+                "hooks": true
+            },
+            "keywords": [
+                "security",
+                "vulnerability",
+                "xss",
+                "sql-injection",
+                "secrets",
+                "code-review",
+                "hook"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/security-guidance"
+        },
+        {
+            "name": "skill-creator",
+            "description": "技能创作专家 — 从零创建技能、修改优化既有技能、评测技能性能。含基准测试、描述优化、性能方差分析完整方法论。",
+            "version": "1.0.0",
+            "author": "Anthropic",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/skill-creator",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "skill",
+                "skill-creator",
+                "eval",
+                "benchmark",
+                "agent-skills"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/skill-creator"
+        },
+        {
             "name": "snake",
             "description": "经典贪吃蛇游戏——在 DriFox 中直接玩的浮動卡片",
             "version": "0.3.0",
@@ -656,6 +818,40 @@
                 "commands": true,
                 "ui": true
             }
+        },
+        {
+            "name": "superpowers",
+            "description": "Superpowers 核心技能库 — TDD、调试、头脑风暴、写计划、代码审查、子智能体驱动开发等 14 个工程工作流技能，让 AI 遵循资深工程师流程。",
+            "version": "6.2.0",
+            "author": "Jesse Vincent",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/superpowers",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true,
+                "hooks": true
+            },
+            "keywords": [
+                "skills",
+                "tdd",
+                "debugging",
+                "brainstorming",
+                "planning",
+                "code-review",
+                "workflow",
+                "best-practices"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/obra/superpowers"
         },
         {
             "name": "teach",

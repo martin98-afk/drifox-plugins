@@ -1,5 +1,23 @@
 # Changelog
 
+## 2.0.0 (2026-08-08)
+
+### ✨ 新增 Claude Code 市场适配插件（6 个）
+
+从 Claude Code 官方/社区市场适配高星插件，新增 DriFox manifest（保留上游 `.claude-plugin/plugin.json` 溯源）：
+
+- **`superpowers`**（obra/superpowers，123k★）— 14 个工程工作流技能（TDD/调试/头脑风暴/写计划/代码审查/子智能体驱动开发），SessionStart 注入技能指引（DriFox 原生 Python hook）
+- **`ecc`**（affaan-m/everything-claude-code，25k★）— 67 智能体 + 284 技能 + 94 命令的工程工作流全集
+  - 所有命令补齐 DriFox 必需的 `type: prompt` frontmatter
+  - 5 个 skill 目录名与 `name` 字段对齐；16 个多行 `>-` description 折叠为单行
+  - hooks 未移植（上游为 node 内联脚本，强依赖 Claude 特有运行时）
+- **`skill-creator`**（Anthropic 官方）— 技能创作/优化/评测完整流程（含评测脚本与基准测试）
+- **`code-simplifier`**（Anthropic 官方）— 代码简化重构智能体（@code-simplifier）
+- **`security-guidance`**（Anthropic 官方）— AI 生成代码安全审查；移植静态模式检查层（25 条规则），改写为 DriFox 原生 Python hook（PostToolUse 触发）；LLM diff 审查层未移植
+- **`feature-dev`**（Anthropic 官方）— 功能开发工作流（/feature-dev + code-explorer/code-architect/code-reviewer 三智能体）
+
+- **机制**：`marketplace.json` 由 `generate_marketplace.py` 重新生成（34 个插件），`validate_plugins.py` 全部通过（新增插件零 error/warning）
+
 ## 0.1.0 (2026-08-04)
 ### Added
 - ip-switcher 插件：免费模型限流自动换 IP（429 检测 + 代理池轮换 + 仪表盘）

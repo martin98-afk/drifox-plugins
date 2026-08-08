@@ -85,6 +85,19 @@ drifox-plugins/
 | [`python-pro`](plugins/python-pro/) | Python 开发增强 — PEP 8 / 类型标注 / lint 自动检查 | user | skills + hooks |
 | [`test-scaffold`](plugins/test-scaffold/) | 测试脚手架生成 — 测试骨架、覆盖率分析 | user | commands + skills |
 
+### Claude Code 市场适配精选
+
+以下插件从 Claude Code 官方/社区市场适配而来，带来生态验证过的工程工作流：
+
+| 名称 | 描述 | 组件覆盖 | 来源 |
+|------|------|----------|------|
+| [`superpowers`](plugins/superpowers/) | 核心技能库 — TDD/调试/头脑风暴/计划/代码审查 14 技能 | skills + hooks | obra/superpowers（123k★） |
+| [`ecc`](plugins/ecc/) | 工程工作流全集 — 67 智能体 + 284 技能 + 94 命令 | agents + skills + commands | affaan-m/everything-claude-code（25k★） |
+| [`skill-creator`](plugins/skill-creator/) | 技能创作/优化/评测完整流程 | skills | Anthropic 官方 |
+| [`code-simplifier`](plugins/code-simplifier/) | 代码简化重构智能体 | agents | Anthropic 官方 |
+| [`security-guidance`](plugins/security-guidance/) | AI 生成代码安全审查（静态模式检查） | hooks | Anthropic 官方 |
+| [`feature-dev`](plugins/feature-dev/) | 功能开发工作流 — 探索→架构→实现→审查 | commands + agents | Anthropic 官方 |
+
 完整索引见 [plugins/README.md](plugins/README.md)。
 
 > **DriFox 运行时内置插件**（如 `plugin-manager`、`plugin-marketplace`、`context-usage-stats`、`file-tree` 等）随 DriFox 分发，**不收录在插件市场中**，避免用户重复安装造成困惑。它们由 DriFox 自带，无需手动安装。

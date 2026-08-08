@@ -1,0 +1,31 @@
+{
+    "name": "ecc",
+    "description": "Everything Claude Code (ECC) — 社区 25k★ 工程工作流全集：67 个专业智能体、284 个领域技能、94 个开发命令（TDD/代码审查/安全/架构等），适配 DriFox 提示词层。",
+    "version": "2.2.0",
+    "type": "user",
+    "license": "MIT",
+    "author": {
+        "name": "Affaan Mustafa",
+        "url": "https://x.com/affaanmustafa"
+    },
+    "homepage": "https://ecc.tools",
+    "keywords": [
+        "agents",
+        "skills",
+        "commands",
+        "tdd",
+        "code-review",
+        "security",
+        "workflow",
+        "automation",
+        "best-practices"
+    ],
+    "components": {
+        "agents": true,
+        "skills": true,
+        "commands": true
+    },
+    "drifox": {
+        "min_version": "0.5.0"
+    }
+}

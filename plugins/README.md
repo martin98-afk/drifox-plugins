@@ -15,6 +15,19 @@
 | [`python-pro`](python-pro/) | Python 开发增强 — PEP 8 / 类型标注 / lint 自动检查 | skills + hooks | 1.0.0 |
 | [`test-scaffold`](test-scaffold/) | 测试脚手架生成 — 测试骨架、覆盖率分析、边界场景推荐 | commands + skills | 1.0.0 |
 
+### Claude Code 市场移植精选
+
+以下插件从 Claude Code 官方/社区市场适配而来（保留上游 `.claude-plugin/plugin.json`，新增 DriFox manifest），带来生态验证过的工程工作流：
+
+| 插件 | 描述 | 组件 | 版本 | 来源 |
+|------|------|------|------|------|
+| [`superpowers`](superpowers/) | Superpowers 核心技能库 — 14 个工程工作流技能（TDD/调试/头脑风暴/计划/代码审查） | skills + hooks | 6.2.0 | obra/superpowers（123k★） |
+| [`ecc`](ecc/) | Everything Claude Code — 67 智能体 + 284 技能 + 94 命令的工程工作流全集 | agents + skills + commands | 2.2.0 | affaan-m/everything-claude-code（25k★） |
+| [`skill-creator`](skill-creator/) | 技能创作 — 从零创建/优化/评测 skill 的完整方法论 | skills | 1.0.0 | Anthropic 官方 |
+| [`code-simplifier`](code-simplifier/) | 代码简化重构智能体 — 不改功能，提升清晰度与可维护性 | agents | 1.0.0 | Anthropic 官方 |
+| [`security-guidance`](security-guidance/) | AI 生成代码安全审查 — 静态模式检查 25+ 类漏洞风险 | hooks | 2.0.6 | Anthropic 官方 |
+| [`feature-dev`](feature-dev/) | 功能开发工作流 — 探索→架构→实现→审查，3 个专业智能体 | commands + agents | 1.0.0 | Anthropic 官方 |
+
 > **DriFox 运行时内置插件**（`plugin-manager`、`plugin-marketplace`、`context-usage-stats`、`file-tree` 等）随 DriFox 分发，不收录在本仓库市场，避免重复安装造成困惑。
 
 ## 组件覆盖矩阵
@@ -29,6 +42,12 @@
 | nuwa-skill | — | — | ✅ | — | — | — | — | — |
 | python-pro | — | — | ✅ | — | ✅ | — | — | — |
 | test-scaffold | ✅ | — | ✅ | — | — | — | — | — |
+| superpowers | — | — | ✅ | — | ✅ | — | — | — |
+| ecc | ✅ | ✅ | ✅ | — | — | — | — | — |
+| skill-creator | — | — | ✅ | — | — | — | — | — |
+| code-simplifier | — | ✅ | — | — | — | — | — | — |
+| security-guidance | — | — | — | — | ✅ | — | — | — |
+| feature-dev | ✅ | ✅ | — | — | — | — | — | — |
 
 > **ui 组件说明**：ui 插件通过 `ui/__init__.py` 中的 `register_ui(registry)` 函数注册可视化组件（浮动卡片 / 内容块渲染器 / 消息元素工厂），由 DriFox 启动时 `UIPluginRegistry.load_plugin` 加载。详见 [docs/architecture.md](../docs/architecture.md#ui-组件)。
 >
