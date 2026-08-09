@@ -4,8 +4,8 @@
 功能：
 - 文件变更列表（已暂存 / 未暂存）
 - 暂存 / 取消暂存 / 放弃修改
-- 提交（含 --amend）
-- Stash 创建 / 列表 / 应用 / 弹出 / 删除
+- 提交
+- 搁置创建 / 列表 / 应用 / 弹出 / 删除
 - 分支切换 / 创建 / 删除
 - 提交历史（Graph 图）
 - Diff 预览对话框
@@ -25,10 +25,8 @@ from typing import Callable, List, Optional, Tuple
 from PyQt5.QtCore import QObject, QPoint, QRectF, QSize, QThread, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QBrush, QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
 from PyQt5.QtWidgets import (
-    QDialog,
     QFrame,
     QHBoxLayout,
-    QInputDialog,
     QLabel,
     QLineEdit,
     QListWidget,
@@ -46,6 +44,7 @@ from qfluentwidgets import (
     IconWidget,
     InfoBar,
     InfoBarPosition,
+    MaskDialogBase,
     PrimaryPushButton,
     RoundMenu,
     ScrollArea,
@@ -324,7 +323,7 @@ class _FileRowWidget(QWidget):
     def _on_discard(self):
         path = self._info["path"]
         st = self._info["status"]
-        if not _ConfirmDialog.ask("确认放弃修改", f"确定要放弃 {path} 的所有修改吗？\n此操作不可恢复！", self):
+        if not _confirm_ask("确认放弃修改", f"确定要放弃 {path} 的所有修改吗？\n此操作不可恢复！", self):
             return
         repo = self._get_repo_path()
         if not repo:
@@ -564,39 +563,72 @@ def _card_bg_rgba() -> str:
     return f"rgba({bg.red()}, {bg.green()}, {bg.blue()}, {bg.alpha()})"
 
 
-class _DiffDialog(QDialog):
-    """Diff 预览对话框"""
+# MaskDialogBase 要求 parent 非 None（其 __init__ 里取 parent.width()）；
+# 无有效父窗口时兜底到常驻隐藏 QWidget，保证离屏测试/无窗口场景可用。
+# 惰性创建：模块导入时机可能早于 QApplication 实例化（QWidget 无 app 会崩）。
+_DIALOG_PARENT_BACKUP = None  # type: Optional[QWidget]
+
+
+def _get_dialog_parent_backup() -> QWidget:
+    global _DIALOG_PARENT_BACKUP
+    if _DIALOG_PARENT_BACKUP is None:
+        _DIALOG_PARENT_BACKUP = QWidget()
+    return _DIALOG_PARENT_BACKUP
+
+
+def _dialog_parent(parent) -> QWidget:
+    """返回对话框挂载父窗口：优先 Tab 管理器单例，其次调用方顶层窗口。
+
+    宿主环境挂到 TabManagerWindow 可让遮罩铺满主窗口而非仅卡片区域；
+    插件无宿主（测试/独立运行）时依次回退：调用方顶层窗口 > 活动窗口 > 兜底。
+    """
+    try:
+        from app.widgets.tab_manager_window import TabManagerWindow
+
+        win = TabManagerWindow.get_instance()
+        if win is not None:
+            return win
+    except Exception:
+        pass
+    if parent is not None:
+        top = parent.window()
+        if top is not None:
+            return top
+    from PyQt5.QtWidgets import QApplication
+
+    app = QApplication.instance()
+    if app is not None and app.activeWindow() is not None:
+        return app.activeWindow()
+    return _get_dialog_parent_backup()
+
+
+class _DiffDialog(MaskDialogBase):
+    """Diff 预览对话框（宿主 MaskDialogBase 风格）"""
 
     def __init__(self, repo_path: str, file_path: str, staged: bool, parent=None):
-        super().__init__(parent)
+        super().__init__(_dialog_parent(parent))
         self._repo_path = repo_path
         self._file_path = file_path
         self._staged = staged
-        self.setWindowTitle(f"Diff — {file_path}")
-        self.setMinimumSize(700, 450)
-        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setShadowEffect(60, (0, 10), QColor(0, 0, 0, 100))
+        self.setClosableOnMaskClicked(True)
+        self.setDraggable(True)
+        self.setMaskColor(QColor(0, 0, 0, 180))
         self._setup_ui()
         self._load_diff()
 
     def _setup_ui(self):
-        self.setStyleSheet("QDialog { background: transparent; }")
-        root = QVBoxLayout(self)
-        root.setContentsMargins(0, 0, 0, 0)
-
-        # 不透明卡片背景（WA_TranslucentBackground 下必须垫底，
-        # 否则半透明 diff 区叠在底层窗口上会呈现全黑）
-        card = QWidget(self)
-        card.setObjectName("diffCard")
-        card.setStyleSheet(
-            f"#diffCard {{ background: {_card_bg_rgba()}; "
+        self.widget.setObjectName("diffWidget")
+        self.widget.setStyleSheet(
+            f"#diffWidget {{ background: {_card_bg_rgba()}; "
             "border: 1px solid rgba(128,128,128,0.15); border-radius: 12px; }"
         )
-        ly = QVBoxLayout(card)
+        ly = QVBoxLayout(self.widget)
         ly.setContentsMargins(16, 16, 16, 16)
         ly.setSpacing(8)
 
         # 头部
-        hdr = QWidget(card)
+        hdr = QWidget(self.widget)
         hdr.setStyleSheet("background: transparent;")
         hl = QHBoxLayout(hdr)
         hl.setContentsMargins(0, 0, 0, 0)
@@ -611,7 +643,7 @@ class _DiffDialog(QDialog):
         hl.addWidget(status_lb)
 
         # Diff 内容
-        self._diff_area = QTextEdit(card)
+        self._diff_area = QTextEdit(self.widget)
         self._diff_area.setReadOnly(True)
         self._diff_area.setStyleSheet(
             "QTextEdit { background: rgba(0,0,0,0.2); border: 1px solid rgba(128,128,128,0.15); "
@@ -624,13 +656,24 @@ class _DiffDialog(QDialog):
         # 关闭按钮
         btn_row = QHBoxLayout()
         btn_row.addStretch(1)
-        close_btn = QPushButton("关闭", card)
+        close_btn = QPushButton("关闭", self.widget)
         close_btn.setFixedWidth(80)
         close_btn.clicked.connect(self.accept)
         btn_row.addWidget(close_btn)
         ly.addLayout(btn_row)
 
-        root.addWidget(card)
+        self.widget.setFixedSize(760, 520)
+        self._center_widget()
+
+    def _center_widget(self):
+        """让 widget 在 dialog 中保持居中"""
+        x = max(0, (self.width() - self.widget.width()) // 2)
+        y = max(0, (self.height() - self.widget.height()) // 2)
+        self.widget.move(x, y)
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self._center_widget()
 
     def _load_diff(self):
         """异步加载 diff，避免大文件 diff 阻塞主线程"""
@@ -678,16 +721,16 @@ class _DiffDialog(QDialog):
 # ========================================================================
 
 
-class _ConfirmDialog(QDialog):
-    """Fluent 风格确认弹窗"""
+class _ConfirmDialog(MaskDialogBase):
+    """Fluent 风格确认弹窗（宿主 MaskDialogBase 风格）"""
 
     def __init__(self, title: str, message: str, parent=None):
-        super().__init__(parent)
+        super().__init__(_dialog_parent(parent))
         self._confirmed = False
-        self.setWindowTitle(title)
-        self.setFixedSize(360, 180)
-        self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
-        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setShadowEffect(60, (0, 10), QColor(0, 0, 0, 100))
+        self.setClosableOnMaskClicked(True)
+        self.setDraggable(True)
+        self.setMaskColor(QColor(0, 0, 0, 180))
         self._setup_ui(title, message)
 
     def _setup_ui(self, title: str, message: str):
@@ -701,35 +744,28 @@ class _ConfirmDialog(QDialog):
         tcs = colors.get("text_secondary", _text_color(secondary=True))
         border = colors.get("border", "rgba(128,128,128,0.15)")
 
-        self.setStyleSheet(f"""
-            _ConfirmDialog {{ background: transparent; }}
-        """)
-
-        root = QVBoxLayout(self)
-        root.setContentsMargins(0, 0, 0, 0)
-
-        card = QWidget(self)
-        card.setObjectName("confirmCard")
-        card.setStyleSheet(f"""
-            #confirmCard {{
+        self.widget.setObjectName("confirmWidget")
+        self.widget.setStyleSheet(f"""
+            #confirmWidget {{
                 background: {bg_rgba};
                 border: 1px solid {border};
                 border-radius: 12px;
             }}
         """)
-        cl = QVBoxLayout(card)
+
+        cl = QVBoxLayout(self.widget)
         cl.setContentsMargins(24, 20, 24, 16)
         cl.setSpacing(12)
 
         # 标题
-        title_lb = QLabel(title, card)
+        title_lb = QLabel(title, self.widget)
         title_lb.setStyleSheet(
             f"color: {tc}; font-size: 15px; font-weight: 600; background: transparent;"
         )
         cl.addWidget(title_lb)
 
         # 消息
-        msg_lb = QLabel(message, card)
+        msg_lb = QLabel(message, self.widget)
         msg_lb.setWordWrap(True)
         msg_lb.setStyleSheet(
             f"color: {tcs}; font-size: 13px; background: transparent;"
@@ -740,7 +776,7 @@ class _ConfirmDialog(QDialog):
         btn_row = QHBoxLayout()
         btn_row.addStretch(1)
 
-        cancel_btn = QPushButton("取消", card)
+        cancel_btn = QPushButton("取消", self.widget)
         cancel_btn.setFixedSize(80, 32)
         cancel_btn.setStyleSheet(
             f"QPushButton {{ background: rgba(128,128,128,0.12); border: none; border-radius: 6px; "
@@ -750,7 +786,7 @@ class _ConfirmDialog(QDialog):
         cancel_btn.clicked.connect(self.reject)
         btn_row.addWidget(cancel_btn)
 
-        confirm_btn = QPushButton("确定", card)
+        confirm_btn = QPushButton("确定", self.widget)
         confirm_btn.setFixedSize(80, 32)
         confirm_btn.setStyleSheet(
             "QPushButton { background: rgba(98,160,234,0.2); border: none; border-radius: 6px; "
@@ -761,7 +797,19 @@ class _ConfirmDialog(QDialog):
         btn_row.addWidget(confirm_btn)
 
         cl.addLayout(btn_row)
-        root.addWidget(card)
+
+        self.widget.setFixedSize(360, 180)
+        self._center_widget()
+
+    def _center_widget(self):
+        """让 widget 在 dialog 中保持居中"""
+        x = max(0, (self.width() - self.widget.width()) // 2)
+        y = max(0, (self.height() - self.widget.height()) // 2)
+        self.widget.move(x, y)
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self._center_widget()
 
     def _on_confirm(self):
         self._confirmed = True
@@ -772,6 +820,154 @@ class _ConfirmDialog(QDialog):
         dlg = _ConfirmDialog(title, message, parent)
         dlg.exec_()
         return dlg._confirmed
+
+
+# ========================================================================
+# 5.6 统一弹窗入口（宿主优先，插件闭包回退）
+# ========================================================================
+
+# git-panel 自身保持可独立运行（无宿主时用本地 _ConfirmDialog/_InputDialog）；
+# 宿主环境则直接复用系统 MaskDialogBase 组件（Colors 主题一致）
+
+
+class _InputDialog(MaskDialogBase):
+    """单输入弹窗（无宿主时的本地回退，样式与宿主 SingleInputDialog 一致）"""
+
+    DEFAULT_WIDTH = 420
+    DEFAULT_HEIGHT = 180
+
+    def __init__(self, title: str, hint: str = "", confirm_text: str = "确认",
+                 cancel_text: str = "取消", parent=None):
+        super().__init__(_dialog_parent(parent))
+        self._hint = hint
+        self.setShadowEffect(60, (0, 10), QColor(0, 0, 0, 100))
+        self.setClosableOnMaskClicked(True)
+        self.setDraggable(True)
+        self.setMaskColor(QColor(0, 0, 0, 180))
+        self._setup_ui(title, confirm_text, cancel_text)
+
+    def _setup_ui(self, title, confirm_text, cancel_text):
+        colors = _fallback_colors()
+        bg = colors.get("card_bg", "rgba(33,33,38,240)")
+        if isinstance(bg, str):
+            bg_rgba = bg
+        else:
+            bg_rgba = f"rgba({bg.red()}, {bg.green()}, {bg.blue()}, {bg.alpha()})"
+        tc = colors.get("text_primary", _text_color())
+        tcs = colors.get("text_secondary", _text_color(secondary=True))
+        border = colors.get("border", "rgba(128,128,128,0.15)")
+
+        self.widget.setObjectName("inputWidget")
+        self.widget.setStyleSheet(f"""
+            #inputWidget {{
+                background: {bg_rgba};
+                border: 1px solid {border};
+                border-radius: 10px;
+            }}
+        """)
+        cl = QVBoxLayout(self.widget)
+        cl.setContentsMargins(24, 20, 24, 16)
+        cl.setSpacing(10)
+
+        title_lb = QLabel(title, self.widget)
+        title_lb.setStyleSheet(
+            f"color: {tc}; font-size: 15px; font-weight: 600; background: transparent;"
+        )
+        cl.addWidget(title_lb)
+
+        self._input = QLineEdit(self.widget)
+        self._input.setPlaceholderText(self._hint)
+        self._input.setStyleSheet(
+            f"QLineEdit {{ background: rgba(128,128,128,0.08); border: 1px solid {border}; "
+            f"border-radius: 6px; padding: 7px 10px; color: {tc}; font-size: 13px; }}"
+            "QLineEdit:focus { border-color: #62a0ea; }"
+        )
+        self._input.returnPressed.connect(self._on_confirm)
+        cl.addWidget(self._input)
+
+        btn_row = QHBoxLayout()
+        btn_row.addStretch(1)
+        cancel_btn = QPushButton(cancel_text, self.widget)
+        cancel_btn.setFixedSize(80, 32)
+        cancel_btn.setStyleSheet(
+            f"QPushButton {{ background: rgba(128,128,128,0.12); border: none; border-radius: 6px; "
+            f"color: {tc}; font-size: 13px; }}"
+            "QPushButton:hover { background: rgba(128,128,128,0.22); }"
+        )
+        cancel_btn.clicked.connect(self.reject)
+        btn_row.addWidget(cancel_btn)
+
+        confirm_btn = QPushButton(confirm_text, self.widget)
+        confirm_btn.setFixedSize(80, 32)
+        confirm_btn.setStyleSheet(
+            "QPushButton { background: rgba(98,160,234,0.2); border: none; border-radius: 6px; "
+            f"color: #62a0ea; font-size: 13px; font-weight: 600; }}"
+            "QPushButton:hover { background: rgba(98,160,234,0.35); }"
+        )
+        confirm_btn.clicked.connect(self._on_confirm)
+        btn_row.addWidget(confirm_btn)
+        cl.addLayout(btn_row)
+
+        self.widget.setFixedSize(self.DEFAULT_WIDTH, self.DEFAULT_HEIGHT)
+        self._center_widget()
+
+    def _center_widget(self):
+        x = max(0, (self.width() - self.widget.width()) // 2)
+        y = max(0, (self.height() - self.widget.height()) // 2)
+        self.widget.move(x, y)
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self._center_widget()
+
+    def _on_confirm(self):
+        self.accept()
+
+    def text(self) -> str:
+        return self._input.text().strip()
+
+
+def _confirm_ask(title: str, message: str, parent=None) -> bool:
+    """统一确认弹窗：宿主环境用系统 ConfirmDialog，否则本地 _ConfirmDialog"""
+    try:
+        from app.widgets.common_dialogs import ConfirmDialog
+    except Exception:
+        return _ConfirmDialog.ask(title, message, parent)
+    holder = {"ok": False}
+
+    def _yes():
+        holder["ok"] = True
+
+    d = ConfirmDialog(title=title, content=message, confirm_text="确定",
+                      cancel_text="取消", parent=_dialog_parent(parent))
+    d.confirmed.connect(_yes)
+    d.exec_()
+    return holder["ok"]
+
+
+def _input_ask(title: str, hint: str = "", parent=None,
+               confirm_text: str = "确认", cancel_text: str = "取消") -> str:
+    """单输入弹窗：宿主环境用系统 SingleInputDialog，否则本地 _InputDialog"""
+    try:
+        from app.widgets.cards.settings.memory_card import SingleInputDialog
+    except Exception:
+        SingleInputDialog = None
+
+    if SingleInputDialog is not None:
+        holder = {"text": ""}
+
+        def _got(t: str):
+            holder["text"] = t
+
+        d = SingleInputDialog(title=title, hint=hint, confirm_text=confirm_text,
+                              cancel_text=cancel_text, parent=_dialog_parent(parent))
+        d.confirmed.connect(_got)
+        d.exec_()
+        return holder["text"]
+    dlg = _InputDialog(title, hint=hint, confirm_text=confirm_text,
+                       cancel_text=cancel_text, parent=parent)
+    dlg.exec_()
+    return dlg.text()
 
 
 # ========================================================================
@@ -876,6 +1072,8 @@ class _StashRowWidget(QWidget):
         self._info = stash_info
         self.setMinimumHeight(32)
         self.setObjectName("StashRow")
+        self.setCursor(Qt.PointingHandCursor)
+        self.setToolTip("双击查看搁置内容")
         self.setStyleSheet(
             "#StashRow { background: transparent; }"
             "#StashRow:hover { background: rgba(128,128,128,0.06); border-radius: 4px; }"
@@ -890,7 +1088,7 @@ class _StashRowWidget(QWidget):
         icon.setStyleSheet("background: transparent;")
         ly.addWidget(icon)
 
-        # 描述
+        # 描述（双击整行 = 查看内容，与「内容」按钮一致）
         msg_lb = QLabel(f"{stash_info['ref']}: {stash_info['message']}", self)
         msg_lb.setStyleSheet(
             f"background: transparent; color: {_text_color()}; font-size: 12px;"
@@ -898,6 +1096,17 @@ class _StashRowWidget(QWidget):
         msg_lb.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         msg_lb.setWordWrap(True)
         ly.addWidget(msg_lb)
+
+        # 内容
+        view_btn = QPushButton("内容", self)
+        view_btn.setFixedSize(40, 22)
+        view_btn.setStyleSheet(
+            "QPushButton { background: rgba(98,160,234,0.12); border: none; border-radius: 4px; "
+            f"color: {_text_color()}; font-size: 11px; padding: 0 4px; }}"
+            "QPushButton:hover { background: rgba(98,160,234,0.28); }"
+        )
+        view_btn.clicked.connect(lambda: self.action_requested.emit("view", stash_info["ref"]))
+        ly.addWidget(view_btn)
 
         # 应用
         apply_btn = QPushButton("应用", self)
@@ -931,6 +1140,11 @@ class _StashRowWidget(QWidget):
         )
         del_btn.clicked.connect(lambda: self.action_requested.emit("drop", stash_info["ref"]))
         ly.addWidget(del_btn)
+
+    def mouseDoubleClickEvent(self, event):
+        """双击整行 = 查看搁置内容"""
+        self.action_requested.emit("view", self._info["ref"])
+        super().mouseDoubleClickEvent(event)
 
 
 # ========================================================================
@@ -1065,16 +1279,6 @@ class _CommitRowWidget(QWidget):
         subject_lb.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         ly.addWidget(subject_lb)
 
-        # Ref 标签
-        refs = commit_info.get("refs", "")
-        if refs:
-            ref_lb = QLabel(refs, self)
-            ref_lb.setStyleSheet(
-                "background: rgba(98,160,234,0.12); color: #62a0ea; "
-                "font-size: 10px; padding: 1px 4px; border-radius: 3px;"
-            )
-            ly.addWidget(ref_lb)
-
     def mouseDoubleClickEvent(self, event):
         self.detail_requested.emit(self._info["hash"])
         super().mouseDoubleClickEvent(event)
@@ -1087,38 +1291,32 @@ class _CommitRowWidget(QWidget):
 _COMMIT_DIFF_LIMIT = 5000
 
 
-class _CommitDetailDialog(QDialog):
+class _CommitDetailDialog(MaskDialogBase):
     """Commit 详情对话框：元信息条 + 完整 diff（词级高亮）"""
 
     def __init__(self, repo_path: str, hash_: str, parent=None):
-        super().__init__(parent)
+        super().__init__(_dialog_parent(parent))
         self._repo_path = repo_path
         self._hash = hash_
-        self.setWindowTitle(f"Commit — {hash_[:8]}")
-        self.setMinimumSize(760, 520)
-        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setShadowEffect(60, (0, 10), QColor(0, 0, 0, 100))
+        self.setClosableOnMaskClicked(True)
+        self.setDraggable(True)
+        self.setMaskColor(QColor(0, 0, 0, 180))
         self._setup_ui()
         self._load()
 
     def _setup_ui(self):
-        self.setStyleSheet("QDialog { background: transparent; }")
-        root = QVBoxLayout(self)
-        root.setContentsMargins(0, 0, 0, 0)
-
-        # 不透明卡片背景（WA_TranslucentBackground 下必须垫底，
-        # 否则半透明 diff 区叠在底层窗口上会呈现全黑）
-        card = QWidget(self)
-        card.setObjectName("commitCard")
-        card.setStyleSheet(
-            f"#commitCard {{ background: {_card_bg_rgba()}; "
+        self.widget.setObjectName("commitWidget")
+        self.widget.setStyleSheet(
+            f"#commitWidget {{ background: {_card_bg_rgba()}; "
             "border: 1px solid rgba(128,128,128,0.15); border-radius: 12px; }"
         )
-        ly = QVBoxLayout(card)
+        ly = QVBoxLayout(self.widget)
         ly.setContentsMargins(16, 16, 16, 16)
         ly.setSpacing(8)
 
         # 元信息条
-        self._hash_lb = QLabel(self._hash, card)
+        self._hash_lb = QLabel(self._hash, self.widget)
         self._hash_lb.setStyleSheet(
             "background: transparent; color: #62a0ea; font-size: 13px; "
             "font-family: 'Consolas', monospace;"
@@ -1128,13 +1326,13 @@ class _CommitDetailDialog(QDialog):
         self._hash_lb.mousePressEvent = self._on_hash_click
         ly.addWidget(self._hash_lb)
 
-        self._meta_lb = QLabel("加载中…", card)
+        self._meta_lb = QLabel("加载中…", self.widget)
         self._meta_lb.setStyleSheet(
             f"background: transparent; color: {_text_color(secondary=True)}; font-size: 12px;"
         )
         ly.addWidget(self._meta_lb)
 
-        self._msg_lb = QLabel("", card)
+        self._msg_lb = QLabel("", self.widget)
         self._msg_lb.setWordWrap(True)
         self._msg_lb.setStyleSheet(
             f"background: transparent; color: {_text_color()}; font-size: 13px;"
@@ -1142,7 +1340,7 @@ class _CommitDetailDialog(QDialog):
         ly.addWidget(self._msg_lb)
 
         # Diff 区
-        self._diff_area = QTextEdit(card)
+        self._diff_area = QTextEdit(self.widget)
         self._diff_area.setReadOnly(True)
         self._diff_area.setStyleSheet(
             "QTextEdit { background: rgba(0,0,0,0.2); border: 1px solid rgba(128,128,128,0.15); "
@@ -1154,13 +1352,24 @@ class _CommitDetailDialog(QDialog):
         # 关闭按钮
         btn_row = QHBoxLayout()
         btn_row.addStretch(1)
-        close_btn = QPushButton("关闭", card)
+        close_btn = QPushButton("关闭", self.widget)
         close_btn.setFixedWidth(80)
         close_btn.clicked.connect(self.accept)
         btn_row.addWidget(close_btn)
         ly.addLayout(btn_row)
 
-        root.addWidget(card)
+        self.widget.setFixedSize(820, 560)
+        self._center_widget()
+
+    def _center_widget(self):
+        """让 widget 在 dialog 中保持居中"""
+        x = max(0, (self.width() - self.widget.width()) // 2)
+        y = max(0, (self.height() - self.widget.height()) // 2)
+        self.widget.move(x, y)
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self._center_widget()
 
     def _on_hash_click(self, event):
         from PyQt5.QtWidgets import QApplication
@@ -1262,6 +1471,122 @@ class _CommitDetailDialog(QDialog):
 
     def _on_error(self, err: str):
         self._diff_area.setPlainText(f"加载 commit 失败: {err}")
+
+
+# ========================================================================
+# 9.7 Stash 详情对话框
+# ========================================================================
+
+
+class _StashDetailDialog(MaskDialogBase):
+    """Stash 详情对话框：完整 diff（git stash show -p）"""
+
+    def __init__(self, repo_path: str, ref: str, parent=None):
+        super().__init__(_dialog_parent(parent))
+        self._repo_path = repo_path
+        self._ref = ref
+        self.setShadowEffect(60, (0, 10), QColor(0, 0, 0, 100))
+        self.setClosableOnMaskClicked(True)
+        self.setDraggable(True)
+        self.setMaskColor(QColor(0, 0, 0, 180))
+        self._setup_ui()
+        self._load()
+
+    def _setup_ui(self):
+        self.widget.setObjectName("stashDetailWidget")
+        self.widget.setStyleSheet(
+            f"#stashDetailWidget {{ background: {_card_bg_rgba()}; "
+            "border: 1px solid rgba(128,128,128,0.15); border-radius: 12px; }"
+        )
+        ly = QVBoxLayout(self.widget)
+        ly.setContentsMargins(16, 16, 16, 16)
+        ly.setSpacing(8)
+
+        # 标题
+        hdr = QWidget(self.widget)
+        hdr.setStyleSheet("background: transparent;")
+        hl = QHBoxLayout(hdr)
+        hl.setContentsMargins(0, 0, 0, 0)
+        title = StrongBodyLabel(f"{self._ref} 内容", hdr)
+        hl.addWidget(title)
+        hl.addStretch(1)
+        status_lb = QLabel("[搁置内容]", hdr)
+        status_lb.setStyleSheet(f"color: {_text_color(secondary=True)}; background: transparent;")
+        hl.addWidget(status_lb)
+        ly.addWidget(hdr)
+
+        # Diff 区
+        self._diff_area = QTextEdit(self.widget)
+        self._diff_area.setReadOnly(True)
+        self._diff_area.setStyleSheet(
+            "QTextEdit { background: rgba(0,0,0,0.2); border: 1px solid rgba(128,128,128,0.15); "
+            "border-radius: 6px; padding: 8px; font-family: 'Consolas', 'Courier New', monospace; "
+            f"color: {_text_color()}; font-size: 13px; }}"
+        )
+        ly.addWidget(self._diff_area, 1)
+
+        # 关闭按钮
+        btn_row = QHBoxLayout()
+        btn_row.addStretch(1)
+        close_btn = QPushButton("关闭", self.widget)
+        close_btn.setFixedWidth(80)
+        close_btn.clicked.connect(self.accept)
+        btn_row.addWidget(close_btn)
+        ly.addLayout(btn_row)
+
+        self.widget.setFixedSize(760, 520)
+        self._center_widget()
+
+    def _center_widget(self):
+        """让 widget 在 dialog 中保持居中"""
+        x = max(0, (self.width() - self.widget.width()) // 2)
+        y = max(0, (self.height() - self.widget.height()) // 2)
+        self.widget.move(x, y)
+
+    def resizeEvent(self, e):
+        super().resizeEvent(e)
+        self._center_widget()
+
+    def _load(self):
+        """异步加载 stash diff"""
+        self._diff_area.setPlainText("加载中…")
+        m = re.search(r"stash@\{(\d+)\}", self._ref)
+        idx = int(m.group(1)) if m else 0
+        w = _Worker(lambda: GitRepo(self._repo_path).stash_show(idx))
+        t = QThread(self)
+        w.moveToThread(t)
+        t.started.connect(w.run)
+        w.finished.connect(self._on_loaded)
+        w.error.connect(self._on_error)
+        w.finished.connect(t.quit)
+        w.error.connect(t.quit)
+        w.finished.connect(w.deleteLater)
+        w.error.connect(w.deleteLater)
+        t.finished.connect(t.deleteLater)
+        self._stash_worker = w
+        self._stash_thread = t
+        t.start()
+
+    def _on_loaded(self, res: GitResult):
+        if not res.ok:
+            self._diff_area.setPlainText(f"加载失败: {res.error_message}")
+            return
+        stdout = res.stdout
+        if not stdout.strip():
+            self._diff_area.setPlainText("(无文件变更)")
+            return
+        try:
+            colored = render_diff_html(
+                stdout,
+                base_color=_text_color(),
+                secondary_color=_text_color(secondary=True),
+            )
+            self._diff_area.setHtml(colored)
+        except Exception as e:
+            self._diff_area.setPlainText(f"渲染失败: {e}")
+
+    def _on_error(self, err: str):
+        self._diff_area.setPlainText(f"加载失败: {err}")
 
 
 # ========================================================================
@@ -1388,14 +1713,13 @@ class GitPanelCard(QWidget):
             "QPushButton:pressed { background: rgba(98,160,234,0.4); }"
         )
 
-        # Amend 按钮
+        # 搁置按钮
         btn_base = (
             f"QPushButton {{ background: rgba(128,128,128,0.1); border: none; border-radius: 5px; "
             f"color: {tc}; font-family: '{ff}'; font-size: {fs - 3}px; padding: 4px 10px; }}"
             "QPushButton:hover { background: rgba(128,128,128,0.2); }"
             "QPushButton:pressed { background: rgba(128,128,128,0.3); }"
         )
-        self._amend_btn.setStyleSheet(btn_base)
         if hasattr(self, '_stash_btn'):
             self._stash_btn.setStyleSheet(btn_base)
         if hasattr(self, '_new_branch_btn'):
@@ -1573,16 +1897,8 @@ class GitPanelCard(QWidget):
         self._commit_btn.clicked.connect(self._on_commit)
         tly.addWidget(self._commit_btn)
 
-        # Amend 按钮
-        self._amend_btn = QPushButton("Amend", tb)
-        self._amend_btn.setFixedSize(52, 28)
-        self._amend_btn.setToolTip("修改上次提交（--amend）")
-        self._amend_btn.setCursor(Qt.PointingHandCursor)
-        self._amend_btn.clicked.connect(self._on_amend)
-        tly.addWidget(self._amend_btn)
-
-        # Stash 按钮
-        self._stash_btn = QPushButton("Stash", tb)
+        # 搁置按钮
+        self._stash_btn = QPushButton("搁置", tb)
         self._stash_btn.setFixedHeight(28)
         self._stash_btn.setCursor(Qt.PointingHandCursor)
         self._stash_btn.setToolTip("保存当前工作进度")
@@ -1823,7 +2139,7 @@ class GitPanelCard(QWidget):
         # ── 2. Stash ──
         stashes = data.get("stashes", [])
         stash_section = _CollapsibleSection(
-            "Stash", count=len(stashes), collapsed=False
+            "搁置", count=len(stashes), collapsed=False
         )
         stash_content = QWidget()
         stash_content.setStyleSheet("background: transparent;")
@@ -1837,7 +2153,7 @@ class GitPanelCard(QWidget):
                 row.action_requested.connect(self._on_stash_action)
                 sl.addWidget(row)
         else:
-            no_stash = QLabel("  无 stash", stash_content)
+            no_stash = QLabel("  无搁置", stash_content)
             no_stash.setStyleSheet(
                 f"background: transparent; color: {self._cached_tcs}; font-size: 12px; "
                 "padding: 12px 16px;"
@@ -1962,17 +2278,6 @@ class GitPanelCard(QWidget):
             lambda r: self._on_commit_done(r),
         )
 
-    def _on_amend(self):
-        """修改上次提交"""
-        msg = self._commit_input.text().strip()
-        if not _ConfirmDialog.ask("确认 Amend", "确定要修改上次提交吗？", self):
-            return
-        self._status_lb.setText("Amend 中…")
-        self._run_git_async(
-            lambda: GitRepo(self._repo_path).commit(msg, amend=True),
-            lambda r: self._on_commit_done(r),
-        )
-
     def _on_commit_done(self, result: Optional[GitResult] = None):
         if result is not None:
             if result.ok:
@@ -1988,23 +2293,29 @@ class GitPanelCard(QWidget):
         QTimer.singleShot(1000, self._async_refresh)
 
     def _on_stash(self):
-        """创建 stash"""
+        """创建搁置"""
         msg = self._commit_input.text().strip() or "WIP"
-        if not _ConfirmDialog.ask("确认 Stash", f"确定要 stash 当前修改吗？\n消息: {msg}", self):
+        if not _confirm_ask("确认搁置", f"确定要搁置当前修改吗？\n消息: {msg}", self):
             return
-        self._status_lb.setText("Stash 中…")
+        self._status_lb.setText("搁置中…")
         self._run_git_async(
             lambda: GitRepo(self._repo_path).stash_push(msg),
-            lambda r: self._on_op_done("Stash 成功", r),
+            lambda r: self._on_op_done("搁置成功", r),
         )
 
     def _on_stash_action(self, action: str, ref: str):
         """处理 stash 操作"""
+        if action == "view":
+            if not self._repo_path:
+                return
+            dialog = _StashDetailDialog(self._repo_path, ref, self)
+            dialog.exec_()
+            return
         if action == "drop":
-            if not _ConfirmDialog.ask("确认删除 Stash", f"确定要删除 {ref} 吗？", self):
+            if not _confirm_ask("确认删除搁置", f"确定要删除 {ref} 吗？", self):
                 return
         elif action == "pop":
-            if not _ConfirmDialog.ask("确认弹出 Stash", f"确定要弹出 {ref} 吗？\n此操作会应用并删除该 stash。", self):
+            if not _confirm_ask("确认弹出搁置", f"确定要弹出 {ref} 吗？\n此操作会应用并删除该搁置。", self):
                 return
         idx = 0
         m = re.search(r"stash@\{(\d+)\}", ref)
@@ -2033,7 +2344,7 @@ class GitPanelCard(QWidget):
 
     def _on_delete_branch(self, name: str):
         """删除分支"""
-        if not _ConfirmDialog.ask("确认删除分支", f"确定要删除分支「{name}」吗？", self):
+        if not _confirm_ask("确认删除分支", f"确定要删除分支「{name}」吗？", self):
             return
         self._status_lb.setText(f"删除 {name}…")
         self._run_git_async(
@@ -2043,10 +2354,10 @@ class GitPanelCard(QWidget):
 
     def _on_create_branch(self):
         """创建新分支"""
-        name, ok = QInputDialog.getText(self, "新建分支", "输入分支名:")
-        if not ok or not name.strip():
+        branch_name = _input_ask("新建分支", "输入分支名:", parent=self,
+                             confirm_text="创建", cancel_text="取消")
+        if not branch_name:
             return
-        branch_name = name.strip()
         self._status_lb.setText(f"创建分支 {branch_name}…")
         self._run_git_async(
             lambda: GitRepo(self._repo_path).branch_create(branch_name),
@@ -2071,7 +2382,7 @@ class GitPanelCard(QWidget):
 
     def _on_discard_all(self):
         """放弃所有修改"""
-        if not _ConfirmDialog.ask("确认放弃所有修改", "确定要放弃所有工作区修改吗？\n此操作不可恢复！", self):
+        if not _confirm_ask("确认放弃所有修改", "确定要放弃所有工作区修改吗？\n此操作不可恢复！", self):
             return
         self._status_lb.setText("放弃中…")
         self._run_git_async(

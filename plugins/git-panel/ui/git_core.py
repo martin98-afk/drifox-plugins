@@ -36,7 +36,7 @@ def _run_git(cwd: str, *args: str, strip: bool = True, timeout: int = GIT_TIMEOU
     """
     try:
         r = subprocess.run(
-            ["git", "-C", cwd, *args],
+            ["git", "-C", cwd, "-c", "core.quotepath=false", *args],
             capture_output=True,
             text=True,
             encoding="utf-8",
@@ -269,6 +269,10 @@ class GitRepo:
 
     def stash_drop(self, idx: int = 0) -> GitResult:
         return self._run("stash", "drop", f"stash@{{{idx}}}")
+
+    def stash_show(self, idx: int = 0) -> GitResult:
+        """查看 stash 的完整 diff（git stash show -p）"""
+        return self._run("stash", "show", "-p", f"stash@{{{idx}}}")
 
     # ── 分支 ──
 
