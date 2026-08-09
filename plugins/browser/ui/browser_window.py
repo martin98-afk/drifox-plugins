@@ -697,6 +697,20 @@ class BrowserWindowCard(QWidget):
             btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
             btn.clicked.connect(slot)
             ply.addWidget(btn)
+
+        # 拦截设置（分离线）
+        sep = QFrame(panel)
+        sep.setFixedHeight(1)
+        sep.setStyleSheet("background: rgba(128,128,128,0.15);")
+        ply.addWidget(sep)
+
+        btn = QToolButton(panel)
+        btn.setIcon(FluentIcon.SETTING.qicon())
+        btn.setIconSize(QSize(16, 16))
+        btn.setText("拦截设置")
+        btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        btn.clicked.connect(self._open_redirect_settings)
+        ply.addWidget(btn)
         return panel
 
     def _position_popup(self, panel):
@@ -745,6 +759,13 @@ class BrowserWindowCard(QWidget):
 
         self._menu_panel.setVisible(False)
         show_downloads_panel(self)
+
+    def _open_redirect_settings(self):
+        """打开拦截设置弹窗（菜单 → 拦截设置）"""
+        from .redirect_settings import show_redirect_settings
+
+        self._menu_panel.setVisible(False)
+        show_redirect_settings(self)
 
     def open_devtools(self):
         from .devtools import open_devtools_for

@@ -39,6 +39,7 @@
 - **收藏夹**：`Ctrl+D` 收藏，菜单 → 收藏夹管理（打开/删除）
 - **历史记录**：卡片内悬浮面板，自动记录访问，支持搜索与清空
 - **下载管理**：downloadRequested 托管，进度条实时显示，可打开所在文件夹
+- **外部链接拦截**：主程序 http/https 外链、Shell 打开的 URL、本地 HTML 文件默认重定向到内置浏览器；浏览器菜单 → 「拦截设置」可分别控制三类拦截与全局总开关，配置实时生效
 - **DevTools**：F12 打开独立开发者工具窗口
 - **隐身模式**：OTR Profile，关闭即焚，与正常浏览完全隔离
 
@@ -54,6 +55,7 @@
 - 数据库：`~/.drifox/plugins/browser/data/browser.db`（收藏/历史/下载）
 - Profile：`~/.drifox/plugins/browser/data/profile/`（Cookie/localStorage）
 - Cache：`~/.drifox/plugins/browser/data/cache/`
+- 拦截配置：`~/.drifox/plugins/browser/data/browser-redirect.json`（enabled / intercept_system / intercept_shell / intercept_html）
 
 ## 架构
 
@@ -71,6 +73,9 @@ browser/
     ├── bookmarks.py             # 收藏管理
     ├── history.py               # 历史管理
     ├── downloads.py             # 下载托管
+    ├── external_open.py         # 外部链接重定向（webbrowser/QDesktopServices/bash）
+    ├── redirect_config.py       # 拦截配置存储 + 决策（拦截力度开关）
+    ├── redirect_settings.py     # 拦截设置弹窗（菜单 → 拦截设置）
     ├── devtools.py              # DevTools 集成
     ├── incognito.py             # 隐身窗口
     ├── shortcuts.py             # 快捷键

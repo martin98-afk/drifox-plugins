@@ -14,9 +14,13 @@
   ``start <url>`` / ``cmd /c start <url>`` / ``explorer <url>``，
   同样转交内置浏览器（用户明确要求大模型 start 开网页也走插件浏览器）。
 
-拦截规则：
-- 仅 http/https 拦截 → 打开浏览器浮动卡片并新开标签页导航
-- 其余（file:/mailto:/本地路径等）→ 原系统逻辑
+拦截行为（配置驱动，见 redirect_config.py）：
+- 全局开关 enabled：总闸，关闭后一切放行
+- intercept_system：拦截 webbrowser/QDesktopServices 的 http/https 外链
+- intercept_shell：拦截 bash start/explorer <url>
+- intercept_html：拦截本地 html 文件（file:// 或磁盘 .html 路径）→ 内置浏览器
+  （修复原实现「打开 html 文件不拦截」的问题）
+- 其余（file 非 html / mailto:/本地可执行文件等）→ 原系统逻辑
 - 浏览器插件未注册 / 卡片不可用 → 回退系统浏览器
 
 幂等：热重载时 register_ui 再次执行，通过标记检测避免重复嵌套 patch。
@@ -28,6 +32,8 @@ from typing import Any, Optional
 
 from loguru import logger
 from PyQt5.QtCore import QObject, pyqtSignal
+
+from .redirect_config import should_intercept, to_browser_url
 
 # ── 幂等标记 ──────────────────────────────────────────────
 _installed = False
@@ -79,7 +85,11 @@ def _get_dispatcher() -> Optional[_MainThreadDispatcher]:
 
 
 def _is_http(url: str) -> bool:
-    """仅拦截 http/https（scheme 大小写不敏感）"""
+    """仅拦截 http/https（scheme 大小写不敏感）
+
+    注：真实拦截决策统一走 redirect_config.should_intercept（含 html 与
+    各入口配置开关）；本函数仅保留给 bash URL 提取等无配置语义的内部判断。
+    """
     u = url.strip().lower()
     return u.startswith("http://") or u.startswith("https://")
 
@@ -161,15 +171,15 @@ def _open_in_browser_threadsafe(url: str, timeout: float = 8.0) -> bool:
 
 
 def _redirect_webbrowser_open(url, new=0, autoraise=True):
-    """webbrowser.open 代理：http/https → 内置浏览器，其余走系统"""
-    if isinstance(url, str) and _is_http(url):
-        if _open_in_browser_threadsafe(url):
+    """webbrowser.open 代理：按配置拦截 http/https + 本地 html → 内置浏览器"""
+    if isinstance(url, str) and should_intercept(url, "system"):
+        if _open_in_browser_threadsafe(to_browser_url(url)):
             return True
     return _orig_webbrowser_open(url, new, autoraise)
 
 
 class _RedirectDesktopServices:
-    """QDesktopServices 代理类：openUrl 拦截 http/https 到内置浏览器"""
+    """QDesktopServices 代理类：openUrl 按配置拦截到内置浏览器"""
 
     _drifox_redirect = True  # 幂等标记：热重载检测已 patch
 
@@ -179,8 +189,8 @@ class _RedirectDesktopServices:
             url_str = url.toString() if hasattr(url, "toString") else str(url)
         except Exception:
             url_str = str(url)
-        if _is_http(url_str):
-            if _open_in_browser_threadsafe(url_str):
+        if should_intercept(url_str, "system"):
+            if _open_in_browser_threadsafe(to_browser_url(url_str)):
                 return True
         return _orig_qdesktop_openurl(url)
 
@@ -261,7 +271,7 @@ def _strip_start_options(rest: str) -> str:
 
 
 def _extract_start_url(command: str) -> Optional[str]:
-    """从 start / explorer 命令中提取 URL，非 URL 场景返回 None
+    """从 start / explorer 命令中提取 URL 或本地 html 文件路径，非目标返回 None
 
     支持形态：
     - start https://example.com
@@ -269,8 +279,11 @@ def _extract_start_url(command: str) -> Optional[str]:
     - start /min https://example.com
     - cmd /c start http://localhost:8080
     - explorer "https://example.com"
-    非 URL（start notepad.exe / explorer D:\\folder）→ None，不拦截。
+    - start D:\\report.html / explorer report.html  # 本地 html（走 intercept_html）
+    非 URL 且非 html 文件（start notepad.exe / explorer D:\\folder）→ None，不拦截。
     """
+    from .redirect_config import _is_local_html
+
     m = _START_RE.match(command.strip())
     if not m:
         return None
@@ -285,6 +298,9 @@ def _extract_start_url(command: str) -> Optional[str]:
     # 注意不含 .com：它是合法域名后缀（example.com）。
     if re.search(r"\.(?:exe|bat|cmd|msi|lnk|dll|ps1|vbs|jar)$", tok, re.IGNORECASE):
         return None
+    # 本地 html 文件（D:/a.html、/tmp/a.html、file:///a.html）→ 直接返回
+    if _is_local_html(tok):
+        return tok
     # 规范化：localhost/裸域名补 scheme；非 URL（本地路径/可执行文件）→ 空
     try:
         from .url_bar import normalize_url
@@ -324,15 +340,15 @@ def install_bash_redirect() -> bool:
     orig = TerminalTools.execute_bash
 
     def _redirect_execute_bash(self, command: str, timeout: int = 120):
-        """代理 execute_bash：start/explorer <url> → 内置浏览器；其余照常执行"""
+        """代理 execute_bash：start/explorer <url|html> → 内置浏览器；其余照常执行"""
         if isinstance(command, str):
             try:
                 url = _extract_start_url(command)
             except Exception:
                 url = None
-            if url is not None:
+            if url is not None and should_intercept(url, "shell"):
                 logger.info(f"[browser-redirect] bash 拦截 start 命令: {command!r} → {url}")
-                if _open_in_browser_threadsafe(url):
+                if _open_in_browser_threadsafe(to_browser_url(url)):
                     from app.tools.result import ToolResult
 
                     return ToolResult(True, content=f"🌐 已在 DriFox 内置浏览器打开: {url}")
