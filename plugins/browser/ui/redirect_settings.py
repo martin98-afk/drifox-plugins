@@ -12,7 +12,8 @@
 
 from typing import Optional
 
-from PyQt5.QtCore import Qt, QColor
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
     QApplication,
     QHBoxLayout,
