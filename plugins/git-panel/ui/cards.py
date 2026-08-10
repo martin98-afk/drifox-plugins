@@ -1656,6 +1656,18 @@ class GitPanelCard(QWidget):
         # 从上下文获取 repo_path
         self._repo_path = ctx.get("project_root", "")
 
+        # 应用插件图标（DriFox 注入 ctx["plugin_icon"] = {light, dark} 路径）
+        # 与 plugin-marketplace 卡片同机制：IconWidget.setIcon(QIcon(path))
+        try:
+            from PyQt5.QtGui import QIcon
+            icon_info = ctx.get("plugin_icon", {}) or {}
+            theme = "dark" if isDarkTheme() else "light"
+            icon_path = icon_info.get(theme, "") or icon_info.get("light", "")
+            if icon_path:
+                self._repo_icon.setIcon(QIcon(icon_path))
+        except Exception as e:
+            logger.debug(f"[git-panel] 插件图标应用失败: {e}")
+
         # 更新 header 样式
         self._header_widget.setStyleSheet("background: transparent;")
 
