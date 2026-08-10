@@ -438,7 +438,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://ecc.tools"
+            "homepage": "https://ecc.tools",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "evolver",
@@ -1442,7 +1446,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://github.com/obra/superpowers"
+            "homepage": "https://github.com/obra/superpowers",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "tailwind-pro",
