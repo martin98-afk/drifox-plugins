@@ -421,7 +421,7 @@ class _CalendarWidget(QWidget):
         """建立竖向映射：col=周几(0=日…6=六)，row=第几周(0开始)，左侧标月份"""
         today = datetime.now()
         start = today - timedelta(days=182)
-        start -= timedelta(days=start.weekday())  # 对齐周一，保证完整周
+        start -= timedelta(days=(start.weekday() + 1) % 7)  # 对齐周日，保证完整周
 
         # 收集所有日期
         all_dates: List[datetime] = []
@@ -437,9 +437,9 @@ class _CalendarWidget(QWidget):
 
         prev_month = -1
         for d in all_dates:
-            # 周一开始的一周作为key
-            mon = d - timedelta(days=d.weekday())
-            week_key = mon.strftime("%Y-%m-%d")
+            # 周日开始的一周作为key（日历列序 = 周日~周六）
+            sunday = d - timedelta(days=(d.weekday() + 1) % 7)
+            week_key = sunday.strftime("%Y-%m-%d")
             if week_key not in week_map:
                 week_map[week_key] = len(week_map)
             row = week_map[week_key]
@@ -491,7 +491,7 @@ class _CalendarWidget(QWidget):
             if rect.contains(pos):
                 self._hover_date = date_key
                 self._hover_count = self._daily.get(date_key, 0)
-                weekday_cn = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"]
+                weekday_cn = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
                 try:
                     dt = datetime.strptime(date_key, "%Y-%m-%d")
                     date_str = f"{dt.year}年{dt.month}月{dt.day}日（{weekday_cn[dt.weekday()]}）"
