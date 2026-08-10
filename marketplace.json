@@ -39,7 +39,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://inference.sh"
+            "homepage": "https://inference.sh",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "ai-video-gen",
@@ -80,7 +84,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://inference.sh"
+            "homepage": "https://inference.sh",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "algorithmic-art",
@@ -110,7 +118,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://github.com/anthropics/skills/tree/main/skills/algorithmic-art"
+            "homepage": "https://github.com/anthropics/skills/tree/main/skills/algorithmic-art",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "beautiful-article-skills",
@@ -142,6 +154,10 @@
             ],
             "drifox": {
                 "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -199,6 +215,10 @@
             ],
             "drifox": {
                 "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -231,7 +251,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://github.com/anthropics/skills/tree/main/skills/canvas-design"
+            "homepage": "https://github.com/anthropics/skills/tree/main/skills/canvas-design",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "claude-api",
@@ -267,7 +291,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://docs.anthropic.com"
+            "homepage": "https://docs.anthropic.com",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "code-reviewer",
@@ -299,6 +327,10 @@
             ],
             "drifox": {
                 "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -329,7 +361,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/code-simplifier"
+            "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/code-simplifier",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "context7",
@@ -365,7 +401,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://context7.com"
+            "homepage": "https://context7.com",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "doc-coauthoring",
@@ -401,7 +441,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://github.com/anthropics/skills"
+            "homepage": "https://github.com/anthropics/skills",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "ecc",
@@ -467,7 +511,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://evomap.ai"
+            "homepage": "https://evomap.ai",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "example-plugin",
@@ -504,6 +552,10 @@
             ],
             "drifox": {
                 "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -537,7 +589,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://github.com/github/awesome-copilot/tree/main/skills/excalidraw-diagram-generator"
+            "homepage": "https://github.com/github/awesome-copilot/tree/main/skills/excalidraw-diagram-generator",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "feature-dev",
@@ -570,7 +626,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/feature-dev"
+            "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/feature-dev",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "frontend-design",
@@ -605,7 +665,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://github.com/anthropics/skills/tree/main/skills/frontend-design"
+            "homepage": "https://github.com/anthropics/skills/tree/main/skills/frontend-design",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "frontend-pro",
@@ -638,6 +702,10 @@
             ],
             "drifox": {
                 "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -749,6 +817,10 @@
             },
             "components": {
                 "hooks": true
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -781,6 +853,10 @@
             ],
             "drifox": {
                 "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -811,6 +887,10 @@
             ],
             "drifox": {
                 "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -847,6 +927,10 @@
             ],
             "drifox": {
                 "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -869,6 +953,10 @@
                 "agents": true,
                 "skills": true,
                 "hooks": true
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -906,7 +994,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://github.com/anthropics/skills"
+            "homepage": "https://github.com/anthropics/skills",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "ip-switcher",
@@ -935,6 +1027,10 @@
             ],
             "drifox": {
                 "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -966,6 +1062,10 @@
             ],
             "drifox": {
                 "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -1000,7 +1100,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://modelcontextprotocol.io"
+            "homepage": "https://modelcontextprotocol.io",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "memory-match",
@@ -1084,7 +1188,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://github.com/alchaincyf/nuwa-skill"
+            "homepage": "https://github.com/alchaincyf/nuwa-skill",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "office-docs",
@@ -1124,7 +1232,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://github.com/anthropics/skills"
+            "homepage": "https://github.com/anthropics/skills",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "omml-docx",
@@ -1193,7 +1305,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/playground"
+            "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/playground",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "python-pro",
@@ -1225,6 +1341,10 @@
             ],
             "drifox": {
                 "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -1261,7 +1381,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://nextjs.org"
+            "homepage": "https://nextjs.org",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "security-guidance",
@@ -1293,7 +1417,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/security-guidance"
+            "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/security-guidance",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "seo-audit",
@@ -1329,7 +1457,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://github.com/coreyhaines31/marketingskills"
+            "homepage": "https://github.com/coreyhaines31/marketingskills",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "skill-creator",
@@ -1359,7 +1491,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/skill-creator"
+            "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/skill-creator",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "slack-gif-creator",
@@ -1388,7 +1524,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://github.com/anthropics/skills/tree/main/skills/slack-gif-creator"
+            "homepage": "https://github.com/anthropics/skills/tree/main/skills/slack-gif-creator",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "snake",
@@ -1485,7 +1625,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://tailwindcss.com"
+            "homepage": "https://tailwindcss.com",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "teach",
@@ -1516,6 +1660,10 @@
             ],
             "drifox": {
                 "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -1547,6 +1695,10 @@
             ],
             "drifox": {
                 "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -1600,7 +1752,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://github.com/anthropics/skills/tree/main/skills/theme-factory"
+            "homepage": "https://github.com/anthropics/skills/tree/main/skills/theme-factory",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "voice-clone",
@@ -1635,7 +1791,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://github.com/martin98-afk/drifox-plugins"
+            "homepage": "https://github.com/martin98-afk/drifox-plugins",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "voice-reply",
@@ -1654,6 +1814,10 @@
             },
             "components": {
                 "hooks": true
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -1685,7 +1849,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://github.com/anthropics/skills/tree/main/skills/web-artifacts-builder"
+            "homepage": "https://github.com/anthropics/skills/tree/main/skills/web-artifacts-builder",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "web-design-skills",
@@ -1717,6 +1885,10 @@
             ],
             "drifox": {
                 "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -1753,7 +1925,11 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "homepage": "https://playwright.dev"
+            "homepage": "https://playwright.dev",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         }
     ]
 }

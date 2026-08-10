@@ -1,6 +1,10 @@
 {
     "name": "algorithmic-art",
     "description": "程序化艺术生成 — p5.js 创意编码，种子随机 + 交互参数探索（流动场/粒子系统）。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
     "version": "1.0.0",
     "type": "user",
     "license": "MIT",

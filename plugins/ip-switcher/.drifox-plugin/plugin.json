@@ -1,6 +1,10 @@
 {
     "name": "ip-switcher",
     "description": "IP 切换监控 — 免费模型限流自动换 IP（429 检测 + 代理池轮换 + 仪表盘）。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
     "version": "0.1.0",
     "author": {
         "name": "DriFox Contributors"
@@ -10,7 +14,13 @@
     "drifox": {
         "min_version": "0.5.0"
     },
-    "keywords": ["drifox", "ip", "proxy", "rate-limit", "free-model"],
+    "keywords": [
+        "drifox",
+        "ip",
+        "proxy",
+        "rate-limit",
+        "free-model"
+    ],
     "components": {
         "ui": true
     }

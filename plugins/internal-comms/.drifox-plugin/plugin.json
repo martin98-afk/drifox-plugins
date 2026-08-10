@@ -1,15 +1,32 @@
 {
     "name": "internal-comms",
     "description": "内部沟通模板 — 3P 沟通（进度/计划/问题）、状态报告、事件复盘、决策通知、产品更新、客户邮件。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
     "version": "1.0.0",
-    "author": { "name": "Anthropic", "url": "https://github.com/anthropics/skills/tree/main/skills/internal-comms" },
+    "author": {
+        "name": "Anthropic",
+        "url": "https://github.com/anthropics/skills/tree/main/skills/internal-comms"
+    },
     "license": "MIT",
     "type": "user",
-    "drifox": { "min_version": "0.5.0" },
+    "drifox": {
+        "min_version": "0.5.0"
+    },
     "keywords": [
-        "internal-comms", "communication", "3p", "status-report",
-        "postmortem", "decision-notice", "product-update",
-        "内部沟通", "状态报告", "复盘", "决策通知"
+        "internal-comms",
+        "communication",
+        "3p",
+        "status-report",
+        "postmortem",
+        "decision-notice",
+        "product-update",
+        "内部沟通",
+        "状态报告",
+        "复盘",
+        "决策通知"
     ],
     "components": {
         "commands": true,

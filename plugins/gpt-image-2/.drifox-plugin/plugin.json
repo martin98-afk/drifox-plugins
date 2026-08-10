@@ -1,6 +1,10 @@
 {
     "name": "gpt-image-2",
     "description": "GPT Image 2 图像生成/编辑技能——18 大类 80+ 结构化模板，支持 Garden 本地生图/宿主委托/提示词顾问三种模式。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
     "version": "1.0.0",
     "author": {
         "name": "ConardLi"
@@ -11,8 +15,12 @@
         "min_version": "0.5.0"
     },
     "keywords": [
-        "gpt-image", "image-generation", "prompt-engineering",
-        "图像生成", "提示词工程", "AI 绘图"
+        "gpt-image",
+        "image-generation",
+        "prompt-engineering",
+        "图像生成",
+        "提示词工程",
+        "AI 绘图"
     ],
     "components": {
         "skills": true

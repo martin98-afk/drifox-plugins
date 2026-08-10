@@ -1,6 +1,10 @@
 {
     "name": "voice-clone",
     "description": "MiniMax 语音克隆 — 上传 10s+ 音频样本，克隆指定音色 voice_id，用克隆音色朗读任意文本（含试听与 TTS 合成）。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
     "version": "1.0.0",
     "type": "user",
     "license": "MIT",

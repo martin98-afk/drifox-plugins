@@ -1,14 +1,30 @@
 {
     "name": "react-pro",
     "description": "React / Next.js 性能优化与最佳实践 — 45 条 RSC 边界、Server Components、App Router、缓存策略、Streaming、Bundle 优化。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
     "version": "1.0.0",
-    "author": { "name": "Vercel Labs", "url": "https://github.com/vercel-labs/agent-skills" },
+    "author": {
+        "name": "Vercel Labs",
+        "url": "https://github.com/vercel-labs/agent-skills"
+    },
     "license": "MIT",
     "type": "user",
-    "drifox": { "min_version": "0.5.0" },
+    "drifox": {
+        "min_version": "0.5.0"
+    },
     "keywords": [
-        "react", "nextjs", "next-js", "rsc", "server-components",
-        "app-router", "performance", "bundle", "web-vitals",
+        "react",
+        "nextjs",
+        "next-js",
+        "rsc",
+        "server-components",
+        "app-router",
+        "performance",
+        "bundle",
+        "web-vitals",
         "react-pro"
     ],
     "components": {

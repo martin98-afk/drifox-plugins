@@ -1,6 +1,10 @@
 {
     "name": "canvas-design",
     "description": "设计感海报生成 — 用设计哲学将需求变成 PNG/PDF 视觉作品（构图/字体/色彩体系）。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
     "version": "1.0.0",
     "type": "user",
     "license": "MIT",

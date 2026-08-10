@@ -1,6 +1,10 @@
 {
     "name": "playground",
     "description": "交互式 HTML 练习场 — 单文件探索器：可视化控件 + 实时预览 + 提示词复制。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
     "version": "1.0.0",
     "type": "user",
     "license": "MIT",

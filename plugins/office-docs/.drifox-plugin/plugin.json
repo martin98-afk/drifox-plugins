@@ -1,15 +1,35 @@
 {
     "name": "office-docs",
     "description": "Office 文档处理 — docx / pdf / pptx / xlsx 4 类文档读、写、转换、生成，Python 脚本 + LibreOffice 模板。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
     "version": "1.0.0",
-    "author": { "name": "Anthropic", "url": "https://github.com/anthropics/skills/tree/main/skills" },
+    "author": {
+        "name": "Anthropic",
+        "url": "https://github.com/anthropics/skills/tree/main/skills"
+    },
     "license": "MIT",
     "type": "user",
-    "drifox": { "min_version": "0.5.0" },
+    "drifox": {
+        "min_version": "0.5.0"
+    },
     "keywords": [
-        "docx", "pdf", "pptx", "xlsx", "word", "excel", "powerpoint",
-        "document", "spreadsheet", "presentation",
-        "文档", "表格", "演示", "LibreOffice"
+        "docx",
+        "pdf",
+        "pptx",
+        "xlsx",
+        "word",
+        "excel",
+        "powerpoint",
+        "document",
+        "spreadsheet",
+        "presentation",
+        "文档",
+        "表格",
+        "演示",
+        "LibreOffice"
     ],
     "components": {
         "commands": true,

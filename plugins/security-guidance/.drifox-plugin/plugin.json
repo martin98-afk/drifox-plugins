@@ -1,6 +1,10 @@
 {
     "name": "security-guidance",
     "description": "AI 生成代码安全审查 — PostToolUse 静态模式检查，识别注入攻击、XSS、SQL 注入、硬编码密钥、不安全反序列化等 25+ 类漏洞风险。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
     "version": "2.0.6",
     "type": "user",
     "license": "MIT",

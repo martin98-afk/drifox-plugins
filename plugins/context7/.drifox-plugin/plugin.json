@@ -1,14 +1,30 @@
 {
     "name": "context7",
     "description": "Context7 — 实时拉取任意库的最新 API 文档与代码示例，省去贴文档链接。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
     "version": "1.0.0",
-    "author": { "name": "upstash", "url": "https://github.com/upstash/context7" },
+    "author": {
+        "name": "upstash",
+        "url": "https://github.com/upstash/context7"
+    },
     "license": "MIT",
     "type": "user",
-    "drifox": { "min_version": "0.5.0" },
+    "drifox": {
+        "min_version": "0.5.0"
+    },
     "keywords": [
-        "context7", "docs", "api", "documentation", "library", "upstash",
-        "文档", "API", "实时拉取"
+        "context7",
+        "docs",
+        "api",
+        "documentation",
+        "library",
+        "upstash",
+        "文档",
+        "API",
+        "实时拉取"
     ],
     "components": {
         "commands": true,

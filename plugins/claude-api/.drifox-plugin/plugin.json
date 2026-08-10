@@ -1,15 +1,31 @@
 {
     "name": "claude-api",
     "description": "Claude API 最佳实践 — SDK 用法、prompt caching、streaming、tool use、batch API、prompt 工程、token 优化。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
     "version": "1.0.0",
-    "author": { "name": "Anthropic", "url": "https://github.com/anthropics/skills/tree/main/skills/claude-api" },
+    "author": {
+        "name": "Anthropic",
+        "url": "https://github.com/anthropics/skills/tree/main/skills/claude-api"
+    },
     "license": "MIT",
     "type": "user",
-    "drifox": { "min_version": "0.5.0" },
+    "drifox": {
+        "min_version": "0.5.0"
+    },
     "keywords": [
-        "claude-api", "anthropic", "sdk", "prompt-cache", "tool-use",
-        "streaming", "batch-api", "prompt-engineering",
-        "Claude API", "Anthropic SDK"
+        "claude-api",
+        "anthropic",
+        "sdk",
+        "prompt-cache",
+        "tool-use",
+        "streaming",
+        "batch-api",
+        "prompt-engineering",
+        "Claude API",
+        "Anthropic SDK"
     ],
     "components": {
         "commands": true,

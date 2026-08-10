@@ -1,15 +1,37 @@
 {
     "name": "ai-video-gen",
     "description": "AI 视频生成 — 40+ 视频模型统一封装（Veo / Wan / Grok / Sora / Runway / Pika / Kling / Luma / 可灵 / 即梦...），文本/图片转视频。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
     "version": "1.0.0",
-    "author": { "name": "inference.sh", "url": "https://github.com/inferen-sh/skills" },
+    "author": {
+        "name": "inference.sh",
+        "url": "https://github.com/inferen-sh/skills"
+    },
     "license": "MIT",
     "type": "user",
-    "drifox": { "min_version": "0.5.0" },
+    "drifox": {
+        "min_version": "0.5.0"
+    },
     "keywords": [
-        "ai-video", "video-generation", "veo", "wan", "grok", "sora",
-        "runway", "pika", "kling", "luma", "可灵", "即梦",
-        "t2v", "i2v", "text-to-video", "image-to-video"
+        "ai-video",
+        "video-generation",
+        "veo",
+        "wan",
+        "grok",
+        "sora",
+        "runway",
+        "pika",
+        "kling",
+        "luma",
+        "可灵",
+        "即梦",
+        "t2v",
+        "i2v",
+        "text-to-video",
+        "image-to-video"
     ],
     "components": {
         "commands": true
