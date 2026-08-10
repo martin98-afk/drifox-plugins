@@ -1798,6 +1798,9 @@ class GitPanelCard(QWidget):
         self._separator.setMaximumHeight(1)
         content.addWidget(self._separator)
 
+        # 状态行（在提交栏上方，独立于标题行；空文本自动隐藏不占空间）
+        self._build_status_row(content)
+
         self._build_toolbar(content)
         self._build_body(content)
         self._build_empty_state(content)
@@ -1807,7 +1810,7 @@ class GitPanelCard(QWidget):
     def _build_header(self, root: QVBoxLayout):
         """头部：两行布局，解决旧版单行 9 元素拥挤、长分支名换行撑高头部的问题。
 
-        行 1（标题行）：仓库图标 + 「Git 面板」 + 状态 + 刷新 + 关闭
+        行 1（标题行）：仓库图标 + 「Git 面板」 + 刷新 + 关闭
         行 2（信息行）：分支徽章（超长中间省略）+ 同步按钮组
         """
         self._header_widget = QWidget(self)
@@ -1816,7 +1819,7 @@ class GitPanelCard(QWidget):
         hly.setContentsMargins(16, 10, 16, 6)
         hly.setSpacing(4)
 
-        # ── 行 1：图标 + 标题 + 状态 + 刷新 + 关闭 ──
+        # ── 行 1：图标 + 标题 + 刷新 + 关闭 ──
         title_row = QWidget(self._header_widget)
         title_row.setStyleSheet("background: transparent;")
         trl = QHBoxLayout(title_row)
@@ -1837,16 +1840,6 @@ class GitPanelCard(QWidget):
         trl.addWidget(self._title_lb)
 
         trl.addStretch(1)
-
-        # 状态（keepColor：_retheme 循环跳过，保留 secondary 色）
-        self._status_lb = QLabel("", title_row)
-        self._status_lb.setProperty("keepColor", True)
-        self._status_lb.setMinimumWidth(64)
-        self._status_lb.setAlignment(Qt.AlignVCenter | Qt.AlignRight)
-        self._status_lb.setStyleSheet(
-            f"background: transparent; color: {self._cached_tcs}; font-size: 11px;"
-        )
-        trl.addWidget(self._status_lb)
 
         # 刷新
         self._refresh_btn = ToolButton(FluentIcon.SYNC, title_row)
@@ -1889,21 +1882,21 @@ class GitPanelCard(QWidget):
         sl.setContentsMargins(0, 0, 0, 0)
         sl.setSpacing(4)
 
-        self._push_btn = QPushButton("Push", sync_widget)
+        self._push_btn = QPushButton("推送", sync_widget)
         self._push_btn.setFixedSize(60, 24)
         self._push_btn.setToolTip("推送本地提交到远程")
         self._push_btn.setCursor(Qt.PointingHandCursor)
         self._push_btn.clicked.connect(self._do_push)
         sl.addWidget(self._push_btn)
 
-        self._pull_btn = QPushButton("Pull", sync_widget)
+        self._pull_btn = QPushButton("拉取", sync_widget)
         self._pull_btn.setFixedSize(60, 24)
         self._pull_btn.setToolTip("拉取远程更新")
         self._pull_btn.setCursor(Qt.PointingHandCursor)
         self._pull_btn.clicked.connect(self._do_pull)
         sl.addWidget(self._pull_btn)
 
-        self._fetch_btn = QPushButton("Fetch", sync_widget)
+        self._fetch_btn = QPushButton("获取", sync_widget)
         self._fetch_btn.setFixedSize(60, 24)
         self._fetch_btn.setToolTip("获取远程所有分支更新")
         self._fetch_btn.setCursor(Qt.PointingHandCursor)
@@ -1915,6 +1908,41 @@ class GitPanelCard(QWidget):
         hly.addWidget(info_row)
 
         root.addWidget(self._header_widget)
+
+    def _build_status_row(self, root: QVBoxLayout):
+        """状态行：位于提交栏上方、独立于标题行；空文本自动隐藏不占布局空间"""
+        self._status_row = QWidget(self)
+        self._status_row.setObjectName("statusRow")
+        self._status_row.setStyleSheet("background: transparent;")
+        rl = QHBoxLayout(self._status_row)
+        rl.setContentsMargins(8, 4, 8, 0)
+        rl.setSpacing(6)
+
+        # 状态点（进行中指示）
+        self._status_dot = QLabel("●", self._status_row)
+        self._status_dot.setProperty("keepColor", True)
+        self._status_dot.setStyleSheet(
+            "background: transparent; color: #62a0ea; font-size: 10px;"
+        )
+        rl.addWidget(self._status_dot)
+
+        # 状态文本（keepColor：_retheme 循环跳过，保留 secondary 色）
+        self._status_lb = QLabel("", self._status_row)
+        self._status_lb.setProperty("keepColor", True)
+        self._status_lb.setStyleSheet(
+            f"background: transparent; color: {self._cached_tcs}; font-size: 12px;"
+        )
+        self._status_lb.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+        rl.addWidget(self._status_lb)
+        rl.addStretch(1)
+
+        self._status_row.setVisible(False)  # 初始无状态，隐藏
+        root.addWidget(self._status_row)
+
+    def _set_status_text(self, text: str):
+        """设置状态文本；空文本自动隐藏状态行（不占布局空间）"""
+        self._status_lb.setText(text)
+        self._status_row.setVisible(bool(text))
 
     def _build_toolbar(self, root: QVBoxLayout):
         """工具栏：提交消息输入 + 提交 / Stash / 新建分支（浅底圆角容器突出主操作区）"""
@@ -2062,7 +2090,7 @@ class GitPanelCard(QWidget):
         if data.get("error"):
             self._empty.setText(data["error"])
             self._empty.setVisible(True)
-            self._status_lb.setText("")
+            self._set_status_text("")
             self._branch_lb.setText("")
             self._content.setVisible(False)
             return
@@ -2082,9 +2110,9 @@ class GitPanelCard(QWidget):
         self._is_loading = loading
         self._refresh_btn.setEnabled(not loading)
         if loading:
-            self._status_lb.setText("加载中…")
+            self._set_status_text("加载中…")
         else:
-            self._status_lb.setText("")
+            self._set_status_text("")
 
     # ── 渲染内容 ──
 
@@ -2318,7 +2346,7 @@ class GitPanelCard(QWidget):
         if not msg:
             self._show_info_bar("info", "提交信息不能为空", "")
             return
-        self._status_lb.setText("提交中…")
+        self._set_status_text("提交中…")
         self._run_git_async(
             lambda: GitRepo(self._repo_path).commit(msg),
             lambda r: self._on_commit_done(r),
@@ -2327,14 +2355,14 @@ class GitPanelCard(QWidget):
     def _on_commit_done(self, result: Optional[GitResult] = None):
         if result is not None:
             if result.ok:
-                self._status_lb.setText("提交成功")
+                self._set_status_text("提交成功")
             else:
-                self._status_lb.setText(f"提交失败: {result.stderr[:50]}")
+                self._set_status_text(f"提交失败: {result.stderr[:50]}")
                 logger.error(f"[git-panel] commit 失败: {result.error_message}")
                 QTimer.singleShot(3000, lambda: self._reset_status() if not self._is_loading else None)
                 return
         else:
-            self._status_lb.setText("提交成功")
+            self._set_status_text("提交成功")
         self._commit_input.setText("")
         QTimer.singleShot(1000, self._async_refresh)
 
@@ -2343,7 +2371,7 @@ class GitPanelCard(QWidget):
         msg = self._commit_input.text().strip() or "WIP"
         if not _confirm_ask("确认搁置", f"确定要搁置当前修改吗？\n消息: {msg}", self):
             return
-        self._status_lb.setText("搁置中…")
+        self._set_status_text("搁置中…")
         self._run_git_async(
             lambda: GitRepo(self._repo_path).stash_push(msg),
             lambda r: self._on_op_done("搁置成功", r),
@@ -2374,7 +2402,7 @@ class GitPanelCard(QWidget):
             fn = lambda: g.stash_pop(idx)
         else:
             fn = lambda: g.stash_drop(idx)
-        self._status_lb.setText(f"{action} {ref}…")
+        self._set_status_text(f"{action} {ref}…")
         self._run_git_async(
             fn,
             lambda r: self._on_op_done(f"{action.capitalize()} 成功", r),
@@ -2382,7 +2410,7 @@ class GitPanelCard(QWidget):
 
     def _on_switch_branch(self, name: str):
         """切换分支"""
-        self._status_lb.setText(f"切换到 {name}…")
+        self._set_status_text(f"切换到 {name}…")
         self._run_git_async(
             lambda: GitRepo(self._repo_path).branch_checkout(name),
             lambda r: self._on_op_done(f"已切换到 {name}", r),
@@ -2392,7 +2420,7 @@ class GitPanelCard(QWidget):
         """删除分支"""
         if not _confirm_ask("确认删除分支", f"确定要删除分支「{name}」吗？", self):
             return
-        self._status_lb.setText(f"删除 {name}…")
+        self._set_status_text(f"删除 {name}…")
         self._run_git_async(
             lambda: GitRepo(self._repo_path).branch_delete(name),
             lambda r: self._on_op_done(f"已删除 {name}", r),
@@ -2404,7 +2432,7 @@ class GitPanelCard(QWidget):
                              confirm_text="创建", cancel_text="取消")
         if not branch_name:
             return
-        self._status_lb.setText(f"创建分支 {branch_name}…")
+        self._set_status_text(f"创建分支 {branch_name}…")
         self._run_git_async(
             lambda: GitRepo(self._repo_path).branch_create(branch_name),
             lambda r: self._on_op_done(f"已创建并切换到 {branch_name}", r),
@@ -2412,7 +2440,7 @@ class GitPanelCard(QWidget):
 
     def _on_stage_all(self):
         """全部暂存"""
-        self._status_lb.setText("暂存中…")
+        self._set_status_text("暂存中…")
         self._run_git_async(
             lambda: GitRepo(self._repo_path).add(["-A"]),
             lambda r: self._on_op_done("已暂存所有修改", r),
@@ -2420,7 +2448,7 @@ class GitPanelCard(QWidget):
 
     def _on_unstage_all(self):
         """全部取消暂存"""
-        self._status_lb.setText("取消暂存中…")
+        self._set_status_text("取消暂存中…")
         self._run_git_async(
             lambda: GitRepo(self._repo_path).restore_staged(["."]),
             lambda r: self._on_op_done("已取消暂存所有修改", r),
@@ -2430,7 +2458,7 @@ class GitPanelCard(QWidget):
         """放弃所有修改"""
         if not _confirm_ask("确认放弃所有修改", "确定要放弃所有工作区修改吗？\n此操作不可恢复！", self):
             return
-        self._status_lb.setText("放弃中…")
+        self._set_status_text("放弃中…")
         self._run_git_async(
             lambda: GitRepo(self._repo_path).checkout_discard(["."]),
             lambda r: self._on_op_done("已放弃所有修改", r),
@@ -2453,11 +2481,11 @@ class GitPanelCard(QWidget):
         if not self._repo_path:
             return
         if self._is_loading:
-            self._status_lb.setText("正在刷新，请稍候…")
+            self._set_status_text("正在刷新，请稍候…")
             QTimer.singleShot(2000, lambda: self._reset_status() if not self._is_loading else None)
             return
         self._set_sync_busy(True)
-        self._status_lb.setText("Push 中…")
+        self._set_status_text("推送中…")
         self._run_git_async(
             lambda: GitRepo(self._repo_path).push(),
             lambda r: self._on_sync_done("Push 完成", r),
@@ -2468,11 +2496,11 @@ class GitPanelCard(QWidget):
         if not self._repo_path:
             return
         if self._is_loading:
-            self._status_lb.setText("正在刷新，请稍候…")
+            self._set_status_text("正在刷新，请稍候…")
             QTimer.singleShot(2000, lambda: self._reset_status() if not self._is_loading else None)
             return
         self._set_sync_busy(True)
-        self._status_lb.setText("Pull 中…")
+        self._set_status_text("拉取中…")
         self._run_git_async(
             lambda: GitRepo(self._repo_path).pull_rebase(),
             lambda r: self._on_sync_done("Pull 完成", r),
@@ -2483,11 +2511,11 @@ class GitPanelCard(QWidget):
         if not self._repo_path:
             return
         if self._is_loading:
-            self._status_lb.setText("正在刷新，请稍候…")
+            self._set_status_text("正在刷新，请稍候…")
             QTimer.singleShot(2000, lambda: self._reset_status() if not self._is_loading else None)
             return
         self._set_sync_busy(True)
-        self._status_lb.setText("Fetch 中…")
+        self._set_status_text("获取中…")
         self._run_git_async(
             lambda: GitRepo(self._repo_path).fetch(),
             lambda r: self._on_sync_done("Fetch 完成", r),
@@ -2509,11 +2537,11 @@ class GitPanelCard(QWidget):
             if not result.ok:
                 self._show_info_bar("error", "操作失败", result.error_message)
                 logger.error(f"[git-panel] {msg} 失败: {result.error_message}")
-                self._status_lb.setText(f"失败: {result.stderr[:50]}")
+                self._set_status_text(f"失败: {result.stderr[:50]}")
                 QTimer.singleShot(4000, lambda: self._reset_status() if not self._is_loading else None)
                 return
         self._show_info_bar("success", msg, "")
-        self._status_lb.setText(msg)
+        self._set_status_text(msg)
         QTimer.singleShot(2000, lambda: self._reset_status() if not self._is_loading else None)
         QTimer.singleShot(300, self._async_refresh)
 
@@ -2550,7 +2578,7 @@ class GitPanelCard(QWidget):
 
     def _reset_status(self):
         if not self._is_loading:
-            self._status_lb.setText("")
+            self._set_status_text("")
 
     def _run_git_async(self, fn, on_done):
         """在后台线程执行一个 git 操作"""
@@ -2577,7 +2605,7 @@ class GitPanelCard(QWidget):
         self._set_sync_busy(False)
         logger.error(f"[git-panel] 后台操作异常: {err}")
         self._show_info_bar("error", "操作异常", err[:200])
-        self._status_lb.setText("操作异常")
+        self._set_status_text("操作异常")
         QTimer.singleShot(4000, lambda: self._reset_status() if not self._is_loading else None)
 
     # ── 关闭 ──
