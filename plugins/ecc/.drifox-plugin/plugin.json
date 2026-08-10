@@ -9,6 +9,10 @@
         "url": "https://x.com/affaanmustafa"
     },
     "homepage": "https://ecc.tools",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
     "keywords": [
         "agents",
         "skills",

@@ -8,6 +8,10 @@
         "name": "Jesse Vincent",
         "email": "jesse@fsck.com"
     },
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
     "homepage": "https://github.com/obra/superpowers",
     "keywords": [
         "skills",
