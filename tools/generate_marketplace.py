@@ -203,6 +203,12 @@ def build_plugin_entry(plugin_dir: Path, manifest: dict) -> dict:
     if manifest.get("homepage"):
         entry["homepage"] = manifest["homepage"]
 
+    # icon 字段：透传 manifest 中的 string 或 {light, dark} 对象
+    # 由客户端从 _marketplace_source 拼 raw.githubusercontent.com URL 异步加载
+    icon_value = manifest.get("icon")
+    if icon_value:
+        entry["icon"] = icon_value
+
     return entry
 
 

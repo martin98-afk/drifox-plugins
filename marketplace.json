@@ -162,6 +162,10 @@
             "components": {
                 "commands": true,
                 "ui": true
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -650,6 +654,10 @@
             "components": {
                 "commands": true,
                 "ui": true
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -680,7 +688,11 @@
                 "graph",
                 "visualization"
             ],
-            "homepage": "https://github.com/martin98-afk/DriFox"
+            "homepage": "https://github.com/martin98-afk/DriFox",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "git-panel",
@@ -710,7 +722,11 @@
                 "branch",
                 "diff"
             ],
-            "homepage": "https://github.com/martin98-afk/DriFox"
+            "homepage": "https://github.com/martin98-afk/DriFox",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
         },
         {
             "name": "git-status",
@@ -1000,6 +1016,10 @@
             "components": {
                 "commands": true,
                 "ui": true
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -1020,6 +1040,10 @@
             "components": {
                 "commands": true,
                 "ui": true
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -1376,6 +1400,10 @@
             "components": {
                 "commands": true,
                 "ui": true
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -1527,6 +1555,10 @@
             "components": {
                 "commands": true,
                 "ui": true
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
