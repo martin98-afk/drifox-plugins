@@ -1155,6 +1155,10 @@
             ],
             "drifox": {
                 "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
