@@ -16,11 +16,11 @@ from typing import Callable, Dict, List, Optional, Tuple
 from PyQt5.QtCore import QEvent, QObject, QPointF, QRectF, QSize, QThread, Qt, pyqtSignal
 from PyQt5.QtGui import QBrush, QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
 from PyQt5.QtWidgets import (
+    QApplication,
     QFrame,
     QHBoxLayout,
     QLabel,
     QSizePolicy,
-    QToolTip,
     QVBoxLayout,
     QWidget,
 )
@@ -257,6 +257,101 @@ class _GitDataWorker(QObject):
 # ============================================================
 
 
+class _CalTooltip(QWidget):
+    """自绘 tooltip 气泡（替代 QToolTip.showText）。
+
+    设计原因：
+      主程序 DriFox 全局设置了原生 QToolTip 的 palette（ToolTipBase / ToolTipText），
+      浅色主题下黑底黑字不可读。参考 context-usage-stats 的自绘方案，
+      颜色由本插件 _resolve_colors() 主题体系驱动：浅色=白底深字，深色=深底白字。
+    """
+
+    _padding_h = 10
+    _padding_v = 6
+    _border_radius = 8
+
+    def __init__(self, parent=None):
+        super().__init__(parent, Qt.ToolTip | Qt.FramelessWindowHint)
+        self.setAttribute(Qt.WA_TranslucentBackground, True)
+        self.setAttribute(Qt.WA_ShowWithoutActivating, True)
+        self._text = ""
+        self._bg = QColor(33, 33, 38, 245)
+        self._tc = QColor(255, 255, 255, 230)
+        self._border = QColor(98, 160, 234)
+        self._font_family = _DEFAULT_FONT
+        self._font_size = 11
+        self._font = QFont(self._font_family, self._font_size)
+        self._font.setWeight(QFont.Normal)
+
+    def set_colors(self, bg: QColor, tc: QColor, border: QColor):
+        """应用主题颜色（浅色=浅底深字，深色=深底白字）"""
+        self._bg = bg
+        self._tc = tc
+        self._border = border
+        self.update()
+
+    def set_font_family(self, family: str):
+        if family and family != self._font_family:
+            self._font_family = family
+            self._font = QFont(family, self._font_size)
+            self._font.setWeight(QFont.Normal)
+
+    def set_text(self, text: str):
+        """设置文本并重算尺寸"""
+        self._text = text
+        fm = QFontMetrics(self._font)
+        lines = text.split("\n")
+        max_w = max((fm.width(l) for l in lines), default=0)
+        line_h = fm.lineSpacing()
+        w = max_w + self._padding_h * 2
+        h = line_h * len(lines) + self._padding_v * 2
+        self.setFixedSize(max(w, 30), max(h, 26))
+        self.update()
+
+    def show_at_global(self, pos):
+        """在屏幕坐标 pos 附近显示（水平居中，显示在其上方）"""
+        if not self._text:
+            return
+        self.winId()
+        tx = pos.x() - self.width() // 2
+        ty = pos.y() - self.height() - 8
+
+        screen = QApplication.primaryScreen()
+        if screen:
+            sg = screen.geometry()
+            tx = max(sg.left() + 2, min(tx, sg.right() - self.width() - 2))
+            if ty < sg.top():
+                ty = pos.y() + 16  # 放鼠标下方
+
+        self.move(tx, ty)
+        self.show()
+
+    def hide_tip(self):
+        self.hide()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        rect = QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5)
+
+        path = QPainterPath()
+        path.addRoundedRect(rect, self._border_radius, self._border_radius)
+        painter.setPen(QPen(self._border, 1))
+        painter.setBrush(self._bg)
+        painter.drawPath(path)
+
+        if not self._text:
+            return
+        painter.setPen(self._tc)
+        painter.setFont(self._font)
+        fm = QFontMetrics(self._font)
+        line_h = fm.lineSpacing()
+        y = self._padding_v + fm.ascent()
+        for line in self._text.split("\n"):
+            painter.drawText(self._padding_h, y, line)
+            y += line_h
+
+
 class _CalendarWidget(QWidget):
     """竖向提交日历：x轴=周日~周六，y轴=按周向下排列，左侧标月份"""
 
@@ -279,17 +374,46 @@ class _CalendarWidget(QWidget):
         self._num_rows = 0
         self._cell_size = 20
         self._step = 23
+        self._tooltip: Optional[_CalTooltip] = None
+        self.destroyed.connect(self._cleanup_tooltip)
 
     def set_data(self, daily: Dict[str, int]):
         self._daily = daily
         self._total_commits = sum(daily.values())
         self._colors = _resolve_colors()
+        if self._tooltip is not None:
+            self._apply_tooltip_colors()
         self._build_cell_map()
         self._recalc_geometry()
         self.update()
 
     def set_font_info(self, family: str, size: int):
         self._font_family = family
+        if self._tooltip is not None:
+            self._tooltip.set_font_family(family)
+
+    # ── tooltip ──
+
+    def _apply_tooltip_colors(self):
+        """把当前主题 colors 应用到自绘 tooltip"""
+        if self._tooltip is None:
+            return
+        bg = QColor(self._colors["card_bg"])
+        bg.setAlpha(250)
+        self._tooltip.set_colors(bg, self._colors["text"], self._colors["accent"])
+
+    def _get_tooltip(self) -> _CalTooltip:
+        if self._tooltip is None:
+            self._tooltip = _CalTooltip()
+            self._tooltip.set_font_family(self._font_family)
+            self._apply_tooltip_colors()
+        return self._tooltip
+
+    def _cleanup_tooltip(self):
+        if self._tooltip is not None:
+            self._tooltip.hide_tip()
+            self._tooltip.deleteLater()
+            self._tooltip = None
 
     # ── 几何 ──
 
@@ -373,16 +497,20 @@ class _CalendarWidget(QWidget):
                     date_str = f"{dt.year}年{dt.month}月{dt.day}日（{weekday_cn[dt.weekday()]}）"
                 except ValueError:
                     date_str = date_key
-                QToolTip.showText(event.globalPos(), f"{date_str}\n{self._hover_count} 次提交", self)
+                tt = self._get_tooltip()
+                tt.set_text(f"{date_str}\n{self._hover_count} 次提交")
+                tt.show_at_global(event.globalPos())
                 break
         if not self._hover_date:
-            QToolTip.hideText()
+            if self._tooltip is not None:
+                self._tooltip.hide_tip()
         self.update()
         super().mouseMoveEvent(event)
 
     def leaveEvent(self, event):
         self._hover_date = None
-        QToolTip.hideText()
+        if self._tooltip is not None:
+            self._tooltip.hide_tip()
         self.update()
         super().leaveEvent(event)
 
