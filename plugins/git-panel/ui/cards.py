@@ -1791,12 +1791,15 @@ class GitPanelCard(QWidget):
 
         self._build_header(content)
 
-        # 分隔线
+        # 分隔线（标题区与操作区分界：标题行正下方）
         self._separator = QFrame(self)
         self._separator.setFrameShape(QFrame.HLine)
         self._separator.setFrameShadow(QFrame.Sunken)
         self._separator.setMaximumHeight(1)
         content.addWidget(self._separator)
+
+        # 分隔符下方：信息行（分支+同步）→ 状态行 → 提交栏
+        self._build_info_row(content)
 
         # 状态行（在提交栏上方，独立于标题行；空文本自动隐藏不占空间）
         self._build_status_row(content)
@@ -1808,63 +1811,60 @@ class GitPanelCard(QWidget):
         root.addWidget(self._content_widget)
 
     def _build_header(self, root: QVBoxLayout):
-        """头部：两行布局，解决旧版单行 9 元素拥挤、长分支名换行撑高头部的问题。
+        """头部：分隔符上方只保留标题行（图标 + 标题 + 刷新 + 关闭）。
 
-        行 1（标题行）：仓库图标 + 「Git 面板」 + 刷新 + 关闭
-        行 2（信息行）：分支徽章（超长中间省略）+ 同步按钮组
+        分支信息行 / 状态行 / 提交栏全部位于分隔符下方，
+        避免「标题上面内容太多」的拥挤感。
         """
         self._header_widget = QWidget(self)
         self._header_widget.setStyleSheet("background: transparent;")
-        hly = QVBoxLayout(self._header_widget)
+        hly = QHBoxLayout(self._header_widget)
         hly.setContentsMargins(16, 10, 16, 6)
         hly.setSpacing(4)
 
-        # ── 行 1：图标 + 标题 + 刷新 + 关闭 ──
-        title_row = QWidget(self._header_widget)
-        title_row.setStyleSheet("background: transparent;")
-        trl = QHBoxLayout(title_row)
-        trl.setContentsMargins(0, 0, 0, 0)
-        trl.setSpacing(8)
-
-        # Git 仓库图标
-        self._repo_icon = IconWidget(FluentIcon.CODE, title_row)
+        # 图标 + 标题
+        self._repo_icon = IconWidget(FluentIcon.CODE, self._header_widget)
         self._repo_icon.setFixedSize(20, 20)
         self._repo_icon.setStyleSheet("background: transparent;")
-        trl.addWidget(self._repo_icon)
+        hly.addWidget(self._repo_icon)
 
-        # 标题
-        self._title_lb = StrongBodyLabel("Git 面板", title_row)
+        self._title_lb = StrongBodyLabel("Git 面板", self._header_widget)
         self._title_lb.setStyleSheet(
             f"color: {self._cached_tc}; background: transparent; font-weight: 600;"
         )
-        trl.addWidget(self._title_lb)
+        hly.addWidget(self._title_lb)
 
-        trl.addStretch(1)
+        hly.addStretch(1)
 
         # 刷新
-        self._refresh_btn = ToolButton(FluentIcon.SYNC, title_row)
+        self._refresh_btn = ToolButton(FluentIcon.SYNC, self._header_widget)
         self._refresh_btn.setFixedSize(28, 28)
         self._refresh_btn.setToolTip("刷新")
         self._refresh_btn.clicked.connect(self._async_refresh)
-        trl.addWidget(self._refresh_btn)
+        hly.addWidget(self._refresh_btn)
 
         # 关闭
-        close_btn = TransparentToolButton(FluentIcon.CLOSE, title_row)
+        close_btn = TransparentToolButton(FluentIcon.CLOSE, self._header_widget)
         close_btn.setFixedSize(28, 28)
         close_btn.setToolTip("关闭")
         close_btn.clicked.connect(self._on_close)
-        trl.addWidget(close_btn)
+        hly.addWidget(close_btn)
 
-        hly.addWidget(title_row)
+        root.addWidget(self._header_widget)
 
-        # ── 行 2：分支徽章 + 同步按钮组 ──
-        info_row = QWidget(self._header_widget)
+    def _build_info_row(self, root: QVBoxLayout):
+        """信息行（分隔符下方）：分支徽章 + 同步按钮组
+
+        位于提交栏上方；分支徽章超长名中间省略 + tooltip 完整名，不换行撑高。
+        """
+        info_row = QWidget(self)
+        info_row.setObjectName("panelInfoRow")
         info_row.setStyleSheet("background: transparent;")
         irl = QHBoxLayout(info_row)
-        irl.setContentsMargins(28, 0, 0, 0)  # 左 28px 对齐标题文字起点
+        irl.setContentsMargins(28, 4, 0, 4)  # 左 28px 对齐标题文字起点
         irl.setSpacing(6)
 
-        # 分支徽章（蓝色胶囊）：超长名中间省略 + tooltip 完整名，不换行撑高
+        # 分支徽章（蓝色胶囊）
         self._branch_lb = _ElidedLabel("", info_row)
         self._branch_lb.setProperty("keepColor", True)
         self._branch_lb.setStyleSheet(
@@ -1875,7 +1875,7 @@ class GitPanelCard(QWidget):
         self._branch_lb.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         irl.addWidget(self._branch_lb, 1)
 
-        # 同步按钮组：Push / Pull / Fetch（固定宽度，避免 sizeHint 挤占分支徽章）
+        # 同步按钮组（固定宽度，避免 sizeHint 挤占分支徽章）
         sync_widget = QWidget(info_row)
         sync_widget.setStyleSheet("background: transparent;")
         sl = QHBoxLayout(sync_widget)
@@ -1905,9 +1905,7 @@ class GitPanelCard(QWidget):
 
         irl.addWidget(sync_widget)
 
-        hly.addWidget(info_row)
-
-        root.addWidget(self._header_widget)
+        root.addWidget(info_row)
 
     def _build_status_row(self, root: QVBoxLayout):
         """状态行：位于提交栏上方、独立于标题行；空文本自动隐藏不占布局空间"""
