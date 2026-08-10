@@ -987,17 +987,22 @@ class _CollapsibleSection(QWidget):
         self._setup_ui()
 
     def _setup_ui(self):
-        self.setStyleSheet("background: transparent;")
+        # 卡片化区块：浅底衬 + 圆角 + 细边框（rgba 灰色明暗主题通用）
+        self.setObjectName("CollapsibleSection")
+        self.setStyleSheet(
+            "#CollapsibleSection { background: rgba(128,128,128,0.05); "
+            "border: 1px solid rgba(128,128,128,0.08); border-radius: 8px; }"
+        )
         ly = QVBoxLayout(self)
-        ly.setContentsMargins(0, 2, 0, 2)
+        ly.setContentsMargins(0, 0, 0, 0)
         ly.setSpacing(0)
 
         # 头部（可点击）
         self._header = QWidget(self)
         self._header.setCursor(Qt.PointingHandCursor)
         self._header.setStyleSheet(
-            "QWidget { background: transparent; }"
-            "QWidget:hover { background: rgba(128,128,128,0.06); border-radius: 6px; }"
+            "QWidget { background: transparent; border: none; }"
+            "QWidget:hover { background: rgba(128,128,128,0.08); border-radius: 8px; }"
         )
         self._header.mousePressEvent = lambda e: self._toggle()
         hl = QHBoxLayout(self._header)
@@ -1028,10 +1033,10 @@ class _CollapsibleSection(QWidget):
 
         ly.addWidget(self._header)
 
-        # 内容容器
+        # 内容容器（左右 8px 内边距，与卡片圆角呼应）
         self._content_widget = QWidget(self)
         self._content_layout = QVBoxLayout(self._content_widget)
-        self._content_layout.setContentsMargins(4, 2, 4, 2)
+        self._content_layout.setContentsMargins(8, 2, 8, 6)
         self._content_layout.setSpacing(0)
         self._content_widget.setVisible(not self._collapsed)
         ly.addWidget(self._content_widget)
@@ -1687,10 +1692,11 @@ class GitPanelCard(QWidget):
             f"font-family: '{ff}'; font-size: {fs}px;"
         )
 
-        # 分支标签
-        self._branch_lb.setStyleSheet(
-            f"background: transparent; color: {tcs}; font-family: '{ff}'; font-size: {fs - 2}px;"
-        )
+        # 分支徽章：样式由 _build_header 静态定义（蓝底胶囊明暗通用），仅跟随主题字号
+        try:
+            self._branch_lb.setFont(QFont("Consolas", max(11, fs - 2) if fs else 12))
+        except (RuntimeError, TypeError):
+            pass
 
         # 状态标签
         self._status_lb.setStyleSheet(
@@ -1799,89 +1805,127 @@ class GitPanelCard(QWidget):
         root.addWidget(self._content_widget)
 
     def _build_header(self, root: QVBoxLayout):
-        """头部：图标 + 标题 + 分支信息 + 操作按钮"""
+        """头部：两行布局，解决旧版单行 9 元素拥挤、长分支名换行撑高头部的问题。
+
+        行 1（标题行）：仓库图标 + 「Git 面板」 + 状态 + 刷新 + 关闭
+        行 2（信息行）：分支徽章（超长中间省略）+ 同步按钮组
+        """
         self._header_widget = QWidget(self)
         self._header_widget.setStyleSheet("background: transparent;")
-        hl = QHBoxLayout(self._header_widget)
-        hl.setContentsMargins(16, 10, 16, 6)
-        hl.setSpacing(8)
+        hly = QVBoxLayout(self._header_widget)
+        hly.setContentsMargins(16, 10, 16, 6)
+        hly.setSpacing(4)
+
+        # ── 行 1：图标 + 标题 + 状态 + 刷新 + 关闭 ──
+        title_row = QWidget(self._header_widget)
+        title_row.setStyleSheet("background: transparent;")
+        trl = QHBoxLayout(title_row)
+        trl.setContentsMargins(0, 0, 0, 0)
+        trl.setSpacing(8)
 
         # Git 仓库图标
-        self._repo_icon = IconWidget(FluentIcon.CODE, self._header_widget)
+        self._repo_icon = IconWidget(FluentIcon.CODE, title_row)
         self._repo_icon.setFixedSize(20, 20)
         self._repo_icon.setStyleSheet("background: transparent;")
-        hl.addWidget(self._repo_icon)
+        trl.addWidget(self._repo_icon)
 
         # 标题
-        self._title_lb = StrongBodyLabel("Git 面板", self._header_widget)
-        self._title_lb.setStyleSheet(f"color: {self._cached_tc}; background: transparent; font-weight: 600;")
-        hl.addWidget(self._title_lb)
-
-        # 分支名（长分支名自动换行，不撑宽侧栏）
-        self._branch_lb = QLabel("", self._header_widget)
-        self._branch_lb.setWordWrap(True)
-        self._branch_lb.setStyleSheet(
-            f"background: transparent; color: {_text_color(secondary=True)}; font-size: 12px;"
+        self._title_lb = StrongBodyLabel("Git 面板", title_row)
+        self._title_lb.setStyleSheet(
+            f"color: {self._cached_tc}; background: transparent; font-weight: 600;"
         )
-        self._branch_lb.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        hl.addWidget(self._branch_lb, 1)
+        trl.addWidget(self._title_lb)
 
-        # 状态
-        self._status_lb = QLabel("", self._header_widget)
+        trl.addStretch(1)
+
+        # 状态（keepColor：_retheme 循环跳过，保留 secondary 色）
+        self._status_lb = QLabel("", title_row)
+        self._status_lb.setProperty("keepColor", True)
+        self._status_lb.setMinimumWidth(64)
+        self._status_lb.setAlignment(Qt.AlignVCenter | Qt.AlignRight)
         self._status_lb.setStyleSheet(
-            f"background: transparent; color: {self._cached_tcs}; font-size: 12px;"
+            f"background: transparent; color: {self._cached_tcs}; font-size: 11px;"
         )
-        hl.addWidget(self._status_lb)
+        trl.addWidget(self._status_lb)
 
-        # 同步按钮组：Push / Pull / Fetch
-        sync_widget = QWidget(self._header_widget)
+        # 刷新
+        self._refresh_btn = ToolButton(FluentIcon.SYNC, title_row)
+        self._refresh_btn.setFixedSize(28, 28)
+        self._refresh_btn.setToolTip("刷新")
+        self._refresh_btn.clicked.connect(self._async_refresh)
+        trl.addWidget(self._refresh_btn)
+
+        # 关闭
+        close_btn = TransparentToolButton(FluentIcon.CLOSE, title_row)
+        close_btn.setFixedSize(28, 28)
+        close_btn.setToolTip("关闭")
+        close_btn.clicked.connect(self._on_close)
+        trl.addWidget(close_btn)
+
+        hly.addWidget(title_row)
+
+        # ── 行 2：分支徽章 + 同步按钮组 ──
+        info_row = QWidget(self._header_widget)
+        info_row.setStyleSheet("background: transparent;")
+        irl = QHBoxLayout(info_row)
+        irl.setContentsMargins(28, 0, 0, 0)  # 左 28px 对齐标题文字起点
+        irl.setSpacing(6)
+
+        # 分支徽章（蓝色胶囊）：超长名中间省略 + tooltip 完整名，不换行撑高
+        self._branch_lb = _ElidedLabel("", info_row)
+        self._branch_lb.setProperty("keepColor", True)
+        self._branch_lb.setStyleSheet(
+            "background: rgba(98,160,234,0.12); border-radius: 5px; padding: 2px 10px; "
+            "color: #62a0ea; font-weight: 600; font-size: 12px;"
+            "font-family: 'Consolas', 'Courier New', monospace;"
+        )
+        self._branch_lb.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+        irl.addWidget(self._branch_lb, 1)
+
+        # 同步按钮组：Push / Pull / Fetch（固定宽度，避免 sizeHint 挤占分支徽章）
+        sync_widget = QWidget(info_row)
         sync_widget.setStyleSheet("background: transparent;")
         sl = QHBoxLayout(sync_widget)
         sl.setContentsMargins(0, 0, 0, 0)
         sl.setSpacing(4)
 
         self._push_btn = QPushButton("Push", sync_widget)
+        self._push_btn.setFixedSize(60, 24)
         self._push_btn.setToolTip("推送本地提交到远程")
         self._push_btn.setCursor(Qt.PointingHandCursor)
         self._push_btn.clicked.connect(self._do_push)
         sl.addWidget(self._push_btn)
 
         self._pull_btn = QPushButton("Pull", sync_widget)
+        self._pull_btn.setFixedSize(60, 24)
         self._pull_btn.setToolTip("拉取远程更新")
         self._pull_btn.setCursor(Qt.PointingHandCursor)
         self._pull_btn.clicked.connect(self._do_pull)
         sl.addWidget(self._pull_btn)
 
         self._fetch_btn = QPushButton("Fetch", sync_widget)
+        self._fetch_btn.setFixedSize(60, 24)
         self._fetch_btn.setToolTip("获取远程所有分支更新")
         self._fetch_btn.setCursor(Qt.PointingHandCursor)
         self._fetch_btn.clicked.connect(self._do_fetch)
         sl.addWidget(self._fetch_btn)
 
-        hl.addWidget(sync_widget)
+        irl.addWidget(sync_widget)
 
-        # 刷新
-        self._refresh_btn = ToolButton(FluentIcon.SYNC, self._header_widget)
-        self._refresh_btn.setFixedSize(28, 28)
-        self._refresh_btn.setToolTip("刷新")
-        self._refresh_btn.clicked.connect(self._async_refresh)
-        hl.addWidget(self._refresh_btn)
-
-        # 关闭
-        close_btn = TransparentToolButton(FluentIcon.CLOSE, self._header_widget)
-        close_btn.setFixedSize(28, 28)
-        close_btn.setToolTip("关闭")
-        close_btn.clicked.connect(self._on_close)
-        hl.addWidget(close_btn)
+        hly.addWidget(info_row)
 
         root.addWidget(self._header_widget)
 
     def _build_toolbar(self, root: QVBoxLayout):
-        """工具栏：提交消息输入 + 提交 / Stash / 新建分支"""
-        tb = QWidget(self)
-        tb.setStyleSheet("background: transparent;")
+        """工具栏：提交消息输入 + 提交 / Stash / 新建分支（浅底圆角容器突出主操作区）"""
+        tb = QFrame(self)
+        tb.setObjectName("panelToolbar")
+        tb.setStyleSheet(
+            "#panelToolbar { background: rgba(128,128,128,0.05); "
+            "border: 1px solid rgba(128,128,128,0.08); border-radius: 8px; }"
+        )
         tly = QHBoxLayout(tb)
-        tly.setContentsMargins(0, 8, 0, 6)
+        tly.setContentsMargins(8, 8, 8, 8)
         tly.setSpacing(6)
 
         # 提交消息输入
@@ -2097,10 +2141,11 @@ class GitPanelCard(QWidget):
 
         # 已暂存标题
         if staged:
-            staged_title = QLabel(f"  ─ 已暂存 ({len(staged)})", changes_content)
+            staged_title = QLabel(f"  ● 已暂存 ({len(staged)})", changes_content)
+            staged_title.setProperty("keepColor", True)
             staged_title.setStyleSheet(
                 "background: transparent; color: #50e3c2; font-size: 11px; "
-                "padding: 4px 12px;"
+                "font-weight: 600; padding: 4px 14px;"
             )
             cl.addWidget(staged_title)
             for item in staged:
@@ -2112,10 +2157,11 @@ class GitPanelCard(QWidget):
 
         # 未暂存标题
         if unstaged:
-            unstaged_title = QLabel(f"  ─ 未暂存 ({len(unstaged)})", changes_content)
+            unstaged_title = QLabel(f"  ● 未暂存 ({len(unstaged)})", changes_content)
+            unstaged_title.setProperty("keepColor", True)
             unstaged_title.setStyleSheet(
                 f"background: transparent; color: {self._cached_tcs}; font-size: 11px; "
-                "padding: 4px 12px;"
+                "font-weight: 600; padding: 4px 14px;"
             )
             cl.addWidget(unstaged_title)
             for item in unstaged:
@@ -2126,7 +2172,7 @@ class GitPanelCard(QWidget):
                 cl.addWidget(row)
 
         if total_changes == 0:
-            no_changes = QLabel("  工作区干净，无变更", changes_content)
+            no_changes = QLabel("  ✓ 工作区干净，无变更", changes_content)
             no_changes.setStyleSheet(
                 f"background: transparent; color: {self._cached_tcs}; font-size: 12px; "
                 "padding: 12px 16px;"
