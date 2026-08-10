@@ -1798,13 +1798,8 @@ class GitPanelCard(QWidget):
         self._separator.setMaximumHeight(1)
         content.addWidget(self._separator)
 
-        # 分隔符下方：信息行（分支+同步）→ 状态行 → 提交栏
-        self._build_info_row(content)
-
-        # 状态行（在提交栏上方，独立于标题行；空文本自动隐藏不占空间）
-        self._build_status_row(content)
-
-        self._build_toolbar(content)
+        # 分隔符下方：操作面板（分支信息行 + 提交栏合并，视觉统一）
+        self._build_action_panel(content)
         self._build_body(content)
         self._build_empty_state(content)
 
@@ -1836,6 +1831,24 @@ class GitPanelCard(QWidget):
 
         hly.addStretch(1)
 
+        # 状态（刷新按钮左侧；空文本自动隐藏，不占空间）
+        self._status_dot = QLabel("●", self._header_widget)
+        self._status_dot.setProperty("keepColor", True)
+        self._status_dot.setStyleSheet(
+            "background: transparent; color: #62a0ea; font-size: 10px;"
+        )
+        hly.addWidget(self._status_dot)
+
+        self._status_lb = QLabel("", self._header_widget)
+        self._status_lb.setProperty("keepColor", True)
+        self._status_lb.setMinimumWidth(64)
+        self._status_lb.setAlignment(Qt.AlignVCenter | Qt.AlignRight)
+        self._status_lb.setStyleSheet(
+            f"background: transparent; color: {self._cached_tcs}; font-size: 11px;"
+        )
+        self._status_lb.setVisible(False)
+        hly.addWidget(self._status_lb)
+
         # 刷新
         self._refresh_btn = ToolButton(FluentIcon.SYNC, self._header_widget)
         self._refresh_btn.setFixedSize(28, 28)
@@ -1852,20 +1865,31 @@ class GitPanelCard(QWidget):
 
         root.addWidget(self._header_widget)
 
-    def _build_info_row(self, root: QVBoxLayout):
-        """信息行（分隔符下方）：分支徽章 + 同步按钮组
+    def _build_action_panel(self, root: QVBoxLayout):
+        """操作面板：分支信息行 + 提交行合并为一个浅底圆角容器，视觉统一
 
-        位于提交栏上方；分支徽章超长名中间省略 + tooltip 完整名，不换行撑高。
+        行 1：分支徽章（超长省略）+ 推送/拉取/获取
+        行 2：提交输入框 + 提交/搁置/新建分支
         """
-        info_row = QWidget(self)
-        info_row.setObjectName("panelInfoRow")
-        info_row.setStyleSheet("background: transparent;")
-        irl = QHBoxLayout(info_row)
-        irl.setContentsMargins(28, 4, 0, 4)  # 左 28px 对齐标题文字起点
-        irl.setSpacing(6)
+        panel = QFrame(self)
+        panel.setObjectName("panelAction")
+        panel.setStyleSheet(
+            "#panelAction { background: rgba(128,128,128,0.05); "
+            "border: 1px solid rgba(128,128,128,0.08); border-radius: 8px; }"
+        )
+        pl = QVBoxLayout(panel)
+        pl.setContentsMargins(8, 6, 8, 8)
+        pl.setSpacing(4)
 
-        # 分支徽章（蓝色胶囊）
-        self._branch_lb = _ElidedLabel("", info_row)
+        # ── 行 1：分支徽章 + 同步按钮组 ──
+        row1 = QWidget(panel)
+        row1.setStyleSheet("background: transparent;")
+        r1 = QHBoxLayout(row1)
+        r1.setContentsMargins(0, 0, 0, 0)
+        r1.setSpacing(6)
+
+        # 分支徽章（蓝色胶囊）：超长名中间省略 + tooltip 完整名，不换行撑高
+        self._branch_lb = _ElidedLabel("", row1)
         self._branch_lb.setProperty("keepColor", True)
         self._branch_lb.setStyleSheet(
             "background: rgba(98,160,234,0.12); border-radius: 5px; padding: 2px 10px; "
@@ -1873,10 +1897,10 @@ class GitPanelCard(QWidget):
             "font-family: 'Consolas', 'Courier New', monospace;"
         )
         self._branch_lb.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
-        irl.addWidget(self._branch_lb, 1)
+        r1.addWidget(self._branch_lb, 1)
 
         # 同步按钮组（固定宽度，避免 sizeHint 挤占分支徽章）
-        sync_widget = QWidget(info_row)
+        sync_widget = QWidget(row1)
         sync_widget.setStyleSheet("background: transparent;")
         sl = QHBoxLayout(sync_widget)
         sl.setContentsMargins(0, 0, 0, 0)
@@ -1903,87 +1927,56 @@ class GitPanelCard(QWidget):
         self._fetch_btn.clicked.connect(self._do_fetch)
         sl.addWidget(self._fetch_btn)
 
-        irl.addWidget(sync_widget)
+        r1.addWidget(sync_widget)
+        pl.addWidget(row1)
 
-        root.addWidget(info_row)
-
-    def _build_status_row(self, root: QVBoxLayout):
-        """状态行：位于提交栏上方、独立于标题行；空文本自动隐藏不占布局空间"""
-        self._status_row = QWidget(self)
-        self._status_row.setObjectName("statusRow")
-        self._status_row.setStyleSheet("background: transparent;")
-        rl = QHBoxLayout(self._status_row)
-        rl.setContentsMargins(8, 4, 8, 0)
-        rl.setSpacing(6)
-
-        # 状态点（进行中指示）
-        self._status_dot = QLabel("●", self._status_row)
-        self._status_dot.setProperty("keepColor", True)
-        self._status_dot.setStyleSheet(
-            "background: transparent; color: #62a0ea; font-size: 10px;"
-        )
-        rl.addWidget(self._status_dot)
-
-        # 状态文本（keepColor：_retheme 循环跳过，保留 secondary 色）
-        self._status_lb = QLabel("", self._status_row)
-        self._status_lb.setProperty("keepColor", True)
-        self._status_lb.setStyleSheet(
-            f"background: transparent; color: {self._cached_tcs}; font-size: 12px;"
-        )
-        self._status_lb.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
-        rl.addWidget(self._status_lb)
-        rl.addStretch(1)
-
-        self._status_row.setVisible(False)  # 初始无状态，隐藏
-        root.addWidget(self._status_row)
-
-    def _set_status_text(self, text: str):
-        """设置状态文本；空文本自动隐藏状态行（不占布局空间）"""
-        self._status_lb.setText(text)
-        self._status_row.setVisible(bool(text))
-
-    def _build_toolbar(self, root: QVBoxLayout):
-        """工具栏：提交消息输入 + 提交 / Stash / 新建分支（浅底圆角容器突出主操作区）"""
-        tb = QFrame(self)
-        tb.setObjectName("panelToolbar")
-        tb.setStyleSheet(
-            "#panelToolbar { background: rgba(128,128,128,0.05); "
-            "border: 1px solid rgba(128,128,128,0.08); border-radius: 8px; }"
-        )
-        tly = QHBoxLayout(tb)
-        tly.setContentsMargins(8, 8, 8, 8)
-        tly.setSpacing(6)
+        # ── 行 2：提交输入框 + 提交/搁置/新建分支 ──
+        row2 = QWidget(panel)
+        row2.setStyleSheet("background: transparent;")
+        r2 = QHBoxLayout(row2)
+        r2.setContentsMargins(0, 0, 0, 0)
+        r2.setSpacing(6)
 
         # 提交消息输入
-        self._commit_input = QLineEdit(tb)
+        self._commit_input = QLineEdit(row2)
         self._commit_input.setPlaceholderText("提交描述...")
         self._commit_input.setMinimumHeight(30)
         self._commit_input.returnPressed.connect(self._on_commit)
-        tly.addWidget(self._commit_input, 1)
+        r2.addWidget(self._commit_input, 1)
 
-        # 提交按钮
-        self._commit_btn = PrimaryPushButton("提交", tb)
+        # 提交按钮（主操作）
+        self._commit_btn = PrimaryPushButton("提交", row2)
         self._commit_btn.setFixedHeight(30)
         self._commit_btn.clicked.connect(self._on_commit)
-        tly.addWidget(self._commit_btn)
+        r2.addWidget(self._commit_btn)
 
         # 搁置按钮
-        self._stash_btn = QPushButton("搁置", tb)
+        self._stash_btn = QPushButton("搁置", row2)
         self._stash_btn.setFixedHeight(28)
         self._stash_btn.setCursor(Qt.PointingHandCursor)
         self._stash_btn.setToolTip("保存当前工作进度")
         self._stash_btn.clicked.connect(self._on_stash)
-        tly.addWidget(self._stash_btn)
+        r2.addWidget(self._stash_btn)
 
         # 新建分支按钮
-        self._new_branch_btn = QPushButton("新建分支", tb)
+        self._new_branch_btn = QPushButton("新建分支", row2)
         self._new_branch_btn.setFixedHeight(28)
         self._new_branch_btn.setCursor(Qt.PointingHandCursor)
         self._new_branch_btn.setToolTip("创建并切换到新分支")
         self._new_branch_btn.clicked.connect(self._on_create_branch)
-        tly.addWidget(self._new_branch_btn)
+        r2.addWidget(self._new_branch_btn)
 
-        root.addWidget(tb)
+        pl.addWidget(row2)
+
+        root.addWidget(panel)
+
+    def _set_status_text(self, text: str):
+        """设置标题行状态文本（刷新按钮左侧）；空文本自动隐藏"""
+        self._status_lb.setText(text)
+        self._status_dot.setVisible(bool(text))
+        self._status_lb.setVisible(bool(text))
+
+
 
     def _build_body(self, root: QVBoxLayout):
         """主体内容：滚动区域内的所有区块"""
