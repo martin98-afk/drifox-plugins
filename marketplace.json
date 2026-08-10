@@ -663,7 +663,7 @@
         {
             "name": "git-dashboard",
             "description": "Git 仪表盘 — 提交日历热力图、最近提交、分支图可视化",
-            "version": "0.1.1",
+            "version": "0.1.2",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
