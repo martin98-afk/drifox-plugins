@@ -1,3 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#333333" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-  <circle cx="12" cy="12" r="1"/><path d="M20.2 20.2c2.04-2.03.02-7.36-4.5-11.9-4.54-4.52-9.87-6.54-11.9-4.5-2.03 2.04-.02 7.36 4.5 11.9 4.54 4.52 9.87 6.54 11.9 4.5z"/><path d="M15.7 15.7c4.52-4.54 6.54-9.87 4.5-11.9-2.03-2.03-7.36-.02-11.9 4.5-4.52 4.54-6.54 9.87-4.5 11.9 2.03 2.03 7.36.02 11.9-4.5z"/>
+  <circle cx="12" cy="12" r="1.8"/>
+  <ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(0 12 12)"/>
+  <ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(60 12 12)"/>
+  <ellipse cx="12" cy="12" rx="9" ry="3.5" transform="rotate(120 12 12)"/>
+  <circle cx="12" cy="12" r="0.9" fill="#FBBF24" stroke="none"/>
 </svg>

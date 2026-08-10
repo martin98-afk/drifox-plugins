@@ -1,3 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#eeeeee" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-  <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/><polyline points="10.5 9.5 8 12 10.5 14.5"/><polyline points="13.5 9.5 16 12 13.5 14.5"/>
+  <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+  <polyline points="14 3 14 9 20 9"/>
+  <line x1="9" y1="14" x2="15" y2="14"/>
+  <line x1="9" y1="17" x2="13" y2="17"/>
+  <path d="M5 7l3 3M19 7l-3 3"/>
+  <circle cx="8" cy="10" r="0.8" fill="#FBBF24" stroke="none"/>
 </svg>
