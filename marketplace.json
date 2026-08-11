@@ -206,6 +206,7 @@
                 "ui": true,
                 "mcp": true
             },
+            "downloads": 1,
             "keywords": [
                 "drifox",
                 "browser",
@@ -730,6 +731,7 @@
                 "commands": true,
                 "ui": true
             },
+            "downloads": 1,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1059,6 +1061,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "knowledge-base",
                 "retrieval",
@@ -1307,6 +1310,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "playground",
                 "html",
@@ -1493,6 +1497,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "skill",
                 "skill-creator",
@@ -1585,6 +1590,7 @@
                 "skills": true,
                 "hooks": true
             },
+            "downloads": 1,
             "keywords": [
                 "skills",
                 "tdd",
@@ -1661,6 +1667,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "teach",
                 "education",
@@ -1790,6 +1797,7 @@
                 "commands": true,
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "voice",
                 "tts",
@@ -1828,6 +1836,7 @@
             "components": {
                 "hooks": true
             },
+            "downloads": 1,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1851,6 +1860,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "artifact",
                 "react",
@@ -1886,6 +1896,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "web-design",
                 "frontend",
@@ -1923,6 +1934,7 @@
                 "commands": true,
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "webapp-testing",
                 "e2e",
