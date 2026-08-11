@@ -23,6 +23,8 @@ from typing import Any, Dict, Optional
 import httpx
 from loguru import logger
 
+from config import get_data_dir
+
 _VENDOR_DIR = Path(__file__).resolve().parent / "_vendor" / "proxypool"
 _PYSOCKS_DIR = Path(__file__).resolve().parent / "_vendor" / "pysocks"
 _PROXY_MAIN = _VENDOR_DIR / "main.py"
@@ -68,16 +70,9 @@ class ProxyPoolManager:
     ):
         self.stats_port = stats_port
         self.proxy_port = proxy_port
-        # 工作目录：存 socks.txt / alive.txt / config.json（默认 user-custom/ip-switcher/data）
-        # 路径基于插件安装位置推导（<root>/plugins/ip-switcher/ui/proxy_pool.py → parents[3]=<root>），
-        # 不依赖进程 CWD，兼容开发（D:/work/DriFox/.drifox）与打包（~/.drifox）两种模式。
-        self.data_dir = data_dir or (
-            Path(__file__).resolve().parents[3]
-            / "plugins"
-            / "user-custom"
-            / "ip-switcher"
-            / "data"
-        )
+        # 工作目录：存 socks.txt / alive.txt / config.json（默认插件自身数据目录
+        # <root>/plugins/ip-switcher/data，与配置同目录，不走 user-custom）
+        self.data_dir = data_dir or get_data_dir()
         self._proc: Optional[subprocess.Popen] = None
         # 独立运行标志：复用分支（端口被占用）时 _proc=None 但代理池确实在跑，
         # is_running() 必须返回 True，否则 UI 无法显示「停止代理」/启用换 IP。

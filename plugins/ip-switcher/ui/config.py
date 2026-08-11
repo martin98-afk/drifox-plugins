@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
-"""ip-switcher 配置 — 存于 user-custom 插件目录（随云端备份恢复）
+"""ip-switcher 配置 — 存于插件自身数据目录
 
-路径：.drifox/plugins/user-custom/ip-switcher/ip-switcher.json
+路径：.drifox/plugins/ip-switcher/data/ip-switcher.json
+
+（此前存于 user-custom 插件目录：会随 config_sync 云端备份整体打包上传，
+ 且代理池运行时数据 alive.txt 频繁变更会不断触发 user-custom.zip 全量上传，
+ 已改为插件自身数据目录，与 browser 插件一致；旧数据首次运行自动迁移。）
 
 系统模型自动发现：
 - 首次运行时若白名单为空，自动从 DriFox 主配置（.drifox/app.config）
@@ -11,6 +15,7 @@
 """
 
 import json
+import shutil
 import threading
 from pathlib import Path
 from typing import Any, Dict, List
@@ -42,13 +47,66 @@ def _get_drifox_root() -> Path:
     return Path(__file__).resolve().parents[3]
 
 
-def _get_user_custom_dir() -> Path:
-    """定位 user-custom 插件目录（随云端备份恢复）"""
-    # 优先环境变量（测试注入）
-    env = __import__("os").environ.get("IP_SWITCHER_CUSTOM_DIR")
+# 旧数据迁移锁（多线程首次并发访问时保证只迁移一次）
+_MIGRATE_LOCK = threading.Lock()
+
+
+def _migrate_legacy_data(root: Path) -> bool:
+    """一次性迁移：<root>/plugins/user-custom/ip-switcher → <root>/plugins/ip-switcher/data
+
+    旧版本把配置与代理池运行时数据存 user-custom 插件目录（随云端备份），
+    会污染用户自定义插件目录并频繁触发 config_sync 全量上传。迁移后删除旧目录。
+
+    旧结构两层（ip-switcher/ip-switcher.json + ip-switcher/data/*）→ 目标 data/ 下平铺
+    （data/ 子目录内容上移一层）。幂等：旧目录不存在 → 返回 False；
+    并发下由 _MIGRATE_LOCK 保证单次执行。
+    """
+    legacy = root / "plugins" / "user-custom" / "ip-switcher"
+    target = root / "plugins" / "ip-switcher" / "data"
+    if not legacy.exists():
+        return False
+    with _MIGRATE_LOCK:
+        if not legacy.exists():
+            return False
+        try:
+            target.mkdir(parents=True, exist_ok=True)
+            moved = 0
+            for item in legacy.iterdir():
+                if item.is_dir() and item.name == "data":
+                    # 旧代理池数据目录：内容上移一层，与配置平级
+                    for sub in item.iterdir():
+                        dest = target / sub.name
+                        if not dest.exists():
+                            shutil.move(str(sub), str(dest))
+                            moved += 1
+                    shutil.rmtree(item, ignore_errors=True)
+                else:
+                    dest = target / item.name
+                    if not dest.exists():
+                        shutil.move(str(item), str(dest))
+                        moved += 1
+            shutil.rmtree(legacy, ignore_errors=True)
+            logger.info(
+                f"[ip-switcher] 旧数据已迁移 {legacy} → {target}（搬移 {moved} 项）"
+            )
+            return True
+        except OSError as e:
+            logger.warning(f"[ip-switcher] 旧数据迁移失败: {e}")
+            return False
+
+
+def get_data_dir() -> Path:
+    """定位插件自身数据目录（<root>/plugins/ip-switcher/data）
+
+    首次访问时自动迁移旧 user-custom 数据（幂等）。
+    环境变量 IP_SWITCHER_DATA_DIR 可覆盖（测试注入）。
+    """
+    env = __import__("os").environ.get("IP_SWITCHER_DATA_DIR")
     if env:
         return Path(env)
-    return _get_drifox_root() / "plugins" / "user-custom"
+    root = _get_drifox_root()
+    _migrate_legacy_data(root)
+    return root / "plugins" / "ip-switcher" / "data"
 
 
 # ── 系统模型自动发现 ──────────────────────────────────────
@@ -143,9 +201,7 @@ class ConfigStore:
     _lock = threading.RLock()
 
     def __init__(self, path: Path | None = None):
-        self.path = path or (
-            _get_user_custom_dir() / "ip-switcher" / "ip-switcher.json"
-        )
+        self.path = path or (get_data_dir() / "ip-switcher.json")
         self._data: Dict[str, Any] = dict(DEFAULT_CONFIG)
         self.load()
 

@@ -9,6 +9,7 @@ import json
 
 from ip_switcher_config import (
     ConfigStore,
+    _migrate_legacy_data,
     discover_opencode_free_provider,
     get_opencode_free_models,
     get_opencode_free_urls,
@@ -97,3 +98,59 @@ def test_merge_unknown_keys_ignored(tmp_path):
     store = reset_config_for_test(cfg_path)
     assert store.get("retry_limit") == 7
     assert "evil_key" not in store.get_all()
+
+
+# ── 旧数据迁移（user-custom → 插件自身数据目录） ──────────────
+
+
+def _make_legacy_layout(root: Path):
+    """构造旧版目录结构：<root>/plugins/user-custom/ip-switcher/{ip-switcher.json, data/*}"""
+    legacy = root / "plugins" / "user-custom" / "ip-switcher"
+    (legacy / "data").mkdir(parents=True)
+    (legacy / "ip-switcher.json").write_text(
+        json.dumps({"retry_limit": 9}), encoding="utf-8"
+    )
+    (legacy / "data" / "alive.txt").write_text("1.2.3.4:1080\n", encoding="utf-8")
+    (legacy / "data" / "socks.txt").write_text("5.6.7.8:1080\n", encoding="utf-8")
+    return legacy
+
+
+def test_migrate_legacy_data_moves_and_removes(tmp_path):
+    """旧 user-custom 数据整体搬入插件自身 data 目录，旧目录删除"""
+    legacy = _make_legacy_layout(tmp_path)
+    assert _migrate_legacy_data(tmp_path) is True
+
+    target = tmp_path / "plugins" / "ip-switcher" / "data"
+    assert (target / "ip-switcher.json").exists()
+    assert (target / "alive.txt").exists()
+    assert (target / "socks.txt").exists()
+    assert not legacy.exists()  # 旧目录已删除
+
+
+def test_migrate_legacy_data_idempotent(tmp_path):
+    """迁移后再次调用返回 False（旧目录已不存在），不报错"""
+    _make_legacy_layout(tmp_path)
+    assert _migrate_legacy_data(tmp_path) is True
+    assert _migrate_legacy_data(tmp_path) is False  # 幂等：无旧数据可搬
+
+
+def test_migrate_legacy_data_noop_without_legacy(tmp_path):
+    """全新安装（无旧数据）时直接返回 False，不创建任何目录"""
+    assert _migrate_legacy_data(tmp_path) is False
+    assert not (tmp_path / "plugins" / "ip-switcher").exists()
+
+
+def test_migrate_legacy_data_merge_existing_target(tmp_path):
+    """目标目录已存在（重复迁移残留）：搬移不冲突项，保留同名文件"""
+    legacy = _make_legacy_layout(tmp_path)
+    target = tmp_path / "plugins" / "ip-switcher" / "data"
+    target.mkdir(parents=True)
+    (target / "alive.txt").write_text("keep-me\n", encoding="utf-8")
+
+    assert _migrate_legacy_data(tmp_path) is True
+    # 同名 alive.txt 保留目标已有内容（未被覆盖）
+    assert (target / "alive.txt").read_text(encoding="utf-8") == "keep-me\n"
+    # 无冲突项照常搬入
+    assert (target / "socks.txt").exists()
+    assert (target / "ip-switcher.json").exists()
+    assert not legacy.exists()
