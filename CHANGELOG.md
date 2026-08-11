@@ -1,5 +1,16 @@
 # Changelog
 
+## 2.3.0 (2026-08-11)
+
+### ✨ 新增 minimax-h3 插件（DriFox 原生）
+
+- **`minimax-h3`** — MiniMax H3 全模态音视频生成：文本/图片/视频/音频 → 带原生立体声音频的视频（768P/2K，4-15s）
+  - `/minimax-h3` 命令引导完整流程（技能写提示词 → 提交任务 → 轮询 → 下载）
+  - `scripts/h3_video.py` 三个子命令：create / query / download，支持 t2va / i2va / fl2va / ref2va 全部输入模式
+  - `skills/h3-prompt-writing/` 搬运自 MiniMax-AI/MiniMax-H3（SKILL.md + base-en.txt + ref-en.txt），原样保留
+  - API Key 从环境变量 `MINIMAX_API_KEY` 或 `~/.minimax/api_key` 读取（与 voice-clone 约定一致）
+  - 合规声明：H3 技能内容遵循 MiniMax H3 Community License，生成内容受平台审核约束
+
 ## 2.2.0 (2026-08-08)
 
 ### ✨ 新增 voice-clone 插件（DriFox 原生）

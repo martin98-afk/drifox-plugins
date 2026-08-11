@@ -84,6 +84,7 @@ drifox-plugins/
 | [`git-workflow`](plugins/git-workflow/) | Git 工作流增强 — 分支检查、提交规范、PR 模板 | user | commands + hooks + skills |
 | [`python-pro`](plugins/python-pro/) | Python 开发增强 — PEP 8 / 类型标注 / lint 自动检查 | user | skills + hooks |
 | [`test-scaffold`](plugins/test-scaffold/) | 测试脚手架生成 — 测试骨架、覆盖率分析 | user | commands + skills |
+| [`minimax-h3`](plugins/minimax-h3/) | MiniMax H3 全模态视频生成 — 文/图/视频/音频转带立体声视频 + H3 提示词技能 | user | commands + skills |
 
 ### Claude Code 市场适配精选
 

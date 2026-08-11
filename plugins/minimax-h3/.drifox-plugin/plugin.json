@@ -1,0 +1,39 @@
+{
+    "name": "minimax-h3",
+    "description": "MiniMax H3 全模态视频生成 — 文本/图片/视频/音频转带立体声音频的视频（768P/2K，4-15s），含 H3 提示词编写技能。",
+    "icon": {
+        "light": "icon.png",
+        "dark": "icon_dark.png"
+    },
+    "version": "1.0.0",
+    "type": "user",
+    "license": "MIT",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "homepage": "https://github.com/martin98-afk/drifox-plugins",
+    "keywords": [
+        "minimax",
+        "h3",
+        "video",
+        "video-generation",
+        "t2v",
+        "i2v",
+        "t2va",
+        "i2va",
+        "fl2va",
+        "ref2va",
+        "ai-video",
+        "视频生成",
+        "文生视频",
+        "图生视频",
+        "多模态"
+    ],
+    "components": {
+        "commands": true,
+        "skills": true
+    },
+    "drifox": {
+        "min_version": "0.5.0"
+    }
+}

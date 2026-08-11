@@ -45,6 +45,7 @@
 | 插件 | 描述 | 组件 | 版本 | 来源 |
 |------|------|------|------|------|
 | [`voice-clone`](voice-clone/) | MiniMax 语音克隆 — 上传音频样本克隆音色 + 克隆音色 TTS 合成 | commands + skills | 1.0.0 | DriFox 原生 |
+| [`minimax-h3`](minimax-h3/) | MiniMax H3 全模态视频生成 — 文本/图片/视频/音频转带立体声音频的视频 + H3 提示词技能 | commands + skills | 1.0.0 | DriFox 原生 |
 
 > **DriFox 运行时内置插件**（`plugin-manager`、`plugin-marketplace`、`context-usage-stats`、`file-tree` 等）随 DriFox 分发，不收录在本仓库市场，避免重复安装造成困惑。
 
@@ -74,6 +75,7 @@
 | playground | — | — | ✅ | — | — | — | — | — |
 | excalidraw-diagram | — | — | ✅ | — | — | — | — | — |
 | voice-clone | ✅ | — | ✅ | — | — | — | — | — |
+| minimax-h3 | ✅ | — | ✅ | — | — | — | — | — |
 
 > **ui 组件说明**：ui 插件通过 `ui/__init__.py` 中的 `register_ui(registry)` 函数注册可视化组件（浮动卡片 / 内容块渲染器 / 消息元素工厂），由 DriFox 启动时 `UIPluginRegistry.load_plugin` 加载。详见 [docs/architecture.md](../docs/architecture.md#ui-组件)。
 >
