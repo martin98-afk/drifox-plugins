@@ -1,12 +1,12 @@
 {
   "schema": 1,
-  "fetched_at": 1786420376.9214833,
+  "fetched_at": 1786424799.8368208,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
     "algorithmic-art": 0,
     "beautiful-article-skills": 0,
-    "breakout": 0,
+    "breakout": 1,
     "browser": 0,
     "canvas-design": 0,
     "claude-api": 0,
@@ -23,7 +23,7 @@
     "frontend-pro": 0,
     "game2048": 0,
     "git-dashboard": 0,
-    "git-panel": 2,
+    "git-panel": 3,
     "git-status": 0,
     "git-workflow": 0,
     "gpt-image-2": 0,

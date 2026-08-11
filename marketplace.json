@@ -179,6 +179,7 @@
                 "commands": true,
                 "ui": true
             },
+            "downloads": 1,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -786,7 +787,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "git",
                 "source-control",
