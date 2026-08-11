@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1786469101.186278,
+  "fetched_at": 1786471830.9229326,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -23,7 +23,7 @@
     "frontend-pro": 0,
     "game2048": 1,
     "git-dashboard": 3,
-    "git-panel": 7,
+    "git-panel": 8,
     "git-status": 0,
     "git-workflow": 0,
     "gpt-image-2": 2,
@@ -53,6 +53,7 @@
     "test-scaffold": 0,
     "tetris": 2,
     "theme-factory": 0,
+    "ui-motion-skills": 0,
     "voice-clone": 1,
     "voice-reply": 1,
     "web-artifacts-builder": 1,
