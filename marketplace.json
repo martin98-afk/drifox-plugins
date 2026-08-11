@@ -179,7 +179,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -470,7 +470,7 @@
                 "skills": true,
                 "commands": true
             },
-            "downloads": 1,
+            "downloads": 3,
             "keywords": [
                 "agents",
                 "skills",
@@ -789,7 +789,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "git",
                 "source-control",
@@ -882,7 +882,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "gpt-image",
                 "image-generation",
@@ -917,7 +917,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "ppt",
                 "presentation",
@@ -1158,7 +1158,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1182,7 +1182,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 2,
+            "downloads": 4,
             "keywords": [
                 "nuwa",
                 "skill",
@@ -1267,7 +1267,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "omml",
                 "docx",
