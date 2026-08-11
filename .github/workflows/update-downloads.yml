@@ -10,8 +10,8 @@ name: Update Downloads
 
 on:
   schedule:
-    # 每 6 小时一次（UTC），与客户端 1h 缓存 TTL 相比足够频繁
-    - cron: "17 */6 * * *"
+    # 每 30 分钟一次，保证下载量及时回写
+    - cron: "*/30 * * * *"
   workflow_dispatch: # 手动触发
 
 # 防止并发运行导致 marketplace.json 冲突
