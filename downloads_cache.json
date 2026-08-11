@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1786428746.311229,
+  "fetched_at": 1786434259.1901994,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -14,7 +14,7 @@
     "code-simplifier": 0,
     "context7": 1,
     "doc-coauthoring": 0,
-    "ecc": 0,
+    "ecc": 1,
     "evolver": 0,
     "example-plugin": 0,
     "excalidraw-diagram": 0,

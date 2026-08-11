@@ -470,6 +470,7 @@
                 "skills": true,
                 "commands": true
             },
+            "downloads": 1,
             "keywords": [
                 "agents",
                 "skills",
