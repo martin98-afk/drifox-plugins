@@ -108,6 +108,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "art",
                 "p5js",
@@ -791,7 +792,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "git",
                 "source-control",
