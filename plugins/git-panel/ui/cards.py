@@ -96,6 +96,11 @@ def _text_color(secondary: bool = False) -> str:
     return "rgba(0,0,0,0.45)" if secondary else "rgba(0,0,0,0.85)"
 
 
+def _diff_area_bg() -> str:
+    """diff 区域背景：深色主题深底，浅色主题浅底"""
+    return "rgba(0,0,0,0.2)" if isDarkTheme() else "rgba(0,0,0,0.04)"
+
+
 def _ctx_font(ctx: dict) -> Tuple[str, int]:
     ff = ctx.get("font_family", "Microsoft YaHei")
     fs = ctx.get("font_size", 14)
@@ -646,7 +651,7 @@ class _DiffDialog(MaskDialogBase):
         self._diff_area = QTextEdit(self.widget)
         self._diff_area.setReadOnly(True)
         self._diff_area.setStyleSheet(
-            "QTextEdit { background: rgba(0,0,0,0.2); border: 1px solid rgba(128,128,128,0.15); "
+            "QTextEdit { background: " + _diff_area_bg() + "; border: 1px solid rgba(128,128,128,0.15); "
             "border-radius: 6px; padding: 8px; font-family: 'Consolas', 'Courier New', monospace; "
             f"color: {_text_color()}; font-size: 13px; }}"
         )
@@ -707,6 +712,7 @@ class _DiffDialog(MaskDialogBase):
                 stdout,
                 base_color=_text_color(),
                 secondary_color=_text_color(secondary=True),
+                dark=isDarkTheme(),
             )
             self._diff_area.setHtml(colored)
         except Exception as e:
@@ -1348,7 +1354,7 @@ class _CommitDetailDialog(MaskDialogBase):
         self._diff_area = QTextEdit(self.widget)
         self._diff_area.setReadOnly(True)
         self._diff_area.setStyleSheet(
-            "QTextEdit { background: rgba(0,0,0,0.2); border: 1px solid rgba(128,128,128,0.15); "
+            "QTextEdit { background: " + _diff_area_bg() + "; border: 1px solid rgba(128,128,128,0.15); "
             "border-radius: 6px; padding: 8px; font-family: 'Consolas', 'Courier New', monospace; "
             f"color: {_text_color()}; font-size: 13px; }}"
         )
@@ -1469,6 +1475,7 @@ class _CommitDetailDialog(MaskDialogBase):
                 diff,
                 base_color=_text_color(),
                 secondary_color=_text_color(secondary=True),
+                dark=isDarkTheme(),
             )
             self._diff_area.setHtml(colored)
         except Exception as e:
@@ -1524,7 +1531,7 @@ class _StashDetailDialog(MaskDialogBase):
         self._diff_area = QTextEdit(self.widget)
         self._diff_area.setReadOnly(True)
         self._diff_area.setStyleSheet(
-            "QTextEdit { background: rgba(0,0,0,0.2); border: 1px solid rgba(128,128,128,0.15); "
+            "QTextEdit { background: " + _diff_area_bg() + "; border: 1px solid rgba(128,128,128,0.15); "
             "border-radius: 6px; padding: 8px; font-family: 'Consolas', 'Courier New', monospace; "
             f"color: {_text_color()}; font-size: 13px; }}"
         )
@@ -1585,6 +1592,7 @@ class _StashDetailDialog(MaskDialogBase):
                 stdout,
                 base_color=_text_color(),
                 secondary_color=_text_color(secondary=True),
+                dark=isDarkTheme(),
             )
             self._diff_area.setHtml(colored)
         except Exception as e:

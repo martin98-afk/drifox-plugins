@@ -20,7 +20,8 @@ def _escape(token: str) -> str:
 
 
 def _render_word_diff(del_line: str, add_line: str,
-                      add_color: str, del_color: str) -> str:
+                      add_color: str, del_color: str,
+                      add_bg: str, del_bg: str) -> str:
     """渲染一对 -/+ 行的词级差异 HTML。
 
     del_line / add_line 为原始行内容（不含 +/- 前缀）。
@@ -38,43 +39,71 @@ def _render_word_diff(del_line: str, add_line: str,
             add_html.append("".join(_escape(t) for t in add_tokens[j1:j2]))
         elif tag == "replace":
             del_html.append(
-                f'<b style="background:rgba(241,76,76,0.28);color:{del_color};'
+                f'<b style="background:{del_bg};color:{del_color};'
                 f'text-decoration:line-through;">'
                 + "".join(_escape(t) for t in del_tokens[i1:i2]) + "</b>"
             )
             add_html.append(
-                f'<b style="background:rgba(80,227,194,0.28);color:{add_color};">'
+                f'<b style="background:{add_bg};color:{add_color};">'
                 + "".join(_escape(t) for t in add_tokens[j1:j2]) + "</b>"
             )
         elif tag == "delete":
             del_html.append(
-                f'<b style="background:rgba(241,76,76,0.28);color:{del_color};'
+                f'<b style="background:{del_bg};color:{del_color};'
                 f'text-decoration:line-through;">'
                 + "".join(_escape(t) for t in del_tokens[i1:i2]) + "</b>"
             )
         elif tag == "insert":
             add_html.append(
-                f'<b style="background:rgba(80,227,194,0.28);color:{add_color};">'
+                f'<b style="background:{add_bg};color:{add_color};">'
                 + "".join(_escape(t) for t in add_tokens[j1:j2]) + "</b>"
             )
 
     return "".join(del_html), "".join(add_html)
 
 
+def _palette(dark: bool) -> dict:
+    """按主题返回 diff 行级/词级调色板。
+
+    深色主题用亮色系（浅绿/红/蓝），浅色主题用深色系保证对比度。
+    """
+    if dark:
+        return {
+            "add": "#50e3c2",
+            "del": "#f14c4c",
+            "hunk": "#62a0ea",
+            "add_bg": "rgba(80,227,194,0.28)",
+            "del_bg": "rgba(241,76,76,0.28)",
+        }
+    return {
+        "add": "#1a7f37",
+        "del": "#cf222e",
+        "hunk": "#0969da",
+        "add_bg": "rgba(26,127,55,0.20)",
+        "del_bg": "rgba(207,34,46,0.20)",
+    }
+
+
 def render_diff_html(diff_text: str,
                      base_color: str = "rgba(255,255,255,0.9)",
-                     secondary_color: str = "rgba(255,255,255,0.55)") -> str:
+                     secondary_color: str = "rgba(255,255,255,0.55)",
+                     dark: bool = True) -> str:
     """将 diff 文本渲染为带行级 + 词级高亮的 HTML。
 
     行级颜色沿用 git 惯例：
-    - + 行：绿 #50e3c2
-    - - 行：红 #f14c4c
-    - @@ 行：蓝 #62a0ea
+    - + 行：绿
+    - - 行：红
+    - @@ 行：蓝
     - diff --git / index / --- / +++ 行：次要色
+
+    dark=False 时使用浅色主题调色板（深绿/深红/深蓝），避免浅色背景上看不清。
     """
-    ADD_COLOR = "#50e3c2"
-    DEL_COLOR = "#f14c4c"
-    HUNK_COLOR = "#62a0ea"
+    pal = _palette(dark)
+    ADD_COLOR = pal["add"]
+    DEL_COLOR = pal["del"]
+    HUNK_COLOR = pal["hunk"]
+    ADD_BG = pal["add_bg"]
+    DEL_BG = pal["del_bg"]
 
     lines = diff_text.splitlines()
     parts = ['<pre style="margin:0; white-space:pre-wrap;">']
@@ -99,7 +128,7 @@ def render_diff_html(diff_text: str,
                 del_body = pending_del[1:]
                 add_body = line[1:]
                 del_html, add_html = _render_word_diff(
-                    del_body, add_body, ADD_COLOR, DEL_COLOR
+                    del_body, add_body, ADD_COLOR, DEL_COLOR, ADD_BG, DEL_BG
                 )
                 parts.append(
                     f'<span style="color:{DEL_COLOR};">{_escape(line[0])}</span>'
