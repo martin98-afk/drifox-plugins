@@ -1,0 +1,71 @@
+name: Update Downloads
+
+# 定时从计数服务拉取插件下载量，回写 marketplace.json 的 downloads 字段
+# （配合客户端安装上报，实现「自动统计下载量」）
+#
+# 流程：
+#   1. tools/fetch_downloads.py   拉取计数 → 更新 downloads_cache.json
+#   2. tools/generate_marketplace.py  注入 downloads 字段 → 重新生成 marketplace.json
+#   3. 有变化则提交 push（[skip ci] 防循环触发）
+
+on:
+  schedule:
+    # 每 6 小时一次（UTC），与客户端 1h 缓存 TTL 相比足够频繁
+    - cron: "17 */6 * * *"
+  workflow_dispatch: # 手动触发
+
+# 防止并发运行导致 marketplace.json 冲突
+concurrency:
+  group: update-downloads
+  cancel-in-progress: true
+
+jobs:
+  update-downloads:
+    name: 拉取下载量并回写 marketplace.json
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN || secrets.DRIFOX_BOT_TOKEN }}
+          persist-credentials: false
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 拉取下载量
+        run: python tools/fetch_downloads.py
+
+      - name: 重新生成 marketplace.json
+        run: python tools/generate_marketplace.py
+
+      - name: 检查是否有变化
+        id: drift
+        run: |
+          if git diff --quiet marketplace.json downloads_cache.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "ℹ️ 下载量无变化，无需提交" >&2
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git diff --stat marketplace.json downloads_cache.json >&2
+          fi
+
+      - name: Commit 并 push
+        if: steps.drift.outputs.changed == 'true'
+        env:
+          TARGET_BRANCH: ${{ github.ref_name }}
+        run: |
+          git config user.name "drifox-bot"
+          git config user.email "drifox-bot@users.noreply.github.com"
+          git add marketplace.json downloads_cache.json
+          git commit \
+            -m "chore(marketplace): update plugin download stats [skip ci]" \
+            -m "由 GitHub Actions 从计数服务自动拉取。"
+          TOKEN="${{ secrets.GITHUB_TOKEN || secrets.DRIFOX_BOT_TOKEN }}"
+          git remote set-url origin "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push origin "HEAD:${TARGET_BRANCH}"

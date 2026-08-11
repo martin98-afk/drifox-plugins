@@ -21,6 +21,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from downloads_stats import load_downloads_cache
+
 # ============================================================
 # 路径定位
 # ============================================================
@@ -29,6 +31,8 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 PLUGINS_DIR = REPO_ROOT / "plugins"
 MARKETPLACE_PATH = REPO_ROOT / "marketplace.json"
 MANIFEST_PATH = Path(".drifox-plugin") / "plugin.json"
+# 下载量缓存（由 tools/fetch_downloads.py 定时拉取计数服务生成）
+DOWNLOADS_CACHE_PATH = REPO_ROOT / "downloads_cache.json"
 
 # 仓库元信息（硬编码，与 README 中的 GitHub 链接一致）
 REPO_NAME = "drifox-official"
@@ -192,6 +196,11 @@ def build_plugin_entry(plugin_dir: Path, manifest: dict) -> dict:
         "components": manifest.get("components", {}),
     }
 
+    # 下载量：从本地缓存读取（无缓存/未知插件则不写字段，保持向后兼容）
+    downloads = _downloads_cache.get("downloads", {}).get(manifest["name"])
+    if isinstance(downloads, int) and downloads > 0:
+        entry["downloads"] = downloads
+
     # 选填字段
     if manifest.get("keywords"):
         entry["keywords"] = manifest["keywords"]
@@ -214,6 +223,8 @@ def build_plugin_entry(plugin_dir: Path, manifest: dict) -> dict:
 
 def generate_marketplace() -> dict:
     """扫描所有插件，生成完整的 marketplace.json 结构。"""
+    global _downloads_cache
+    _downloads_cache = load_downloads_cache(DOWNLOADS_CACHE_PATH)
     plugins = discover_plugins()
     entries: list[dict] = []
 
@@ -238,6 +249,9 @@ def generate_marketplace() -> dict:
 # ============================================================
 # 一致性检查
 # ============================================================
+
+# 下载量缓存（模块级，generate_marketplace 时加载）
+_downloads_cache: dict = {}
 
 
 def check_consistency(generated: dict, existing: dict) -> list[str]:

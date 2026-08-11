@@ -187,6 +187,26 @@ python tools/generate_marketplace.py --check
 
 新增或修改插件后，运行生成脚本更新 `marketplace.json`。
 
+## 插件下载量统计
+
+`marketplace.json` 中每个插件可含 `downloads` 字段（累计安装次数），统计链路全自动：
+
+1. **客户端上报**：DriFox 客户端安装/更新插件成功后，后台线程向计数服务 `GET /hit/drifox-plugins-{插件名}` 计数 +1（尽力而为，失败不影响安装）
+2. **定时拉取**：GitHub Actions（`.github/workflows/update-downloads.yml`，每 6 小时）运行 `python tools/fetch_downloads.py`，从计数服务读取各插件计数，缓存到 `downloads_cache.json`
+3. **回写市场**：同一 workflow 再运行 `generate_marketplace.py`，把计数注入 `marketplace.json` 的 `downloads` 字段并自动提交
+4. **客户端展示**：插件卡片与详情面板显示 `⬇ N`
+
+本地手动更新统计：
+
+```bash
+python tools/fetch_downloads.py          # 拉取计数并更新 downloads_cache.json
+python tools/fetch_downloads.py --check  # 仅检查计数服务可达性
+python tools/generate_marketplace.py     # 重新生成 marketplace.json（注入 downloads）
+```
+
+> **计数服务**：经典 countapi.xyz 已不稳定，当前使用其开源替代 CountAPI（`countapi.mileshilliard.com`，免注册无鉴权）。服务地址与 key 命名规则在 `tools/downloads_stats.py` 与客户端 `installer.py` 中保持一致，切换服务时需同步修改两侧。
+> **防刷说明**：计数服务无鉴权，计数可被伪造 URL 刷高；如需精确统计可换用带鉴权的自建服务（如 Cloudflare Worker + KV）。
+
 ## 贡献
 
 欢迎通过 Issue 和 PR 贡献新插件或改进现有插件。详见 [CONTRIBUTING.md](CONTRIBUTING.md)。

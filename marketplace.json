@@ -785,6 +785,7 @@
             "components": {
                 "ui": true
             },
+            "downloads": 1,
             "keywords": [
                 "git",
                 "source-control",
