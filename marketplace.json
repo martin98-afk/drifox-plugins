@@ -755,6 +755,7 @@
             "components": {
                 "ui": true
             },
+            "downloads": 2,
             "keywords": [
                 "git",
                 "dashboard",
@@ -788,7 +789,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "git",
                 "source-control",
