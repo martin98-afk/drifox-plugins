@@ -85,6 +85,7 @@ drifox-plugins/
 | [`python-pro`](plugins/python-pro/) | Python 开发增强 — PEP 8 / 类型标注 / lint 自动检查 | user | skills + hooks |
 | [`test-scaffold`](plugins/test-scaffold/) | 测试脚手架生成 — 测试骨架、覆盖率分析 | user | commands + skills |
 | [`minimax-h3`](plugins/minimax-h3/) | MiniMax H3 全模态视频生成 — 文/图/视频/音频转带立体声视频 + H3 提示词技能 | user | commands + skills |
+| [`ui-motion-skills`](plugins/ui-motion-skills/) | UI 动效设计技能集 — 动画构建/评审/审计/词汇 + Apple 设计 + UI 库选型 + 原型对比 + Sonner 指南（源自 emilkowalski/skills） | user | skills |
 
 ### Claude Code 市场适配精选
 

@@ -1827,6 +1827,46 @@
             }
         },
         {
+            "name": "ui-motion-skills",
+            "description": "UI 动效设计技能集——源自 emilkowalski/skills（Emil Kowalski，前 Vercel/Linear），覆盖动画从零构建、严格评审、全库审计、动画词汇、Apple 设计原则、UI 库选型、原型对比与 Sonner 指南，让 AI 的动效品味达到一线水准。",
+            "version": "1.0.0",
+            "author": "emilkowalski",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/ui-motion-skills",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "animation",
+                "motion",
+                "ui",
+                "design",
+                "easing",
+                "transition",
+                "apple-design",
+                "prototype",
+                "sonner",
+                "动效",
+                "动画",
+                "设计"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "voice-clone",
             "description": "MiniMax 语音克隆 — 上传 10s+ 音频样本，克隆指定音色 voice_id，用克隆音色朗读任意文本（含试听与 TTS 合成）。",
             "version": "1.0.0",

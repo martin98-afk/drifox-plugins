@@ -14,6 +14,7 @@
 | [`nuwa-skill`](nuwa-skill/) | 女娲·Skill造人术 — 蒸馏任何人思维框架，附 14 个人物视角 Skill | skills | 1.0.0 |
 | [`python-pro`](python-pro/) | Python 开发增强 — PEP 8 / 类型标注 / lint 自动检查 | skills + hooks | 1.0.0 |
 | [`test-scaffold`](test-scaffold/) | 测试脚手架生成 — 测试骨架、覆盖率分析、边界场景推荐 | commands + skills | 1.0.0 |
+| [`ui-motion-skills`](ui-motion-skills/) | UI 动效设计技能集 — 动画构建/评审/审计/词汇 + Apple 设计 + UI 库选型 + 原型对比 + Sonner 指南（源自 emilkowalski/skills） | skills | 1.0.0 |
 
 ### Claude Code 市场移植精选
 
@@ -76,6 +77,7 @@
 | excalidraw-diagram | — | — | ✅ | — | — | — | — | — |
 | voice-clone | ✅ | — | ✅ | — | — | — | — | — |
 | minimax-h3 | ✅ | — | ✅ | — | — | — | — | — |
+| ui-motion-skills | — | — | ✅ | — | — | — | — | — |
 
 > **ui 组件说明**：ui 插件通过 `ui/__init__.py` 中的 `register_ui(registry)` 函数注册可视化组件（浮动卡片 / 内容块渲染器 / 消息元素工厂），由 DriFox 启动时 `UIPluginRegistry.load_plugin` 加载。详见 [docs/architecture.md](../docs/architecture.md#ui-组件)。
 >

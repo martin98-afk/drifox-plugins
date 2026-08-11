@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.4.0 (2026-08-12)
+
+### ✨ 新增 ui-motion-skills 插件（社区生态）
+
+- **`ui-motion-skills`** — UI 动效设计技能集，打包 [emilkowalski/skills](https://github.com/emilkowalski/skills)（MIT，28k★）全部 10 个技能，内容与上游保持一致：
+  - 自动触发：`emil-design-eng`（核心哲学）、`animate`（从零构建动画）、`animation-vocabulary`（动效术语反查）、`apple-design`（Apple 设计原则）、`ask-sonner`（Sonner toast 指南）
+  - 显式调用：`review-animations`（严格评审）、`improve-animations`（全库审计）、`find-animation-opportunities`（寻找动效机会）、`pick-ui-library`（UI 库选型）、`prototype`（多版本原型对比）
+  - 含辅助文档：RECIPES.md / API.md / AUDIT.md / STANDARDS.md / PLAN-TEMPLATE.md / PICKER.md
+- **机制**：`marketplace.json` 重新生成（56→57 个插件），`ui-motion-skills` 通过 `validate_plugins.py` 校验（零 error/warning）
+
 ## 2.3.0 (2026-08-11)
 
 ### ✨ 新增 minimax-h3 插件（DriFox 原生）
