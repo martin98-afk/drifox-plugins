@@ -387,6 +387,7 @@
                 "skills": true,
                 "mcp": true
             },
+            "downloads": 1,
             "keywords": [
                 "context7",
                 "docs",
@@ -785,7 +786,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "git",
                 "source-control",
@@ -1019,6 +1020,7 @@
             "components": {
                 "ui": true
             },
+            "downloads": 1,
             "keywords": [
                 "drifox",
                 "ip",
@@ -1088,6 +1090,7 @@
                 "commands": true,
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "mcp",
                 "model-context-protocol",
@@ -1150,6 +1153,7 @@
                 "commands": true,
                 "ui": true
             },
+            "downloads": 1,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1173,6 +1177,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "nuwa",
                 "skill",
