@@ -389,7 +389,7 @@
                 "skills": true,
                 "mcp": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "context7",
                 "docs",
@@ -757,7 +757,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "git",
                 "dashboard",
@@ -791,7 +791,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "git",
                 "source-control",
@@ -1027,7 +1027,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "drifox",
                 "ip",
@@ -1566,6 +1566,7 @@
                 "commands": true,
                 "ui": true
             },
+            "downloads": 2,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1739,7 +1740,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
