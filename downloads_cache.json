@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1786424799.8368208,
+  "fetched_at": 1786426436.0014927,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -26,8 +26,8 @@
     "git-panel": 3,
     "git-status": 0,
     "git-workflow": 0,
-    "gpt-image-2": 0,
-    "guizang-ppt-skill": 0,
+    "gpt-image-2": 1,
+    "guizang-ppt-skill": 1,
     "hookify": 0,
     "internal-comms": 0,
     "ip-switcher": 1,
@@ -35,7 +35,7 @@
     "mcp-builder": 1,
     "memory-match": 0,
     "minesweeper": 1,
-    "nuwa-skill": 1,
+    "nuwa-skill": 2,
     "office-docs": 0,
     "omml-docx": 0,
     "playground": 0,

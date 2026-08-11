@@ -880,6 +880,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "gpt-image",
                 "image-generation",
@@ -914,6 +915,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "ppt",
                 "presentation",
@@ -1178,7 +1180,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "nuwa",
                 "skill",
