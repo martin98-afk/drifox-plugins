@@ -1003,7 +1003,7 @@
         {
             "name": "ip-switcher",
             "description": "IP 切换监控 — 免费模型限流自动换 IP（429 检测 + 代理池轮换 + 仪表盘）。",
-            "version": "0.1.0",
+            "version": "0.1.1",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
