@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1786465408.2694201,
+  "fetched_at": 1786469101.186278,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -35,7 +35,7 @@
     "mcp-builder": 1,
     "memory-match": 0,
     "minesweeper": 3,
-    "minimax-h3": 0,
+    "minimax-h3": 1,
     "nuwa-skill": 4,
     "office-docs": 0,
     "omml-docx": 2,

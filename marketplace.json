@@ -1187,6 +1187,7 @@
                 "commands": true,
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "minimax",
                 "h3",
