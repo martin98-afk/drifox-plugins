@@ -21,6 +21,7 @@
 - 信号连接保存引用，销毁时断开（防 lambda 访问已删控件）
 """
 
+import threading
 import time
 from typing import Callable, Optional
 
@@ -108,6 +109,9 @@ class IPSwitcherCard(QWidget):
     """IP自动换绑仪表盘浮动卡片"""
 
     closed = pyqtSignal()
+    # 跨线程回主线程通道：后台线程完成后 emit(callable)，主线程事件循环执行
+    # ⚠️ 不能从后台线程调 QTimer.singleShot / 直接改控件（回调永不执行/崩溃）
+    _sig_ui_task = pyqtSignal(object)
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -115,6 +119,8 @@ class IPSwitcherCard(QWidget):
         self._is_busy = False
         self._state = get_state()
         self._config = get_config()
+        # 统计异步抓取节流：一次只允许一个进行中
+        self._stats_fetching = False
 
         # 缓存的上下文主题（供动态创建控件使用）
         self._cached_ff = "Microsoft YaHei"
@@ -124,8 +130,16 @@ class IPSwitcherCard(QWidget):
         self._cached_border = "rgba(128,128,128,0.15)"
         self._cached_accent = "#62a0ea"
 
+        self._sig_ui_task.connect(self._run_ui_task)
         self._setup_ui()
         self._connect_signals()
+
+    def _run_ui_task(self, fn):
+        """主线程执行跨线程任务（AutoConnection 自动投递）"""
+        try:
+            fn()
+        except Exception:
+            logger.exception("[ip-switcher] UI 任务执行异常")
 
     # ── 拉模型上下文注入 ──
 
@@ -588,11 +602,8 @@ class IPSwitcherCard(QWidget):
         success = stats["success_count"]
         rate = f"{int(success * 100 / total)}%" if total else "-"
         self._stat_labels["success_rate"].setText(rate)
+        # 代理池运行状态 → 停止/启动按钮 + 立即换IP 联动（is_running 快速路径不阻塞）
         manager = get_manager()
-        pool_stats = manager.get_stats()
-        pool_size = pool_stats.get("pool_size", "-") if pool_stats else "-"
-        self._stat_labels["pool_size"].setText(str(pool_size))
-        # 代理池运行状态 → 停止/启动按钮 + 立即换IP 联动
         running = manager.is_running()
         self._pool_btn.setText("停止代理" if running else "启动代理")
         self._pool_btn.setToolTip(
@@ -614,6 +625,37 @@ class IPSwitcherCard(QWidget):
         self._render_history(st.history()[:8])
         # 按钮
         self._auto_btn.setText("恢复自动" if not st.is_auto_switch() else "暂停自动")
+        # 代理池大小：HTTP 请求异步抓取（不阻塞主线程）
+        self._fetch_pool_size_async()
+
+    def _fetch_pool_size_async(self):
+        """后台线程取 /stats 的 pool_size，回主线程更新标签（节流防堆积）"""
+        if self._stats_fetching:
+            return
+        self._stats_fetching = True
+
+        def _work():
+            pool_stats = None
+            try:
+                pool_stats = get_manager().get_stats()
+            except Exception:
+                pass
+            # 回主线程（信号 AutoConnection）
+            self._sig_ui_task.emit(lambda: self._apply_pool_size(pool_stats))
+
+        threading.Thread(target=_work, daemon=True).start()
+
+    def _apply_pool_size(self, pool_stats):
+        self._stats_fetching = False
+        try:
+            import sip
+
+            if sip.isdeleted(self._stat_labels["pool_size"]):
+                return
+            pool_size = pool_stats.get("pool_size", "-") if pool_stats else "-"
+            self._stat_labels["pool_size"].setText(str(pool_size))
+        except Exception:
+            pass
 
     def _refresh_opencode(self):
         """展示系统内置 opencode 免费模型列表（只读）"""
@@ -686,28 +728,41 @@ class IPSwitcherCard(QWidget):
     # ── 操作 ──
 
     def _on_manual_switch(self):
+        """手动换 IP：后台线程执行（rotate + 出口验证是 IO，不阻塞 UI）"""
         if self._is_busy:
             return
         self._is_busy = True
         self._switch_btn.setEnabled(False)
         self._switch_btn.setText("切换中…")
-        try:
-            from ip_redirect import _switch_ip_threadsafe
 
-            new_ip = _switch_ip_threadsafe()
-            if new_ip:
-                self._switch_btn.setText("已切换")
-            else:
-                self._switch_btn.setText("切换失败")
-        except Exception:
-            logger.exception("[ip-switcher] 手动换 IP 异常")
-            self._switch_btn.setText("切换失败")
-        finally:
-            QTimer.singleShot(2000, self._reset_btn)
+        def _work():
+            new_ip = None
+            try:
+                # 后台线程直接执行（不再经 _switch_ip_threadsafe 派发主线程）
+                from ip_redirect import _do_switch_ip
 
-    def _reset_btn(self):
+                new_ip = _do_switch_ip(trigger="manual")
+            except Exception:
+                logger.exception("[ip-switcher] 手动换 IP 异常")
+            finally:
+                # 回主线程恢复按钮 + 刷新（信号 AutoConnection 投递主线程）
+                self._sig_ui_task.emit(
+                    lambda: self._after_manual_switch(new_ip)
+                )
+
+        threading.Thread(target=_work, daemon=True).start()
+
+    def _after_manual_switch(self, new_ip: Optional[str]):
         if not self._is_busy:
             return
+        self._is_busy = False
+        self._switch_btn.setEnabled(True)
+        self._switch_btn.setText("已切换" if new_ip else "切换失败")
+        self._refresh_all()
+        QTimer.singleShot(2000, self._reset_btn)
+
+    def _reset_btn(self):
+        # 无条件恢复（_after_manual_switch 已清 _is_busy，这里只负责还原按钮文字）
         self._is_busy = False
         self._switch_btn.setEnabled(True)
         self._switch_btn.setText("立即换 IP")
@@ -723,19 +778,35 @@ class IPSwitcherCard(QWidget):
         manager = get_manager()
         st = self._state
         if manager.is_running():
-            # ── 停止代理 ──
-            try:
-                manager.stop()
-                st.set_pool_state("stopped")
-                logger.info("[ip-switcher] 手动停止代理池")
-            except Exception:
-                logger.exception("[ip-switcher] 停止代理池异常")
-            self._refresh_all()
+            # ── 停止代理（terminate/wait 可能阻塞数秒 → 后台执行） ──
+            self._pool_btn.setEnabled(False)
+            self._pool_btn.setText("停止中…")
+            logger.info("[ip-switcher] 手动停止代理池…")
+
+            def _stop_work():
+                try:
+                    manager.stop()
+                    st.set_pool_state("stopped")
+                    # 持久化"手动停止"标记：热重载/重启后 lazy_start 不再自动拉起
+                    self._config.set("pool_manual_stopped", True)
+                    logger.info("[ip-switcher] 手动停止代理池")
+                except Exception:
+                    logger.exception("[ip-switcher] 停止代理池异常")
+                finally:
+                    self._sig_ui_task.emit(
+                        lambda: (self._pool_btn.setEnabled(True), self._refresh_all())
+                    )
+
+            threading.Thread(target=_stop_work, daemon=True).start()
             return
         # ── 启动代理（后台，避免阻塞 UI） ──
+        # 先触发刷新（set_pool_state 信号会同步 _refresh_all，覆盖按钮文字），
+        # 再置灰 + 设「启动中…」，保证最终文字不被覆盖。
+        st.set_pool_state("starting")
         self._pool_btn.setEnabled(False)
         self._pool_btn.setText("启动中…")
-        st.set_pool_state("starting")
+        # 清除"手动停止"标记：下次热重载/重启恢复自动拉起
+        self._config.set("pool_manual_stopped", False)
         logger.info("[ip-switcher] 手动启动代理池…")
 
         def _boot():
@@ -743,8 +814,7 @@ class IPSwitcherCard(QWidget):
                 ok = manager.start(fetch_and_check=True)
                 if ok:
                     manager.set_mode("sticky")
-                    stats = manager.get_stats()
-                    cur = (stats or {}).get("current")
+                    cur = manager.ensure_sticky_ip()
                     if cur:
                         st.set_current_ip(cur)
                     st.set_pool_state("ok")
@@ -756,16 +826,10 @@ class IPSwitcherCard(QWidget):
                 logger.exception("[ip-switcher] 代理池手动启动异常")
                 st.set_pool_state("error")
             finally:
-                # 恢复按钮并刷新（跨线程，Qt 信号自动投递主线程）
-                from PyQt5.QtCore import QTimer
-
-                def _done():
-                    self._pool_btn.setEnabled(True)
-                    self._refresh_all()
-
-                QTimer.singleShot(0, _done)
-
-        import threading
+                # 恢复按钮并刷新（信号 AutoConnection 投递主线程）
+                self._sig_ui_task.emit(
+                    lambda: (self._pool_btn.setEnabled(True), self._refresh_all())
+                )
 
         threading.Thread(target=_boot, daemon=True).start()
 

@@ -25,7 +25,21 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "retry_backoff_seconds": 2,
     "auto_switch": True,
     "switch_fail_threshold": 3,
+    # 用户手动停止过代理池 → 热重载/重启后不自动拉起（尊重用户意愿）
+    "pool_manual_stopped": False,
 }
+
+
+def _get_drifox_root() -> Path:
+    """定位 DriFox 应用数据根目录（.drifox）
+
+    基于插件自身安装位置推导，不依赖进程 CWD：
+    <root>/plugins/ip-switcher/ui/config.py  →  parents[3] = <root>
+    - 开发环境：D:/work/DriFox/.drifox（app_data_dir 相对 CWD，但插件也装其下）
+    - 打包环境：~/.drifox
+    两种模式插件都位于 <root>/plugins/<name>/ui/ 下，因此向上 3 级即为 .drifox 根。
+    """
+    return Path(__file__).resolve().parents[3]
 
 
 def _get_user_custom_dir() -> Path:
@@ -34,13 +48,7 @@ def _get_user_custom_dir() -> Path:
     env = __import__("os").environ.get("IP_SWITCHER_CUSTOM_DIR")
     if env:
         return Path(env)
-    # 开发环境：项目根/.drifox/plugins/user-custom
-    # 打包环境：~/.drifox/plugins/user-custom
-    import sys
-
-    if not hasattr(sys, "_MEIPASS") and not getattr(sys, "frozen", False):
-        return Path(".drifox") / "plugins" / "user-custom"
-    return Path.home() / ".drifox" / "plugins" / "user-custom"
+    return _get_drifox_root() / "plugins" / "user-custom"
 
 
 # ── 系统模型自动发现 ──────────────────────────────────────
@@ -51,11 +59,7 @@ def _get_system_config_path() -> Path:
     env = __import__("os").environ.get("IP_SWITCHER_SYSTEM_CONFIG")
     if env:
         return Path(env)
-    import sys
-
-    if not hasattr(sys, "_MEIPASS") and not getattr(sys, "frozen", False):
-        return Path(".drifox") / "app.config"
-    return Path.home() / ".drifox" / "app.config"
+    return _get_drifox_root() / "app.config"
 
 
 def discover_system_providers() -> List[Dict[str, Any]]:

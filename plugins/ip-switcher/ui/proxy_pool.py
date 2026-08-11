@@ -69,17 +69,37 @@ class ProxyPoolManager:
         self.stats_port = stats_port
         self.proxy_port = proxy_port
         # 工作目录：存 socks.txt / alive.txt / config.json（默认 user-custom/ip-switcher/data）
+        # 路径基于插件安装位置推导（<root>/plugins/ip-switcher/ui/proxy_pool.py → parents[3]=<root>），
+        # 不依赖进程 CWD，兼容开发（D:/work/DriFox/.drifox）与打包（~/.drifox）两种模式。
         self.data_dir = data_dir or (
-            Path(".drifox") / "plugins" / "user-custom" / "ip-switcher" / "data"
+            Path(__file__).resolve().parents[3]
+            / "plugins"
+            / "user-custom"
+            / "ip-switcher"
+            / "data"
         )
         self._proc: Optional[subprocess.Popen] = None
+        # 独立运行标志：复用分支（端口被占用）时 _proc=None 但代理池确实在跑，
+        # is_running() 必须返回 True，否则 UI 无法显示「停止代理」/启用换 IP。
+        self._running: bool = False
+        # is_running 结果短缓存（复用分支走端口探测 0.5s，高频调用防卡主线程）
+        self._running_cache: Optional[tuple] = None  # (timestamp, bool)
         self._lock = threading.RLock()
         self._base_url = f"http://127.0.0.1:{stats_port}"
 
     # ── 子进程生命周期 ──
 
-    def is_running(self) -> bool:
-        return self._proc is not None and self._proc.poll() is None
+    def is_running(self, cache_seconds: float = 1.0) -> bool:
+        # 自己启动的进程存活 → True（O(1)，无需缓存）
+        if self._proc is not None and self._proc.poll() is None:
+            return True
+        # 复用分支（_proc=None）或进程被其他实例停止：端口实测 + 短缓存
+        now = time.time()
+        if self._running_cache is not None and now - self._running_cache[0] < cache_seconds:
+            return self._running_cache[1]
+        val = self._running and _probe_port(self.stats_port)
+        self._running_cache = (now, val)
+        return val
 
     # ── PID 文件跟踪（热重载/复用分支也能定位并杀旧进程） ──
 
@@ -163,6 +183,8 @@ class ProxyPoolManager:
             # 但保留 PID 文件以便本实例 stop() 时可定位并清理旧进程
             pid = self._read_pid_file()
             self._proc = None
+            self._running = True
+            self._running_cache = None  # 清缓存：状态已变，防旧 False 误报
             if pid and self._is_pid_alive(pid):
                 logger.info(f"[ip-switcher] 接管现有代理池 PID={pid}")
             return True
@@ -190,12 +212,15 @@ class ProxyPoolManager:
                     env=_build_subprocess_env(),
                 )
                 self._write_pid_file(self._proc.pid)
+                self._running = True
+                self._running_cache = None  # 清缓存
                 logger.info(
                     f"[ip-switcher] 代理池已启动 (pid={self._proc.pid}, port={self.proxy_port})"
                 )
             except Exception as e:
                 logger.error(f"[ip-switcher] 代理池启动失败: {e}")
                 self._proc = None
+                self._running = False
                 return False
         # 等待控制台就绪
         deadline = time.time() + wait_ready
@@ -249,6 +274,8 @@ class ProxyPoolManager:
                     except Exception:
                         pass
                 self._proc = None
+        self._running = False
+        self._running_cache = None
         # PID 文件兜底清理（复用分支 _proc=None 时依然能杀旧进程；主程序退出时同样生效）
         pid = self._read_pid_file()
         if pid:
@@ -263,9 +290,13 @@ class ProxyPoolManager:
         method: str,
         path: str,
         body: Optional[Dict[str, Any]] = None,
-        timeout: float = 6.0,
+        timeout: float = 3.0,
     ):
-        """请求代理池控制台 API，失败返回 None"""
+        """请求代理池控制台 API，失败返回 None
+
+        超时 3s：本地控制台请求毫秒级，缩短超时避免 UI 刷新（get_stats）
+        在控制台异常时卡顿过久。
+        """
         try:
             if method == "GET":
                 r = httpx.get(self._base_url + path, timeout=timeout)
@@ -293,6 +324,19 @@ class ProxyPoolManager:
             return None
         return d.get("current")
 
+    def ensure_sticky_ip(self) -> Optional[str]:
+        """确保 sticky 模式已有 current IP；无则主动 rotate 一次
+
+        代理池刚启动时 mode=auto 且 current=null（尚未选择出口代理），
+        此时直接显示「未使用」会让用户误以为换绑没生效。启动流程在
+        set_mode("sticky") 后调用本方法，让 current 立即有值。
+        """
+        stats = self.get_stats() or {}
+        cur = stats.get("current")
+        if cur:
+            return cur
+        return self.rotate()
+
     def fetch_proxies(self) -> bool:
         """触发抓取代理（后台任务）"""
         d = self._request("POST", "/fetch", {})
@@ -313,11 +357,12 @@ class ProxyPoolManager:
 
     # ── 出口 IP 验证 ──
 
-    def get_outbound_ip(self, timeout: float = 8.0) -> Optional[str]:
+    def get_outbound_ip(self, timeout: float = 3.0) -> Optional[str]:
         """通过代理请求 ipify 拿出口 IP（验证代理连通性）
 
         ⚠️ 免费代理转发 https 常报 CERTIFICATE_VERIFY_FAILED（代理做 MITM），
         因此用 http 端点 + verify=False，避免误判代理不可用。
+        超时 3s：换 IP 在后台线程执行，但需尽快返回（验证失败时用代理 host 兜底）。
         """
         proxy_url = f"http://127.0.0.1:{self.proxy_port}"
         try:

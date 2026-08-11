@@ -57,36 +57,41 @@ def register_ui(registry):
     except Exception:
         pass
 
-    # 3) 懒启动代理池（后台，不阻塞注册）
+    # 3) 懒启动代理池（后台线程，不阻塞注册也不阻塞主线程）
     try:
         from PyQt5.QtCore import QTimer
 
         def _lazy_start():
-            try:
-                from .config import get_config
-                from .proxy_pool import get_manager
-                from .state import get_state
+            import threading
 
-                cfg = get_config()
-                if cfg.get("enabled"):
-                    manager = get_manager()
-                    get_state().set_pool_state("starting")
-                    # fetch_and_check=True：首次自动抓取+检测代理
-                    ok = manager.start(fetch_and_check=True)
-                    if ok:
-                        # 平时保持同一 IP（sticky），仅限流时切换
-                        manager.set_mode("sticky")
-                        stats = manager.get_stats()
-                        cur = (stats or {}).get("current")
-                        if cur:
-                            get_state().set_current_ip(cur)
-                        get_state().set_pool_state("ok")
-                        logger.info("[ip-switcher] 代理池就绪 (sticky 模式)")
-                    else:
-                        get_state().set_pool_state("error")
-                        logger.error("[ip-switcher] 代理池启动失败")
-            except Exception:
-                logger.exception("[ip-switcher] 代理池启动失败")
+            def _boot():
+                try:
+                    from .config import get_config
+                    from .proxy_pool import get_manager
+                    from .state import get_state
+
+                    cfg = get_config()
+                    if cfg.get("enabled") and not cfg.get("pool_manual_stopped"):
+                        manager = get_manager()
+                        get_state().set_pool_state("starting")
+                        # fetch_and_check=True：首次自动抓取+检测代理
+                        ok = manager.start(fetch_and_check=True)
+                        if ok:
+                            # 平时保持同一 IP（sticky），仅限流时切换
+                            manager.set_mode("sticky")
+                            # 启动后立即选一个出口 IP（否则 current=null 显示「未使用」）
+                            cur = manager.ensure_sticky_ip()
+                            if cur:
+                                get_state().set_current_ip(cur)
+                            get_state().set_pool_state("ok")
+                            logger.info("[ip-switcher] 代理池就绪 (sticky 模式)")
+                        else:
+                            get_state().set_pool_state("error")
+                            logger.error("[ip-switcher] 代理池启动失败")
+                except Exception:
+                    logger.exception("[ip-switcher] 代理池启动失败")
+
+            threading.Thread(target=_boot, daemon=True).start()
 
         QTimer.singleShot(500, _lazy_start)
     except Exception:

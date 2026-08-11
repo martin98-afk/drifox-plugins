@@ -14,7 +14,6 @@ import time
 from typing import Any, Optional
 
 from loguru import logger
-from PyQt5.QtCore import QObject, pyqtSignal
 
 # 绝对导入（与 conftest.py 加载方式一致：sys.path 含 ui 目录）
 from config import get_config
@@ -55,6 +54,41 @@ def _is_rate_limit_error(exc: BaseException) -> bool:
     return any(kw in msg for kw in _RATE_LIMIT_KEYWORDS)
 
 
+def _is_connection_error(exc: BaseException) -> bool:
+    """判断异常是否为连接类错误（代理不可用 / 网络断连）
+
+    白名单请求全走本地代理池，连接失败大概率是选中代理已死或上游断连，
+    与限流一样应触发换 IP 重试。
+    """
+    try:
+        import openai
+
+        if isinstance(exc, openai.APIConnectionError):
+            return True
+    except Exception:
+        pass
+    try:
+        import httpx
+
+        if isinstance(exc, (httpx.ConnectError, httpx.ConnectTimeout)):
+            return True
+    except Exception:
+        pass
+    try:
+        import httpcore
+
+        if isinstance(exc, (httpcore.ConnectError, httpcore.ConnectTimeout)):
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def _is_switch_trigger_error(exc: BaseException) -> bool:
+    """是否应触发换 IP：限流（429）或连接类错误（死代理）"""
+    return _is_rate_limit_error(exc) or _is_connection_error(exc)
+
+
 def _is_opencode_free(model: str = "", base_url: str = "") -> bool:
     """opencode 免费模型判定：model 名或 base_url 命中系统内置 opencode 免费 provider"""
     cfg = get_config()
@@ -65,84 +99,28 @@ def _is_opencode_free(model: str = "", base_url: str = "") -> bool:
     return False
 
 
-class _MainThreadDispatcher(QObject):
-    """跨线程派发器：信号 AutoConnection 自动投递到主线程事件循环"""
-
-    _requested = pyqtSignal(object)
-
-    def __init__(self):
-        super().__init__()
-        self._requested.connect(self._handle)
-
-    def _handle(self, fn):
-        try:
-            fn()
-        except Exception:
-            logger.exception("[ip-switcher] 主线程派发任务异常")
-
-    def call(self, fn):
-        self._requested.emit(fn)
-
-
-_dispatcher: Optional[_MainThreadDispatcher] = None
-
-
-def _get_dispatcher() -> Optional[_MainThreadDispatcher]:
-    """获取主线程派发器（须在主线程创建）"""
-    global _dispatcher
-    if _dispatcher is None:
-        try:
-            from PyQt5.QtCore import QThread
-            from PyQt5.QtWidgets import QApplication
-
-            app = QApplication.instance()
-            if app is None or QThread.currentThread() != app.thread():
-                return None
-            _dispatcher = _MainThreadDispatcher()
-        except Exception:
-            return None
-    return _dispatcher
-
-
 def _switch_ip_threadsafe(
     trigger: str = "manual", timeout: float = 20.0
 ) -> Optional[str]:
-    """线程安全换 IP：非 UI 线程 → 派发到主线程同步等待结果
+    """执行换 IP（可在任意线程调用，不阻塞主线程）
+
+    换 IP 全程是 IO 操作（rotate 控制台请求 + 出口 IP 验证），
+    不应派发到主线程执行（会冻结 UI）。调用方负责在后台线程调用：
+    - 429 路径：worker 线程（openai SDK 调用线程）
+    - 手动路径：卡片按钮起后台线程
+    完成后通过 state 信号（AutoConnection）自动投递主线程刷新 UI。
 
     Args:
         trigger: 触发类型 "manual"（手动按钮）或 "ratelimit"（429 自动）
     """
-    import threading as _t
-
-    try:
-        from PyQt5.QtCore import QThread
-        from PyQt5.QtWidgets import QApplication
-
-        app = QApplication.instance()
-        if app is not None and QThread.currentThread() != app.thread():
-            dispatcher = _get_dispatcher()
-            if dispatcher is None:
-                logger.warning("[ip-switcher] 派发器不可用且非主线程，跳过换 IP")
-                return None
-            event = _t.Event()
-            result: dict = {"ip": None}
-
-            def _do():
-                try:
-                    result["ip"] = _do_switch_ip(trigger)
-                finally:
-                    event.set()
-
-            dispatcher.call(_do)
-            event.wait(timeout)
-            return result["ip"]
-    except Exception:
-        pass
     return _do_switch_ip(trigger)
 
 
 def _do_switch_ip(trigger: str = "manual") -> Optional[str]:
-    """执行换 IP（主线程）：代理池 rotate → 验证出口 IP → 更新 state
+    """执行换 IP（可在任意线程调用）：代理池 rotate → 验证出口 IP → 更新 state
+
+    IO 操作（rotate / 出口验证）在调用线程执行，不在主线程跑；
+    state 写入线程安全（RLock + 信号 AutoConnection 投递主线程刷新 UI）。
 
     Args:
         trigger: "manual"（手动按钮）或 "ratelimit"（429 自动）
@@ -153,13 +131,21 @@ def _do_switch_ip(trigger: str = "manual") -> Optional[str]:
         return None
     old_ip = state.current_ip()
     manager = get_manager()
-    new_proxy = manager.rotate()
-    if not new_proxy:
-        logger.warning("[ip-switcher] 代理池换 IP 失败（可能池子为空）")
-        state.set_pool_state("error")
-        return None
-    # 验证出口 IP
-    outbound = manager.get_outbound_ip()
+    # rotate + 出口验证：验证失败（死代理）自动再 rotate，最多 2 轮
+    # （每轮 get_outbound_ip 3s 超时，全程后台线程执行不阻塞 UI）
+    new_proxy: Optional[str] = None
+    outbound: Optional[str] = None
+    for _attempt in range(2):
+        new_proxy = manager.rotate()
+        if not new_proxy:
+            logger.warning("[ip-switcher] 代理池换 IP 失败（可能池子为空）")
+            state.set_pool_state("error")
+            return None
+        outbound = manager.get_outbound_ip()
+        if outbound:
+            break
+        logger.warning(f"[ip-switcher] 出口验证失败，尝试更换代理 ({_attempt + 1}/2)")
+    # 出口验证失败时用代理 host 兜底（换绑仍记录，连接错误会再触发换 IP）
     new_ip = outbound or new_proxy.split(":")[0]
     if old_ip == "未使用":
         effective_trigger = "startup"
@@ -172,18 +158,34 @@ def _do_switch_ip(trigger: str = "manual") -> Optional[str]:
 
 
 def _make_proxied_http_client(proxy_url: str):
-    """构建带代理的 httpx.Client（openai SDK http_client 参数）"""
+    """构建带代理的 httpx.Client（openai SDK http_client 参数）
+
+    verify=False：免费代理转发 https 常做 MITM（自签名证书），
+    与 get_outbound_ip 的 http 端点处理一致，避免 CERTIFICATE_VERIFY_FAILED。
+    """
     import httpx
 
-    return httpx.Client(proxy=proxy_url, timeout=httpx.Timeout(60.0, connect=10.0))
+    return httpx.Client(
+        proxy=proxy_url,
+        timeout=httpx.Timeout(60.0, connect=10.0),
+        verify=False,
+    )
 
 
 def _patched_openai_init(self, *args, **kwargs):
-    """OpenAI.__init__ 代理：白名单命中注入代理 http_client"""
+    """OpenAI.__init__ 代理：白名单命中注入代理 http_client
+
+    仅当代理池正在运行时注入；用户停止代理后新 client 直接回退直连，
+    避免指向已死的 8082 端口。
+    """
     cfg = get_config()
     base_url = kwargs.get("base_url") or ""
     model = kwargs.get("model") or ""
-    if cfg.get("enabled") and _is_opencode_free(model=model, base_url=base_url):
+    if (
+        cfg.get("enabled")
+        and get_manager().is_running()
+        and _is_opencode_free(model=model, base_url=base_url)
+    ):
         if "http_client" not in kwargs:
             try:
                 port = cfg.get("proxy_pool_port", 8082)
@@ -203,7 +205,11 @@ def _patched_async_openai_init(self, *args, **kwargs):
     cfg = get_config()
     base_url = kwargs.get("base_url") or ""
     model = kwargs.get("model") or ""
-    if cfg.get("enabled") and _is_opencode_free(model=model, base_url=base_url):
+    if (
+        cfg.get("enabled")
+        and get_manager().is_running()
+        and _is_opencode_free(model=model, base_url=base_url)
+    ):
         if "http_client" not in kwargs:
             try:
                 port = cfg.get("proxy_pool_port", 8082)
@@ -212,6 +218,7 @@ def _patched_async_openai_init(self, *args, **kwargs):
                 kwargs["http_client"] = httpx.AsyncClient(
                     proxy=f"http://127.0.0.1:{port}",
                     timeout=httpx.Timeout(60.0, connect=10.0),
+                    verify=False,  # 免费代理 MITM 自签名证书
                 )
                 logger.debug(
                     f"[ip-switcher] 白名单命中注入异步代理 client: base={base_url}"
@@ -222,14 +229,19 @@ def _patched_async_openai_init(self, *args, **kwargs):
 
 
 def _wrap_chat_create(orig_create):
-    """包装 chat.completions.create：429 → 换 IP → 重试"""
+    """包装 chat.completions.create：限流(429)/连接错误 → 换 IP → 重试"""
 
     def _wrapped(self, *args, **kwargs):
         cfg = get_config()
         model = kwargs.get("model") or getattr(self, "_model", "")
         base_url = str(getattr(self, "base_url", "") or "")
-        if not (cfg.get("enabled") and _is_opencode_free(model=model, base_url=base_url)):
-            return orig_create(self, *args, **kwargs)  # 非白名单零开销
+        # 代理池未运行 → 直接透传（停止代理后不换 IP 不重试）
+        if not (
+            cfg.get("enabled")
+            and get_manager().is_running()
+            and _is_opencode_free(model=model, base_url=base_url)
+        ):
+            return orig_create(self, *args, **kwargs)  # 非白名单/池停零开销
 
         retry_limit = int(cfg.get("retry_limit", 3))
         backoff = float(cfg.get("retry_backoff_seconds", 2))
@@ -238,11 +250,12 @@ def _wrap_chat_create(orig_create):
             try:
                 return orig_create(self, *args, **kwargs)
             except Exception as e:
-                if not _is_rate_limit_error(e):
-                    raise  # 非限流错误直接抛
+                if not _is_switch_trigger_error(e):
+                    raise  # 非限流/非连接错误直接抛
                 last_exc = e
+                reason = "429 限流" if _is_rate_limit_error(e) else "连接错误"
                 logger.warning(
-                    f"[ip-switcher] 429 限流 (第 {attempt + 1} 次)，换 IP 后重试"
+                    f"[ip-switcher] {reason} (第 {attempt + 1} 次)，换 IP 后重试"
                 )
                 if attempt >= retry_limit:
                     break
@@ -263,7 +276,12 @@ def _wrap_chat_acreate(orig_acreate):
         cfg = get_config()
         model = kwargs.get("model") or getattr(self, "_model", "")
         base_url = str(getattr(self, "base_url", "") or "")
-        if not (cfg.get("enabled") and _is_opencode_free(model=model, base_url=base_url)):
+        # 代理池未运行 → 直接透传（停止代理后不换 IP 不重试）
+        if not (
+            cfg.get("enabled")
+            and get_manager().is_running()
+            and _is_opencode_free(model=model, base_url=base_url)
+        ):
             return await orig_acreate(self, *args, **kwargs)
 
         retry_limit = int(cfg.get("retry_limit", 3))
@@ -273,11 +291,12 @@ def _wrap_chat_acreate(orig_acreate):
             try:
                 return await orig_acreate(self, *args, **kwargs)
             except Exception as e:
-                if not _is_rate_limit_error(e):
+                if not _is_switch_trigger_error(e):
                     raise
                 last_exc = e
+                reason = "429 限流" if _is_rate_limit_error(e) else "连接错误"
                 logger.warning(
-                    f"[ip-switcher] 429 限流 (异步, 第 {attempt + 1} 次)，换 IP 后重试"
+                    f"[ip-switcher] {reason} (异步, 第 {attempt + 1} 次)，换 IP 后重试"
                 )
                 if attempt >= retry_limit:
                     break
@@ -353,9 +372,6 @@ def install_redirect() -> bool:
             _wrapped_async._drifox_ip_switch = True  # type: ignore[attr-defined]
             _wrapped_async._orig = _orig_chat_acreate  # type: ignore[attr-defined]
             Completions.acreate = _wrapped_async  # type: ignore[assignment]
-
-        # 5) 预创建主线程派发器（register_ui 在主线程执行）
-        _get_dispatcher()
 
         _installed = True
         logger.info("[ip-switcher] monkey patch 已安装 (OpenAI.__init__ + chat.create)")
