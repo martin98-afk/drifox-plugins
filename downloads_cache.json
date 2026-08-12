@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1786522180.9300094,
+  "fetched_at": 1786527420.4923975,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -8,6 +8,7 @@
     "beautiful-article-skills": 1,
     "breakout": 2,
     "browser": 7,
+    "calendar": 1,
     "canvas-design": 0,
     "claude-api": 0,
     "code-reviewer": 0,
@@ -40,7 +41,7 @@
     "office-docs": 0,
     "omml-docx": 2,
     "playground": 1,
-    "ponytail": 3,
+    "ponytail": 4,
     "python-pro": 0,
     "react-pro": 0,
     "security-guidance": 0,
