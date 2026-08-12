@@ -207,7 +207,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 1,
+            "downloads": 7,
             "keywords": [
                 "drifox",
                 "browser",
@@ -1062,7 +1062,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "knowledge-base",
                 "retrieval",
@@ -1187,7 +1187,7 @@
                 "commands": true,
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "minimax",
                 "h3",
@@ -1638,7 +1638,7 @@
                 "skills": true,
                 "hooks": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "skills",
                 "tdd",
