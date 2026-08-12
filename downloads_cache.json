@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1786512271.5407717,
+  "fetched_at": 1786517478.2126102,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -55,7 +55,7 @@
     "test-scaffold": 0,
     "tetris": 2,
     "theme-factory": 0,
-    "ui-motion-skills": 0,
+    "ui-motion-skills": 1,
     "voice-clone": 1,
     "voice-reply": 1,
     "web-artifacts-builder": 1,
