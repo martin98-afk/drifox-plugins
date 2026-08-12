@@ -15,10 +15,9 @@
         "min_version": "0.5.0"
     },
     "keywords": [
-        "drifox",
         "example",
-        "reference",
-        "template"
+        "template",
+        "development"
     ],
     "components": {
         "commands": true,

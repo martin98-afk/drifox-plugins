@@ -15,14 +15,11 @@
         "min_version": "0.5.0"
     },
     "keywords": [
-        "web-design",
         "frontend",
         "html",
         "css",
         "react",
-        "网页设计",
-        "前端",
-        "视觉设计"
+        "前端"
     ],
     "components": {
         "skills": true

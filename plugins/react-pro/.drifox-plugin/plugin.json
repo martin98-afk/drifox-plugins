@@ -17,15 +17,8 @@
     },
     "keywords": [
         "react",
-        "nextjs",
-        "next-js",
-        "rsc",
-        "server-components",
-        "app-router",
         "performance",
-        "bundle",
-        "web-vitals",
-        "react-pro"
+        "frontend"
     ],
     "components": {
         "commands": true,

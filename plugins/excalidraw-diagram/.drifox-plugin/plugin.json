@@ -13,14 +13,9 @@
     },
     "homepage": "https://github.com/github/awesome-copilot/tree/main/skills/excalidraw-diagram-generator",
     "keywords": [
-        "excalidraw",
         "diagram",
-        "diagram-generator",
         "flowchart",
-        "sequence",
-        "visualization",
-        "手绘",
-        "架构图"
+        "visualization"
     ],
     "components": {
         "skills": true

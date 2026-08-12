@@ -15,13 +15,9 @@
     "keywords": [
         "voice",
         "tts",
-        "voice-clone",
-        "clone",
         "audio",
         "speech",
-        "minimax",
-        "语音克隆",
-        "音色"
+        "语音克隆"
     ],
     "components": {
         "commands": true,

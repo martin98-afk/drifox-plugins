@@ -16,17 +16,9 @@
         "min_version": "0.5.0"
     },
     "keywords": [
-        "internal-comms",
         "communication",
-        "3p",
-        "status-report",
-        "postmortem",
-        "decision-notice",
-        "product-update",
-        "内部沟通",
-        "状态报告",
-        "复盘",
-        "决策通知"
+        "collaboration",
+        "documentation"
     ],
     "components": {
         "commands": true,

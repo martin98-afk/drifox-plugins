@@ -16,19 +16,9 @@
         "min_version": "0.5.0"
     },
     "keywords": [
-        "ai-image",
         "image-generation",
-        "t2i",
-        "image-to-image",
-        "gemini",
-        "nano-banana",
-        "dall-e",
-        "imagen",
-        "midjourney",
-        "stable-diffusion",
-        "flux",
-        "文生图",
-        "图编辑"
+        "prompt-engineering",
+        "art"
     ],
     "components": {
         "commands": true

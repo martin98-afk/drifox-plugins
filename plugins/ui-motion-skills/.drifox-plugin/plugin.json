@@ -19,14 +19,7 @@
         "motion",
         "ui",
         "design",
-        "easing",
-        "transition",
-        "apple-design",
-        "prototype",
-        "sonner",
-        "动效",
-        "动画",
-        "设计"
+        "easing"
     ],
     "components": {
         "skills": true

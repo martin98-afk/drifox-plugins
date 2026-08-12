@@ -19,13 +19,7 @@
         "seo",
         "audit",
         "copywriting",
-        "landing-page",
-        "marketing",
-        "SEO",
-        "审计",
-        "文案",
-        "落地页",
-        "转化"
+        "marketing"
     ],
     "components": {
         "commands": true,

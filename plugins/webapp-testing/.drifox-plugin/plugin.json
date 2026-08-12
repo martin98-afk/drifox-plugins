@@ -16,16 +16,10 @@
         "min_version": "0.5.0"
     },
     "keywords": [
-        "webapp-testing",
         "e2e",
-        "playwright",
-        "chromium",
-        "chrome",
         "browser",
         "testing",
-        "自动化测试",
-        "e2e 测试",
-        "浏览器测试"
+        "自动化测试"
     ],
     "components": {
         "commands": true,

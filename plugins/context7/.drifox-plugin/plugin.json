@@ -16,15 +16,10 @@
         "min_version": "0.5.0"
     },
     "keywords": [
-        "context7",
         "docs",
         "api",
         "documentation",
-        "library",
-        "upstash",
-        "文档",
-        "API",
-        "实时拉取"
+        "文档"
     ],
     "components": {
         "commands": true,

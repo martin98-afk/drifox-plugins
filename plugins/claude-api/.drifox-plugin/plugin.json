@@ -16,16 +16,9 @@
         "min_version": "0.5.0"
     },
     "keywords": [
-        "claude-api",
-        "anthropic",
         "sdk",
-        "prompt-cache",
-        "tool-use",
-        "streaming",
-        "batch-api",
         "prompt-engineering",
-        "Claude API",
-        "Anthropic SDK"
+        "api"
     ],
     "components": {
         "commands": true,

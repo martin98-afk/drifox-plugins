@@ -16,14 +16,10 @@
         "min_version": "0.5.0"
     },
     "keywords": [
-        "tailwindcss",
         "tailwind",
         "css",
-        "v4",
-        "utility-first",
         "design-system",
-        "lsp",
-        "tailwind-pro"
+        "lsp"
     ],
     "components": {
         "commands": true,

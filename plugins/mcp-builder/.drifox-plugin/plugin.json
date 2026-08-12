@@ -17,13 +17,8 @@
     },
     "keywords": [
         "mcp",
-        "model-context-protocol",
-        "mcp-server",
         "tool",
-        "anthropic",
-        "context7",
-        "MCP 服务器",
-        "工具集成"
+        "development"
     ],
     "components": {
         "commands": true,

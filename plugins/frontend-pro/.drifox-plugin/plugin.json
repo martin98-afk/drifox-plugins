@@ -19,10 +19,7 @@
         "a11y",
         "accessibility",
         "react",
-        "vue",
-        "css",
-        "performance",
-        "web-components"
+        "vue"
     ],
     "components": {
         "commands": true,

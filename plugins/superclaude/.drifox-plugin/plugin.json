@@ -12,18 +12,10 @@
     "type": "user",
     "keywords": [
         "development",
-        "pm-agent",
-        "confidence-check",
-        "parallel-execution",
-        "reflexion",
-        "pdca",
         "code-quality",
         "testing",
         "research",
-        "architecture",
-        "agents",
-        "skills",
-        "commands"
+        "architecture"
     ],
     "components": {
         "commands": true,

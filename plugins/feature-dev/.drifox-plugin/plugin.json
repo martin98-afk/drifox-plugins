@@ -14,11 +14,9 @@
     },
     "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/feature-dev",
     "keywords": [
-        "feature",
         "development",
         "architecture",
         "workflow",
-        "exploration",
         "code-review"
     ],
     "components": {

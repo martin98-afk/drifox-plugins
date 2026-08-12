@@ -19,8 +19,7 @@
         "workflow",
         "commit",
         "branch",
-        "pr",
-        "conventional-commits"
+        "pr"
     ],
     "components": {
         "commands": true,

@@ -22,19 +22,9 @@
                 "commands": true
             },
             "keywords": [
-                "ai-image",
                 "image-generation",
-                "t2i",
-                "image-to-image",
-                "gemini",
-                "nano-banana",
-                "dall-e",
-                "imagen",
-                "midjourney",
-                "stable-diffusion",
-                "flux",
-                "文生图",
-                "图编辑"
+                "prompt-engineering",
+                "art"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -64,22 +54,9 @@
                 "commands": true
             },
             "keywords": [
-                "ai-video",
                 "video-generation",
-                "veo",
-                "wan",
-                "grok",
-                "sora",
-                "runway",
-                "pika",
-                "kling",
-                "luma",
-                "可灵",
-                "即梦",
-                "t2v",
-                "i2v",
-                "text-to-video",
-                "image-to-video"
+                "multimodal",
+                "generative"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -111,10 +88,8 @@
             "downloads": 1,
             "keywords": [
                 "art",
-                "p5js",
                 "generative",
-                "creative-coding",
-                "algorithmic"
+                "creative-coding"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -144,14 +119,9 @@
                 "skills": true
             },
             "keywords": [
-                "article",
-                "editorial",
                 "html",
-                "reacticle",
-                "文章",
-                "编辑",
-                "排版",
-                "网页文章"
+                "writing",
+                "design"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -209,12 +179,9 @@
             },
             "downloads": 7,
             "keywords": [
-                "drifox",
                 "browser",
                 "web",
-                "chrome",
-                "tab",
-                "devtools"
+                "automation"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -243,13 +210,10 @@
                 "skills": true
             },
             "keywords": [
-                "poster",
                 "design",
                 "canvas",
                 "art",
-                "visual",
-                "海报",
-                "平面设计"
+                "visual"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -280,16 +244,9 @@
                 "skills": true
             },
             "keywords": [
-                "claude-api",
-                "anthropic",
                 "sdk",
-                "prompt-cache",
-                "tool-use",
-                "streaming",
-                "batch-api",
                 "prompt-engineering",
-                "Claude API",
-                "Anthropic SDK"
+                "api"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -392,15 +349,10 @@
             },
             "downloads": 2,
             "keywords": [
-                "context7",
                 "docs",
                 "api",
                 "documentation",
-                "library",
-                "upstash",
-                "文档",
-                "API",
-                "实时拉取"
+                "文档"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -431,16 +383,9 @@
                 "skills": true
             },
             "keywords": [
-                "doc-coauthoring",
                 "writing",
-                "drafting",
                 "documentation",
-                "collaboration",
-                "structured-interview",
-                "文档协作",
-                "草稿",
-                "迭代",
-                "定稿"
+                "collaboration"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -478,11 +423,7 @@
                 "skills",
                 "commands",
                 "tdd",
-                "code-review",
-                "security",
-                "workflow",
-                "automation",
-                "best-practices"
+                "code-review"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -550,10 +491,9 @@
                 "lsp": true
             },
             "keywords": [
-                "drifox",
                 "example",
-                "reference",
-                "template"
+                "template",
+                "development"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -582,14 +522,9 @@
                 "skills": true
             },
             "keywords": [
-                "excalidraw",
                 "diagram",
-                "diagram-generator",
                 "flowchart",
-                "sequence",
-                "visualization",
-                "手绘",
-                "架构图"
+                "visualization"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -621,11 +556,9 @@
                 "agents": true
             },
             "keywords": [
-                "feature",
                 "development",
                 "architecture",
                 "workflow",
-                "exploration",
                 "code-review"
             ],
             "drifox": {
@@ -656,15 +589,9 @@
                 "skills": true
             },
             "keywords": [
-                "frontend-design",
                 "design",
-                "anthropic",
                 "ui",
                 "tailwind",
-                "前端设计",
-                "视觉",
-                "配色",
-                "字体",
                 "动效"
             ],
             "drifox": {
@@ -700,10 +627,7 @@
                 "a11y",
                 "accessibility",
                 "react",
-                "vue",
-                "css",
-                "performance",
-                "web-components"
+                "vue"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -762,9 +686,6 @@
             "keywords": [
                 "git",
                 "dashboard",
-                "commits",
-                "calendar",
-                "graph",
                 "visualization"
             ],
             "homepage": "https://github.com/martin98-afk/DriFox",
@@ -796,11 +717,8 @@
             "keywords": [
                 "git",
                 "source-control",
-                "changes",
                 "commit",
-                "stash",
-                "branch",
-                "diff"
+                "branch"
             ],
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
@@ -856,8 +774,7 @@
                 "workflow",
                 "commit",
                 "branch",
-                "pr",
-                "conventional-commits"
+                "pr"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -887,12 +804,10 @@
             },
             "downloads": 2,
             "keywords": [
-                "gpt-image",
                 "image-generation",
                 "prompt-engineering",
                 "图像生成",
-                "提示词工程",
-                "AI 绘图"
+                "提示词工程"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -925,15 +840,8 @@
                 "ppt",
                 "presentation",
                 "slides",
-                "guizang",
-                "swiss",
-                "magazine",
-                "swiss-style",
                 "tts",
-                "voice",
-                "minimax",
-                "audio",
-                "配音"
+                "voice"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -989,17 +897,9 @@
                 "skills": true
             },
             "keywords": [
-                "internal-comms",
                 "communication",
-                "3p",
-                "status-report",
-                "postmortem",
-                "decision-notice",
-                "product-update",
-                "内部沟通",
-                "状态报告",
-                "复盘",
-                "决策通知"
+                "collaboration",
+                "documentation"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1030,11 +930,9 @@
             },
             "downloads": 2,
             "keywords": [
-                "drifox",
-                "ip",
                 "proxy",
-                "rate-limit",
-                "free-model"
+                "network",
+                "tool"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1068,9 +966,7 @@
                 "retrieval",
                 "pdf",
                 "excel",
-                "知识库",
-                "检索",
-                "RAG"
+                "知识库"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1102,13 +998,8 @@
             "downloads": 1,
             "keywords": [
                 "mcp",
-                "model-context-protocol",
-                "mcp-server",
                 "tool",
-                "anthropic",
-                "context7",
-                "MCP 服务器",
-                "工具集成"
+                "development"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1189,20 +1080,8 @@
             },
             "downloads": 2,
             "keywords": [
-                "minimax",
-                "h3",
-                "video",
                 "video-generation",
-                "t2v",
-                "i2v",
-                "t2va",
-                "i2va",
-                "fl2va",
-                "ref2va",
-                "ai-video",
                 "视频生成",
-                "文生视频",
-                "图生视频",
                 "多模态"
             ],
             "drifox": {
@@ -1234,17 +1113,9 @@
             },
             "downloads": 4,
             "keywords": [
-                "nuwa",
                 "skill",
-                "perspective",
-                "distill",
-                "mind-model",
-                "女娲",
-                "造人",
-                "蒸馏",
-                "思维模型",
-                "人物视角",
-                "心智模型"
+                "agents",
+                "writing"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1277,18 +1148,9 @@
             "keywords": [
                 "docx",
                 "pdf",
-                "pptx",
-                "xlsx",
                 "word",
                 "excel",
-                "powerpoint",
-                "document",
-                "spreadsheet",
-                "presentation",
-                "文档",
-                "表格",
-                "演示",
-                "LibreOffice"
+                "document"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1319,17 +1181,11 @@
             },
             "downloads": 2,
             "keywords": [
-                "omml",
                 "docx",
                 "word",
                 "math",
                 "formula",
-                "equation",
-                "公式",
-                "数学公式",
-                "专利交底书",
-                "OMML",
-                "document-generation"
+                "公式"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1359,11 +1215,9 @@
             },
             "downloads": 1,
             "keywords": [
-                "playground",
                 "html",
                 "interactive",
-                "prototype",
-                "练习场"
+                "prototype"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1394,12 +1248,8 @@
                 "skills": true
             },
             "keywords": [
-                "lazy",
                 "yagni",
-                "minimal",
-                "simplest-solution",
                 "refactor",
-                "over-engineering",
                 "code-review",
                 "skills",
                 "commands"
@@ -1430,12 +1280,8 @@
             },
             "keywords": [
                 "python",
-                "pep8",
                 "typing",
-                "lint",
-                "ruff",
-                "mypy",
-                "asyncio"
+                "lint"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1466,15 +1312,8 @@
             },
             "keywords": [
                 "react",
-                "nextjs",
-                "next-js",
-                "rsc",
-                "server-components",
-                "app-router",
                 "performance",
-                "bundle",
-                "web-vitals",
-                "react-pro"
+                "frontend"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1506,8 +1345,6 @@
             "keywords": [
                 "security",
                 "vulnerability",
-                "xss",
-                "sql-injection",
                 "secrets",
                 "code-review",
                 "hook"
@@ -1544,13 +1381,7 @@
                 "seo",
                 "audit",
                 "copywriting",
-                "landing-page",
-                "marketing",
-                "SEO",
-                "审计",
-                "文案",
-                "落地页",
-                "转化"
+                "marketing"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1582,10 +1413,8 @@
             "downloads": 1,
             "keywords": [
                 "skill",
-                "skill-creator",
-                "eval",
-                "benchmark",
-                "agent-skills"
+                "agents",
+                "template"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1615,10 +1444,9 @@
                 "skills": true
             },
             "keywords": [
-                "gif",
                 "animation",
-                "slack",
-                "动图"
+                "communication",
+                "image-generation"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1679,18 +1507,10 @@
             },
             "keywords": [
                 "development",
-                "pm-agent",
-                "confidence-check",
-                "parallel-execution",
-                "reflexion",
-                "pdca",
                 "code-quality",
                 "testing",
                 "research",
-                "architecture",
-                "agents",
-                "skills",
-                "commands"
+                "architecture"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1722,10 +1542,7 @@
                 "tdd",
                 "debugging",
                 "brainstorming",
-                "planning",
-                "code-review",
-                "workflow",
-                "best-practices"
+                "planning"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1757,14 +1574,10 @@
                 "lsp": true
             },
             "keywords": [
-                "tailwindcss",
                 "tailwind",
                 "css",
-                "v4",
-                "utility-first",
                 "design-system",
-                "lsp",
-                "tailwind-pro"
+                "lsp"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1799,9 +1612,7 @@
                 "education",
                 "learning",
                 "tutorial",
-                "交互式教学",
-                "学习路线",
-                "知识管理"
+                "交互式教学"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1835,8 +1646,7 @@
                 "scaffold",
                 "coverage",
                 "tdd",
-                "unit-test",
-                "pytest"
+                "unit-test"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1892,7 +1702,6 @@
             "keywords": [
                 "theme",
                 "styling",
-                "换肤",
                 "主题"
             ],
             "drifox": {
@@ -1927,14 +1736,7 @@
                 "motion",
                 "ui",
                 "design",
-                "easing",
-                "transition",
-                "apple-design",
-                "prototype",
-                "sonner",
-                "动效",
-                "动画",
-                "设计"
+                "easing"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1967,13 +1769,9 @@
             "keywords": [
                 "voice",
                 "tts",
-                "voice-clone",
-                "clone",
                 "audio",
                 "speech",
-                "minimax",
-                "语音克隆",
-                "音色"
+                "语音克隆"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -2028,10 +1826,8 @@
             },
             "downloads": 1,
             "keywords": [
-                "artifact",
                 "react",
                 "tailwind",
-                "shadcn",
                 "frontend",
                 "前端"
             ],
@@ -2064,14 +1860,11 @@
             },
             "downloads": 1,
             "keywords": [
-                "web-design",
                 "frontend",
                 "html",
                 "css",
                 "react",
-                "网页设计",
-                "前端",
-                "视觉设计"
+                "前端"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -2102,16 +1895,10 @@
             },
             "downloads": 1,
             "keywords": [
-                "webapp-testing",
                 "e2e",
-                "playwright",
-                "chromium",
-                "chrome",
                 "browser",
                 "testing",
-                "自动化测试",
-                "e2e 测试",
-                "浏览器测试"
+                "自动化测试"
             ],
             "drifox": {
                 "min_version": "0.5.0"

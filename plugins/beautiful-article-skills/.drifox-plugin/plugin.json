@@ -15,14 +15,9 @@
         "min_version": "0.5.0"
     },
     "keywords": [
-        "article",
-        "editorial",
         "html",
-        "reacticle",
-        "文章",
-        "编辑",
-        "排版",
-        "网页文章"
+        "writing",
+        "design"
     ],
     "components": {
         "skills": true

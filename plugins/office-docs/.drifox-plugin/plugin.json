@@ -18,18 +18,9 @@
     "keywords": [
         "docx",
         "pdf",
-        "pptx",
-        "xlsx",
         "word",
         "excel",
-        "powerpoint",
-        "document",
-        "spreadsheet",
-        "presentation",
-        "文档",
-        "表格",
-        "演示",
-        "LibreOffice"
+        "document"
     ],
     "components": {
         "commands": true,

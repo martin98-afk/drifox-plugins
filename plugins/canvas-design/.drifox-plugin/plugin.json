@@ -14,13 +14,10 @@
     },
     "homepage": "https://github.com/anthropics/skills/tree/main/skills/canvas-design",
     "keywords": [
-        "poster",
         "design",
         "canvas",
         "art",
-        "visual",
-        "海报",
-        "平面设计"
+        "visual"
     ],
     "components": {
         "skills": true

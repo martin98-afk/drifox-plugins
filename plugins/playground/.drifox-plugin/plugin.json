@@ -14,11 +14,9 @@
     },
     "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/playground",
     "keywords": [
-        "playground",
         "html",
         "interactive",
-        "prototype",
-        "练习场"
+        "prototype"
     ],
     "components": {
         "skills": true

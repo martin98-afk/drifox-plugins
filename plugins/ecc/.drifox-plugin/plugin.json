@@ -18,11 +18,7 @@
         "skills",
         "commands",
         "tdd",
-        "code-review",
-        "security",
-        "workflow",
-        "automation",
-        "best-practices"
+        "code-review"
     ],
     "components": {
         "agents": true,

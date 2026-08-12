@@ -15,17 +15,11 @@
     "min_version": "0.5.0"
   },
   "keywords": [
-    "omml",
     "docx",
     "word",
     "math",
     "formula",
-    "equation",
-    "公式",
-    "数学公式",
-    "专利交底书",
-    "OMML",
-    "document-generation"
+    "公式"
   ],
   "components": {
     "skills": true

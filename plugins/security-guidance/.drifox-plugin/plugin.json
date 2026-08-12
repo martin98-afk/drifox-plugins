@@ -16,8 +16,6 @@
     "keywords": [
         "security",
         "vulnerability",
-        "xss",
-        "sql-injection",
         "secrets",
         "code-review",
         "hook"

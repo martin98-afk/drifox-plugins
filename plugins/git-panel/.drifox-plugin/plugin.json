@@ -15,11 +15,8 @@
     "keywords": [
         "git",
         "source-control",
-        "changes",
         "commit",
-        "stash",
-        "branch",
-        "diff"
+        "branch"
     ],
     "components": {
         "ui": true

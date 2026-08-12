@@ -15,10 +15,8 @@
     "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/skill-creator",
     "keywords": [
         "skill",
-        "skill-creator",
-        "eval",
-        "benchmark",
-        "agent-skills"
+        "agents",
+        "template"
     ],
     "components": {
         "skills": true

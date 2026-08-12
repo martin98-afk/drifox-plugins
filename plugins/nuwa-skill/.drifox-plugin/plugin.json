@@ -17,17 +17,9 @@
         "min_version": "0.5.0"
     },
     "keywords": [
-        "nuwa",
         "skill",
-        "perspective",
-        "distill",
-        "mind-model",
-        "女娲",
-        "造人",
-        "蒸馏",
-        "思维模型",
-        "人物视角",
-        "心智模型"
+        "agents",
+        "writing"
     ],
     "components": {
         "skills": true

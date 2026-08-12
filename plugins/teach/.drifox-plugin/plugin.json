@@ -19,9 +19,7 @@
         "education",
         "learning",
         "tutorial",
-        "交互式教学",
-        "学习路线",
-        "知识管理"
+        "交互式教学"
     ],
     "components": {
         "skills": true

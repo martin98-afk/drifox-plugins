@@ -19,9 +19,7 @@
         "retrieval",
         "pdf",
         "excel",
-        "知识库",
-        "检索",
-        "RAG"
+        "知识库"
     ],
     "components": {
         "skills": true

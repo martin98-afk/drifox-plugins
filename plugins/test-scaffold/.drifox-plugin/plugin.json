@@ -19,8 +19,7 @@
         "scaffold",
         "coverage",
         "tdd",
-        "unit-test",
-        "pytest"
+        "unit-test"
     ],
     "components": {
         "commands": true,

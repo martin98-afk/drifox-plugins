@@ -15,11 +15,9 @@
         "min_version": "0.5.0"
     },
     "keywords": [
-        "drifox",
-        "ip",
         "proxy",
-        "rate-limit",
-        "free-model"
+        "network",
+        "tool"
     ],
     "components": {
         "ui": true

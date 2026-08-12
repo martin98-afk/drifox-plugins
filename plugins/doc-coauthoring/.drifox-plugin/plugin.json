@@ -16,16 +16,9 @@
         "min_version": "0.5.0"
     },
     "keywords": [
-        "doc-coauthoring",
         "writing",
-        "drafting",
         "documentation",
-        "collaboration",
-        "structured-interview",
-        "文档协作",
-        "草稿",
-        "迭代",
-        "定稿"
+        "collaboration"
     ],
     "components": {
         "commands": true,

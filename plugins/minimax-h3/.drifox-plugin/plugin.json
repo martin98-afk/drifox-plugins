@@ -13,20 +13,8 @@
     },
     "homepage": "https://github.com/martin98-afk/drifox-plugins",
     "keywords": [
-        "minimax",
-        "h3",
-        "video",
         "video-generation",
-        "t2v",
-        "i2v",
-        "t2va",
-        "i2va",
-        "fl2va",
-        "ref2va",
-        "ai-video",
         "视频生成",
-        "文生视频",
-        "图生视频",
         "多模态"
     ],
     "components": {

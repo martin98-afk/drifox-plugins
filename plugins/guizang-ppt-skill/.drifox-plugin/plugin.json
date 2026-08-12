@@ -18,15 +18,8 @@
         "ppt",
         "presentation",
         "slides",
-        "guizang",
-        "swiss",
-        "magazine",
-        "swiss-style",
         "tts",
-        "voice",
-        "minimax",
-        "audio",
-        "配音"
+        "voice"
     ],
     "components": {
         "skills": true

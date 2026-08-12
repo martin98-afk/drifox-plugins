@@ -14,10 +14,9 @@
     },
     "homepage": "https://github.com/anthropics/skills/tree/main/skills/slack-gif-creator",
     "keywords": [
-        "gif",
         "animation",
-        "slack",
-        "动图"
+        "communication",
+        "image-generation"
     ],
     "components": {
         "skills": true

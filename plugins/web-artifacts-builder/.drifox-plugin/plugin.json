@@ -14,10 +14,8 @@
     },
     "homepage": "https://github.com/anthropics/skills/tree/main/skills/web-artifacts-builder",
     "keywords": [
-        "artifact",
         "react",
         "tailwind",
-        "shadcn",
         "frontend",
         "前端"
     ],
