@@ -361,6 +361,46 @@
             }
         },
         {
+            "name": "context-stats",
+            "description": "欢迎卡片用量统计 — 在欢迎卡片新增「📊 用量」tab，用 echarts 展示模型上下文（token）用量与消息量趋势",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui",
+                "stats"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/context-stats",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true
+            },
+            "keywords": [
+                "welcome",
+                "stats",
+                "echarts",
+                "token",
+                "context",
+                "usage",
+                "trend",
+                "用量",
+                "上下文",
+                "趋势"
+            ],
+            "drifox": {
+                "min_version": "0.4.15"
+            },
+            "homepage": "https://github.com/martin98-afk/DriFox",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "context7",
             "description": "Context7 — 实时拉取任意库的最新 API 文档与代码示例，省去贴文档链接。",
             "version": "1.0.0",
