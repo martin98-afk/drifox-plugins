@@ -118,6 +118,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "html",
                 "writing",
@@ -417,7 +418,7 @@
                 "skills": true,
                 "commands": true
             },
-            "downloads": 3,
+            "downloads": 5,
             "keywords": [
                 "agents",
                 "skills",
@@ -1247,6 +1248,7 @@
                 "commands": true,
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "yagni",
                 "refactor",
@@ -1505,6 +1507,7 @@
                 "skills": true,
                 "mcp": true
             },
+            "downloads": 1,
             "keywords": [
                 "development",
                 "code-quality",
