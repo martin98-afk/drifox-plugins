@@ -170,24 +170,31 @@ def test_fetch_stats_no_db(tmp_path, monkeypatch):
 
 
 def test_render_welcome_tab_html(mock_db):
-    """输出 markdown 片段：包含两个 echarts 代码块，JSON 可解析"""
+    """输出 markdown 片段：单个合并 echarts 代码块（双面板），JSON 可解析"""
     plugin = _load_plugin_package()
     render_mod = sys.modules["ui_plugin_context_stats.render"]
 
     html = render_mod.render_welcome_tab({"is_dark": True})
     assert "```echarts" in html
-    assert html.count("```echarts") == 2  # token + 消息两图
+    assert html.count("```echarts") == 1  # 合并单图（token + 消息双面板）
 
     # 提取 echarts JSON 并验证可解析
     import re
 
     blocks = re.findall(r"```echarts\n(.*?)\n```", html, re.DOTALL)
-    assert len(blocks) == 2
-    for b in blocks:
-        opt = json.loads(b)
-        assert opt["backgroundColor"] == "transparent"
-        assert opt["xAxis"]["data"]  # 14 天标签
-        assert len(opt["xAxis"]["data"]) == 14
+    assert len(blocks) == 1
+    opt = json.loads(blocks[0])
+    assert opt["backgroundColor"] == "transparent"
+    # 双面板：2 个 grid / 2 条 x 轴 / 2 条 y 轴 / 2 个 series
+    assert len(opt["grid"]) == 2
+    assert len(opt["xAxis"]) == 2
+    assert len(opt["yAxis"]) == 2
+    assert len(opt["series"]) == 2
+    assert len(opt["xAxis"][0]["data"]) == 14
+    # 双轴联动
+    assert opt["axisPointer"]["link"] == [{"xAxisIndex": "all"}]
+    # 面板标题
+    assert len(opt["title"]) == 2
 
 
 def test_render_dark_light_palette(mock_db):

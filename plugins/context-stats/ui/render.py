@@ -11,6 +11,7 @@ render_func 返回 markdown 片段（含 ```echarts 代码块），
 - 不导入 app.core 或 app.widgets 内部的任何模块
 - 主线程同步调用，只做轻量 JSON 组装（数据来自 data.get_stats() 缓存）
 - 明暗适配读 ctx["is_dark"]（跟随 Qt 主题），ctx 缺失时回退 OS
+- 两个图表合并为单个 echarts 实例（上下双面板），压缩纵向高度
 """
 
 import json
@@ -58,8 +59,32 @@ def _fmt_k(n: int) -> str:
     return str(n)
 
 
-def _base_option(p: dict) -> dict:
-    """echarts option 公共骨架"""
+def _axis_style(p: dict, show_label: bool) -> dict:
+    """xAxis 公共样式"""
+    return {
+        "type": "category",
+        "axisLine": {"lineStyle": {"color": p["split"]}},
+        "axisTick": {"show": False},
+        "axisLabel": {
+            "color": p["text_muted"],
+            "fontSize": 11,
+            "show": show_label,
+        },
+    }
+
+
+def _combined_option(daily_tokens: list, daily_messages: list, p: dict) -> dict:
+    """合并图表 — 上下双面板（token 面积图 + 消息柱状图）
+
+    单个 echarts 实例，纵向减半：原两图各 400px → 一图 400px。
+    结构：
+    - grid[0] 上：token 面积图（x 轴不显示日期标签省高度，tooltip 联动可看）
+    - grid[1] 下：消息柱状图（x 轴显示日期标签）
+    - title 分别标注两个面板
+    - axisPointer.link 联动两条轴
+    """
+    days = [label for label, _ in daily_tokens]
+
     return {
         "backgroundColor": "transparent",
         "textStyle": {"fontFamily": "inherit", "color": p["text"]},
@@ -70,82 +95,100 @@ def _base_option(p: dict) -> dict:
             "borderWidth": 1,
             "textStyle": {"color": p["text"], "fontSize": 12},
             "axisPointer": {"type": "line", "lineStyle": {"color": p["grid"]}},
+            # {a0}/{a1} = 两个 series 名，{c0}/{c1} = 对应值
+            "formatter": "{b}<br/>{a0}: {c0} tokens<br/>{a1}: {c1} 条",
         },
-        "grid": {"left": 10, "right": 16, "top": 32, "bottom": 8, "containLabel": True},
-        "xAxis": {
-            "type": "category",
-            "boundaryGap": True,
-            "axisLine": {"lineStyle": {"color": p["split"]}},
-            "axisTick": {"show": False},
-            "axisLabel": {"color": p["text_muted"], "fontSize": 11},
-        },
-        "yAxis": {
-            "type": "value",
-            "splitLine": {"lineStyle": {"color": p["split"]}},
-            "axisLabel": {
-                "color": p["text_muted"],
-                "fontSize": 11,
+        # 双轴联动：hover 任意面板，另一面板同竖线
+        "axisPointer": {"link": [{"xAxisIndex": "all"}]},
+        "grid": [
+            {"left": 10, "right": 16, "top": 34, "height": "36%", "containLabel": True},
+            {
+                "left": 10,
+                "right": 16,
+                "top": "56%",
+                "height": "34%",
+                "containLabel": True,
             },
-        },
+        ],
+        "title": [
+            {
+                "text": "🔤 上下文用量",
+                "left": 10,
+                "top": 6,
+                "textStyle": {"fontSize": 12, "color": p["text"], "fontWeight": "bold"},
+            },
+            {
+                "text": "📈 消息量",
+                "left": 10,
+                "top": "50%",
+                "textStyle": {"fontSize": 12, "color": p["text"], "fontWeight": "bold"},
+            },
+        ],
+        "xAxis": [
+            {
+                **_axis_style(p, show_label=False),
+                "data": days,
+                "gridIndex": 0,
+                "boundaryGap": False,
+            },
+            {**_axis_style(p, show_label=True), "data": days, "gridIndex": 1},
+        ],
+        "yAxis": [
+            {
+                "type": "value",
+                "gridIndex": 0,
+                "splitLine": {"lineStyle": {"color": p["split"]}},
+                "axisLabel": {"color": p["text_muted"], "fontSize": 10},
+            },
+            {
+                "type": "value",
+                "gridIndex": 1,
+                "splitLine": {"lineStyle": {"color": p["split"]}},
+                "axisLabel": {"color": p["text_muted"], "fontSize": 10},
+            },
+        ],
+        "series": [
+            {
+                "name": "Token 用量",
+                "type": "line",
+                "xAxisIndex": 0,
+                "yAxisIndex": 0,
+                "smooth": True,
+                "symbol": "circle",
+                "symbolSize": 6,
+                "showSymbol": False,
+                "lineStyle": {"color": p["accent"], "width": 2},
+                "itemStyle": {"color": p["accent"]},
+                "areaStyle": {
+                    "color": {
+                        "type": "linear",
+                        "x": 0,
+                        "y": 0,
+                        "x2": 0,
+                        "y2": 1,
+                        "colorStops": [
+                            {"offset": 0, "color": p["accent_gradient"][0]},
+                            {"offset": 1, "color": p["accent_gradient"][1]},
+                        ],
+                    }
+                },
+                "data": [v for _, v in daily_tokens],
+            },
+            {
+                "name": "消息数",
+                "type": "bar",
+                "xAxisIndex": 1,
+                "yAxisIndex": 1,
+                "barWidth": "55%",
+                "itemStyle": {"color": p["success"], "borderRadius": [4, 4, 0, 0]},
+                "data": [v for _, v in daily_messages],
+            },
+        ],
     }
 
 
-def _token_option(daily_tokens: list, p: dict) -> dict:
-    """上下文用量趋势 — 面积图"""
-    opt = _base_option(p)
-    opt["xAxis"]["data"] = [label for label, _ in daily_tokens]
-    opt["xAxis"]["boundaryGap"] = False
-    opt["tooltip"]["formatter"] = "{b}<br/>{a}: {c} tokens"
-    opt["series"] = [
-        {
-            "name": "Token 用量",
-            "type": "line",
-            "smooth": True,
-            "symbol": "circle",
-            "symbolSize": 6,
-            "showSymbol": False,
-            "lineStyle": {"color": p["accent"], "width": 2},
-            "itemStyle": {"color": p["accent"]},
-            "areaStyle": {
-                "color": {
-                    "type": "linear",
-                    "x": 0,
-                    "y": 0,
-                    "x2": 0,
-                    "y2": 1,
-                    "colorStops": [
-                        {"offset": 0, "color": p["accent_gradient"][0]},
-                        {"offset": 1, "color": p["accent_gradient"][1]},
-                    ],
-                }
-            },
-            "data": [v for _, v in daily_tokens],
-        }
-    ]
-    return opt
-
-
-def _message_option(daily_messages: list, p: dict) -> dict:
-    """每日消息量趋势 — 柱状图"""
-    opt = _base_option(p)
-    opt["xAxis"]["data"] = [label for label, _ in daily_messages]
-    opt["series"] = [
-        {
-            "name": "消息数",
-            "type": "bar",
-            "barWidth": "55%",
-            "itemStyle": {
-                "color": p["success"],
-                "borderRadius": [4, 4, 0, 0],
-            },
-            "data": [v for _, v in daily_messages],
-        }
-    ]
-    return opt
-
-
 def _build_html(ctx: Optional[dict]) -> str:
-    """组装欢迎 tab 的 markdown 片段（含两个 echarts 代码块）"""
+    """组装欢迎 tab 的 markdown 片段（含单个合并 echarts 代码块）"""
     data = get_stats()
     if data.get("error"):
         return f"> ⚠️ 用量数据加载失败：{data['error'][:80]}\n"
@@ -172,21 +215,14 @@ def _build_html(ctx: Optional[dict]) -> str:
         f"**近 14 天** · 估算 Token **{_fmt_k(total_tokens)}** · 消息 **{_fmt_k(total_messages)}** 条\n"
     )
 
-    if any(v for _, v in daily_tokens):
-        parts.append("### 🔤 上下文用量趋势\n")
-        parts.append(
-            "```echarts\n"
-            + json.dumps(_token_option(daily_tokens, p), ensure_ascii=False)
-            + "\n```\n"
+    # 单个合并 echarts 实例（上下双面板）
+    parts.append(
+        "```echarts\n"
+        + json.dumps(
+            _combined_option(daily_tokens, daily_messages, p), ensure_ascii=False
         )
-
-    if any(v for _, v in daily_messages):
-        parts.append("### 📈 每日消息量趋势\n")
-        parts.append(
-            "```echarts\n"
-            + json.dumps(_message_option(daily_messages, p), ensure_ascii=False)
-            + "\n```\n"
-        )
+        + "\n```\n"
+    )
 
     return "\n".join(parts)
 
