@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.5.1 (2026-08-13)
+
+### 🔧 改进 context-stats 用量图表
+
+- **`context-stats`** — 用量趋势图由「上下双面板」改为**单坐标系双 Y 轴**合并图：token 面积图（左轴）+ 消息柱状图（右轴）共享一条时间轴，一眼对比两组数据
+- **数字缩写**：y 轴刻度与 tooltip 支持 `8M` / `1.2k` 形式（8000000 → 8M，去尾 `.0`）；因 echarts JSON 无法携带 JS 函数，采用 Python 侧按数据量级缩放 + 字符串模板 formatter 实现
+- **测试**：`tests/test_context_stats.py` 增加缩写（`_fmt_k` / `_scale_unit`）与双轴结构断言，10 项全过
+
 ## 2.5.0 (2026-08-12)
 
 ### ✨ 新增 calendar 插件（DriFox 原生）

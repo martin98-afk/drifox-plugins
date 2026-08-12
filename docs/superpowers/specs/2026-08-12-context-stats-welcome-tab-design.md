@@ -65,14 +65,17 @@ render_func(ctx) 返回:
 公共：`backgroundColor: 'transparent'`、`grid`、`tooltip: {trigger:'axis'}`、
 `xAxis` 14 天 `MM-DD`、显式 textStyle 颜色（不依赖骨架 dark 主题默认）。
 
-**图 1 Token 趋势**（面积图）：
-- `type:'line'`、`smooth:true`、`symbol:'circle'`、`symbolSize:6`
-- `areaStyle` 渐变（accent 色系，暗色 #62a0ea / 亮色 #2878dc，透明度 0.3→0）
-- `yAxis` 格式 `1.2k` 缩写
+**单图双 Y 轴**（一个 echarts 实例、共享 x 轴，两条曲线同一坐标系）：
+- 左轴（yAxis[0]）：token 用量，`type:'line'` 面积图（accent 色系，暗色 #62a0ea / 亮色 #2878dc，渐变 0.3→0）
+- 右轴（yAxis[1]）：消息量，`type:'bar'` 柱状图（success 系，暗色 #50e3c2 / 亮色 #00a888，`borderRadius:[4,4,0,0]`）
+- 右轴关闭 `splitLine` 避免网格重叠
 
-**图 2 消息量趋势**（柱状图）：
-- `type:'bar'`、`barWidth:'50%'`、`borderRadius:[4,4,0,0]`
-- 柱色 success 系（暗色 #50e3c2 / 亮色 #00a888）
+**数字缩写**（8000000 → 8M / 8000 → 8k）：
+- echarts JSON 走 base64 → `JSON.parse`，**无法携带 JS 函数 formatter**
+- 方案：Python 侧按各轴数据最大值选单位（`_scale_unit`：≥1e6→M，≥1e3→k），
+  数据除以缩放因子，`axisLabel.formatter` 用字符串模板 `"{value}M"` / `"{value}k"` 补后缀
+- tooltip formatter 同法拼接（`{c0}M tokens` / `{c1} 条`）
+- 概要行 `_fmt_k`：整数去尾 `.0`（`8.0M` → `8M`）
 
 明暗切换：`ctx["is_dark"]` 选择色板；`is_dark is not None` 判断，勿 `bool()` 包裹。
 

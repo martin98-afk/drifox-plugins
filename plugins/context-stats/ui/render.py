@@ -11,7 +11,8 @@ render_func 返回 markdown 片段（含 ```echarts 代码块），
 - 不导入 app.core 或 app.widgets 内部的任何模块
 - 主线程同步调用，只做轻量 JSON 组装（数据来自 data.get_stats() 缓存）
 - 明暗适配读 ctx["is_dark"]（跟随 Qt 主题），ctx 缺失时回退 OS
-- 两个图表合并为单个 echarts 实例（上下双面板），压缩纵向高度
+- 两曲线合并为单个 echarts 实例（单坐标系 + 双 Y 轴：左 token / 右 消息）
+- 数字缩写 8M/1.2k：Python 侧缩放数据 + 字符串模板 formatter（JSON 无法携带函数）
 """
 
 import json
@@ -51,12 +52,28 @@ def _palette(is_dark: bool) -> dict:
 
 
 def _fmt_k(n: int) -> str:
-    """数字缩写：1234 → '1.2k'"""
-    if n >= 1000000:
-        return f"{n / 1000000:.1f}M"
-    if n >= 1000:
-        return f"{n / 1000:.1f}k"
+    """数字缩写：8000000 → '8M'，1234 → '1.2k'（整数去尾 .0）"""
+    if n >= 1_000_000:
+        v = n / 1_000_000
+        return f"{v:.1f}M" if v != int(v) else f"{int(v)}M"
+    if n >= 1_000:
+        v = n / 1_000
+        return f"{v:.1f}k" if v != int(v) else f"{int(v)}k"
     return str(n)
+
+
+def _scale_unit(values: list) -> tuple:
+    """按数据最大值选择显示单位，返回 (缩放因子, 单位后缀)
+
+    8000000 → (1_000_000, 'M')；8000 → (1_000, 'k')；800 → (1, '')
+    供 y 轴刻度与 tooltip 共用：数据除以因子后配字符串模板 formatter。
+    """
+    mx = max(values, default=0)
+    if mx >= 1_000_000:
+        return 1_000_000, "M"
+    if mx >= 1_000:
+        return 1_000, "k"
+    return 1, ""
 
 
 def _axis_style(p: dict, show_label: bool) -> dict:
@@ -74,16 +91,21 @@ def _axis_style(p: dict, show_label: bool) -> dict:
 
 
 def _combined_option(daily_tokens: list, daily_messages: list, p: dict) -> dict:
-    """合并图表 — 上下双面板（token 面积图 + 消息柱状图）
+    """合并图表 — 单坐标系双 Y 轴（左 token 面积图 + 右 消息柱状图）
 
-    单个 echarts 实例，纵向减半：原两图各 400px → 一图 400px。
-    结构：
-    - grid[0] 上：token 面积图（x 轴不显示日期标签省高度，tooltip 联动可看）
-    - grid[1] 下：消息柱状图（x 轴显示日期标签）
-    - title 分别标注两个面板
-    - axisPointer.link 联动两条轴
+    单个 echarts 实例、共享 x 轴，两条曲线在同一坐标系：
+    - yAxis[0] 左轴：token 用量（line 面积图）
+    - yAxis[1] 右轴：消息量（bar 柱状图）
+    - 数字缩写：数据在 Python 侧按各自单位缩放（echarts JSON 走 base64 +
+      JSON.parse，无法携带 JS 函数），axisLabel/tooltip 用字符串模板补后缀
+      （8000000 → 8M / 8000 → 8k）
     """
     days = [label for label, _ in daily_tokens]
+    token_vals = [v for _, v in daily_tokens]
+    msg_vals = [v for _, v in daily_messages]
+
+    tok_factor, tok_unit = _scale_unit(token_vals)
+    msg_factor, msg_unit = _scale_unit(msg_vals)
 
     return {
         "backgroundColor": "transparent",
@@ -95,63 +117,62 @@ def _combined_option(daily_tokens: list, daily_messages: list, p: dict) -> dict:
             "borderWidth": 1,
             "textStyle": {"color": p["text"], "fontSize": 12},
             "axisPointer": {"type": "line", "lineStyle": {"color": p["grid"]}},
-            # {a0}/{a1} = 两个 series 名，{c0}/{c1} = 对应值
-            "formatter": "{b}<br/>{a0}: {c0} tokens<br/>{a1}: {c1} 条",
+            # {a0}/{a1} = series 名，{c0}/{c1} = 缩放后值（已除 tok_factor/msg_factor）
+            "formatter": (
+                "{b}<br/>{a0}: {c0}"
+                + tok_unit
+                + " tokens<br/>{a1}: {c1}"
+                + msg_unit
+                + " 条"
+            ),
         },
-        # 双轴联动：hover 任意面板，另一面板同竖线
-        "axisPointer": {"link": [{"xAxisIndex": "all"}]},
         "grid": [
-            {"left": 10, "right": 16, "top": 34, "height": "36%", "containLabel": True},
-            {
-                "left": 10,
-                "right": 16,
-                "top": "56%",
-                "height": "34%",
-                "containLabel": True,
-            },
+            {"left": 10, "right": 16, "top": 34, "bottom": 20, "containLabel": True}
         ],
         "title": [
             {
-                "text": "🔤 上下文用量",
+                "text": "📊 上下文用量 · 消息量",
                 "left": 10,
                 "top": 6,
                 "textStyle": {"fontSize": 12, "color": p["text"], "fontWeight": "bold"},
-            },
-            {
-                "text": "📈 消息量",
-                "left": 10,
-                "top": "50%",
-                "textStyle": {"fontSize": 12, "color": p["text"], "fontWeight": "bold"},
-            },
+            }
         ],
         "xAxis": [
             {
-                **_axis_style(p, show_label=False),
+                **_axis_style(p, show_label=True),
                 "data": days,
-                "gridIndex": 0,
                 "boundaryGap": False,
-            },
-            {**_axis_style(p, show_label=True), "data": days, "gridIndex": 1},
+            }
         ],
         "yAxis": [
             {
                 "type": "value",
-                "gridIndex": 0,
+                "position": "left",
+                "min": 0,
                 "splitLine": {"lineStyle": {"color": p["split"]}},
-                "axisLabel": {"color": p["text_muted"], "fontSize": 10},
+                "axisLabel": {
+                    "color": p["text_muted"],
+                    "fontSize": 10,
+                    "formatter": "{value}" + tok_unit,
+                },
             },
             {
                 "type": "value",
-                "gridIndex": 1,
-                "splitLine": {"lineStyle": {"color": p["split"]}},
-                "axisLabel": {"color": p["text_muted"], "fontSize": 10},
+                "position": "right",
+                "min": 0,
+                # 右轴关闭网格线，避免与左轴重叠
+                "splitLine": {"show": False},
+                "axisLabel": {
+                    "color": p["text_muted"],
+                    "fontSize": 10,
+                    "formatter": "{value}" + msg_unit,
+                },
             },
         ],
         "series": [
             {
                 "name": "Token 用量",
                 "type": "line",
-                "xAxisIndex": 0,
                 "yAxisIndex": 0,
                 "smooth": True,
                 "symbol": "circle",
@@ -172,16 +193,15 @@ def _combined_option(daily_tokens: list, daily_messages: list, p: dict) -> dict:
                         ],
                     }
                 },
-                "data": [v for _, v in daily_tokens],
+                "data": [v / tok_factor for v in token_vals],
             },
             {
                 "name": "消息数",
                 "type": "bar",
-                "xAxisIndex": 1,
                 "yAxisIndex": 1,
-                "barWidth": "55%",
+                "barWidth": "45%",
                 "itemStyle": {"color": p["success"], "borderRadius": [4, 4, 0, 0]},
-                "data": [v for _, v in daily_messages],
+                "data": [v / msg_factor for v in msg_vals],
             },
         ],
     }
