@@ -1,12 +1,14 @@
 # calendar 插件 — DriFox 官方插件
 
-在 DriFox 欢迎卡片中注入「日历」tab，月视图展示，支持上/下月切换与今天高亮。
+在 DriFox 欢迎卡片中注入「日历」tab，月视图展示，支持上/下月切换与今天高亮，
+右侧附带圆形时钟实时显示系统时间。
 
 ## 功能
 
 - 📅 欢迎卡片新增「📅 日历」tab（mode_key=`calendar`）
 - 🔄 上/下月切换（‹ › 按钮）
 - ⭐ 今天高亮（蓝色圆角底色）
+- 🕐 右侧圆形时钟（时/分/秒针，CSS 动画实时走动，秒针每秒跳格）
 - 🌓 明暗配色自动跟随系统（`prefers-color-scheme`）
 - 📆 周一起始、前后月补位日期灰显
 
@@ -54,8 +56,10 @@ def register_ui(registry: UIPluginRegistry) -> None:
 
 欢迎卡片骨架用 `innerHTML` 注入内容，因此：
 
-- `<script>` 标签不会执行 → 日期网格由 Python 预渲染
+- `<script>` 标签不会执行 → 日期网格与时钟刻度由 Python 预渲染
 - 上/下月切换走 `onclick` 内联 JS（`_CAL_SHIFT_JS`，DOM API 构建格子）
+- 时钟指针走纯 CSS 动画（`@keyframes cal-spin`），用负 `animation-delay`
+  对齐渲染时刻的系统时间，无需 JS 定时器
 - `<style>` 注入后生效 → 样式全部内联
 
 ## 参考

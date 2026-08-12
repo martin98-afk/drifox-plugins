@@ -57,17 +57,60 @@ def _build_calendar_cells(year: int, month: int, day: int) -> str:
     return "".join(cells)
 
 
-def _render_calendar_html() -> str:
-    """渲染当月日历 HTML：月标题 + 周表头（周一起始）+ 预渲染日期网格 + 今天高亮
+def _build_clock_ticks_html() -> str:
+    """预渲染 12 个表盘刻度（整点 12/3/6/9 加长加粗）
 
-    网格由 Python 预渲染（innerHTML 注入的 <script> 不执行），
-    上/下月切换走 onclick 内联 JS。明暗配色 prefers-color-scheme。
+    刻度用绝对定位 + transform: rotate(a) translateY(-r) 对齐表盘圆周，
+    整点与普通刻度共 12 个，Python 预渲染（无 <script> 依赖）。
+    """
+    ticks = []
+    for i in range(12):
+        angle = i * 30
+        if i % 3 == 0:
+            ticks.append(
+                f'<div class="tick tick-major" style="transform:rotate({angle}deg) translateY(-70px)"></div>'
+            )
+        else:
+            ticks.append(
+                f'<div class="tick" style="transform:rotate({angle}deg) translateY(-74px)"></div>'
+            )
+    return "".join(ticks)
+
+
+def _build_clock_html(now: datetime) -> str:
+    """预渲染圆形时钟：表盘 + 刻度 + 时/分/秒针 + 中心点 + 日期
+
+    指针走纯 CSS 动画（innerHTML 注入的 <script> 不执行）：
+    - 每根指针一个 @keyframes cal-spin 旋转动画
+    - animation-delay 取负秒数对齐渲染时刻的真实时间（如秒针 -{s}s → 立即停在第 s 格）
+    - 秒针 steps(60) 每秒跳一格，分/时针 linear 平滑走动
+    """
+    h, m, s = now.hour % 12, now.minute, now.second
+    week_cn = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"][now.weekday()]
+    return f"""<div class="cal-clock">
+<div class="clock-face">
+  {_build_clock_ticks_html()}
+  <div class="hand hand-hour" style="animation-delay:-{h * 3600 + m * 60 + s}s"></div>
+  <div class="hand hand-minute" style="animation-delay:-{m * 60 + s}s"></div>
+  <div class="hand hand-second" style="animation-delay:-{s}s"></div>
+  <div class="clock-dot"></div>
+</div>
+<div class="clock-date">{now.month} 月 {now.day} 日 · {week_cn}</div>
+</div>"""
+
+
+def _render_calendar_html() -> str:
+    """渲染当月日历 HTML：左侧日历（月标题 + 周表头 + 日期网格）+ 右侧圆形时钟
+
+    网格与时钟刻度由 Python 预渲染（innerHTML 注入的 <script> 不执行），
+    上/下月切换走 onclick 内联 JS，指针走 CSS 动画。明暗配色 prefers-color-scheme。
     """
     now = datetime.now()
     y, m, d = now.year, now.month, now.day
     cells = _build_calendar_cells(y, m, d)
     shift = _CAL_SHIFT_JS.replace("TODAY_Y", str(y)).replace("TODAY_M", str(m)).replace("TODAY_D", str(d))
     return f"""<div class="cal-wrap" data-y="{y}" data-m="{m}">
+<div class="cal-main">
 <div class="cal-head">
   <button class="cal-nav" onclick="{shift.replace('DELTA', '-1')}" title="上一月">‹</button>
   <div class="cal-title">{y} 年 {m} 月</div>
@@ -76,8 +119,11 @@ def _render_calendar_html() -> str:
 <div class="cal-week"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
 <div class="cal-grid">{cells}</div>
 </div>
+{_build_clock_html(now)}
+</div>
 <style>
-.cal-wrap {{ max-width: 560px; margin: 0 auto; font-family: inherit; }}
+.cal-wrap {{ max-width: 760px; margin: 0 auto; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 44px; flex-wrap: wrap; }}
+.cal-main {{ flex: 1 1 300px; max-width: 480px; min-width: 280px; }}
 .cal-head {{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }}
 .cal-title {{ font-size: 15px; font-weight: 600; letter-spacing: 0.02em; }}
 .cal-nav {{
@@ -97,16 +143,33 @@ def _render_calendar_html() -> str:
 .cal-today {{
   background: var(--cal-accent); color: #fff !important; font-weight: 700;
 }}
+.cal-clock {{ display: flex; flex-direction: column; align-items: center; gap: 10px; }}
+.clock-face {{
+  position: relative; width: 160px; height: 160px; border-radius: 50%;
+  background: var(--cal-clock-bg); border: 1px solid var(--cal-border);
+  box-shadow: inset 0 0 8px rgba(0,0,0,0.05);
+}}
+.tick {{ position: absolute; left: 50%; top: 50%; width: 2px; height: 8px; margin: -4px 0 0 -1px; border-radius: 1px; background: var(--cal-muted); }}
+.tick-major {{ height: 16px; margin-top: -8px; background: var(--cal-text); }}
+@keyframes cal-spin {{ from {{ transform: rotate(0deg); }} to {{ transform: rotate(360deg); }} }}
+.hand {{ position: absolute; left: 50%; bottom: 50%; transform-origin: 50% 100%; border-radius: 3px 3px 1px 1px; }}
+.hand-hour {{ width: 5px; height: 34px; margin-left: -2.5px; background: var(--cal-hand); animation: cal-spin 43200s linear infinite; }}
+.hand-minute {{ width: 3px; height: 50px; margin-left: -1.5px; background: var(--cal-hand); animation: cal-spin 3600s linear infinite; }}
+.hand-second {{ width: 1.5px; height: 58px; margin-left: -0.75px; background: var(--cal-accent); animation: cal-spin 60s steps(60) infinite; }}
+.clock-dot {{ position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--cal-hand); border: 2px solid var(--cal-clock-bg); }}
+.clock-date {{ font-size: 12px; color: var(--cal-muted); letter-spacing: 0.03em; }}
 :root {{
   --cal-text: #333; --cal-muted: #999; --cal-other: #ccc;
   --cal-border: rgba(0,0,0,0.12); --cal-nav-bg: rgba(0,0,0,0.04);
   --cal-nav-hover: rgba(0,0,0,0.09); --cal-accent: #2d8cf0;
+  --cal-clock-bg: rgba(0,0,0,0.04); --cal-hand: #333;
 }}
 @media (prefers-color-scheme: dark) {{
   :root {{
     --cal-text: #e6e6e6; --cal-muted: #8a8a8a; --cal-other: #555;
     --cal-border: rgba(255,255,255,0.14); --cal-nav-bg: rgba(255,255,255,0.06);
     --cal-nav-hover: rgba(255,255,255,0.12); --cal-accent: #5aa2f5;
+    --cal-clock-bg: rgba(255,255,255,0.06); --cal-hand: #e6e6e6;
   }}
 }}
 </style>
