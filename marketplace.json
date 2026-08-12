@@ -178,7 +178,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 9,
+            "downloads": 10,
             "keywords": [
                 "browser",
                 "web",
@@ -210,7 +210,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 2,
+            "downloads": 4,
             "keywords": [
                 "calendar",
                 "date",
@@ -379,7 +379,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "welcome",
                 "stats",
@@ -493,7 +493,7 @@
                 "commands": true,
                 "hooks": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "agents",
                 "skills",
@@ -738,7 +738,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -764,7 +764,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "git",
                 "dashboard",
@@ -795,7 +795,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 8,
+            "downloads": 9,
             "keywords": [
                 "git",
                 "source-control",
@@ -884,7 +884,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "image-generation",
                 "prompt-engineering",
@@ -1137,7 +1137,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1162,7 +1162,7 @@
                 "commands": true,
                 "skills": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "video-generation",
                 "视频生成",
@@ -1195,7 +1195,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "skill",
                 "agents",
@@ -1264,7 +1264,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "docx",
                 "word",
