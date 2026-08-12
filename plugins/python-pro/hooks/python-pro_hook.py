@@ -127,9 +127,9 @@ def handle_post_tool_use(ctx: dict) -> None:
 # ============================================================
 
 
-def hook_post_tool_use(ctx: dict) -> None:
-    """PostToolUse 钩子入口。"""
-    handle_post_tool_use(ctx)
+def hook_post_tool_use(event: str = "", context: dict | None = None) -> None:
+    """PostToolUse 钩子入口（DriFox 约定签名 event, context）。"""
+    handle_post_tool_use(context or {})
 
 
 # ============================================================
@@ -148,7 +148,7 @@ def main() -> None:
         sys.exit(1)
 
     if args.event == "PostToolUse":
-        hook_post_tool_use(ctx)
+        hook_post_tool_use(args.event, ctx)
     else:
         sys.stderr.write(f"未知事件: {args.event}\n")
         sys.exit(1)

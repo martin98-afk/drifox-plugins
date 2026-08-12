@@ -19,7 +19,8 @@
     ],
     "components": {
         "commands": true,
-        "skills": true
+        "skills": true,
+        "hooks": true
     },
     "drifox": {
         "min_version": "0.5.0"

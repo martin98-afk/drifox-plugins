@@ -41,8 +41,7 @@ CC_PATTERN = re.compile(
     r"^(feat|fix|docs|style|refactor|perf|test|chore|ci|revert)"
     r"(\([a-z0-9/-]+\))?"  # 可选 scope
     r": "
-    r"[a-z][a-z0-9 -]*"  # description，首字母小写
-    r"{1,72}$"  # 长度限制
+    r"[a-z][a-z0-9 -]{1,72}$"  # description，首字母小写，长度限制
 )
 
 # 合法的 git commit 参数组合（用于从 message 中提取提交消息）
@@ -209,11 +208,17 @@ def handle_pre_tool_use(ctx: dict[str, Any]) -> dict[str, Any]:
 # Hook 适配器
 # ============================================================
 
-def hook_pre_tool_use() -> None:
+def hook_pre_tool_use(event: str = "", context: dict | None = None) -> str:
     """PreToolUse 事件的 Hook 入口。
 
-    从命令行参数解析上下文，调用处理器。
+    DriFox 调用约定：func(event, context) → 返回处理结果字符串。
+    兼容旧 CLI 用法：无 context 参数时从 argparse + stdin 读取。
     """
+    if context is not None:
+        # DriFox 直调模式
+        result = handle_pre_tool_use(context)
+        return result.get("warning", "")
+    # 旧 CLI 模式：解析命令行参数 + stdin
     parser = argparse.ArgumentParser(description=f"{PLUGIN_NAME} - PreToolUse hook")
     parser.add_argument("--event", required=True, help="事件名")
     args = parser.parse_args()

@@ -6,7 +6,10 @@
         "hooks": [
           {
             "type": "python",
-            "function": ".voice-reply_hook:handle_post_assistant_message"
+            "function": ".voice-reply_hook:handle_post_assistant_message",
+            "timeout": 10,
+            "enabled": true,
+            "id": "voice_reply_post_assistant_message"
           }
         ]
       }

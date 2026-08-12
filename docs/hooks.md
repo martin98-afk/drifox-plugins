@@ -123,6 +123,36 @@ if __name__ == "__main__":
     main()
 ```
 
+## 批量验证：validate_hooks.py
+
+仓库提供 `tools/validate_hooks.py`，用 **DriFox 真实 HookManager** 加载并执行
+所有插件的 hooks，验证插件 hooks 能否被 DriFox 实际使用（比静态校验更接近真实）：
+
+```bash
+# 校验所有带 hooks 的插件（需能定位 DriFox 仓库）
+python tools/validate_hooks.py
+
+# 指定 DriFox 仓库路径
+python tools/validate_hooks.py --drifox D:/work/DriFox
+
+# 只校验单个插件
+python tools/validate_hooks.py plugins/ponytail
+```
+
+校验内容：
+
+1. `hooks.json` 是合法 JSON，`hooks` 字典结构正确
+2. 每个 hook 用 `HookManager.register_hooks_from_json()` 注册（相对导入 `.module:func`）
+3. 对每个订阅事件触发最小上下文，确认 hook **真实执行成功**（success=True）
+
+行为约定：
+
+- 注册在临时目录副本上进行，**不会写回**源 `hooks.json`（避免 id 补写污染）
+- 每个插件验证后注销，避免 HookManager 类级共享状态串扰
+- 退出码：0=全部通过，1=存在失败，2=无法定位 DriFox / 缺依赖
+
+> DriFox 仓库定位优先级：`--drifox` 参数 > 环境变量 `DRIFOX_ROOT` > 常见路径。
+
 ## 最佳实践
 
 - **幂等**：钩子可能被多次触发，所有副作用必须可重入

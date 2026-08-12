@@ -66,17 +66,19 @@ def speak(text: str) -> str:
 # ============================================================
 
 
-def handle_post_assistant_message(ctx: dict) -> str:
-    """处理 PostAssistantMessage 事件
+def handle_post_assistant_message(event: str = "", context: dict | None = None) -> str:
+    """处理 PostAssistantMessage 事件（DriFox 约定签名 event, context）
 
     Args:
-        ctx: DriFox 传入的上下文字典，包含：
+        event: 事件名
+        context: DriFox 传入的上下文字典，包含：
             - response / assistant_response: AI 回复文本
             - project_root: 项目根目录
 
     Returns:
         播报状态字符串（可空）
     """
+    ctx = context or {}
     response = ctx.get("response", "") or ctx.get("assistant_response", "")
     if not response:
         return ""
@@ -118,7 +120,7 @@ def main():
         sys.exit(1)
 
     if args.event == "PostAssistantMessage":
-        result = handle_post_assistant_message(ctx)
+        result = handle_post_assistant_message(args.event, ctx)
         if result:
             print(result)
     else:
