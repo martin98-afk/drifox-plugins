@@ -153,6 +153,18 @@ python tools/validate_hooks.py plugins/ponytail
 
 > DriFox 仓库定位优先级：`--drifox` 参数 > 环境变量 `DRIFOX_ROOT` > 常见路径。
 
+### 支持 command 类型（Claude Code 插件兼容）
+
+`hooks.json` 的 `type=command` 也可用：执行任意 shell 命令（含 `node`），
+stdin 传 JSON context，支持 `${CLAUDE_PLUGIN_ROOT}` 变量替换与
+`CLAUDE_PLUGIN_ROOT`/`CLAUDE_PROJECT` 等环境变量注入（专为第三方 Claude
+插件设计）。exit code 2 按 Claude Code 约定视为 BLOCK（阻断工具执行）。
+
+> 社区插件（如 ecc/upstream hooks）的 22 个 node command hook 理论上可直接
+> 接入。本仓库 `plugins/ecc/hooks/` 采用**精选 Python 重写**方案（5 个核心
+> hook：git push 提醒 / 预提交质量检查 / 临时文档警告 / 编辑后质量门 /
+> console.log 检查），不必依赖 node 运行时，见 `plugins/ecc/hooks/ecc_hook.py`。
+
 ## 最佳实践
 
 - **幂等**：钩子可能被多次触发，所有副作用必须可重入

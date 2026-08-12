@@ -1,0 +1,70 @@
+{
+    "description": "ecc 核心 hooks（Python 重写版）— git push 提醒 / 预提交质量检查 / 临时文档警告 / 编辑后质量门 / console.log 检查",
+    "hooks": {
+        "PreToolUse": [
+            {
+                "matcher": "Bash",
+                "hooks": [
+                    {
+                        "type": "python",
+                        "function": ".ecc_hook:hook_git_push_reminder",
+                        "timeout": 5,
+                        "enabled": true,
+                        "id": "ecc_pre_bash_git_push_reminder",
+                        "add_output_to_context": true
+                    },
+                    {
+                        "type": "python",
+                        "function": ".ecc_hook:hook_commit_quality",
+                        "timeout": 15,
+                        "enabled": true,
+                        "id": "ecc_pre_bash_commit_quality",
+                        "add_output_to_context": true
+                    }
+                ]
+            },
+            {
+                "matcher": "Write",
+                "hooks": [
+                    {
+                        "type": "python",
+                        "function": ".ecc_hook:hook_doc_file_warning",
+                        "timeout": 5,
+                        "enabled": true,
+                        "id": "ecc_pre_write_doc_file_warning",
+                        "add_output_to_context": true
+                    }
+                ]
+            }
+        ],
+        "PostToolUse": [
+            {
+                "matcher": "Edit|Write|MultiEdit",
+                "hooks": [
+                    {
+                        "type": "python",
+                        "function": ".ecc_hook:hook_quality_gate",
+                        "timeout": 20,
+                        "enabled": true,
+                        "id": "ecc_post_edit_quality_gate",
+                        "add_output_to_context": true
+                    }
+                ]
+            }
+        ],
+        "Stop": [
+            {
+                "hooks": [
+                    {
+                        "type": "python",
+                        "function": ".ecc_hook:hook_check_console_log",
+                        "timeout": 15,
+                        "enabled": true,
+                        "id": "ecc_stop_check_console_log",
+                        "add_output_to_context": true
+                    }
+                ]
+            }
+        ]
+    }
+}

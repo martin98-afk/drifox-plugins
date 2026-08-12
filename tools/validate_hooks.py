@@ -69,6 +69,33 @@ _EVENT_CONTEXTS: dict[str, dict] = {
     "PostToolUse": {"tool_name": "Read", "message": "test"},
 }
 
+
+def _matcher_context(event_name: str, matcher: str | None) -> dict:
+    """按规则 matcher 构造能命中的最小上下文。
+
+    工具名 matcher（Edit|Write|MultiEdit 等）需注入匹配的 tool_name，
+    否则 matcher 类 hook 永远无法触发验证。
+    """
+    ctx = dict(_EVENT_CONTEXTS.get(event_name, {"message": "test"}))
+    if not matcher or event_name not in ("PreToolUse", "PostToolUse"):
+        return ctx
+    if matcher.startswith("tool:"):
+        ctx["tool_name"] = matcher[5:].split("|")[0]
+        return ctx
+    # Edit|Write|MultiEdit 等：取第一个工具名
+    names = [n.strip() for n in matcher.split("|") if n.strip()]
+    if names:
+        # Bash 有 command，Edit/Write 有 file_path，兼顾各 matcher
+        first = names[0]
+        ctx["tool_name"] = first
+        if first.lower() in ("bash",):
+            ctx["tool_input"] = {"command": "echo test"}
+        elif first.lower() in ("edit", "write", "multiedit"):
+            ctx["tool_input"] = {"file_path": "test.py"}
+        else:
+            ctx["tool_input"] = {}
+    return ctx
+
 _IS_TTY = sys.stdout.isatty()
 
 
@@ -165,17 +192,25 @@ def check_one(plugin_dir: Path, drifox_root: Path) -> HookCheckResult:
         for event_name, rules in raw_hooks.items():
             if event_name not in SUPPORTED_EVENTS:
                 result.warnings.append(f"事件 {event_name} 不在 DriFox SUPPORTED_EVENTS 中")
-            ctx = dict(_EVENT_CONTEXTS.get(event_name, {"message": "test"}))
-            results = hm.trigger_event(event_name, context=ctx, trigger_async=False)
-            for r in results:
-                result.total += 1
-                if r.success:
-                    result.executed += 1
-                else:
-                    result.ok = False
-                    result.errors.append(
-                        f"{event_name} 执行失败: {r.output[:200]}"
-                    )
+            seen_rules: set[int] = set()
+            for rule_idx, rule in enumerate(rules):
+                if rule_idx in seen_rules:
+                    continue
+                seen_rules.add(rule_idx)
+                # 每个规则独立触发：用其 matcher 构造命中上下文
+                matcher = rule.get("matcher")
+                ctx = _matcher_context(event_name, matcher)
+                results = hm.trigger_event(event_name, context=ctx, trigger_async=False)
+                matched = [r for r in results if r.success or r.output]
+                for r in matched:
+                    result.total += 1
+                    if r.success:
+                        result.executed += 1
+                    else:
+                        result.ok = False
+                        result.errors.append(
+                            f"{event_name} 执行失败: {r.output[:200]}"
+                        )
 
         # 4. 注销本插件 hooks，避免类级共享状态串到下一插件
         hm.unregister_skill_hooks(name)
