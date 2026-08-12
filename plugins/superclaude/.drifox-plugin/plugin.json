@@ -1,0 +1,37 @@
+{
+    "name": "superclaude",
+    "description": "AI 增强开发框架 — 30 个命令、20 个智能体、7 种模式、置信度检查、并行执行与反思式学习（SuperClaude_Framework 适配 DriFox）。",
+    "version": "4.3.0",
+    "author": {
+        "name": "SuperClaude Org",
+        "url": "https://github.com/SuperClaude-Org"
+    },
+    "homepage": "https://github.com/SuperClaude-Org/SuperClaude_Framework",
+    "repository": "https://github.com/SuperClaude-Org/SuperClaude_Framework",
+    "license": "MIT",
+    "type": "user",
+    "keywords": [
+        "development",
+        "pm-agent",
+        "confidence-check",
+        "parallel-execution",
+        "reflexion",
+        "pdca",
+        "code-quality",
+        "testing",
+        "research",
+        "architecture",
+        "agents",
+        "skills",
+        "commands"
+    ],
+    "components": {
+        "commands": true,
+        "agents": true,
+        "skills": true,
+        "mcp": true
+    },
+    "drifox": {
+        "min_version": "0.5.0"
+    }
+}

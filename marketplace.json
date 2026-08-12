@@ -1375,6 +1375,41 @@
             }
         },
         {
+            "name": "ponytail",
+            "description": "Lazy senior dev 模式 — YAGNI/stdlib/原生优先的最简实现哲学，6 个命令 + 6 个技能（适配 DriFox 提示词层）。",
+            "version": "4.8.4",
+            "author": "Dietrich Gebert",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/ponytail",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true,
+                "skills": true
+            },
+            "keywords": [
+                "lazy",
+                "yagni",
+                "minimal",
+                "simplest-solution",
+                "refactor",
+                "over-engineering",
+                "code-review",
+                "skills",
+                "commands"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/DietrichGebert/ponytail"
+        },
+        {
             "name": "python-pro",
             "description": "Python 开发增强 — 注入 PEP 8 / 类型标注 / 异步最佳实践，PostToolUse 自动 lint 检查，让 Python 代码质量持续达标。",
             "version": "1.0.0",
@@ -1618,6 +1653,49 @@
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
             }
+        },
+        {
+            "name": "superclaude",
+            "description": "AI 增强开发框架 — 30 个命令、20 个智能体、7 种模式、置信度检查、并行执行与反思式学习（SuperClaude_Framework 适配 DriFox）。",
+            "version": "4.3.0",
+            "author": "SuperClaude Org",
+            "license": "MIT",
+            "categories": [
+                "mcp",
+                "agent",
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/superclaude",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true,
+                "agents": true,
+                "skills": true,
+                "mcp": true
+            },
+            "keywords": [
+                "development",
+                "pm-agent",
+                "confidence-check",
+                "parallel-execution",
+                "reflexion",
+                "pdca",
+                "code-quality",
+                "testing",
+                "research",
+                "architecture",
+                "agents",
+                "skills",
+                "commands"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/SuperClaude-Org/SuperClaude_Framework"
         },
         {
             "name": "superpowers",

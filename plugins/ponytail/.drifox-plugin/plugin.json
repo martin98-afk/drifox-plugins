@@ -1,0 +1,31 @@
+{
+    "name": "ponytail",
+    "description": "Lazy senior dev 模式 — YAGNI/stdlib/原生优先的最简实现哲学，6 个命令 + 6 个技能（适配 DriFox 提示词层）。",
+    "version": "4.8.4",
+    "author": {
+        "name": "Dietrich Gebert",
+        "url": "https://github.com/DietrichGebert"
+    },
+    "homepage": "https://github.com/DietrichGebert/ponytail",
+    "repository": "https://github.com/DietrichGebert/ponytail",
+    "license": "MIT",
+    "type": "user",
+    "keywords": [
+        "lazy",
+        "yagni",
+        "minimal",
+        "simplest-solution",
+        "refactor",
+        "over-engineering",
+        "code-review",
+        "skills",
+        "commands"
+    ],
+    "components": {
+        "commands": true,
+        "skills": true
+    },
+    "drifox": {
+        "min_version": "0.5.0"
+    }
+}
