@@ -753,7 +753,7 @@
         {
             "name": "git-workflow",
             "description": "Git 工作流增强 — 分支命名检查、提交规范验证、PR 模板生成，让团队 Git 实践自动化。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -1232,7 +1232,7 @@
         {
             "name": "ponytail",
             "description": "Lazy senior dev 模式 — YAGNI/stdlib/原生优先的最简实现哲学，6 个命令 + 6 个技能（适配 DriFox 提示词层）。",
-            "version": "4.8.4",
+            "version": "4.8.5",
             "author": "Dietrich Gebert",
             "license": "MIT",
             "categories": [
@@ -1246,7 +1246,8 @@
             },
             "components": {
                 "commands": true,
-                "skills": true
+                "skills": true,
+                "hooks": true
             },
             "downloads": 1,
             "keywords": [
@@ -1264,7 +1265,7 @@
         {
             "name": "python-pro",
             "description": "Python 开发增强 — 注入 PEP 8 / 类型标注 / 异步最佳实践，PostToolUse 自动 lint 检查，让 Python 代码质量持续达标。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -1788,7 +1789,7 @@
         {
             "name": "voice-reply",
             "description": "将 AI 回复转为语音播放（使用 pyttsx3 Windows SAPI5 离线 TTS）",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox",
             "license": "GPL-3.0-or-later",
             "categories": [
