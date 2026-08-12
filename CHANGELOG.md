@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.5.0 (2026-08-12)
+
+### ✨ 新增 calendar 插件（DriFox 原生）
+
+- **`calendar`** — 欢迎卡片日历 tab：Python 预渲染当月网格（周一起始 + 前后月补位 + 今天高亮），上/下月切换走 onclick 内联 JS（`innerHTML` 注入不执行 `<script>` 的约束），明暗配色 `prefers-color-scheme` 自适应
+- **机制**：`marketplace.json` 重新生成（59→60 个插件），`calendar` 通过 `validate_plugins.py` 校验（零 error/warning）
+
 ## 2.4.0 (2026-08-12)
 
 ### ✨ 新增 ui-motion-skills 插件（社区生态）

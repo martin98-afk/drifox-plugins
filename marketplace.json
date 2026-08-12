@@ -193,6 +193,34 @@
             }
         },
         {
+            "name": "calendar",
+            "description": "日历插件：在欢迎卡片注入日历 tab，支持上/下月切换与今天高亮",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/calendar",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true
+            },
+            "keywords": [
+                "calendar",
+                "date",
+                "welcome"
+            ],
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "canvas-design",
             "description": "设计感海报生成 — 用设计哲学将需求变成 PNG/PDF 视觉作品（构图/字体/色彩体系）。",
             "version": "1.0.0",

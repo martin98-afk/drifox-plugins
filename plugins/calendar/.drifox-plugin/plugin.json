@@ -1,0 +1,22 @@
+{
+    "name": "calendar",
+    "description": "日历插件：在欢迎卡片注入日历 tab，支持上/下月切换与今天高亮",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "1.0.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "license": "MIT",
+    "type": "user",
+    "keywords": [
+        "calendar",
+        "date",
+        "welcome"
+    ],
+    "components": {
+        "ui": true
+    }
+}

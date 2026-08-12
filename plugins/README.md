@@ -41,6 +41,12 @@
 | [`playground`](playground/) | 交互式 HTML 练习场 — 控件 + 实时预览 + 提示词输出 | skills | 1.0.0 | Anthropic 官方 |
 | [`excalidraw-diagram`](excalidraw-diagram/) | 手绘风格图表 — 流程图/时序图/ER 图/思维导图 + 模板库 | skills | 1.0.0 | github/awesome-copilot |
 
+### UI 组件插件
+
+| 插件 | 描述 | 组件 | 版本 | 来源 |
+|------|------|------|------|------|
+| [`calendar`](calendar/) | 日历 tab — 欢迎卡片内嵌月视图，上/下月切换 + 今天高亮 | ui | 1.0.0 | DriFox 原生 |
+
 ### 语音与多媒体
 
 | 插件 | 描述 | 组件 | 版本 | 来源 |
@@ -77,6 +83,7 @@
 | excalidraw-diagram | — | — | ✅ | — | — | — | — | — |
 | voice-clone | ✅ | — | ✅ | — | — | — | — | — |
 | minimax-h3 | ✅ | — | ✅ | — | — | — | — | — |
+| calendar | — | — | — | — | — | — | — | ✅ |
 | ui-motion-skills | — | — | ✅ | — | — | — | — | — |
 
 > **ui 组件说明**：ui 插件通过 `ui/__init__.py` 中的 `register_ui(registry)` 函数注册可视化组件（浮动卡片 / 内容块渲染器 / 消息元素工厂），由 DriFox 启动时 `UIPluginRegistry.load_plugin` 加载。详见 [docs/architecture.md](../docs/architecture.md#ui-组件)。
