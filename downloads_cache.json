@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1786551890.6559994,
+  "fetched_at": 1786555556.5511925,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -13,6 +13,7 @@
     "claude-api": 0,
     "code-reviewer": 1,
     "code-simplifier": 1,
+    "context-stats": 1,
     "context7": 2,
     "doc-coauthoring": 1,
     "ecc": 6,
