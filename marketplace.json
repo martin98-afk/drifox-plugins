@@ -210,7 +210,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "calendar",
                 "date",
@@ -239,6 +239,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "design",
                 "canvas",
@@ -308,6 +309,7 @@
                 "agents": true,
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "code-review",
                 "pr",
@@ -341,6 +343,7 @@
             "components": {
                 "agents": true
             },
+            "downloads": 1,
             "keywords": [
                 "refactor",
                 "simplify",
@@ -412,6 +415,7 @@
                 "commands": true,
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "writing",
                 "documentation",
@@ -485,6 +489,7 @@
                 "hooks": true,
                 "skills": true
             },
+            "downloads": 1,
             "drifox": {
                 "min_version": "0.5.0"
             },
@@ -521,6 +526,7 @@
                 "mcp": true,
                 "lsp": true
             },
+            "downloads": 1,
             "keywords": [
                 "example",
                 "template",
@@ -552,6 +558,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "diagram",
                 "flowchart",
@@ -586,6 +593,7 @@
                 "commands": true,
                 "agents": true
             },
+            "downloads": 1,
             "keywords": [
                 "development",
                 "architecture",
@@ -619,6 +627,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "design",
                 "ui",
@@ -653,6 +662,7 @@
                 "commands": true,
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "frontend",
                 "a11y",
@@ -927,6 +937,7 @@
                 "commands": true,
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "communication",
                 "collaboration",
@@ -1060,6 +1071,7 @@
                 "commands": true,
                 "ui": true
             },
+            "downloads": 1,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1176,6 +1188,7 @@
                 "commands": true,
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "docx",
                 "pdf",
@@ -1311,6 +1324,7 @@
                 "skills": true,
                 "hooks": true
             },
+            "downloads": 1,
             "keywords": [
                 "python",
                 "typing",
@@ -1343,6 +1357,7 @@
                 "commands": true,
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "react",
                 "performance",
@@ -1375,6 +1390,7 @@
             "components": {
                 "hooks": true
             },
+            "downloads": 1,
             "keywords": [
                 "security",
                 "vulnerability",
@@ -1765,7 +1781,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "animation",
                 "motion",
