@@ -19,7 +19,7 @@
     browser_navigate   当前标签导航到 URL
     browser_read       读取当前页正文（text）或 HTML（html）
     browser_execute_js 执行任意 JS（DOM 操作：点击/输入/滚动/查询）
-    browser_screenshot 截取当前页（base64 PNG，AI 视觉模型可读）
+    browser_screenshot 截取当前页（保存本地 PNG 并返回文件路径）
     browser_back / browser_forward / browser_reload
     browser_tabs / browser_switch_tab / browser_new_tab / browser_close_tab
 """
@@ -301,12 +301,12 @@ def browser_scroll(direction: str = "down", amount: int = 600) -> str:
 
 @mcp.tool()
 def browser_screenshot() -> str:
-    """截取插件浏览器当前页面截图（返回 base64 PNG，配合视觉模型理解页面）"""
+    """截取插件浏览器当前页面截图（保存本地 PNG 并返回文件路径）"""
     try:
         data = _api("screenshot")
         if not data.get("ok"):
             return f"截图失败: {data.get('error', 'unknown')}"
-        return data["image"]
+        return data["path"]
     except Exception as e:
         return f"调用失败: {e}"
 

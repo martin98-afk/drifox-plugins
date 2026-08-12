@@ -53,6 +53,7 @@
 ## 数据目录
 
 - 数据库：`~/.drifox/plugins/browser/data/browser.db`（收藏/历史/下载）
+- 截图：`~/.drifox/plugins/browser/data/screenshots/`（MCP 截图工具保存）
 - Profile：`~/.drifox/plugins/browser/data/profile/`（Cookie/localStorage）
 - Cache：`~/.drifox/plugins/browser/data/cache/`
 - 拦截配置：`~/.drifox/plugins/browser/data/browser-redirect.json`（enabled / intercept_system / intercept_shell / intercept_html）

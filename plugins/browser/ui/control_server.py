@@ -15,12 +15,11 @@
 - navigate         导航到 URL（浏览器未开时自动打开）
 - read             读取当前页文本/HTML
 - execute_js       执行任意 JS（点击/输入/滚动/读取状态）
-- screenshot       截图当前页 → base64 PNG
+- screenshot       截图当前页 → 保存本地 PNG 并返回路径
 - back/forward/reload  导航控制
 - tabs / switch_tab / new_tab / close_tab  标签管理
 """
 
-import base64
 import json
 import os
 import secrets
@@ -182,14 +181,14 @@ def _op_screenshot() -> dict:
     pixmap = view.grab()
     if pixmap.isNull():
         return {"ok": False, "error": "截图失败"}
-    from PyQt5.QtCore import QBuffer, QByteArray, QIODevice
+    from PyQt5.QtCore import QDateTime
 
-    ba = QByteArray()
-    buf = QBuffer(ba)
-    buf.open(QIODevice.WriteOnly)
-    pixmap.save(buf, "PNG")
-    buf.close()
-    return {"ok": True, "image": base64.b64encode(bytes(ba.data())).decode("ascii")}
+    out_dir = Path.home() / ".drifox" / "plugins" / "browser" / "data" / "screenshots"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / f"screenshot_{QDateTime.currentMSecsSinceEpoch()}.png"
+    if not pixmap.save(str(path), "PNG"):
+        return {"ok": False, "error": "截图保存失败"}
+    return {"ok": True, "path": str(path)}
 
 
 def _op_back() -> dict:
