@@ -1,11 +1,11 @@
 {
     "name": "calendar",
-    "description": "日历插件：在欢迎卡片注入日历 tab，支持上/下月切换与今天高亮",
+    "description": "日历插件：在欢迎卡片注入日历 tab，支持上/下月切换、今天高亮与圆形时钟",
     "icon": {
         "light": "icon.svg",
         "dark": "icon_dark.svg"
     },
-    "version": "1.0.0",
+    "version": "1.1.0",
     "author": {
         "name": "DriFox Contributors"
     },
