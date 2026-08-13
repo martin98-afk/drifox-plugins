@@ -210,7 +210,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 8,
+            "downloads": 9,
             "keywords": [
                 "calendar",
                 "date",
@@ -379,7 +379,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 7,
+            "downloads": 8,
             "keywords": [
                 "welcome",
                 "stats",
@@ -795,7 +795,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 14,
+            "downloads": 15,
             "keywords": [
                 "git",
                 "source-control",
@@ -1401,7 +1401,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "dashboard",
                 "stats",
@@ -1504,7 +1504,7 @@
             "components": {
                 "hooks": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "security",
                 "vulnerability",
