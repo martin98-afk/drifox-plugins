@@ -12,6 +12,7 @@
 """
 
 import logging
+import os
 import re
 import subprocess
 from dataclasses import dataclass
@@ -242,6 +243,27 @@ class GitRepo:
         """删除未跟踪文件"""
         return self._run("clean", "-f", "--", *paths)
 
+    def discard_unstaged_all(self) -> GitResult:
+        """放弃所有未暂存修改：已跟踪文件工作区修改恢复 + 未跟踪文件删除。
+
+        - 已暂存内容（index）不受影响
+        - 已跟踪文件：git checkout -- . 恢复工作区（仅当存在已跟踪未暂存修改时执行）
+        - 未跟踪文件/目录：git checkout 不处理，需 git clean -fd 删除
+        """
+        items = self.status_items()
+        unstaged = [i for i in items if not i["staged"]]
+        untracked = [i["path"] for i in unstaged if i["status"] == "??"]
+        tracked_unstaged = [i for i in unstaged if i["status"] != "??"]
+        if tracked_unstaged:
+            res = self.checkout_discard(["."])
+            if not res.ok:
+                return res
+        if untracked:
+            # 全量删除未跟踪文件与目录（不含 .gitignore 忽略项），
+            # 与 status -u 报告的 ?? 集合一致，-d 保证空目录也被清理
+            return self._run("clean", "-fd")
+        return GitResult(ok=True)
+
     # ── 提交 ──
 
     def commit(self, message: str = "", amend: bool = False) -> GitResult:
@@ -375,6 +397,18 @@ class GitRepo:
 
     def diff(self, path: str, staged: bool = False) -> str:
         return _get_diff(self.cwd, path, staged)
+
+    def file_content(self, path: str) -> str:
+        """读取工作区文件内容（未跟踪文件预览用）。
+
+        失败返回空字符串（如文件不存在 / 二进制乱码由 errors=replace 兜底）。
+        """
+        try:
+            full = os.path.join(self.cwd, path)
+            with open(full, "r", encoding="utf-8", errors="replace") as f:
+                return f.read()
+        except OSError:
+            return ""
 
     def show_commit(self, hash_: str) -> GitResult:
         """查看单个 commit 的完整信息与 diff（git show --format=fuller）"""

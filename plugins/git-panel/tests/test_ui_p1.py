@@ -113,6 +113,35 @@ class TestWordLevelDiff(P1UITestBase):
         dlg.deleteLater()
         _APP.processEvents()
 
+    def test_untracked_file_preview(self):
+        """未跟踪文件（??）双击预览：显示全新增 diff，而非"(无差异)" """
+        self._write("brand_new.txt", "alpha\nbeta\n")
+        dlg = cards._DiffDialog(self.repo, "brand_new.txt", False, "??")
+        dlg.show()
+        ok = wait_until(lambda: "加载中" not in dlg._diff_area.toPlainText())
+        self.assertTrue(ok, "未跟踪文件 diff 异步加载超时")
+        html = dlg._diff_area.toHtml()
+        self.assertIn("brand_new.txt", html)
+        self.assertIn("alpha", html)
+        self.assertIn("beta", html)
+        self.assertNotIn("(无差异)", dlg._diff_area.toPlainText())
+        # 标题状态显示"未跟踪"
+        dlg.close()
+        dlg.deleteLater()
+        _APP.processEvents()
+
+    def test_untracked_empty_file_preview(self):
+        """未跟踪空文件预览：显示"(空文件)"而非"(无差异)" """
+        self._write("empty_new.txt", "")
+        dlg = cards._DiffDialog(self.repo, "empty_new.txt", False, "??")
+        dlg.show()
+        ok = wait_until(lambda: "加载中" not in dlg._diff_area.toPlainText())
+        self.assertTrue(ok, "空文件 diff 异步加载超时")
+        self.assertIn("空文件", dlg._diff_area.toPlainText())
+        dlg.close()
+        dlg.deleteLater()
+        _APP.processEvents()
+
 
 class TestCommitDetailDialog(P1UITestBase):
     def test_commit_detail(self):

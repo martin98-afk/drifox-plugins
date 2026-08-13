@@ -247,6 +247,46 @@ class TestCommitDetailParse(unittest.TestCase):
 class TestReviewFixes(TempRepoMixin, unittest.TestCase):
     """P0 code review 反馈修复的针对性测试"""
 
+    def test_discard_unstaged_all(self):
+        """放弃所有未暂存修改：已跟踪恢复 + 未跟踪删除，已暂存保留"""
+        self._write("a.txt", "v1\n")
+        self.g.add(["."])
+        self.g.commit("init")
+
+        # 已跟踪修改（未暂存）+ 未跟踪文件 + 已暂存内容
+        self._write("a.txt", "v2\n")
+        self._write("new.txt", "new content\n")
+        self._write("staged.txt", "s1\n")
+        self.g.add(["staged.txt"])
+        self._write("staged.txt", "s2\n")  # staged + 工作区修改并存
+
+        res = self.g.discard_unstaged_all()
+        self.assertTrue(res.ok, res.error_message)
+
+        # 已跟踪文件恢复原状
+        with open(os.path.join(self.repo, "a.txt"), encoding="utf-8") as f:
+            self.assertEqual(f.read(), "v1\n")
+        # 未跟踪文件被删除
+        self.assertFalse(os.path.exists(os.path.join(self.repo, "new.txt")))
+        # 已暂存内容保留（index 中仍是 s1，工作区 s2 修改被丢弃）
+        with open(os.path.join(self.repo, "staged.txt"), encoding="utf-8") as f:
+            self.assertEqual(f.read(), "s1\n")
+        st = dict(self.g.status())
+        self.assertEqual(st.get("staged.txt"), "A ")
+
+    def test_discard_unstaged_all_untracked_dir(self):
+        """未跟踪目录整体被删除（clean -fd）"""
+        self._write("dir/sub/file.txt", "x\n")
+        res = self.g.discard_unstaged_all()
+        self.assertTrue(res.ok, res.error_message)
+        self.assertFalse(os.path.exists(os.path.join(self.repo, "dir")))
+
+    def test_file_content(self):
+        self._write("new.txt", "line1\nline2\n")
+        self.assertEqual(self.g.file_content("new.txt"), "line1\nline2\n")
+        # 不存在文件返回空
+        self.assertEqual(self.g.file_content("missing.txt"), "")
+
     def test_error_message_fallback(self):
         """Q4：stderr 为空时返回固定字符串，不回退 stdout"""
         res = cards.GitResult(ok=False, stdout="some stdout", stderr="")

@@ -20,6 +20,7 @@ import re
 import subprocess
 import sys
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, List, Optional, Tuple
 
 from PyQt5.QtCore import QObject, QPoint, QRectF, QSize, QThread, Qt, QTimer, pyqtSignal
@@ -207,7 +208,7 @@ class _FileRowWidget(QWidget):
     """单个文件变更行"""
 
     staged_changed = pyqtSignal()  # 暂存/取消暂存后触发刷新
-    diff_requested = pyqtSignal(str, bool)  # (path, staged)
+    diff_requested = pyqtSignal(str, bool, str)  # (path, staged, status)
 
     def __init__(self, file_info: dict, parent=None):
         super().__init__(parent)
@@ -250,7 +251,7 @@ class _FileRowWidget(QWidget):
         path_lb.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         path_lb.setCursor(Qt.PointingHandCursor)
         path_lb.mousePressEvent = lambda e: self.diff_requested.emit(
-            self._info["path"], self._info["staged"]
+            self._info["path"], self._info["staged"], self._info["status"]
         )
         ly.addWidget(path_lb, 1)
 
@@ -610,11 +611,13 @@ def _dialog_parent(parent) -> QWidget:
 class _DiffDialog(MaskDialogBase):
     """Diff 预览对话框（宿主 MaskDialogBase 风格）"""
 
-    def __init__(self, repo_path: str, file_path: str, staged: bool, parent=None):
+    def __init__(self, repo_path: str, file_path: str, staged: bool,
+                 status: str = "", parent=None):
         super().__init__(_dialog_parent(parent))
         self._repo_path = repo_path
         self._file_path = file_path
         self._staged = staged
+        self._status = status  # git 状态码（"??" 未跟踪等），决定 diff 获取方式
         self.setShadowEffect(60, (0, 10), QColor(0, 0, 0, 100))
         self.setClosableOnMaskClicked(True)
         self.setDraggable(True)
@@ -642,10 +645,12 @@ class _DiffDialog(MaskDialogBase):
         hl.addWidget(title)
         hl.addStretch(1)
 
-        status_text = "已暂存" if self._staged else "工作区"
-        status_lb = QLabel(f"[{status_text}]", hdr)
-        status_lb.setStyleSheet(f"color: {_text_color(secondary=True)}; background: transparent;")
-        hl.addWidget(status_lb)
+        # 右上角关闭按钮（叉号）
+        close_btn = TransparentToolButton(FluentIcon.CLOSE, hdr)
+        close_btn.setFixedSize(28, 28)
+        close_btn.setToolTip("关闭")
+        close_btn.clicked.connect(self.accept)
+        hl.addWidget(close_btn)
 
         # Diff 内容
         self._diff_area = QTextEdit(self.widget)
@@ -657,15 +662,6 @@ class _DiffDialog(MaskDialogBase):
         )
         ly.addWidget(hdr)
         ly.addWidget(self._diff_area, 1)
-
-        # 关闭按钮
-        btn_row = QHBoxLayout()
-        btn_row.addStretch(1)
-        close_btn = QPushButton("关闭", self.widget)
-        close_btn.setFixedWidth(80)
-        close_btn.clicked.connect(self.accept)
-        btn_row.addWidget(close_btn)
-        ly.addLayout(btn_row)
 
         self.widget.setFixedSize(760, 520)
         self._center_widget()
@@ -700,11 +696,22 @@ class _DiffDialog(MaskDialogBase):
         t.start()
 
     def _fetch_diff(self) -> str:
-        return GitRepo(self._repo_path).diff(self._file_path, self._staged)
+        g = GitRepo(self._repo_path)
+        # 未跟踪文件（??）：git diff 不显示未跟踪内容，直接读文件构造全新增 diff
+        if self._status == "??":
+            content = g.file_content(self._file_path)
+            if not content:
+                return ""
+            body = content.rstrip("\n").splitlines()
+            lines = ["--- /dev/null", f"+++ b/{self._file_path}"]
+            lines.append(f"@@ -0,0 +1,{len(body)} @@")
+            lines.extend(f"+{ln}" for ln in body)
+            return "\n".join(lines)
+        return g.diff(self._file_path, self._staged)
 
     def _on_diff_loaded(self, stdout: str):
         if not stdout:
-            self._diff_area.setPlainText("(无差异)")
+            self._diff_area.setPlainText("(空文件)" if self._status == "??" else "(无差异)")
             return
         try:
             # 词级高亮渲染（difflib.SequenceMatcher）
@@ -2070,7 +2077,12 @@ class GitPanelCard(QWidget):
         t.start()
 
     def _fetch_all_data(self) -> dict:
-        """同步函数：后台线程执行，收集所有 Git 信息"""
+        """同步函数：后台线程执行，收集所有 Git 信息
+
+        6 个查询（分支/ahead/状态/stash/分支列表/日志）彼此独立，
+        用线程池并行执行（每个查询独立 git 子进程），
+        总耗时从「串行求和」降到「最慢单个查询」。
+        """
         repo = self._repo_path
         if not repo:
             return {"error": "未获取到项目路径"}
@@ -2078,12 +2090,19 @@ class GitPanelCard(QWidget):
         if not g.is_git_repo():
             return {"error": "当前项目不是 Git 仓库"}
 
-        branch = g.branch()
-        ahead, behind = g.ahead_behind()
-        status = g.status_items()
-        stashes = g.stash_list()
-        branches = g.branch_list()
-        log = g.log()
+        with ThreadPoolExecutor(max_workers=6) as ex:
+            f_branch = ex.submit(g.branch)
+            f_ab = ex.submit(g.ahead_behind)
+            f_status = ex.submit(g.status_items)
+            f_stashes = ex.submit(g.stash_list)
+            f_branches = ex.submit(g.branch_list)
+            f_log = ex.submit(g.log)
+            branch = f_branch.result()
+            ahead, behind = f_ab.result()
+            status = f_status.result()
+            stashes = f_stashes.result()
+            branches = f_branches.result()
+            log = f_log.result()
 
         return {
             "branch": branch,
@@ -2325,6 +2344,20 @@ class GitPanelCard(QWidget):
             stage_all_btn.clicked.connect(self._on_stage_all)
             bl.addWidget(stage_all_btn)
 
+            # 放弃所有未暂存修改（常驻：有未暂存修改即显示）
+            discard_unstaged_btn = QPushButton("放弃未暂存修改", bar)
+            discard_unstaged_btn.setFixedHeight(24)
+            discard_unstaged_btn.setToolTip(
+                "放弃所有未暂存修改：已跟踪文件恢复原状，未跟踪文件将被删除（已暂存内容不受影响）"
+            )
+            discard_unstaged_btn.setStyleSheet(
+                "QPushButton { background: rgba(241,76,76,0.08); border: none; border-radius: 4px; "
+                f"color: {self._cached_tcs}; font-size: 11px; padding: 0 10px; }}"
+                "QPushButton:hover { background: rgba(241,76,76,0.2); }"
+            )
+            discard_unstaged_btn.clicked.connect(self._on_discard_unstaged_all)
+            bl.addWidget(discard_unstaged_btn)
+
         if staged:
             unstage_all_btn = QPushButton("全部取消暂存", bar)
             unstage_all_btn.setFixedHeight(24)
@@ -2335,16 +2368,6 @@ class GitPanelCard(QWidget):
             )
             unstage_all_btn.clicked.connect(self._on_unstage_all)
             bl.addWidget(unstage_all_btn)
-
-            discard_all_btn = QPushButton("放弃所有修改", bar)
-            discard_all_btn.setFixedHeight(24)
-            discard_all_btn.setStyleSheet(
-                "QPushButton { background: rgba(241,76,76,0.08); border: none; border-radius: 4px; "
-                f"color: {self._cached_tcs}; font-size: 11px; padding: 0 10px; }}"
-                "QPushButton:hover { background: rgba(241,76,76,0.2); }"
-            )
-            discard_all_btn.clicked.connect(self._on_discard_all)
-            bl.addWidget(discard_all_btn)
 
         bl.addStretch(1)
         return bar
@@ -2465,19 +2488,25 @@ class GitPanelCard(QWidget):
             lambda r: self._on_op_done("已取消暂存所有修改", r),
         )
 
-    def _on_discard_all(self):
-        """放弃所有修改"""
-        if not _confirm_ask("确认放弃所有修改", "确定要放弃所有工作区修改吗？\n此操作不可恢复！", self):
+    def _on_discard_unstaged_all(self):
+        """放弃所有未暂存修改（已跟踪恢复 + 未跟踪删除，已暂存不受影响）"""
+        if not _confirm_ask(
+            "确认放弃未暂存修改",
+            "确定要放弃所有未暂存修改吗？\n"
+            "已跟踪文件将恢复原状，未跟踪文件将被删除。\n"
+            "已暂存内容不受影响。此操作不可恢复！",
+            self,
+        ):
             return
         self._set_status_text("放弃中…")
         self._run_git_async(
-            lambda: GitRepo(self._repo_path).checkout_discard(["."]),
-            lambda r: self._on_op_done("已放弃所有修改", r),
+            lambda: GitRepo(self._repo_path).discard_unstaged_all(),
+            lambda r: self._on_op_done("已放弃所有未暂存修改", r),
         )
 
-    def _on_diff_request(self, path: str, staged: bool):
+    def _on_diff_request(self, path: str, staged: bool, status: str):
         """打开 Diff 预览对话框"""
-        dialog = _DiffDialog(self._repo_path, path, staged, self)
+        dialog = _DiffDialog(self._repo_path, path, staged, status, self)
         dialog.exec_()
 
     def _on_commit_detail(self, hash_: str):
@@ -2594,6 +2623,9 @@ class GitPanelCard(QWidget):
     def _run_git_async(self, fn, on_done):
         """在后台线程执行一个 git 操作"""
         if self._is_loading:
+            # 刷新进行中不静默丢弃：提示用户稍候
+            self._set_status_text("正在刷新，请稍候…")
+            QTimer.singleShot(2000, lambda: self._reset_status() if not self._is_loading else None)
             return
         self._cleanup_worker()
 
