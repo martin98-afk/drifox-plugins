@@ -324,14 +324,14 @@ def build_options(data: dict, is_dark: bool) -> list:
                        "textStyle": {"fontSize": 10, "color": p["text"]}})
     if data.get("languages"):
         series.append(_languages_option(data["languages"], p))
-        titles.append({"text": "语言分布", "left": 8, "top": "54%",
+        titles.append({"text": "语言分布", "left": 8, "top": "48%",
                        "textStyle": {"fontSize": 10, "color": p["text"]}})
     if data.get("file_types"):
         s, x, y = _file_types_option(data["file_types"], p)
         series.append(s)
         x_axes.append(x)
         y_axes.append(y)
-        titles.append({"text": "文件类型", "left": "54%", "top": "54%",
+        titles.append({"text": "文件类型", "left": "54%", "top": "48%",
                        "textStyle": {"fontSize": 10, "color": p["text"]}})
 
     if not series:
