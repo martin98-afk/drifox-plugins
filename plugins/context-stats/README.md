@@ -10,7 +10,7 @@
 | 🔤 **上下文用量趋势** | 近 14 天估算 token 用量面积图（echarts） |
 | 📈 **消息量趋势** | 近 14 天每日消息量柱状图（echarts） |
 | 🌓 **明暗适配** | 图表配色跟随 Qt 主题（读 `ctx["is_dark"]`） |
-| ⚡ **模块级缓存** | 数据按 db mtime + 日期缓存，切换 tab 不重复查询 |
+| ⚡ **模块级缓存** | 数据按 db mtime + 日期 + 60s TTL 缓存，切换 tab 不重复查询 |
 
 ## 依赖
 
@@ -85,7 +85,8 @@ def register_ui(registry: UIPluginRegistry) -> None:
 
 - 不导入 `app.core` 或 `app.widgets` 内部模块
 - SQLite 通过 `sqlite3` stdlib 直读（只读连接）
-- `render_func` 主线程同步调用 → 查询轻量聚合 + 模块级缓存（db mtime + 日期作 key）
+- `render_func` 主线程同步调用 → 查询轻量聚合 + 模块级缓存（db mtime + 日期作 key，60s TTL 防快速切 tab 反复查询）
+- 性能：聚合查询合并为单次全表扫描（轻量列）；回退估算在 SQL 侧 `substr` 截断 + `LIMIT` 限制，避免超大 `messages` 字段全量传输；token 估算用 `str.translate` 删除表（C 层）替代逐字符循环
 - 热重载：`register_ui` 清理 `ui_plugin_context_stats.` sys.modules 前缀
 
 ## 参考

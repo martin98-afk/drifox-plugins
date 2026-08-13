@@ -236,10 +236,13 @@ def _build_html(ctx: Optional[dict]) -> str:
     )
 
     # 单个合并 echarts 实例（上下双面板）
+    # separators 压缩 JSON 空白 → 减小 base64 体积与渲染管线处理量
     parts.append(
         "```echarts\n"
         + json.dumps(
-            _combined_option(daily_tokens, daily_messages, p), ensure_ascii=False
+            _combined_option(daily_tokens, daily_messages, p),
+            ensure_ascii=False,
+            separators=(",", ":"),
         )
         + "\n```\n"
     )
