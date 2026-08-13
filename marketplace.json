@@ -1045,7 +1045,7 @@
                 "hooks": true,
                 "skills": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "prompt",
                 "optimizer",
@@ -1435,7 +1435,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 7,
+            "downloads": 8,
             "keywords": [
                 "dashboard",
                 "stats",

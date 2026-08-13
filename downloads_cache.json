@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1786630546.9194934,
+  "fetched_at": 1786634910.8571455,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -33,8 +33,9 @@
     "hookify": 0,
     "internal-comms": 1,
     "ip-switcher": 2,
-    "kim-service": 3,
+    "kim-service": 4,
     "knowledge-base-skills": 2,
+    "laputa-fog": 0,
     "mcp-builder": 1,
     "memory-match": 1,
     "minesweeper": 4,
@@ -44,7 +45,7 @@
     "omml-docx": 3,
     "playground": 1,
     "ponytail": 5,
-    "project-dashboard": 7,
+    "project-dashboard": 8,
     "python-pro": 1,
     "react-pro": 1,
     "security-guidance": 2,
