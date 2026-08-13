@@ -7,11 +7,16 @@ render_func 主线程同步调用，git/文件采集耗时（数百 ms）必须�
 - 缓存 key = (git_root, HEAD, 当天日期)：HEAD 变化自动失效重采
 """
 
+import time
 from datetime import datetime
 from typing import Optional
 
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 from loguru import logger
+
+# HEAD 查询 TTL（秒）：build_cache_key 主线程同步跑 git，短 TTL 缓存避免每次渲染都起子进程
+_HEAD_TTL = 5.0
+_head_cache: dict = {}  # project_root -> (ts, head)
 
 # 延迟导入（避免模块加载时依赖 sys.path 已含 ui 目录）
 _collector = None
@@ -127,11 +132,20 @@ def get_collector() -> _Collector:
 
 
 def build_cache_key(project_root: str, data: Optional[dict] = None) -> tuple:
-    """缓存 key：git 根 + HEAD + 日期（HEAD 变化自动重采）"""
-    try:
-        from dashboard import _run_git
+    """缓存 key：git 根 + HEAD + 日期（HEAD 变化自动重采）
 
-        head = _run_git(project_root, "rev-parse", "--short", "HEAD") or "none"
-    except Exception:
-        head = "none"
+    HEAD 查询带 5s TTL 缓存：主线程同步调用多次渲染时避免重复启动 git 子进程。
+    """
+    now = time.monotonic()
+    cached = _head_cache.get(project_root)
+    if cached is not None and now - cached[0] < _HEAD_TTL:
+        head = cached[1]
+    else:
+        try:
+            from dashboard import _run_git
+
+            head = _run_git(project_root, "rev-parse", "--short", "HEAD") or "none"
+        except Exception:
+            head = "none"
+        _head_cache[project_root] = (now, head)
     return (project_root, head, datetime.now().strftime("%Y-%m-%d"))

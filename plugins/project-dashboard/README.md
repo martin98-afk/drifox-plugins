@@ -91,7 +91,8 @@ def register_ui(registry: UIPluginRegistry) -> None:
 
 - 不导入 `app.core` 或 `app.widgets` 内部模块（仅通过 `UIPluginRegistry` 实例回调）
 - `render_func` 主线程同步调用 → 数据采集全部异步（QThread worker 单例，幂等启动）
-- git 命令通过 `subprocess.run()` 完成，单次超时 8 秒，失败静默降级
+- git 命令通过 `subprocess.run()` 完成，单次超时 8 秒，失败静默降级；Windows 下加 `CREATE_NO_WINDOW` 隐藏子进程控制台窗口
+- 性能：语言/文件类型扫描仅对已知文本扩展名读取行数（二进制/未知扩展名只计数），行数统计用线程池并行；`build_cache_key` 的 HEAD 查询带 5s TTL 缓存，避免主线程频繁启动 git 子进程
 - 热重载：`register_ui` 清理 `ui_plugin_project_dashboard.` sys.modules 前缀
 
 ## 参考

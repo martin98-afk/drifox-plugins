@@ -9,6 +9,7 @@
 import os
 import subprocess
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -33,11 +34,17 @@ _EXT_LANG = {
 
 
 def _run_git(cwd: str, *args: str, timeout: int = 8) -> str:
-    """执行 git 命令，失败/超时返回空串（不抛异常）"""
+    """执行 git 命令，失败/超时返回空串（不抛异常）
+
+    Windows 下加 CREATE_NO_WINDOW 隐藏子进程控制台窗口，避免闪黑窗。
+    """
     try:
+        kwargs = {}
+        if os.name == "nt":
+            kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
         r = subprocess.run(
             ["git", *args], cwd=cwd, capture_output=True, text=True,
-            timeout=timeout, encoding="utf-8", errors="replace",
+            timeout=timeout, encoding="utf-8", errors="replace", **kwargs,
         )
         return r.stdout.strip() if r.returncode == 0 else ""
     except Exception:
@@ -50,11 +57,30 @@ def find_git_root(start: str) -> Optional[str]:
     return out or None
 
 
+# 已知语言扩展名（_EXT_LANG 的 key）：仅这些才读内容统计行数
+_TEXT_EXTS = frozenset(_EXT_LANG)
+
+
+def _count_lines(path: Path) -> int:
+    """单文件行数统计（大文件跳过；供线程池并行调用）"""
+    try:
+        if path.stat().st_size > 512 * 1024:  # 大文件跳过行数统计
+            return 0
+        with open(path, "rb") as f:
+            return f.read().count(b"\n")
+    except OSError:
+        return 0
+
+
 def _scan_files(project_root: str):
-    """遍历项目文件（跳过噪音目录），返回 (ext_counter, lang_files, lang_lines)"""
+    """遍历项目文件（跳过噪音目录），返回 (ext_counter, lang_files, lang_lines)
+
+    性能：二进制/未知扩展名只计数不读内容；已知文本文件的行数统计
+    用线程池并行（文件 I/O 释放 GIL，可真实提速）。
+    """
     ext_counter: Counter = Counter()
     lang_files: Counter = Counter()
-    lang_lines: Counter = Counter()
+    targets: list = []  # (Path, lang) 待统计行数的文本文件
     for dirpath, dirnames, filenames in os.walk(project_root):
         # 原地过滤跳过目录（os.walk 生效）
         dirnames[:] = [d for d in dirnames if d not in _SKIP_DIRS]
@@ -65,14 +91,16 @@ def _scan_files(project_root: str):
             ext_counter[ext] += 1
             lang = _EXT_LANG.get(ext, ext.lstrip(".").capitalize())
             lang_files[lang] += 1
-            try:
-                p = Path(dirpath) / fn
-                if p.stat().st_size > 512 * 1024:  # 大文件跳过行数统计
-                    continue
-                with open(p, encoding="utf-8", errors="ignore") as f:
-                    lang_lines[lang] += sum(1 for _ in f)
-            except OSError:
-                pass
+            if ext in _TEXT_EXTS:
+                targets.append((Path(dirpath) / fn, lang))
+
+    lang_lines: Counter = Counter()
+    if targets:
+        workers = min(8, os.cpu_count() or 4)
+        with ThreadPoolExecutor(max_workers=workers) as ex:
+            for (_, lang), n in zip(targets, ex.map(_count_lines, (p for p, _ in targets))):
+                if n:
+                    lang_lines[lang] += n
     return ext_counter, lang_files, lang_lines
 
 
@@ -94,8 +122,13 @@ def collect_data(project_root: str) -> dict:
         result["error"] = "当前目录不是 git 仓库"
         return result
     result["repo_name"] = Path(git_root).name
-    result["branch"] = _run_git(git_root, "branch", "--show-current") or "unknown"
-    result["head"] = _run_git(git_root, "rev-parse", "--short", "HEAD")
+    # 分支 + HEAD 合并为一次 git 调用（--abbrev-ref 在 detached 时输出 HEAD）
+    out = _run_git(git_root, "rev-parse", "--abbrev-ref", "HEAD", "--short", "HEAD")
+    lines = out.splitlines()
+    branch = lines[0] if lines else ""
+    head = lines[1] if len(lines) > 1 else ""
+    result["branch"] = branch if branch and branch != "HEAD" else "unknown"
+    result["head"] = head
 
     # commit 趋势：近 30 天
     out = _run_git(
@@ -225,7 +258,7 @@ def _languages_option(languages: list, p: dict) -> dict:
     return {
         "type": "pie",
         "name": "语言分布",
-        "radius": ["32%", "55%"],
+        "radius": ["20%", "36%"],
         "center": ["26%", "76%"],
         "itemStyle": {"borderColor": p["card"], "borderWidth": 2},
         "label": {"color": p["text"], "fontSize": 8},
