@@ -1333,8 +1333,14 @@ class _CommitDetailDialog(MaskDialogBase):
         ly.setContentsMargins(16, 16, 16, 16)
         ly.setSpacing(8)
 
-        # 元信息条
-        self._hash_lb = QLabel(self._hash, self.widget)
+        # 头部：hash + 右上角关闭
+        hdr = QWidget(self.widget)
+        hdr.setStyleSheet("background: transparent;")
+        hl = QHBoxLayout(hdr)
+        hl.setContentsMargins(0, 0, 0, 0)
+        hl.setSpacing(6)
+
+        self._hash_lb = QLabel(self._hash, hdr)
         self._hash_lb.setStyleSheet(
             "background: transparent; color: #62a0ea; font-size: 13px; "
             "font-family: 'Consolas', monospace;"
@@ -1342,7 +1348,16 @@ class _CommitDetailDialog(MaskDialogBase):
         self._hash_lb.setCursor(Qt.PointingHandCursor)
         self._hash_lb.setToolTip("点击复制完整 hash")
         self._hash_lb.mousePressEvent = self._on_hash_click
-        ly.addWidget(self._hash_lb)
+        hl.addWidget(self._hash_lb)
+        hl.addStretch(1)
+
+        close_btn = TransparentToolButton(FluentIcon.CLOSE, hdr)
+        close_btn.setFixedSize(28, 28)
+        close_btn.setToolTip("关闭")
+        close_btn.clicked.connect(self.accept)
+        hl.addWidget(close_btn)
+
+        ly.addWidget(hdr)
 
         self._meta_lb = QLabel("加载中…", self.widget)
         self._meta_lb.setStyleSheet(
@@ -1366,15 +1381,6 @@ class _CommitDetailDialog(MaskDialogBase):
             f"color: {_text_color()}; font-size: 13px; }}"
         )
         ly.addWidget(self._diff_area, 1)
-
-        # 关闭按钮
-        btn_row = QHBoxLayout()
-        btn_row.addStretch(1)
-        close_btn = QPushButton("关闭", self.widget)
-        close_btn.setFixedWidth(80)
-        close_btn.clicked.connect(self.accept)
-        btn_row.addWidget(close_btn)
-        ly.addLayout(btn_row)
 
         self.widget.setFixedSize(820, 560)
         self._center_widget()
@@ -1521,17 +1527,24 @@ class _StashDetailDialog(MaskDialogBase):
         ly.setContentsMargins(16, 16, 16, 16)
         ly.setSpacing(8)
 
-        # 标题
+        # 标题 + 右上角关闭
         hdr = QWidget(self.widget)
         hdr.setStyleSheet("background: transparent;")
         hl = QHBoxLayout(hdr)
         hl.setContentsMargins(0, 0, 0, 0)
+        hl.setSpacing(6)
         title = StrongBodyLabel(f"{self._ref} 内容", hdr)
         hl.addWidget(title)
         hl.addStretch(1)
         status_lb = QLabel("[搁置内容]", hdr)
         status_lb.setStyleSheet(f"color: {_text_color(secondary=True)}; background: transparent;")
         hl.addWidget(status_lb)
+
+        close_btn = TransparentToolButton(FluentIcon.CLOSE, hdr)
+        close_btn.setFixedSize(28, 28)
+        close_btn.setToolTip("关闭")
+        close_btn.clicked.connect(self.accept)
+        hl.addWidget(close_btn)
         ly.addWidget(hdr)
 
         # Diff 区
@@ -1543,15 +1556,6 @@ class _StashDetailDialog(MaskDialogBase):
             f"color: {_text_color()}; font-size: 13px; }}"
         )
         ly.addWidget(self._diff_area, 1)
-
-        # 关闭按钮
-        btn_row = QHBoxLayout()
-        btn_row.addStretch(1)
-        close_btn = QPushButton("关闭", self.widget)
-        close_btn.setFixedWidth(80)
-        close_btn.clicked.connect(self.accept)
-        btn_row.addWidget(close_btn)
-        ly.addLayout(btn_row)
 
         self.widget.setFixedSize(760, 520)
         self._center_widget()
