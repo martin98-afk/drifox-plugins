@@ -19,7 +19,7 @@ from datetime import datetime
 # 占位符由 Python 注入：TODAY_Y / TODAY_M / TODAY_D（今天）、DELTA（±1）。
 # 用 DOM API 构建格子（textContent），避免 HTML 字符串引号与 onclick 属性冲突。
 _CAL_SHIFT_JS = """(function(b,dl){{
-var w=b.parentNode.parentNode,y=+w.getAttribute('data-y'),m=+w.getAttribute('data-m');
+var w=b.closest('.cal-wrap'),y=+w.getAttribute('data-y'),m=+w.getAttribute('data-m');
 m+=dl;if(m<1){{m=12;y--}}if(m>12){{m=1;y++}}
 w.setAttribute('data-y',y);w.setAttribute('data-m',m);
 var g=w.querySelector('.cal-grid');g.innerHTML='';
@@ -99,16 +99,35 @@ def _build_clock_html(now: datetime) -> str:
 </div>"""
 
 
-def _render_calendar_html() -> str:
+def _render_calendar_html(ctx: dict | None = None) -> str:
     """渲染当月日历 HTML：左侧日历（月标题 + 周表头 + 日期网格）+ 右侧圆形时钟
 
     网格与时钟刻度由 Python 预渲染（innerHTML 注入的 <script> 不执行），
-    上/下月切换走 onclick 内联 JS，指针走 CSS 动画。明暗配色 prefers-color-scheme。
+    上/下月切换走 onclick 内联 JS，指针走 CSS 动画。
+    明暗配色跟随主程序注入的 ctx["is_dark"]（与 context-stats 等插件一致），
+    ctx 缺失（旧主程序）时默认暗色（DriFox 默认深色主题）。
     """
     now = datetime.now()
     y, m, d = now.year, now.month, now.day
     cells = _build_calendar_cells(y, m, d)
     shift = _CAL_SHIFT_JS.replace("TODAY_Y", str(y)).replace("TODAY_M", str(m)).replace("TODAY_D", str(d))
+    is_dark = ctx.get("is_dark") if isinstance(ctx, dict) else None
+    if is_dark is None:
+        is_dark = True
+    # 明暗两套 CSS 变量，按 is_dark 注入（不用 prefers-color-scheme，它与 Qt 主题不同步）
+    vars_light = (
+        "--cal-text: #333; --cal-muted: #999; --cal-other: #ccc; "
+        "--cal-border: rgba(0,0,0,0.12); --cal-nav-bg: rgba(0,0,0,0.04); "
+        "--cal-nav-hover: rgba(0,0,0,0.09); --cal-accent: #2d8cf0; "
+        "--cal-clock-bg: rgba(0,0,0,0.04); --cal-hand: #333;"
+    )
+    vars_dark = (
+        "--cal-text: #e6e6e6; --cal-muted: #8a8a8a; --cal-other: #555; "
+        "--cal-border: rgba(255,255,255,0.14); --cal-nav-bg: rgba(255,255,255,0.06); "
+        "--cal-nav-hover: rgba(255,255,255,0.12); --cal-accent: #5aa2f5; "
+        "--cal-clock-bg: rgba(255,255,255,0.06); --cal-hand: #e6e6e6;"
+    )
+    css_vars = vars_dark if is_dark else vars_light
     return f"""<div class="cal-wrap" data-y="{y}" data-m="{m}">
 <div class="cal-main">
 <div class="cal-head">
@@ -159,18 +178,7 @@ def _render_calendar_html() -> str:
 .clock-dot {{ position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--cal-hand); border: 2px solid var(--cal-clock-bg); }}
 .clock-date {{ font-size: 12px; color: var(--cal-muted); letter-spacing: 0.03em; }}
 :root {{
-  --cal-text: #333; --cal-muted: #999; --cal-other: #ccc;
-  --cal-border: rgba(0,0,0,0.12); --cal-nav-bg: rgba(0,0,0,0.04);
-  --cal-nav-hover: rgba(0,0,0,0.09); --cal-accent: #2d8cf0;
-  --cal-clock-bg: rgba(0,0,0,0.04); --cal-hand: #333;
-}}
-@media (prefers-color-scheme: dark) {{
-  :root {{
-    --cal-text: #e6e6e6; --cal-muted: #8a8a8a; --cal-other: #555;
-    --cal-border: rgba(255,255,255,0.14); --cal-nav-bg: rgba(255,255,255,0.06);
-    --cal-nav-hover: rgba(255,255,255,0.12); --cal-accent: #5aa2f5;
-    --cal-clock-bg: rgba(255,255,255,0.06); --cal-hand: #e6e6e6;
-  }}
+  {css_vars}
 }}
 </style>
 """
@@ -188,5 +196,5 @@ def register_ui(registry):
         plugin_name="calendar",
         mode_key="calendar",
         label="📅 日历",
-        render_func=lambda ctx: _render_calendar_html(),
+        render_func=lambda ctx: _render_calendar_html(ctx),
     )
