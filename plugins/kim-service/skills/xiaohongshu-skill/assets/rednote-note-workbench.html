@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>小红书反 AI 味成稿工作台</title>
+  <style>
+    :root {
+      --ink: #1d1d1f;
+      --muted: #6b7280;
+      --line: #d8dee9;
+      --paper: #f7f4ef;
+      --panel: #ffffff;
+      --accent: #d92842;
+      --green: #1f7a5a;
+      --blue: #2f5d9f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      line-height: 1.55;
+    }
+    main {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 28px;
+    }
+    h1 {
+      font-size: 30px;
+      margin: 0 0 8px;
+    }
+    h2 {
+      font-size: 18px;
+      margin: 0 0 12px;
+    }
+    p {
+      color: var(--muted);
+      margin: 0 0 18px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    label {
+      display: block;
+      font-weight: 700;
+      margin: 10px 0 6px;
+    }
+    textarea, input {
+      width: 100%;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 9px 10px;
+      font: inherit;
+      background: #fff;
+    }
+    textarea {
+      min-height: 78px;
+      resize: vertical;
+    }
+    .wide { grid-column: 1 / -1; }
+    .pill {
+      display: inline-block;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 4px 9px;
+      margin: 3px 4px 3px 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .danger { border-left: 4px solid var(--accent); }
+    .ok { border-left: 4px solid var(--green); }
+    .info { border-left: 4px solid var(--blue); }
+    @media (max-width: 760px) {
+      main { padding: 18px; }
+      .grid { grid-template-columns: 1fr; }
+      .wide { grid-column: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>小红书反 AI 味成稿工作台</h1>
+    <p>先填真实素材，再写标题、封面、图文页、正文和承接。空缺就标待补，不编故事。</p>
+
+    <div class="grid">
+      <section class="info">
+        <h2>1. 买家/读者判断</h2>
+        <label>目标读者</label>
+        <input placeholder="例如：写周报很痛苦的职场新人">
+        <label>读者现在的痛点</label>
+        <textarea placeholder="他们卡在哪里？怕什么？想省什么时间？"></textarea>
+        <label>笔记希望读者做什么</label>
+        <input placeholder="收藏 / 评论 / 私信关键词 / 了解服务">
+      </section>
+
+      <section class="info">
+        <h2>1.5 Skill 自己做的机会研究</h2>
+        <label>研究日期与能力</label>
+        <input placeholder="日期、检索能力、互动数据可见范围">
+        <label>读者搜索/浏览场景</label>
+        <textarea placeholder="具体场景与搜索表达。来源：用户提供 / 研究证据 / AI 假设"></textarea>
+        <label>重复承诺与内容空缺</label>
+        <textarea placeholder="同类内容反复讲什么、还有什么没解决。来源：用户提供 / 研究证据 / AI 假设"></textarea>
+        <label>读者真实问题</label>
+        <textarea placeholder="公开讨论或用户材料中的具体问题。来源：用户提供 / 研究证据 / AI 假设"></textarea>
+        <label>要抢的需求</label>
+        <textarea placeholder="本条只解决一个需求。来源：用户提供 / 研究证据 / AI 假设"></textarea>
+        <label>研究缺口</label>
+        <textarea placeholder="看不到或无法验证的数据；不得编造高赞、热门、爆款"></textarea>
+      </section>
+
+      <section class="info wide">
+        <h2>1.6 营销决策</h2>
+        <label>目标读者与具体场景</label>
+        <textarea placeholder="具体人群与场景。来源：用户提供 / 研究证据 / AI 假设"></textarea>
+        <label>需求阶段</label>
+        <input placeholder="未意识到 / 已知痛点 / 找方法 / 比较 / 准备行动 / 分享。来源：...">
+        <label>主目标 / 次目标</label>
+        <input placeholder="各一个。来源：用户提供 / 研究证据 / AI 假设">
+        <label>读者张力（痛点、期待、阻力、担忧）</label>
+        <textarea placeholder="具体张力。来源：用户提供 / 研究证据 / AI 假设"></textarea>
+        <label>产品角色</label>
+        <input placeholder="不出现 / 背景工具 / 方法载体 / 证据对象 / 对比对象 / 直接方案。来源：...">
+        <label>证据强度与不可说边界</label>
+        <textarea placeholder="已有证据与不能证实内容。来源：用户提供 / 研究证据 / AI 假设"></textarea>
+        <label>表达强度（隐性 / 半显性 / 显性）及理由</label>
+        <textarea placeholder="强度与理由。来源：用户提供 / 研究证据 / AI 假设"></textarea>
+        <label>信息框架与标题路线</label>
+        <textarea placeholder="场景痛点 / 搜索答案 / 判断标准 / 反差观点等。来源：..."></textarea>
+        <label>视觉证据方式</label>
+        <textarea placeholder="真实记录 / 使用演示 / 产品细节 / 比较表 / 信息图等。来源：..."></textarea>
+      </section>
+
+      <section class="ok">
+        <h2>2. 真人细节补位</h2>
+        <label>已知事实</label>
+        <textarea placeholder="只写真实发生、能公开或已脱敏的信息"></textarea>
+        <label>待补素材</label>
+        <textarea placeholder="截图、数据、前后对比、过程图、具体场景"></textarea>
+        <label>不能写</label>
+        <textarea placeholder="不能编造的客户反馈、收入、效果、老板评价"></textarea>
+      </section>
+
+      <section>
+        <h2>3. 标题/封面兑现</h2>
+        <label>标题承诺</label>
+        <textarea placeholder="标题承诺必须能在正文和图文页兑现"></textarea>
+        <label>封面字</label>
+        <input placeholder="不超过两行，手机首屏能看清">
+        <div>
+          <span class="pill">不写必爆</span>
+          <span class="pill">不写保证涨粉</span>
+          <span class="pill">不写全网最</span>
+        </div>
+      </section>
+
+      <section>
+        <h2>4. 标签建议</h2>
+        <label>3-6 个克制标签</label>
+        <textarea placeholder="#职场周报 #AI提效 #运营复盘"></textarea>
+        <label>禁止蹭的无关热点</label>
+        <textarea placeholder="和内容无关的热词、平台事件、夸张身份标签"></textarea>
+      </section>
+
+      <section class="wide danger">
+        <h2>5. 最终成品自检</h2>
+        <label>真实感来源</label>
+        <textarea placeholder="具体场景、真实物件、生活痕迹、手机拍摄感、不完美细节"></textarea>
+        <label>模拟真实素材方向</label>
+        <textarea placeholder="场景、物件、人物视角、截图样式、生活痕迹、拍摄质感"></textarea>
+        <label>最终改稿提醒</label>
+        <textarea placeholder="补真实图、删模板话、检查标题兑现、检查图片是否像真实账号会发"></textarea>
+      </section>
+
+      <section class="wide">
+        <h2>6. 封面与逐页视觉导演</h2>
+        <label>封面版式</label>
+        <input placeholder="A / B / C / D / E 与名称">
+        <label>主体区</label>
+        <textarea placeholder="主体、位置、面积和真实感锚点"></textarea>
+        <label>主标题区与精确文字</label>
+        <textarea placeholder="位置 + 精确文字"></textarea>
+        <label>副标题区与精确文字</label>
+        <textarea placeholder="位置 + 精确文字"></textarea>
+        <label>不能遮挡区</label>
+        <textarea placeholder="人物、产品、动作或证据"></textarea>
+        <label>缩略图第一眼承诺</label>
+        <textarea placeholder="手机信息流先读到什么"></textarea>
+        <label>构图选择理由</label>
+        <textarea placeholder="为什么这套构图服务于当前营销目标与证据"></textarea>
+        <label>内页逐页视觉导演表</label>
+        <textarea placeholder="每页严格填写：页面角色；读者在本页完成的认知动作；本页唯一信息承诺；画面主体与真实感锚点；构图版式；选择理由；主体区；主标题区 / 精确文字；副标题或证据区 / 精确文字；文字层级与位置；不能遮挡或不能出现；与前后页连续的元素；本页 Image2 结构化提示词；验收"></textarea>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

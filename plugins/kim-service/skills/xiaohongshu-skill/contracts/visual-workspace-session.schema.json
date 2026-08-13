@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.meta-kim/xiaohongshu-skill/visual-workspace-session.schema.json",
+  "title": "Rednote optional visual workspace offer and launch state",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "offer_stage",
+    "value_fingerprint",
+    "same_stage_offer_count",
+    "decision_surface",
+    "prerequisites",
+    "new_value_reason",
+    "new_value_evidence_sha256",
+    "decision_evidence",
+    "launch_evidence",
+    "canvas_state_readback",
+    "continuation"
+  ],
+  "properties": {
+    "schema_version": { "const": "rednote-visual-workspace-session-v1" },
+    "status": {
+      "enum": [
+        "not_offered",
+        "offered_pending",
+        "accepted",
+        "declined",
+        "unavailable",
+        "launch_failed",
+        "opened_verified"
+      ]
+    },
+    "offer_stage": {
+      "type": ["string", "null"],
+      "enum": [null, "cover_first_visible_candidate", "cover_revision_comparison", "failed_page_revision_comparison"]
+    },
+    "value_fingerprint": { "anyOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+    "same_stage_offer_count": { "type": "integer", "minimum": 0, "maximum": 1 },
+    "decision_surface": {
+      "enum": [
+        "none",
+        "request_user_input",
+        "AskUserQuestion",
+        "host_equivalent_native_choice",
+        "markdown_fallback",
+        "explicit_auto_permission"
+      ]
+    },
+    "prerequisites": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "opportunity_research_complete",
+        "marketing_decision_complete",
+        "page_directions_complete",
+        "image2_brief_complete",
+        "visible_sample_sha256",
+        "aspect_ratio"
+      ],
+      "properties": {
+        "opportunity_research_complete": { "type": "boolean" },
+        "marketing_decision_complete": { "type": "boolean" },
+        "page_directions_complete": { "type": "boolean" },
+        "image2_brief_complete": { "type": "boolean" },
+        "visible_sample_sha256": { "anyOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "aspect_ratio": { "type": ["string", "null"] }
+      }
+    },
+    "new_value_reason": { "type": ["string", "null"] },
+    "new_value_evidence_sha256": { "anyOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+    "decision_evidence": { "anyOf": [{ "$ref": "#/$defs/decisionEvidence" }, { "type": "null" }] },
+    "launch_evidence": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tool_name", "evidence_path", "evidence_sha256"],
+          "properties": {
+            "tool_name": { "const": "render_cowart_canvas_widget" },
+            "evidence_path": { "type": "string", "minLength": 1 },
+            "evidence_sha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        { "type": "null" }
+      ]
+    },
+    "canvas_state_readback": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tool_name", "shape_id", "asset_url_or_path", "snapshot_sha256"],
+          "properties": {
+            "tool_name": { "const": "get_cowart_canvas_state" },
+            "shape_id": { "type": "string", "minLength": 1 },
+            "asset_url_or_path": { "type": "string", "minLength": 1 },
+            "snapshot_sha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        { "type": "null" }
+      ]
+    },
+    "continuation": { "enum": ["continue_existing_route", "wait_for_markdown_reply", "launch_workspace"] }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "not_offered" } }, "required": ["status"] },
+      "then": { "properties": { "decision_surface": { "const": "none" }, "same_stage_offer_count": { "const": 0 }, "continuation": { "const": "continue_existing_route" } } }
+    },
+    {
+      "if": { "properties": { "status": { "const": "offered_pending" }, "decision_surface": { "const": "markdown_fallback" } }, "required": ["status", "decision_surface"] },
+      "then": { "properties": { "same_stage_offer_count": { "const": 1 }, "continuation": { "const": "wait_for_markdown_reply" } } }
+    },
+    {
+      "if": { "properties": { "status": { "enum": ["declined", "unavailable", "launch_failed", "opened_verified"] } }, "required": ["status"] },
+      "then": { "properties": { "continuation": { "const": "continue_existing_route" } } }
+    },
+    {
+      "if": { "properties": { "status": { "const": "opened_verified" } }, "required": ["status"] },
+      "then": { "not": { "anyOf": [{ "properties": { "launch_evidence": { "type": "null" } } }, { "properties": { "canvas_state_readback": { "type": "null" } } }] } }
+    },
+    {
+      "if": { "properties": { "offer_stage": { "enum": ["cover_revision_comparison", "failed_page_revision_comparison"] } }, "required": ["offer_stage"] },
+      "then": {
+        "properties": { "new_value_reason": { "type": "string", "minLength": 1 } },
+        "not": { "properties": { "new_value_evidence_sha256": { "type": "null" } } }
+      }
+    }
+  ],
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "decisionEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "evidence_path", "evidence_sha256", "human_confirmation_proven"],
+      "properties": {
+        "kind": { "enum": ["native_choice_return", "explicit_auto_permission", "visible_user_reply_after_markdown"] },
+        "evidence_path": { "type": "string", "minLength": 1 },
+        "evidence_sha256": { "$ref": "#/$defs/sha256" },
+        "human_confirmation_proven": { "type": "boolean" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "const": "native_choice_return" } }, "required": ["kind"] },
+          "then": { "properties": { "human_confirmation_proven": { "const": true } } }
+        },
+        {
+          "if": { "properties": { "kind": { "enum": ["explicit_auto_permission", "visible_user_reply_after_markdown"] } }, "required": ["kind"] },
+          "then": { "properties": { "human_confirmation_proven": { "const": false } } }
+        }
+      ]
+    }
+  }
+}

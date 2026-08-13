@@ -1,0 +1,50 @@
+{
+  "schema_version": "2.0",
+  "run_id": "pending-run-id",
+  "run_type": "acceptance",
+  "status": "pending",
+  "input_file": "input.md",
+  "input_sha256": null,
+  "attestations": {
+    "host": "../attestations/pending-run-id-host-attestation.json",
+    "reviewer": "../attestations/pending-run-id-reviewer-attestation.json"
+  },
+  "routes": [
+    {
+      "route": "without-skill",
+      "execution_status": "pending",
+      "host_runtime": null,
+      "session_id": null,
+      "started_at": null,
+      "completed_at": null,
+      "prompt_file": "prompt-without-skill.txt",
+      "prompt_sha256": null,
+      "output_file": "without-skill-output.md",
+      "output_sha256": null,
+      "skill_loaded": false,
+      "skill_source": null,
+      "trigger_observed": false,
+      "evidence_files": [
+        "runtime-without-skill.log"
+      ]
+    },
+    {
+      "route": "with-skill",
+      "execution_status": "pending",
+      "host_runtime": null,
+      "session_id": null,
+      "started_at": null,
+      "completed_at": null,
+      "prompt_file": "prompt-with-skill.txt",
+      "prompt_sha256": null,
+      "output_file": "with-skill-output.md",
+      "output_sha256": null,
+      "skill_loaded": true,
+      "skill_source": "meta-skill-creator/SKILL.md",
+      "trigger_observed": false,
+      "evidence_files": [
+        "runtime-with-skill.log"
+      ]
+    }
+  ]
+}

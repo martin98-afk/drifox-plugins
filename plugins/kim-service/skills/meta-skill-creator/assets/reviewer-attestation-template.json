@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "attestation_type": "human-review",
+  "attestation_id": "pending-review-attestation-id",
+  "issuer_id": "pending-human-reviewer-id",
+  "issued_at": null,
+  "reviewed_at": null,
+  "run_id": "pending-run-id",
+  "reviewer": {
+    "id": "pending-human-reviewer-id",
+    "display_name": "pending-human-reviewer-name",
+    "type": "human"
+  },
+  "rubric_sha256": null,
+  "outputs": {
+    "without-skill": null,
+    "with-skill": null
+  },
+  "dimension_scores": [
+    {
+      "dimension_id": "pending-rubric-dimension-id",
+      "without_score": null,
+      "with_score": null,
+      "evidence_refs": [
+        "without-skill-output.md#L1",
+        "with-skill-output.md#L1"
+      ]
+    }
+  ],
+  "totals": {
+    "without": null,
+    "with": null,
+    "delta": null
+  },
+  "decision": "pending"
+}

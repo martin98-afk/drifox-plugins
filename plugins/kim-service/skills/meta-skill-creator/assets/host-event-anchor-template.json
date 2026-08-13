@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "event_type": "host-session-export",
+  "event_id": "pending-host-event-id",
+  "issuer": "pending-host-issuer",
+  "captured_at": null,
+  "run_id": "pending-run-id",
+  "routes": [
+    {
+      "route": "without-skill",
+      "host_runtime": null,
+      "session_id": null,
+      "started_at": null,
+      "completed_at": null,
+      "prompt_sha256": null,
+      "output_sha256": null,
+      "skill_loaded": false,
+      "trigger_observed": false
+    },
+    {
+      "route": "with-skill",
+      "host_runtime": null,
+      "session_id": null,
+      "started_at": null,
+      "completed_at": null,
+      "prompt_sha256": null,
+      "output_sha256": null,
+      "skill_loaded": true,
+      "trigger_observed": true
+    }
+  ]
+}

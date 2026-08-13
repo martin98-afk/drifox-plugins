@@ -1,0 +1,27 @@
+{
+    "name": "kim-service",
+    "description": "Kim Service — AI Hook 与 Agent Skills 合集：HookPrompt 提示词自动优化 + 8 个 Skill（Agent Teams / Memory 3-Layer / Find Skill / GoalPro / Kim Decision / Meta Skill Creator / Semgrep / Xiaohongshu）。",
+    "icon": "icon.png",
+    "version": "0.1.0",
+    "type": "user",
+    "components": {
+        "hooks": true,
+        "skills": true
+    },
+    "author": {
+        "name": "KimYx0207"
+    },
+    "license": "MIT",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "prompt",
+        "optimizer",
+        "hook",
+        "skills",
+        "decision",
+        "memory",
+        "goal"
+    ]
+}

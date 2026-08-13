@@ -1026,6 +1026,39 @@
             }
         },
         {
+            "name": "kim-service",
+            "description": "Kim Service — AI Hook 与 Agent Skills 合集：HookPrompt 提示词自动优化 + 8 个 Skill（Agent Teams / Memory 3-Layer / Find Skill / GoalPro / Kim Decision / Meta Skill Creator / Semgrep / Xiaohongshu）。",
+            "version": "0.1.0",
+            "author": "KimYx0207",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/kim-service",
+                "ref": "main"
+            },
+            "components": {
+                "hooks": true,
+                "skills": true
+            },
+            "keywords": [
+                "prompt",
+                "optimizer",
+                "hook",
+                "skills",
+                "decision",
+                "memory",
+                "goal"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "icon": "icon.png"
+        },
+        {
             "name": "knowledge-base-skills",
             "description": "本地知识库检索技能——面向本地知识库目录的分层检索和问答助手，支持 Markdown/PDF/Excel 渐进式检索。",
             "version": "1.0.0",

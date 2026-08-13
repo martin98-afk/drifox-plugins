@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "attestation_type": "host-runtime",
+  "attestation_id": "pending-host-attestation-id",
+  "issuer": "pending-host-issuer",
+  "issued_at": null,
+  "run_id": "pending-run-id",
+  "input_sha256": null,
+  "capabilities": {
+    "host_runtime": null,
+    "python_command": null,
+    "skill_invocation_surface": null
+  },
+  "event_anchor": {
+    "path": "pending-host-event.json",
+    "sha256": null
+  },
+  "routes": [
+    {
+      "route": "without-skill",
+      "host_runtime": null,
+      "session_id": null,
+      "started_at": null,
+      "completed_at": null,
+      "prompt_sha256": null,
+      "output_sha256": null,
+      "skill_loaded": false,
+      "trigger_observed": false
+    },
+    {
+      "route": "with-skill",
+      "host_runtime": null,
+      "session_id": null,
+      "started_at": null,
+      "completed_at": null,
+      "prompt_sha256": null,
+      "output_sha256": null,
+      "skill_loaded": true,
+      "trigger_observed": true
+    }
+  ]
+}

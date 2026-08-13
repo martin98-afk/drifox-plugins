@@ -1,0 +1,141 @@
+{
+  "schema_version": "1.2",
+  "provider_id": "cowart",
+  "provider_role": "visual_workspace",
+  "target_version_metadata": "0.1.20",
+  "version_is_enablement_evidence": false,
+  "generation_route_tier": null,
+  "may_rescue_generation_failure": false,
+  "supported_hosts": ["codex"],
+  "enablement": {
+    "mode": "capability_probe",
+    "required_tools": [
+      "render_cowart_canvas_widget",
+      "get_cowart_selection",
+      "insert_cowart_image",
+      "get_cowart_canvas_state"
+    ],
+    "missing_required_behavior": "continue_existing_host_native_image_and_choice_route"
+  },
+  "offer_policy": {
+    "offer_only_after_visible_value": true,
+    "primary_offer_stage": "cover_first_visible_candidate",
+    "required_primary_prerequisites": [
+      "opportunity_research_complete",
+      "marketing_decision_complete",
+      "page_directions_complete",
+      "image2_brief_complete",
+      "visible_3_4_cover_candidate"
+    ],
+    "allowed_offer_stages": [
+      "cover_first_visible_candidate",
+      "cover_revision_comparison",
+      "failed_page_revision_comparison"
+    ],
+    "decision_surface_priority": [
+      "request_user_input",
+      "AskUserQuestion",
+      "host_equivalent_native_choice",
+      "markdown_fallback"
+    ],
+    "states": [
+      "not_offered",
+      "offered_pending",
+      "accepted",
+      "declined",
+      "unavailable",
+      "launch_failed",
+      "opened_verified"
+    ],
+    "same_stage_offer_limit": 1,
+    "dedupe_key": "offer_stage+value_fingerprint",
+    "cross_stage_reoffer_requires": [
+      "different_offer_stage",
+      "new_value_reason",
+      "new_value_evidence_sha256",
+      "changed_value_fingerprint"
+    ],
+    "markdown_fallback_must_stop_and_wait": true,
+    "continue_existing_route_on": ["declined", "unavailable", "launch_failed"],
+    "explicit_auto_permission_is_human_confirmation": false,
+    "no_question_continue_means": "skip_optional_workspace",
+    "user_copy": {
+      "question": "封面首稿已经出来，3:4 页面方向也已确定。要不要打开可视化工作台？你可以在手机画幅里放大查看标题、主体和留白，直接批注需要调整的位置；无论是否打开，封面确认和后续生成都照常继续。",
+      "open_label": "打开工作台（推荐）",
+      "open_description": "马上看到 3:4 封面首稿，可放大检查排版并圈出要调整的位置。",
+      "skip_label": "暂不打开，继续生成",
+      "skip_description": "不打开画布，直接继续封面确认和后续图片生成，结果不会少。"
+    }
+  },
+  "canvas": {
+    "required_aspect_ratio": "3:4",
+    "holder_kind": "AI 图片",
+    "forbidden_modes": ["AI Slides 16:9"]
+  },
+  "capabilities": [
+    "place_generated_asset_in_holder",
+    "post_insert_persistence_readback",
+    "mobile_thumbnail_review_surface",
+    "annotation_screenshot_revision_comparison",
+    "per_page_asset_manifest"
+  ],
+  "native_tool_mappings": {
+    "open_widget": "render_cowart_canvas_widget",
+    "read_selection_and_holder_contract": "get_cowart_selection",
+    "insert_or_replace_bitmap": "insert_cowart_image",
+    "post_insert_state_readback": "get_cowart_canvas_state",
+    "save_canvas_state_fallback": "save_cowart_canvas_state",
+    "save_widget_reference_image_when_needed": "save_cowart_reference_image",
+    "read_page_asset_when_needed": "read_cowart_page_asset"
+  },
+  "skill_semantics": {
+    "open": "cowart-open-canvas",
+    "generate_with_host_then_place": "cowart-image-gen",
+    "revise_from_annotation_screenshot": "cowart-image-edit"
+  },
+  "proof_boundaries": {
+    "insert_result_ids_prove": ["attempted"],
+    "insert_result_ids_do_not_prove": ["persisted_placement", "generation", "quality", "acceptance"],
+    "completed_placement_status": "persisted_verified",
+    "completed_placement_requires": [
+      "post_insert_get_cowart_canvas_state",
+      "shape_id_readback_match",
+      "asset_url_or_path_readback_match",
+      "persisted_snapshot_sha256"
+    ],
+    "batch_permission_source": "host_native_choice",
+    "final_asset_field": "accepted_asset",
+    "static_validator_is_live_host_proof": false
+  },
+  "path_policy": {
+    "project_dir_source": "current_user_workspace",
+    "default_canvas_dir": "<projectDir>/canvas",
+    "record_resolved_project_dir": true,
+    "record_resolved_canvas_dir": true,
+    "custom_canvas_dir_default": "forbidden",
+    "custom_canvas_dir_exception_requires": [
+      "explicit_user_authorization",
+      "normalized_path_containment",
+      "realpath_and_symlink_containment"
+    ],
+    "custom_canvas_dir_must_remain_within_project_dir": true
+  },
+  "insert_policies": {
+    "verified_ai_image_holder": {
+      "replaceAiImageHolder": true,
+      "requires": ["exactly_one_selected_ai_image_holder", "aspect_ratio_3_4"]
+    },
+    "unverified_or_normal_anchor": {
+      "replaceAiImageHolder": false
+    },
+    "annotation_before_after": {
+      "replaceAiImageHolder": false,
+      "placement": "right",
+      "preserve_original": true,
+      "preserve_annotations": true
+    }
+  },
+  "normal_transport": "native_codex_widget_mcp",
+  "legacy_localhost_browser_path_is_normal": false,
+  "unsupported_host_behavior": "continue_existing_host_native_image_and_choice_route"
+}

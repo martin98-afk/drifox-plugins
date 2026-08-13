@@ -1,0 +1,10 @@
+Copyright (c) 2026 LaojinAI.
+
+Memory 3-Layer is distributed under the MIT License in LICENSE. Its public
+release version is governed by the repository-level Kim Service release.
+
+Historical provenance: portions of the initial implementation were derived
+from KimYx0207/claude-memory-3layer at revision
+1d60800c1a34dfe83d8e2b102b24c7d57d87ca53. That repository is retained only
+as provenance. The current release source and capability contract are
+KimYx0207/Kim_Service/skills/memory-3layer.

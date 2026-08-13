@@ -1,0 +1,19 @@
+{
+  "schema_version": "rednote-visual-workspace-offer-eval-v1",
+  "cases": [
+    { "id": "recommended-open", "kind": "positive", "expected": "accepted" },
+    { "id": "skip-and-continue", "kind": "positive", "expected": "accepted" },
+    { "id": "runtime-unavailable", "kind": "positive", "expected": "accepted" },
+    { "id": "launch-failed-non-blocking", "kind": "positive", "expected": "accepted" },
+    { "id": "same-stage-deduplicated", "kind": "positive", "expected": "accepted" },
+    { "id": "cross-stage-new-value-reoffer", "kind": "positive", "expected": "accepted" },
+    { "id": "explicit-auto-permission", "kind": "positive", "expected": "accepted" },
+    { "id": "markdown-fallback-waits", "kind": "positive", "expected": "accepted" },
+    { "id": "offer-before-visible-cover", "kind": "negative", "expected": "rejected" },
+    { "id": "same-stage-repeat", "kind": "negative", "expected": "rejected" },
+    { "id": "cross-stage-without-new-value", "kind": "negative", "expected": "rejected" },
+    { "id": "opened-without-state-readback", "kind": "negative", "expected": "rejected" },
+    { "id": "auto-permission-claims-human-confirmed", "kind": "negative", "expected": "rejected" },
+    { "id": "markdown-claims-native-popup", "kind": "negative", "expected": "rejected" }
+  ]
+}
