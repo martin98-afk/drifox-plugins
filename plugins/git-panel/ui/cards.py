@@ -1789,10 +1789,14 @@ class GitPanelCard(QWidget):
                     new_ss = re.sub(
                         r"font-size:\s*[^;]+;",
                         f"font-size: {max(fs - 3, 11)}px;",
-                        ss,
+                        new_ss,
                     )
                 if ff and f"font-family: '{ff}'" not in new_ss:
-                    new_ss += f" font-family: '{ff}';"
+                    # 必须插入 QPushButton 块内：追加到样式末尾（块外）会被 Qt 忽略
+                    new_ss = new_ss.replace(
+                        "QPushButton {",
+                        f"QPushButton {{ font-family: '{ff}';",
+                    )
                 child.setStyleSheet(new_ss)
             except RuntimeError:
                 pass
