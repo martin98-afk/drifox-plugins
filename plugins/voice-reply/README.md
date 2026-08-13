@@ -1,47 +1,41 @@
 # Voice Reply - AI 回复语音播报
 
-将 AI 回复文字转为语音播放，使用 Windows 离线 TTS（SAPI5），无需网络。
+将 AI 回复文字转为语音播放，使用 Windows 自带离线 TTS（SAPI5），无需网络、**零第三方依赖**。
 
-## 依赖安装
+## 依赖
 
-本插件依赖 `pyttsx3` 库进行语音合成，需在当前系统 Python 环境中安装：
+**无需安装任何依赖。** 插件直接调用 Windows SAPI5 COM 接口（`win32com`，随 DriFox 运行环境自带），
+不依赖 `pyttsx3` 等第三方库。
 
-```bash
-pip install pyttsx3
+> 要求：Windows 系统已安装中文语音包（如 Microsoft Huihui），一般 Windows 10/11 自带。
+
+### 验证语音
+
+```powershell
+powershell -NoProfile -Command "[void][System.Reflection.Assembly]::LoadWithPartialName('System.Speech'); $s = New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.GetInstalledVoices() | ForEach-Object { $_.VoiceInfo.Name }"
 ```
 
-> ⚠️ **注意**：本插件以 `command` 类型运行（调用系统 `python`），而非 DriFox 内置 Python。
-> 请确保 `python` 命令可用且已安装上述依赖。
-
-### 验证安装
-
-```bash
-python -c "import pyttsx3; print('✅ pyttsx3 可用')"
-```
-
-如果看到 ✅ 提示，说明安装成功。
+如果列表中有中文语音（如 `Microsoft Huihui Desktop`），即可正常播报。
 
 ## 配置
 
 本插件默认监听 `PostAssistantMessage` 事件，在每次 AI 回复后自动朗读。
 
-如需调整语音或语速，编辑 `hooks/voice_reply.py` 中的：
+如需调整语音或语速，编辑 `hooks/voice-reply_hook.py` 中的：
 
 | 配置项 | 代码位置 | 说明 |
 |--------|----------|------|
-| 语音索引 | `voices[0]` → 切换索引选择不同语音 | 0=中文, 1/2=英文 |
-| 语速 | `engine.setProperty("rate", 180)` | 数值越大越快 |
-| 最大字符 | `if len(text) > 1000` → 截断阈值 | 避免朗读过长文本 |
+| 中文语音选择 | `_get_engine()` 中 `"Chinese" in desc` | 自动选择中文语音，可改为其他关键词 |
+| 语速 | `engine.Rate = 1` | SAPI 范围 -10 ~ 10，0 为正常 |
+| 音量 | `engine.Volume = 100` | 范围 0 ~ 100 |
+| 最大字符 | `MAX_TEXT_LEN = 500` | 截断阈值，避免语音队列过长 |
 
 ## 工作原理
 
-DriFox 在 `PostAssistantMessage` 事件触发时，通过 command 类型 Hook 执行：
-
-```
-python "{plugin_root}/hooks/voice_reply.py" --event=PostAssistantMessage
-```
-
-其中 `{plugin_root}` 是 DriFox 内置变量，自动替换为插件根目录路径。上下文通过 stdin (JSON) 传递给脚本，脚本使用 `pyttsx3` 朗读 AI 回复文本。
+DriFox 在 `PostAssistantMessage` 事件触发时，以 **python 类型 Hook** 加载本插件
+（`hooks/hooks.json` 配置的 `function` 指向 `voice-reply_hook.py`），
+在 DriFox 进程内通过 `win32com` 调用 Windows SAPI5 异步播报（`SVSFlagsAsync`），
+**不阻塞聊天流程**。
 
 ## 事件
 

@@ -1,22 +1,80 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Voice Reply Hook — 将 AI 回复转为语音播放
+Voice Reply Hook — 将 AI 回复转为语音播放（Windows SAPI5，零第三方依赖）
 
-标准 Python 钩子形式（由 DriFox hooks.json 配置为 type=python）：
-    function: voice-reply_hook:handle_post_assistant_message
+执行机制：DriFox python 类型 hook，由 HookManager 在 DriFox 进程内
+以 importlib 加载执行（function: .voice-reply_hook:handle_post_assistant_message）。
 
-依赖：pyttsx3（需单独安装，详见插件 README.md）
+语音合成直接调用 Windows 自带 SAPI5 COM 接口（win32com / pywin32，
+随 DriFox 运行环境自带），无需安装 pyttsx3 等任何额外依赖。
+
+播放采用异步模式（SVSFlagsAsync），不阻塞聊天流程。
 
 CLI 调试：
-    echo '{"response":"hello"}' | python voice-reply_hook.py --event=PostAssistantMessage
+    echo {"response":"hello"} | python voice-reply_hook.py --event=PostAssistantMessage
 """
 
 import argparse
 import json
 import sys
+import threading
 
 PLUGIN_NAME = "voice-reply"
+
+# 播报文本上限（字），避免语音队列过长
+MAX_TEXT_LEN = 500
+
+# SAPI5 Speak 标志：SVSFlagsAsync = 1（异步播报，立即返回）
+_SVSFlagsAsync = 1
+
+# 每个线程独立的 SpVoice 引擎（hook 线程池线程常驻复用，对象长期存活保证播完）
+_local = threading.local()
+
+
+def _get_engine():
+    """获取当前线程的 SAPI SpVoice 引擎（懒创建 + 线程级缓存）
+
+    Returns:
+        SpVoice COM 对象；初始化失败返回 None
+    """
+    engine = getattr(_local, "engine", None)
+    if engine is not None:
+        return engine
+
+    try:
+        import win32com.client
+    except ImportError:
+        return None
+
+    try:
+        engine = win32com.client.Dispatch("SAPI.SpVoice")
+
+        # 优先选择中文语音（如 Microsoft Huihui）
+        try:
+            voices = engine.GetVoices()
+            for i in range(voices.Count):
+                if "Chinese" in voices.Item(i).GetDescription():
+                    engine.Voice = voices.Item(i)
+                    break
+        except Exception:
+            pass
+
+        # 语速（SAPI 范围 -10 ~ 10，0 为正常）
+        try:
+            engine.Rate = 1
+        except Exception:
+            pass
+        # 音量 0 ~ 100
+        try:
+            engine.Volume = 100
+        except Exception:
+            pass
+
+        _local.engine = engine
+        return engine
+    except Exception:
+        return None
 
 
 # ============================================================
@@ -25,7 +83,7 @@ PLUGIN_NAME = "voice-reply"
 
 
 def speak(text: str) -> str:
-    """使用 pyttsx3 播放语音
+    """使用 Windows SAPI5 异步播放语音
 
     Args:
         text: 要朗读的文本
@@ -33,30 +91,17 @@ def speak(text: str) -> str:
     Returns:
         播放状态字符串
     """
-    try:
-        import pyttsx3
-    except ImportError:
-        return (
-            "❌ 缺少依赖 pyttsx3，请运行: pip install pyttsx3\n"
-            "   或参考插件 README.md 安装依赖"
-        )
+    if sys.platform != "win32":
+        return "❌ 语音播报仅支持 Windows（SAPI5）"
+
+    engine = _get_engine()
+    if engine is None:
+        return "❌ 语音引擎初始化失败（win32com/SAPI5 不可用）"
 
     try:
-        engine = pyttsx3.init()
-
-        # 设置语音（索引 0 通常是中文 Huihui）
-        voices = engine.getProperty("voices")
-        if voices:
-            engine.setProperty("voice", voices[0].id)
-
-        # 语速中等
-        engine.setProperty("rate", 180)
-
-        engine.say(text)
-        engine.runAndWait()
-
-        return f"🔊 已语音播报回复（{len(text)}字）"
-
+        # 异步播报：立即返回，不阻塞聊天流程
+        engine.Speak(text, _SVSFlagsAsync)
+        return f"🔊 已开始语音播报（{len(text)}字）"
     except Exception as e:
         return f"❌ 语音播报失败: {e}"
 
@@ -87,9 +132,9 @@ def handle_post_assistant_message(event: str = "", context: dict | None = None) 
     if len(text) < 3:
         return ""
 
-    # 截断过长文本（避免 TTS 耗时太久）
-    if len(text) > 1000:
-        text = text[:1000] + "……"
+    # 截断过长文本（避免语音队列过长）
+    if len(text) > MAX_TEXT_LEN:
+        text = text[:MAX_TEXT_LEN] + "……"
 
     return speak(text)
 

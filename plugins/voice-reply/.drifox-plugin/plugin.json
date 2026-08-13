@@ -1,11 +1,11 @@
 {
     "name": "voice-reply",
-    "description": "将 AI 回复转为语音播放（使用 pyttsx3 Windows SAPI5 离线 TTS）",
+    "description": "将 AI 回复转为语音播放（Windows SAPI5 离线 TTS，零依赖）",
     "icon": {
         "light": "icon.svg",
         "dark": "icon_dark.svg"
     },
-    "version": "1.0.1",
+    "version": "1.1.0",
     "type": "user",
     "components": {
         "hooks": true
