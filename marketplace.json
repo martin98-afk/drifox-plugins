@@ -178,7 +178,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 13,
+            "downloads": 14,
             "keywords": [
                 "browser",
                 "web",
@@ -885,7 +885,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "image-generation",
                 "prompt-engineering",
@@ -1367,7 +1367,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "html",
                 "interactive",
@@ -1999,7 +1999,7 @@
             "components": {
                 "hooks": true
             },
-            "downloads": 1,
+            "downloads": 3,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
