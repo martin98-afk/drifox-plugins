@@ -1,0 +1,147 @@
+# ─────────────────────────────────────────────
+# 浮岛·雾青 · Laputa Fog
+# 宫崎骏《天空之城》灵感浅色主题
+# 灰蓝主调 · 琥珀暖金点缀 · 呼吸感光晕
+# ─────────────────────────────────────────────
+name: 浮岛·雾青
+id: laputa-fog
+mode: light
+window:
+  gradient_start: rgba(228, 236, 242, 255)
+  gradient_end: rgba(210, 220, 228, 255)
+background:
+  chat_list:
+    image: laputa-fog_bg.jpg
+    opacity: 0.13
+    enabled: true
+colors:
+  # ── 1. 基础色 ────────────────────────────────────
+  accent: '#5B7E8E'
+  accent_warm: '#C49A5C'
+  border: '#B6C2CC'
+  border_accent: '#7EA8B8'
+  text_primary: '#1F2D38'
+  text_secondary: rgba(31, 45, 56, 0.60)
+  text_muted: '#7A8A96'
+  card_bg: rgba(233, 238, 242, 238)
+  card_bg_solid: rgba(233, 238, 242, 252)
+  content_bg: '#DDE5EC'
+  hover_bg: rgba(91, 126, 142, 0.08)
+  selected_bg: rgba(91, 126, 142, 0.18)
+  capsule_bg: rgba(210, 225, 235, 215)
+  capsule_border: rgba(182, 194, 204, 200)
+
+  # ── 2. 全局 UI 基底 ──────────────────────────────
+  toolbar_bg: rgba(91, 126, 142, 0.05)
+  divider_color: rgba(0, 0, 0, 0.07)
+  hover_bg_strong: rgba(91, 126, 142, 0.08)
+  scrollbar_handle_bg: rgba(0, 0, 0, 0.15)
+  scrollbar_handle_hover_bg: rgba(0, 0, 0, 0.25)
+  card_placeholder_text: '#8A9CBA'
+
+  # ── 3. 卡片级语义色 ──────────────────────────────
+  button_text_on_accent: '#ffffff'
+  status_info: '#6BB5D0'
+  status_danger_bg: rgba(220, 50, 50, 0.8)
+  status_archive_bg: rgba(91, 126, 142, 0.8)
+  card_bg_dim: rgba(91, 126, 142, 0.04)
+  archived_card_bg: rgba(91, 126, 142, 0.10)
+  archived_card_border: rgba(91, 126, 142, 0.20)
+
+  # ── 4. 语法高亮色 ────────────────────────────────
+  syntax_step: '#059669'
+  syntax_tool: '#B45309'
+  syntax_success: '#16A34A'
+  syntax_error: '#DC2626'
+  syntax_result: '#7C3AED'
+
+  # ── 5. 标签色 ────────────────────────────────────
+  tag_accent: '#5B7E8E'
+  tag_accent_text: '#3A5A68'
+  tag_purple: '#7C3AED'
+  tag_purple_text: '#5B1FA3'
+  tag_orange: '#C49A5C'
+  tag_orange_text: '#9A7040'
+
+  # ── 6. 用户 / AI 卡片色 ──────────────────────────
+  user_card_bg: rgba(200, 222, 236, 195)
+  user_card_accent: '#5B7E8E'
+  user_card_text: '#1F2D38'
+  user_card_muted: '#5A6A78'
+
+  assistant_card_bg: rgba(245, 230, 200, 225)
+  assistant_card_accent: '#C49A5C'
+  assistant_card_text: '#1F2D38'
+  assistant_card_muted: '#8A7A50'
+
+  # ── 7. 智能体按钮 ────────────────────────────────
+  agent_btn_text: '#7A8AA0'
+  agent_btn_text_active: '#5B7E8E'
+  agent_btn_bg_active: rgba(91, 126, 142, 0.12)
+  agent_btn_separator: rgba(165, 185, 205, 150)
+
+  # ── 8. 输入框 ────────────────────────────────────
+  input_bg_start: rgba(215, 230, 240, 210)
+  input_bg_end: rgba(205, 222, 234, 210)
+  input_focus_bg_start: rgba(230, 240, 248, 245)
+  input_focus_bg_end: rgba(220, 235, 245, 245)
+  input_text: '#1F2D38'
+  input_focus_text: '#0A1A28'
+  input_border: '#B6C2CC'
+  input_focus_border: '#5B7E8E'
+  input_placeholder: rgba(31, 45, 56, 0.35)
+
+  # ── 8.5 输入卡发光预设 ──────────────────────────
+  input_glow_preset: "breath"
+
+  # ── 全局 UI 发光 ────────────────────────────────
+  glow_primary_alpha: 120
+  glow_primary_blur: 24
+  glow_ambient_alpha: 60
+  glow_ambient_blur: 32
+
+  # ── 9. 底部工具栏条 ──────────────────────────────
+  toolbar_strip_bg: rgba(205, 222, 234, 210)
+  toolbar_strip_border: '#B6C2CC'
+
+  # ── 10. 实时交互卡片 ─────────────────────────────
+  realtime_border: '#5B7E8E'
+  realtime_accent: '#7EA8B8'
+  realtime_accent_warm: '#C49A5C'
+  realtime_success: '#10B981'
+  realtime_error: '#EF4444'
+  realtime_bg: rgba(233, 238, 242, 248)
+  realtime_text: '#1F2D38'
+  realtime_text_secondary: rgba(31, 45, 56, 0.65)
+  realtime_tag_bg: rgba(91, 126, 142, 0.10)
+  realtime_tag_border: rgba(91, 126, 142, 0.22)
+
+  # ── 11. 系统卡片 ─────────────────────────────────
+  system_border: '#B6C2CC'
+  system_accent: '#5B7E8E'
+
+  # ── 12. 发送按钮渐变 ────────────────────────────
+  send_btn_start: '#5B7E8E'
+  send_btn_end: '#4A6A78'
+  send_btn_hover_start: '#6B8E9E'
+  send_btn_hover_end: '#5B7E8E'
+  send_btn_radius: 17
+
+  # ── 13. 时间线 ──────────────────────────────────
+  timeline_node: '#B0C0CC'
+  timeline_node_hover: '#5B7E8E'
+  timeline_node_visible: '#5B7E8E'
+  timeline_node_selected: '#C49A5C'
+  timeline_line: '#C8D4DE'
+  timeline_line_progress: '#5B7E8E'
+
+  # ── 14. 上下文圆环 ──────────────────────────────
+  ring_normal: '#5B7E8E'
+  ring_warning: '#C49A5C'
+  ring_danger: '#EF4444'
+  ring_compacted: '#7C3AED'
+
+  # ── 15. 分支标签 ────────────────────────────────
+  branch_label_bg: rgba(91, 126, 142, 0.10)
+  branch_label_border: rgba(91, 126, 142, 0.22)
+  window_bg: rgba(91, 126, 142, 0.04)

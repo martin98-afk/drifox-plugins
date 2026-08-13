@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.6.0 (2026-08-13)
+
+### ✨ 新增 laputa-fog 主题插件（DriFox 原生）
+
+- **`laputa-fog`** — 浮岛·雾青主题：宫崎骏《天空之城》灵感浅色主题，灰蓝主调（`#5B7E8E`）+ 琥珀暖金点缀（`#C49A5C`），呼吸感光晕（`input_glow_preset: breath`），96 个颜色 token，显式声明 `mode: light`
+- **专属背景**：聊天列表背景图 `laputa-fog_bg.jpg`（13% 透明度），随插件分发
+- **机制**：`marketplace.json` 重新生成（63→64 个插件），`laputa-fog` 通过 `validate_plugins.py` 校验（零 error/warning），`/theme laputa-fog` 切换
+
 ## 2.5.1 (2026-08-13)
 
 ### 🔧 改进 context-stats 用量图表

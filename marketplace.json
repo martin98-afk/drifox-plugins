@@ -1095,6 +1095,40 @@
             }
         },
         {
+            "name": "laputa-fog",
+            "description": "浮岛·雾青主题 — 宫崎骏《天空之城》灵感浅色主题，灰蓝主调、琥珀暖金点缀、呼吸感光晕。",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "theme"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/laputa-fog",
+                "ref": "main"
+            },
+            "components": {
+                "themes": true
+            },
+            "keywords": [
+                "theme",
+                "laputa",
+                "sky-castle",
+                "light",
+                "主题"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/martin98-afk/drifox-plugins",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "mcp-builder",
             "description": "MCP 服务器构建助手 — 教用户从零创建 MCP（Model Context Protocol）服务器，连接任意工具/数据源到 DriFox / Claude Code / Cursor。",
             "version": "1.0.0",
@@ -1384,7 +1418,7 @@
         {
             "name": "project-dashboard",
             "description": "项目信息看板 — 生成 commit 趋势/语言分布/贡献者/文件统计图表，欢迎卡片展示",
-            "version": "0.2.1",
+            "version": "0.2.2",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
