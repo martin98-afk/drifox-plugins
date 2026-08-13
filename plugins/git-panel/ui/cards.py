@@ -1106,7 +1106,7 @@ class _StashRowWidget(QWidget):
         icon.setStyleSheet("background: transparent;")
         ly.addWidget(icon)
 
-        # 描述（双击整行 = 查看内容，与「内容」按钮一致）
+        # 描述（双击整行 = 查看内容）
         msg_lb = QLabel(f"{stash_info['ref']}: {stash_info['message']}", self)
         msg_lb.setStyleSheet(
             f"background: transparent; color: {_text_color()}; font-size: 12px;"
@@ -1115,20 +1115,10 @@ class _StashRowWidget(QWidget):
         msg_lb.setWordWrap(True)
         ly.addWidget(msg_lb)
 
-        # 内容
-        view_btn = QPushButton("内容", self)
-        view_btn.setFixedSize(40, 22)
-        view_btn.setStyleSheet(
-            "QPushButton { background: rgba(98,160,234,0.12); border: none; border-radius: 4px; "
-            f"color: {_text_color()}; font-size: 11px; padding: 0 4px; }}"
-            "QPushButton:hover { background: rgba(98,160,234,0.28); }"
-        )
-        view_btn.clicked.connect(lambda: self.action_requested.emit("view", stash_info["ref"]))
-        ly.addWidget(view_btn)
-
-        # 应用
+        # 应用（保留该搁置；双击整行可先查看内容，确认后再应用）
         apply_btn = QPushButton("应用", self)
         apply_btn.setFixedSize(40, 22)
+        apply_btn.setToolTip("应用搁置内容到工作区（保留该搁置）")
         apply_btn.setStyleSheet(
             "QPushButton { background: rgba(98,160,234,0.15); border: none; border-radius: 4px; "
             f"color: {_text_color()}; font-size: 11px; padding: 0 4px; }}"
@@ -1136,17 +1126,6 @@ class _StashRowWidget(QWidget):
         )
         apply_btn.clicked.connect(lambda: self.action_requested.emit("apply", stash_info["ref"]))
         ly.addWidget(apply_btn)
-
-        # 弹出
-        pop_btn = QPushButton("弹出", self)
-        pop_btn.setFixedSize(40, 22)
-        pop_btn.setStyleSheet(
-            "QPushButton { background: rgba(80,227,194,0.15); border: none; border-radius: 4px; "
-            f"color: {_text_color()}; font-size: 11px; padding: 0 4px; }}"
-            "QPushButton:hover { background: rgba(80,227,194,0.3); }"
-        )
-        pop_btn.clicked.connect(lambda: self.action_requested.emit("pop", stash_info["ref"]))
-        ly.addWidget(pop_btn)
 
         # 删除
         del_btn = QPushButton("删除", self)
@@ -1793,6 +1772,25 @@ class GitPanelCard(QWidget):
                 new_ss = re.sub(r"color:\s*[^;]+;", f"color: {tc};", ss)
                 if fs:
                     new_ss = re.sub(r"font-size:\s*[^;]+;", f"font-size: {fs}px;", new_ss)
+                if ff and f"font-family: '{ff}'" not in new_ss:
+                    new_ss += f" font-family: '{ff}';"
+                child.setStyleSheet(new_ss)
+            except RuntimeError:
+                pass
+
+        # 按钮样式更新：跟随主题字体/字号（保留各自语义色）
+        for child in self.findChildren(QPushButton):
+            try:
+                ss = child.styleSheet()
+                if not ss:
+                    continue
+                new_ss = ss
+                if fs:
+                    new_ss = re.sub(
+                        r"font-size:\s*[^;]+;",
+                        f"font-size: {max(fs - 3, 11)}px;",
+                        ss,
+                    )
                 if ff and f"font-family: '{ff}'" not in new_ss:
                     new_ss += f" font-family: '{ff}';"
                 child.setStyleSheet(new_ss)
