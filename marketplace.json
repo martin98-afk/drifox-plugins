@@ -118,7 +118,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "html",
                 "writing",
@@ -151,7 +151,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -210,7 +210,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 7,
+            "downloads": 8,
             "keywords": [
                 "calendar",
                 "date",
@@ -379,7 +379,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "welcome",
                 "stats",
