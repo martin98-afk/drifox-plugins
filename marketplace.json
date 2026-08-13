@@ -178,7 +178,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 11,
+            "downloads": 12,
             "keywords": [
                 "browser",
                 "web",
@@ -379,7 +379,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "welcome",
                 "stats",
@@ -795,7 +795,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 13,
+            "downloads": 14,
             "keywords": [
                 "git",
                 "source-control",
@@ -851,6 +851,7 @@
                 "hooks": true,
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "git",
                 "workflow",
@@ -884,7 +885,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "image-generation",
                 "prompt-engineering",
@@ -1044,7 +1045,7 @@
                 "hooks": true,
                 "skills": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "prompt",
                 "optimizer",
@@ -1400,7 +1401,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "dashboard",
                 "stats",
