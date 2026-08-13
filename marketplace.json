@@ -178,7 +178,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 10,
+            "downloads": 11,
             "keywords": [
                 "browser",
                 "web",
@@ -210,7 +210,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "calendar",
                 "date",
@@ -379,7 +379,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "welcome",
                 "stats",
@@ -493,7 +493,7 @@
                 "commands": true,
                 "hooks": true
             },
-            "downloads": 7,
+            "downloads": 8,
             "keywords": [
                 "agents",
                 "skills",
@@ -1162,7 +1162,7 @@
                 "commands": true,
                 "skills": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "video-generation",
                 "视频生成",
@@ -1333,7 +1333,7 @@
                 "skills": true,
                 "hooks": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "yagni",
                 "refactor",
