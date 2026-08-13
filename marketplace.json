@@ -1381,6 +1381,43 @@
             "homepage": "https://github.com/DietrichGebert/ponytail"
         },
         {
+            "name": "project-dashboard",
+            "description": "项目信息看板 — 生成 commit 趋势/语言分布/贡献者/文件统计图表，欢迎卡片展示",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui",
+                "stats",
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/project-dashboard",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true
+            },
+            "keywords": [
+                "dashboard",
+                "stats",
+                "git",
+                "echarts",
+                "welcome",
+                "trend"
+            ],
+            "drifox": {
+                "min_version": "0.4.15"
+            },
+            "homepage": "https://github.com/martin98-afk/DriFox",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "python-pro",
             "description": "Python 开发增强 — 注入 PEP 8 / 类型标注 / 异步最佳实践，PostToolUse 自动 lint 检查，让 Python 代码质量持续达标。",
             "version": "1.0.1",

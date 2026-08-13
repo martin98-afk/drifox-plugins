@@ -46,6 +46,7 @@
 | 插件 | 描述 | 组件 | 版本 | 来源 |
 |------|------|------|------|------|
 | [`calendar`](calendar/) | 日历 tab — 欢迎卡片内嵌月视图，上/下月切换 + 今天高亮 | ui | 1.0.0 | DriFox 原生 |
+| [`project-dashboard`](project-dashboard/) | 项目信息看板 — commit 趋势/语言分布/贡献者/文件统计图表 | ui | 0.1.0 | DriFox 原生 |
 
 ### 语音与多媒体
 
@@ -84,6 +85,7 @@
 | voice-clone | ✅ | — | ✅ | — | — | — | — | — |
 | minimax-h3 | ✅ | — | ✅ | — | — | — | — | — |
 | calendar | — | — | — | — | — | — | — | ✅ |
+| project-dashboard | — | — | — | — | — | — | — | ✅ |
 | ui-motion-skills | — | — | ✅ | — | — | — | — | — |
 
 > **ui 组件说明**：ui 插件通过 `ui/__init__.py` 中的 `register_ui(registry)` 函数注册可视化组件（浮动卡片 / 内容块渲染器 / 消息元素工厂），由 DriFox 启动时 `UIPluginRegistry.load_plugin` 加载。详见 [docs/architecture.md](../docs/architecture.md#ui-组件)。
