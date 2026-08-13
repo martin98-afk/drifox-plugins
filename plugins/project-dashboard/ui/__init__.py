@@ -9,7 +9,6 @@ render_func 返回 markdown 片段（概要行 + ```echarts 代码块），
 后台采集完成自动重渲染欢迎卡片，不阻塞 UI 主线程。
 """
 
-import os
 import sys
 from pathlib import Path
 
@@ -24,8 +23,10 @@ def _get_project_root() -> str:
     2. 遍历全部窗口 provider（主程序 welcome tab 渲染时不传 project_root，
        且活跃窗口可能在多窗口/欢迎卡片场景下解析失败）
     3. 全局兼容 provider
-    4. os.getcwd() 兜底
     全部无效返回空串（调用方显示友好提示，不启动采集）。
+
+    【修复】不再用 os.getcwd() 兜底：软件启动目录（源码根/exe 目录）
+    本身可能是 git 仓库（如 D:/work/DriFox），会把启动目录误当项目根展示其 git 信息。
     """
     candidates: list = []
     try:
@@ -60,8 +61,9 @@ def _get_project_root() -> str:
                 pass
     except Exception:
         pass
-    candidates.append(os.getcwd())
-
+    # 【修复】移除 os.getcwd() 兜底：软件启动目录（源码根/exe 目录）本身可能是
+    # git 仓库（如 D:/work/DriFox），会把启动目录误当项目根展示其 git 信息。
+    # 全部候选无效时返回空串，由调用方显示"未检测到 git 项目"友好提示。
     seen = set()
     for cand in candidates:
         if not cand or cand in seen:

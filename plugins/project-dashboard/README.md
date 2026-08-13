@@ -93,7 +93,7 @@ def register_ui(registry: UIPluginRegistry) -> None:
 - `render_func` 主线程同步调用 → 数据采集全部异步（QThread worker 单例，幂等启动）
 - git 命令通过 `subprocess.run()` 完成，单次超时 8 秒，失败静默降级；Windows 下加 `CREATE_NO_WINDOW` 隐藏子进程控制台窗口
 - 性能：语言/文件类型扫描仅对已知文本扩展名读取行数（二进制/未知扩展名只计数），行数统计用线程池并行；`build_cache_key` 的 HEAD 查询带 5s TTL 缓存，避免主线程频繁启动 git 子进程
-- 项目根解析：主程序渲染 welcome tab 只注入 `is_dark`，插件用候选链解析 project_root（活跃窗口 provider → 全部窗口 provider → 全局 provider → cwd），逐级 `find_git_root` 验证，全部无效返回空串显示友好提示；error 采集结果缓存 60s TTL，避免错误被永久固定
+- 项目根解析：主程序渲染 welcome tab 只注入 `is_dark`，插件用候选链解析 project_root（活跃窗口 provider → 全部窗口 provider → 全局兼容 provider），逐级 `find_git_root` 验证，全部无效返回空串显示友好提示；**不回退 `os.getcwd()`**（软件启动目录/源码根本身可能是 git 仓库，会把启动目录误当项目根展示其 git 信息，见 v0.2.2 修复）；error 采集结果缓存 60s TTL，避免错误被永久固定
 - 热重载：`register_ui` 清理 `ui_plugin_project_dashboard.` sys.modules 前缀
 
 ## 参考
