@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1786609526.052291,
+  "fetched_at": 1786613886.543282,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -13,7 +13,7 @@
     "claude-api": 0,
     "code-reviewer": 1,
     "code-simplifier": 1,
-    "context-stats": 5,
+    "context-stats": 6,
     "context7": 2,
     "doc-coauthoring": 1,
     "ecc": 8,
@@ -44,7 +44,7 @@
     "omml-docx": 3,
     "playground": 1,
     "ponytail": 5,
-    "project-dashboard": 0,
+    "project-dashboard": 4,
     "python-pro": 1,
     "react-pro": 1,
     "security-guidance": 1,
