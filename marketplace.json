@@ -210,7 +210,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 5,
+            "downloads": 7,
             "keywords": [
                 "calendar",
                 "date",
@@ -379,7 +379,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "welcome",
                 "stats",
@@ -1044,6 +1044,7 @@
                 "hooks": true,
                 "skills": true
             },
+            "downloads": 2,
             "keywords": [
                 "prompt",
                 "optimizer",
