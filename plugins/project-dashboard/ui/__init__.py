@@ -17,20 +17,65 @@ from loguru import logger
 
 
 def _get_project_root() -> str:
-    """获取当前项目 git 根：优先 registry 活跃窗口 provider，兜底 os.getcwd()"""
+    """获取当前项目 git 根（返回 git toplevel，保证是 git 仓库）
+
+    候选链（逐个用 find_git_root 验证，返回第一个有效 git 根）：
+    1. 活跃窗口 provider 的 project_root
+    2. 遍历全部窗口 provider（主程序 welcome tab 渲染时不传 project_root，
+       且活跃窗口可能在多窗口/欢迎卡片场景下解析失败）
+    3. 全局兼容 provider
+    4. os.getcwd() 兜底
+    全部无效返回空串（调用方显示友好提示，不启动采集）。
+    """
+    candidates: list = []
     try:
         from app.core.ui_plugin_registry import UIPluginRegistry
 
         reg = UIPluginRegistry.get_instance()
+        # 1. 活跃窗口
         provider = reg._resolve_active_window_provider()
         if provider is not None:
-            ctx = provider()
-            root = ctx.get("project_root")
-            if root:
-                return root
+            try:
+                root = provider().get("project_root")
+                if root:
+                    candidates.append(root)
+            except Exception:
+                pass
+        # 2. 全部窗口 provider（欢迎卡片可能渲染在非活跃窗口/初始阶段）
+        for p in list(getattr(reg, "_context_providers", {}).values()):
+            try:
+                root = p().get("project_root")
+                if root:
+                    candidates.append(root)
+            except Exception:
+                pass
+        # 3. 全局兼容 provider
+        gp = getattr(reg, "_context_provider", None)
+        if gp is not None:
+            try:
+                root = gp().get("project_root")
+                if root:
+                    candidates.append(root)
+            except Exception:
+                pass
     except Exception:
         pass
-    return os.getcwd()
+    candidates.append(os.getcwd())
+
+    seen = set()
+    for cand in candidates:
+        if not cand or cand in seen:
+            continue
+        seen.add(cand)
+        try:
+            from dashboard import find_git_root
+
+            git_root = find_git_root(cand)
+            if git_root:
+                return git_root
+        except Exception:
+            pass
+    return ""
 
 
 def _render_welcome_tab(ctx: dict = None) -> str:
@@ -44,6 +89,9 @@ def _render_welcome_tab(ctx: dict = None) -> str:
         is_dark = True  # DriFox 默认深色主题
 
     root = _get_project_root()
+    if not root:
+        # 候选链全部无效（registry 未就绪 / 无任何窗口提供项目）→ 不采集，下次渲染重试
+        return "> ⚠️ 未检测到 git 项目，请在对话窗口打开项目后重试\n"
 
     from collector import build_cache_key, get_collector
 

@@ -17,6 +17,8 @@ from loguru import logger
 # HEAD 查询 TTL（秒）：build_cache_key 主线程同步跑 git，短 TTL 缓存避免每次渲染都起子进程
 _HEAD_TTL = 5.0
 _head_cache: dict = {}  # project_root -> (ts, head)
+# error 结果缓存 TTL（秒）：避免错误被永久固定（如 root 解析暂时失败），过期自动重采
+_ERROR_TTL = 60.0
 
 # 延迟导入（避免模块加载时依赖 sys.path 已含 ui 目录）
 _collector = None
@@ -52,10 +54,18 @@ class _Collector:
         self._worker: Optional[_CollectWorker] = None
         self._cache: Optional[dict] = None
         self._cache_key: tuple = ()
+        self._cache_ts: float = 0.0  # 缓存写入时间（error TTL 用）
 
     def get_cached(self, cache_key: tuple) -> Optional[dict]:
-        """缓存命中返回 data，否则 None"""
+        """缓存命中返回 data，否则 None
+
+        error 结果带 TTL：过期视为未命中，允许自动重采恢复。
+        """
         if self._cache is not None and self._cache_key == cache_key:
+            if self._cache.get("error"):
+                if time.monotonic() - self._cache_ts < _ERROR_TTL:
+                    return self._cache
+                return None  # error 过期 → 触发重采
             return self._cache
         return None
 
@@ -81,6 +91,7 @@ class _Collector:
 
     def _on_done(self, data: dict):
         self._cache = data
+        self._cache_ts = time.monotonic()
         self._thread = None
         self._worker = None
         _refresh_welcome_cards()
@@ -90,6 +101,7 @@ class _Collector:
         self._thread = None
         self._worker = None
         self._cache = {"error": f"采集失败: {err}"}
+        self._cache_ts = time.monotonic()
         _refresh_welcome_cards()
         logger.error(f"[project-dashboard] collect error: {err}")
 
