@@ -38,34 +38,46 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: 拉取下载量
-        run: python tools/fetch_downloads.py
-
-      - name: 重新生成 marketplace.json
-        run: python tools/generate_marketplace.py
-
-      - name: 检查是否有变化
-        id: drift
-        run: |
-          if git diff --quiet marketplace.json downloads_cache.json; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "ℹ️ 下载量无变化，无需提交" >&2
-          else
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            git diff --stat marketplace.json downloads_cache.json >&2
-          fi
-
-      - name: Commit 并 push
-        if: steps.drift.outputs.changed == 'true'
+      - name: 拉取下载量并提交（自动处理并发冲突）
         env:
           TARGET_BRANCH: ${{ github.ref_name }}
         run: |
+          set -euo pipefail
           git config user.name "drifox-bot"
           git config user.email "drifox-bot@users.noreply.github.com"
-          git add marketplace.json downloads_cache.json
-          git commit \
-            -m "chore(marketplace): update plugin download stats [skip ci]" \
-            -m "由 GitHub Actions 从计数服务自动拉取。"
           TOKEN="${{ secrets.GITHUB_TOKEN || secrets.DRIFOX_BOT_TOKEN }}"
           git remote set-url origin "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git push origin "HEAD:${TARGET_BRANCH}"
+
+          MAX_ATTEMPTS=5
+          for i in $(seq 1 "$MAX_ATTEMPTS"); do
+            echo "=== 第 $i 次尝试 ===" >&2
+
+            # 先同步到远程最新，避免与 auto-regenerate / 手动提交并发冲突
+            git fetch origin "$TARGET_BRANCH"
+            git reset --hard "origin/$TARGET_BRANCH"
+
+            # 基于最新代码拉取下载量并重新生成 marketplace.json（幂等）
+            python tools/fetch_downloads.py
+            python tools/generate_marketplace.py
+
+            # 无变化则直接结束
+            if git diff --quiet marketplace.json downloads_cache.json; then
+              echo "ℹ️ 下载量无变化，无需提交" >&2
+              exit 0
+            fi
+
+            git add marketplace.json downloads_cache.json
+            git commit \
+              -m "chore(marketplace): update plugin download stats [skip ci]" \
+              -m "由 GitHub Actions 从计数服务自动拉取。"
+
+            if git push origin "HEAD:$TARGET_BRANCH"; then
+              echo "✅ push 成功" >&2
+              exit 0
+            fi
+            echo "⚠️ push 被拒（存在并发提交），重试..." >&2
+            sleep 5
+          done
+
+          echo "❌ 多次重试后仍 push 失败，请人工检查" >&2
+          exit 1
