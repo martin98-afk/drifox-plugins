@@ -764,7 +764,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "git",
                 "dashboard",
@@ -795,7 +795,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 9,
+            "downloads": 13,
             "keywords": [
                 "git",
                 "source-control",
@@ -1229,7 +1229,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "skill",
                 "agents",
