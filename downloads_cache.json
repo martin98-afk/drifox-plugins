@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1786735568.95226,
+  "fetched_at": 1786737708.477278,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -25,7 +25,7 @@
     "frontend-pro": 1,
     "game2048": 2,
     "git-dashboard": 6,
-    "git-panel": 17,
+    "git-panel": 18,
     "git-status": 0,
     "git-workflow": 1,
     "gpt-image-2": 5,
