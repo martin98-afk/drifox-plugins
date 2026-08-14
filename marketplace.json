@@ -764,7 +764,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "git",
                 "dashboard",
@@ -1265,7 +1265,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "skill",
                 "agents",
@@ -2000,7 +2000,7 @@
             "components": {
                 "hooks": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"

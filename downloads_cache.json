@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1786707409.2511399,
+  "fetched_at": 1786711302.33518,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -24,7 +24,7 @@
     "frontend-design": 1,
     "frontend-pro": 1,
     "game2048": 2,
-    "git-dashboard": 5,
+    "git-dashboard": 6,
     "git-panel": 16,
     "git-status": 0,
     "git-workflow": 1,
@@ -40,7 +40,7 @@
     "memory-match": 1,
     "minesweeper": 4,
     "minimax-h3": 5,
-    "nuwa-skill": 6,
+    "nuwa-skill": 7,
     "office-docs": 1,
     "omml-docx": 4,
     "playground": 2,
@@ -62,7 +62,7 @@
     "theme-factory": 0,
     "ui-motion-skills": 2,
     "voice-clone": 1,
-    "voice-reply": 3,
+    "voice-reply": 4,
     "web-artifacts-builder": 1,
     "web-design-skills": 1,
     "webapp-testing": 1
