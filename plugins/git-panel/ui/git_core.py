@@ -117,9 +117,12 @@ def _get_stashes(cwd: str) -> List[dict]:
 
 
 def _get_branches(cwd: str) -> List[dict]:
-    """获取分支列表 [{"name", "current"}]"""
+    """获取分支列表 [{"name", "current", "checked_out_elsewhere"}]"""
     # strip=False：非当前分支行以两个空格开头，整体 strip 会吞掉首行
     # 前导空格，导致 line[2:] 错误截断分支名（如 master → ster）
+    # `+` 前缀：该分支在链接 worktree 中检出（git branch 文档约定）。
+    # 必须剥离，否则 `+` 被当成分支名 → 显示错误 + 切换执行
+    # `git checkout "+ name"` 必然失败。
     stdout, _, code = _run_git(cwd, "branch", strip=False)
     if code != 0 or not stdout:
         return []
@@ -128,9 +131,17 @@ def _get_branches(cwd: str) -> List[dict]:
         line = line.strip()
         if not line:
             continue
-        is_current = line.startswith("*")
-        name = line[1:].strip() if is_current else line
-        result.append({"name": name, "current": is_current})
+        if line.startswith("*"):
+            name, is_current, checked_out_elsewhere = line[1:].strip(), True, False
+        elif line.startswith("+"):
+            name, is_current, checked_out_elsewhere = line[1:].strip(), False, True
+        else:
+            name, is_current, checked_out_elsewhere = line, False, False
+        result.append({
+            "name": name,
+            "current": is_current,
+            "checked_out_elsewhere": checked_out_elsewhere,
+        })
     return result
 
 

@@ -1181,6 +1181,8 @@ class _BranchRowWidget(QWidget):
         text = branch_info["name"]
         if branch_info["current"]:
             text += " (当前)"
+        elif branch_info.get("checked_out_elsewhere"):
+            text += " (其他工作树)"
         name_lb = QLabel(text, self)
         name_lb.setWordWrap(True)
         if branch_info["current"]:
@@ -1197,24 +1199,42 @@ class _BranchRowWidget(QWidget):
 
         # 切换按钮（非当前分支）
         if not branch_info["current"]:
+            occupied = branch_info.get("checked_out_elsewhere", False)
             switch_btn = QPushButton("切换", self)
             switch_btn.setFixedSize(40, 22)
-            switch_btn.setStyleSheet(
-                "QPushButton { background: rgba(98,160,234,0.15); border: none; border-radius: 4px; "
-                f"color: {_text_color()}; font-size: 11px; padding: 0 4px; }}"
-                "QPushButton:hover { background: rgba(98,160,234,0.3); }"
-            )
-            switch_btn.clicked.connect(lambda: self.switch_requested.emit(branch_info["name"]))
+            if occupied:
+                # 分支在另一 worktree 检出：git 禁止在此检出，置灰并提示
+                switch_btn.setEnabled(False)
+                switch_btn.setToolTip("该分支已在其他工作树中检出，无法在此切换")
+                switch_btn.setStyleSheet(
+                    "QPushButton { background: rgba(128,128,128,0.1); border: none; "
+                    f"border-radius: 4px; color: {_text_color(secondary=True)}; font-size: 11px; padding: 0 4px; }}"
+                )
+            else:
+                switch_btn.setStyleSheet(
+                    "QPushButton { background: rgba(98,160,234,0.15); border: none; border-radius: 4px; "
+                    f"color: {_text_color()}; font-size: 11px; padding: 0 4px; }}"
+                    "QPushButton:hover { background: rgba(98,160,234,0.3); }"
+                )
+                switch_btn.clicked.connect(lambda: self.switch_requested.emit(branch_info["name"]))
             ly.addWidget(switch_btn)
 
             del_btn = QPushButton("删除", self)
             del_btn.setFixedSize(40, 22)
-            del_btn.setStyleSheet(
-                "QPushButton { background: rgba(241,76,76,0.15); border: none; border-radius: 4px; "
-                f"color: {_text_color()}; font-size: 11px; padding: 0 4px; }}"
-                "QPushButton:hover { background: rgba(241,76,76,0.3); }"
-            )
-            del_btn.clicked.connect(lambda: self.delete_requested.emit(branch_info["name"]))
+            if occupied:
+                del_btn.setEnabled(False)
+                del_btn.setToolTip("该分支已在其他工作树中检出，无法删除")
+                del_btn.setStyleSheet(
+                    "QPushButton { background: rgba(128,128,128,0.1); border: none; "
+                    f"border-radius: 4px; color: {_text_color(secondary=True)}; font-size: 11px; padding: 0 4px; }}"
+                )
+            else:
+                del_btn.setStyleSheet(
+                    "QPushButton { background: rgba(241,76,76,0.15); border: none; border-radius: 4px; "
+                    f"color: {_text_color()}; font-size: 11px; padding: 0 4px; }}"
+                    "QPushButton:hover { background: rgba(241,76,76,0.3); }"
+                )
+                del_btn.clicked.connect(lambda: self.delete_requested.emit(branch_info["name"]))
             ly.addWidget(del_btn)
 
 

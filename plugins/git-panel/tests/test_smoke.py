@@ -122,6 +122,31 @@ class TestGitRepoEndToEnd(TempRepoMixin, unittest.TestCase):
         self.assertTrue(self.g.branch_checkout("aaa").ok)
         self.assertEqual(self.g.branch(), "aaa")
 
+    def test_branch_list_worktree_plus_prefix(self):
+        """回归：分支在链接 worktree 检出时 git branch 输出 `+ name` 前缀，
+        name 必须剥离 `+` 且标记 checked_out_elsewhere（旧 bug：`+` 被当成分支名，
+        显示错误 + 切换执行 checkout "+ name" 失败）"""
+        self._write("a.txt", "x\n")
+        self.g.add(["."])
+        self.g.commit("init")
+        # 创建链接 worktree 并检出 wb 分支（模拟 DriFox-dsh_learning 场景）
+        wt_dir = os.path.join(self._tmp, "wt")
+        self.assertTrue(self.g.branch_create("wb").ok)
+        self.assertTrue(self.g.branch_checkout("main").ok)
+        _git(self.repo, "worktree", "add", wt_dir, "wb")
+
+        branches = self.g.branch_list()
+        by_name = {b["name"]: b for b in branches}
+        # 分支名不含 `+` 前缀
+        self.assertIn("wb", by_name)
+        self.assertNotIn("+ wb", by_name)
+        # 标记为在其他 worktree 检出
+        self.assertTrue(by_name["wb"]["checked_out_elsewhere"])
+        self.assertFalse(by_name["main"]["checked_out_elsewhere"])
+        # 当前分支 main 不受影响
+        self.assertTrue(by_name["main"]["current"])
+        self.assertEqual(len(branches), 2)
+
     def test_show_commit(self):
         self._write("a.txt", "x\n")
         self.g.add(["."])
