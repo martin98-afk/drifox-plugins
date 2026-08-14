@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1786685096.620583,
+  "fetched_at": 1786690271.0027459,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -35,7 +35,7 @@
     "ip-switcher": 2,
     "kim-service": 5,
     "knowledge-base-skills": 2,
-    "laputa-fog": 0,
+    "laputa-fog": 1,
     "mcp-builder": 1,
     "memory-match": 1,
     "minesweeper": 4,
