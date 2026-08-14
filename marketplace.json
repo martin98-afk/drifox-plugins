@@ -379,7 +379,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 9,
+            "downloads": 10,
             "keywords": [
                 "welcome",
                 "stats",
@@ -795,7 +795,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 16,
+            "downloads": 17,
             "keywords": [
                 "git",
                 "source-control",
@@ -918,7 +918,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "ppt",
                 "presentation",
@@ -1112,7 +1112,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "theme",
                 "laputa",
@@ -1436,7 +1436,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 11,
+            "downloads": 12,
             "keywords": [
                 "dashboard",
                 "stats",
@@ -1703,7 +1703,7 @@
                 "skills": true,
                 "mcp": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "development",
                 "code-quality",
