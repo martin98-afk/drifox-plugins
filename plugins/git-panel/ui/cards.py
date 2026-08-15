@@ -2153,7 +2153,25 @@ class GitPanelCard(QWidget):
 
         self._empty.setVisible(False)
         self._content.setVisible(True)
+        self._preserve_scroll_pos()
         self._render_content(data)
+
+    def _preserve_scroll_pos(self):
+        """刷新前保存滚动位置，渲染重建后恢复（避免列表刷新滚回顶部）"""
+        self._saved_scroll_pos = self._scroll.verticalScrollBar().value()
+
+    def _restore_scroll_pos(self):
+        """内容重建完成后恢复滚动位置。
+
+        延迟到事件循环下一次迭代：清空/重建后布局尚未定型，
+        立即 setValue 会被后续布局重置；且需 clamp 到新内容的最大值。
+        """
+        pos = getattr(self, "_saved_scroll_pos", None)
+        if pos is None:
+            return
+        self._saved_scroll_pos = None
+        sb = self._scroll.verticalScrollBar()
+        QTimer.singleShot(0, lambda: sb.setValue(min(pos, sb.maximum())))
 
     def _on_refresh_error(self, err: str):
         self._set_loading(False)
@@ -2350,6 +2368,9 @@ class GitPanelCard(QWidget):
 
         # 刷新主题
         self._apply_latest_theme()
+
+        # 重建完成后恢复滚动位置
+        self._restore_scroll_pos()
 
     def _make_changes_action_bar(self, staged: list, unstaged: list) -> QWidget:
         """创建变更区域的操作栏"""

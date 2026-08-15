@@ -807,7 +807,7 @@
         {
             "name": "git-panel",
             "description": "Git 控制面板 — 文件变更、暂存/取消暂存、提交、Stash、分支管理、提交历史、Diff 预览",
-            "version": "1.7.1",
+            "version": "1.7.2",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
