@@ -19,7 +19,11 @@ example-plugin/
 ├── __init__.py              # Python 包标记
 ├── README.md                # 本文件
 ├── tools/
-│   └── example_tool.py      # example_repeat（含 register(registry)）
+│   ├── example_tool.py      # example_repeat（含 register(registry)）
+│   ├── icons/               # 深色主题图标（SVG，文件名 = icon 字段值）
+│   │   └── 工具.svg
+│   └── icons_light/         # 浅色主题图标（缺省回退 icons/）
+│       └── 工具.svg
 ├── commands/
 │   └── hello.md             # /hello（完整 frontmatter 示例）
 ├── agents/
@@ -41,7 +45,7 @@ example-plugin/
 
 | 组件 | 本插件示例 | 权威参考 |
 |------|----------|---------|
-| tools | `tools/example_tool.py` | `plugins/system/tools/`（file/web/automation/codegraph 等） |
+| tools | `tools/example_tool.py`（含 icon 自包含示例） | `plugins/system/tools/`（file/web/automation/codegraph 等） |
 | commands | `commands/hello.md` | `plugins/system/commands/`（12 个） |
 | agents | `agents/example.md` | `plugins/system/agents/`（10 个） |
 | skills | `skills/example-plugin/SKILL.md` | `plugins/system/skills/`（25+ 个） |
@@ -63,6 +67,50 @@ example-plugin/
 - MCP：[`docs/mcp.md`](../../docs/mcp.md)
 - LSP：[`docs/lsp.md`](../../docs/lsp.md)
 - 工具：[`docs/architecture.md`](../../docs/architecture.md#工具组件)
+
+## 插件工具的 icon 自包含
+
+`tools/example_tool.py` 演示了**插件自带图标**的标准做法：每个工具在 `register(...)` 时
+通过 `icon="<name>"` 指定图标文件名，PluginToolLoader 自动从插件自带目录加载（无需主程序
+资源）。
+
+### 目录约定
+
+```
+tools/
+├── icons/         # 深色主题图标（主程序默认深色主题时优先用）
+│   └── 工具.svg   # icon="工具" → 渲染层找 工具.svg
+└── icons_light/   # 浅色主题图标（缺省时自动回退 icons/）
+    └── 工具.svg
+```
+
+### 查找顺序（渲染层 `render_helpers._get_tool_icon_html`）
+
+1. `<插件根>/tools/icons_light/<icon>.svg`（浅色主题）
+2. `<插件根>/tools/icons/<icon>.svg`（深色主题 / 浅色缺失回退）
+3. 主程序 `qrc:/icons[_light]/<icon>.svg`（主题感知，兜底）
+
+### 文件名约束
+
+- 大小写**敏感**（`Search` 与 `search` 是两个不同图标）
+- 支持中文 / 数字开头 / `-` / `_`（参考 `DriFox/plugins/system/tools/icons/` 下的真实样例）
+- 必须是合法 SVG（推荐 `viewBox` + 单 `<path>`）
+
+### 代码示例
+
+```python
+registry.register(
+    "example_repeat", _REPEAT_SCHEMA, impl=_repeat_impl,
+    danger="safe", icon="工具", cn_name="示例重复",   # ← icon="工具"
+    group="示例", description="把输入文本重复 N 次",
+    render_mode="inline",
+    preview=_preview_repeat,
+    summarize=make_summarize_from_preview(_preview_repeat),
+)
+```
+
+> 💡 派生新插件时，把需要的 SVG 拷到 `tools/icons/` + `tools/icons_light/` 即可。
+> 同一份图标可在多个插件之间复制：图标库自带、自包含、无主程序耦合。
 
 ## 使用
 
@@ -90,6 +138,9 @@ cp -r plugins/example-plugin plugins/your-plugin
 - 关闭不用的组件（`components` 字典里把 `false`）
 
 派生后请把本 README 替换为真实说明。
+
+> 派生时**保留** `tools/icons/` 与 `tools/icons_light/` 作为图标的参考样例，
+> 替换为你自己的图标即可。
 
 ## 校验
 

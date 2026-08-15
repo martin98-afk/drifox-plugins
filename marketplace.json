@@ -463,6 +463,37 @@
             }
         },
         {
+            "name": "desktop-automation",
+            "description": "桌面自动化工具（mouse / keyboard / screenshot）—— 通过 pynput + mss 控制桌面，从 DriFox 主程序迁出（工具插件化）",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/desktop-automation",
+                "ref": "main"
+            },
+            "components": {
+                "tools": true
+            },
+            "keywords": [
+                "desktop",
+                "automation",
+                "screenshot",
+                "mouse",
+                "keyboard"
+            ],
+            "homepage": "https://github.com/martin98-afk/DriFox",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "doc-coauthoring",
             "description": "文档协作写作助手 — 起草、迭代、定稿三阶段流程，结构化访谈、风格统一、决策追踪。",
             "version": "1.0.0",
