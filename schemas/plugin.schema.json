@@ -97,9 +97,14 @@
         { "required": ["themes"] },
         { "required": ["mcp"] },
         { "required": ["lsp"] },
-        { "required": ["ui"] }
+        { "required": ["ui"] },
+        { "required": ["tools"] }
       ],
       "properties": {
+        "tools": {
+          "type": "boolean",
+          "description": "启用 tools/*.py 工具（每个文件暴露 register(registry)，注册内置工具）"
+        },
         "commands": {
           "type": "boolean",
           "description": "启用 commands/*.md 斜杠命令"

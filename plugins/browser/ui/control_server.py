@@ -103,13 +103,29 @@ def _wait_load(view, timeout: float = 15.0) -> bool:
 # ── 浏览器操作（均在主线程执行）──
 
 def _ensure_browser():
-    """确保浏览器卡片存在并可见，返回 (card, view)；不可用返回 (None, None)"""
+    """确保浏览器卡片存在且可见，返回 (card, view)；不可用返回 (None, None)
+
+    关键：卡片被关闭（_close_card 只 hide 不销毁）后 _CURRENT_CARD 仍指向
+    隐藏实例。隐藏的 QWebEngineView 不参与合成，grab() 必然空白 →
+    必须检查 isVisible()，不可见时重新显示浮动卡片。
+    """
     from .browser_window import _get_current_card
 
-    card = _get_current_card()
+    def _get_visible():
+        card = _get_current_card()
+        if card is None:
+            return None, None
+        try:
+            if card.isVisible():
+                return card, card._current_view()
+        except RuntimeError:
+            return None, None  # 对象已销毁
+        return None, None
+
+    card, view = _get_visible()
     if card is not None:
-        return card, card._current_view()
-    # 浏览器未打开 → 尝试自动打开浮动卡片
+        return card, view
+    # 浏览器未打开或已隐藏 → 尝试重新显示浮动卡片
     try:
         from app.core.ui_plugin_registry import UIPluginRegistry
         from app.widgets.cards.card_manager import CardManager
@@ -120,9 +136,10 @@ def _ensure_browser():
             visible = any(cm.is_card_visible("browser", wid) for wid in cm.get_all_windows())
             if not visible:
                 registry.toggle_floating_card("browser")
-            card = _get_current_card()
+            # 显示后重新获取（toggle_floating_card 同步执行 show_card）
+            card, view = _get_visible()
             if card is not None:
-                return card, card._current_view()
+                return card, view
     except Exception:
         pass
     return None, None

@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.7.0 (2026-08-15)
+### ✨ 新增 codegraph-tools 工具插件 + tools 组件支持
+- **`codegraph-tools`** — CodeGraph 语义级代码智能工具（`codegraph_explore`）：搜索 / 调用链 / 影响分析 / 索引管理，从 DriFox 主程序迁出（工具插件化），依赖 `codegraph-py` 库
+- **组件体系扩展**：官方插件组件由 8 类增至 9 类，新增 **`tools`** 组件（`tools/*.py` 暴露 `register(registry)` 注册内置工具，由 `PluginToolLoader` 加载）
+- **配套更新**：`schemas/plugin.schema.json` 支持 `tools` 组件；`tools/validate_plugins.py` 新增 `check_tools_dir` 校验（register 入口 + 语法）；`tools/generate_marketplace.py` 推断 `tool` 分类；`example-plugin` 补齐 tools/ui 组件成为 9 类完整参考；README / docs 组件清单同步更新
+- **机制**：`marketplace.json` 重新生成（64→65 个插件），`codegraph-tools` 通过 `validate_plugins.py` 校验（零 error/warning）
+
 ## 2.6.0 (2026-08-13)
 
 ### ✨ 新增 laputa-fog 主题插件（DriFox 原生）

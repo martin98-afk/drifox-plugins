@@ -1,6 +1,6 @@
 # example-plugin
 
-> DriFox 插件的**最小参考实现**。本插件不解决真实问题，专门用来展示官方插件结构与全部 7 类组件的标准写法。
+> DriFox 插件的**最小参考实现**。本插件不解决真实问题，专门用来展示官方插件结构与全部 9 类组件的标准写法。
 
 ## 目的
 
@@ -8,16 +8,18 @@
 - 作为官方插件**结构约定**的活文档
 - 作为 `tools/validate_plugins.py` 的**冒烟测试用例**
 
-## 结构（全部 7 类组件）
+## 结构（全部 9 类组件）
 
 ```
 example-plugin/
 ├── .drifox-plugin/
-│   └── plugin.json          # manifest（启用全部 7 类组件）
+│   └── plugin.json          # manifest（启用全部 9 类组件）
 ├── .mcp.json                # MCP 服务器配置
 ├── .lsp.json                # LSP 语言服务器配置
 ├── __init__.py              # Python 包标记
 ├── README.md                # 本文件
+├── tools/
+│   └── example_tool.py      # example_repeat（含 register(registry)）
 ├── commands/
 │   └── hello.md             # /hello（完整 frontmatter 示例）
 ├── agents/
@@ -28,15 +30,18 @@ example-plugin/
 ├── themes/
 │   └── example/
 │       └── example.yaml     # 浅色主题示例
-└── hooks/
-    ├── hooks.json           # SessionStart + PostToolUse
-    └── example-plugin_hook.py
+├── hooks/
+│   ├── hooks.json           # SessionStart + PostToolUse
+│   └── example-plugin_hook.py
+└── ui/
+    └── __init__.py          # register_ui(registry) 骨架示例
 ```
 
-## 七类组件对照
+## 九类组件对照
 
 | 组件 | 本插件示例 | 权威参考 |
 |------|----------|---------|
+| tools | `tools/example_tool.py` | `plugins/system/tools/`（file/web/automation/codegraph 等） |
 | commands | `commands/hello.md` | `plugins/system/commands/`（12 个） |
 | agents | `agents/example.md` | `plugins/system/agents/`（10 个） |
 | skills | `skills/example-plugin/SKILL.md` | `plugins/system/skills/`（25+ 个） |
@@ -44,6 +49,7 @@ example-plugin/
 | hooks | `hooks/hooks.json` + `example-plugin_hook.py` | `plugins/system/hooks/hooks.json` |
 | mcp | `.mcp.json` | `plugins/system/.mcp.json` |
 | lsp | `.lsp.json` | `plugins/system/.lsp.json` |
+| ui | `ui/__init__.py` | `plugins/system/ui/`（UIPluginRegistry 加载） |
 
 ## 组件文档
 
@@ -56,6 +62,7 @@ example-plugin/
 - 钩子：[`docs/hooks.md`](../../docs/hooks.md)
 - MCP：[`docs/mcp.md`](../../docs/mcp.md)
 - LSP：[`docs/lsp.md`](../../docs/lsp.md)
+- 工具：[`docs/architecture.md`](../../docs/architecture.md#工具组件)
 
 ## 使用
 
@@ -65,6 +72,7 @@ example-plugin/
 4. 用 `@example` 触发智能体
 5. `/theme example` 切换主题
 6. 观察 `PostToolUse` 钩子输出（`./memory/example-plugin.log`）
+7. 让 LLM 调用 `example_repeat` 工具验证 tools 组件加载
 
 ## 派生
 

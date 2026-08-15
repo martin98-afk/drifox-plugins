@@ -34,10 +34,11 @@
 | `drifox` | object | 兼容性声明，见下 |
 | `dependencies` | object | 插件间依赖，见下 |
 
-### `components` 子字段（8 个 flag）
+### `components` 子字段（9 个 flag）
 
 ```json
 "components": {
+  "tools": true,       // tools/*.py → 内置工具（含 register(registry)）
   "commands": true,    // commands/<name>.md → 斜杠命令
   "agents": true,      // agents/<name>.md → @<name> 智能体
   "skills": true,      // skills/<name>/SKILL.md → AI 技能
@@ -53,6 +54,7 @@
 
 | flag | 必需资源 | 详见 |
 |------|---------|------|
+| `tools` | `tools/*.py`（含 `register(registry)`） | [architecture.md](architecture.md#工具组件) |
 | `commands` | `commands/*.md` | [commands.md](commands.md) |
 | `agents` | `agents/*.md` | [agents.md](agents.md) |
 | `skills` | `skills/<name>/SKILL.md` | [skills.md](skills.md) |

@@ -129,6 +129,8 @@ def infer_categories(manifest: dict) -> list[str]:
         categories.append("ui")
     if comps.get("agents"):
         categories.append("agent")
+    if comps.get("tools"):
+        categories.append("tool")
 
     # 按 keywords 推断
     kw_category_map = {

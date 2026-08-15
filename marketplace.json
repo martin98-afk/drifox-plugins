@@ -361,6 +361,30 @@
             }
         },
         {
+            "name": "codegraph-tools",
+            "description": "CodeGraph 语义级代码智能工具（codegraph_explore）：搜索/调用链/影响分析/索引管理，依赖 codegraph-py 库",
+            "version": "1.0.0",
+            "author": "DriFoxx Team",
+            "license": "MIT",
+            "categories": [
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/codegraph-tools",
+                "ref": "main"
+            },
+            "components": {
+                "tools": true
+            },
+            "homepage": "https://github.com/martin98-afk/DriFox",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "context-stats",
             "description": "欢迎卡片用量统计 — 在欢迎卡片新增「📊 用量」tab，用 echarts 展示模型上下文（token）用量与消息量趋势",
             "version": "0.1.1",
@@ -542,7 +566,7 @@
         },
         {
             "name": "example-plugin",
-            "description": "DriFox 插件的最小参考实现 — 展示全部 7 类组件（commands/agents/skills/themes/hooks/mcp/lsp）的标准写法。",
+            "description": "DriFox 插件的最小参考实现 — 展示全部 9 类组件（tools/commands/agents/skills/themes/hooks/mcp/lsp/ui）的标准写法。",
             "version": "1.0.0",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
@@ -550,7 +574,9 @@
                 "theme",
                 "mcp",
                 "lsp",
-                "agent"
+                "ui",
+                "agent",
+                "tool"
             ],
             "source": {
                 "type": "git-subdir",
@@ -559,13 +585,15 @@
                 "ref": "main"
             },
             "components": {
+                "tools": true,
                 "commands": true,
                 "agents": true,
                 "skills": true,
                 "themes": true,
                 "hooks": true,
                 "mcp": true,
-                "lsp": true
+                "lsp": true,
+                "ui": true
             },
             "downloads": 1,
             "keywords": [

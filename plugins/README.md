@@ -7,8 +7,9 @@
 | 插件 | 描述 | 组件 | 版本 |
 |------|------|------|------|
 | [`code-reviewer`](code-reviewer/) | 自动化代码审查 — checklist 审查、质量评分、报告生成 | commands + agents + skills | 1.0.0 |
+| [`codegraph-tools`](codegraph-tools/) | CodeGraph 语义级代码智能 — 搜索/调用链/影响分析/索引管理（codegraph_explore） | tools | 1.0.0 |
 | [`evolver`](evolver/) | Evolver 自进化引擎 — 基于 GEP 协议沉淀 Agent 经验 | commands + hooks + skills | 1.0.0 |
-| [`example-plugin`](example-plugin/) | 最小参考实现，定义官方插件结构与全部 8 类组件约定 | 全部 8 类 | 1.0.0 |
+| [`example-plugin`](example-plugin/) | 最小参考实现，定义官方插件结构与全部 9 类组件约定 | 全部 9 类 | 1.0.0 |
 | [`frontend-pro`](frontend-pro/) | 前端开发增强 — 组件规范、a11y 检查、性能最佳实践 | commands + skills | 1.0.0 |
 | [`git-workflow`](git-workflow/) | Git 工作流增强 — 分支检查、提交规范、PR 模板生成 | commands + hooks + skills | 1.0.0 |
 | [`nuwa-skill`](nuwa-skill/) | 女娲·Skill造人术 — 蒸馏任何人思维框架，附 14 个人物视角 Skill | skills | 1.0.0 |
@@ -65,9 +66,10 @@
 
 ## 组件覆盖矩阵
 
-| | commands | agents | skills | themes | hooks | mcp | lsp | ui |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| code-reviewer | ✅ | ✅ | ✅ | — | — | — | — | — |
+| | commands | agents | skills | themes | hooks | mcp | lsp | ui | tools |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| code-reviewer | ✅ | ✅ | ✅ | — | — | — | — | — | — |
+| codegraph-tools | — | — | — | — | — | — | — | — | ✅ |
 | evolver | ✅ | — | ✅ | — | ✅ | — | — | — |
 | example-plugin | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | frontend-pro | ✅ | — | ✅ | — | — | — | — | — |
@@ -95,6 +97,8 @@
 | laputa-fog | — | — | — | ✅ | — | — | — | — |
 | ui-motion-skills | — | — | ✅ | — | — | — | — | — |
 
+> **tools 组件说明**：tools 插件通过 `tools/*.py` 中的 `register(registry)` 函数注册内置工具，由 DriFox 启动时 `PluginToolLoader` 加载（危险级别强制声明）。真实示例见 DriFox 运行时内置插件（`plugins/system/tools/`：file/web/automation/codegraph/terminal/diagnostics 等）。
+>
 > **ui 组件说明**：ui 插件通过 `ui/__init__.py` 中的 `register_ui(registry)` 函数注册可视化组件（浮动卡片 / 内容块渲染器 / 消息元素工厂），由 DriFox 启动时 `UIPluginRegistry.load_plugin` 加载。详见 [docs/architecture.md](../docs/architecture.md#ui-组件)。
 >
 > **ui 插件参考**：ui 组件的真实示例（浮动卡片、渲染器、工厂）见 DriFox 运行时内置插件（`plugin-marketplace` / `plugin-manager` / `context-usage-stats` 等），它们随 DriFox 分发，不在本仓库市场内。
@@ -105,6 +109,7 @@
 2. 在该目录下放置 `.drifox-plugin/plugin.json` 声明 manifest
 3. 在 manifest 的 `components` 字典里启用你需要的组件（可启用 1-8 个）
 4. 按需实现：
+   - `tools/<name>.py`（含 `register(registry)`）
    - `commands/<name>.md`
    - `agents/<name>.md`
    - `skills/<name>/SKILL.md`

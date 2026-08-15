@@ -2,8 +2,9 @@
 
 [![License: GPL-3.0-or-later](https://img.shields.io/badge/license-GPL--3.0--or--later-blue.svg)](LICENSE)
 
-DriFox 的官方插件仓库。每个插件是一个独立、可热插拔的扩展单元，提供 8 类能力：
+DriFox 的官方插件仓库。每个插件是一个独立、可热插拔的扩展单元，提供 9 类能力：
 
+- **tools** — 内置工具（`tools/*.py`，向 LLM 注册可调用工具）
 - **commands** — 斜杠命令（`/xx`）
 - **agents** — 智能体（`@xx`）
 - **skills** — AI 技能（自动匹配）
@@ -17,7 +18,7 @@ DriFox 的官方插件仓库。每个插件是一个独立、可热插拔的扩�
 
 ## 权威参考
 
-完整的官方实现见 DriFox 运行时的内置 `plugins/system/` 目录（不在本仓库）。它包含全部 7 类组件的真实示例：
+完整的官方实现见 DriFox 运行时的内置 `plugins/system/` 目录（不在本仓库）。它包含全部 9 类组件的真实示例：
 
 | 组件 | 数量 | 位置 |
 |------|------|------|
@@ -28,6 +29,7 @@ DriFox 的官方插件仓库。每个插件是一个独立、可热插拔的扩�
 | hooks | 1 配置 | `plugins/system/hooks/hooks.json` |
 | mcp | 4 server | `plugins/system/.mcp.json` |
 | lsp | 1 server | `plugins/system/.lsp.json` |
+| tools | 工具插件化 | `plugins/system/tools/` |
 
 所有约定以 system 插件为准；本仓库的 `example-plugin` 是最小化可工作版本，`evolver` 是真实生产插件。
 
@@ -70,7 +72,7 @@ drifox-plugins/
     ├── README.md                    # 插件索引
     ├── code-reviewer/               # 自动化代码审查
     ├── evolver/                     # 首个官方插件：Evolver 自进化引擎
-    └── example-plugin/              # 最小参考插件，定义官方约定（含全部 8 类组件）
+    └── example-plugin/              # 最小参考插件，定义官方约定（含全部 9 类组件）
 ```
 
 ## 官方插件
@@ -78,8 +80,9 @@ drifox-plugins/
 | 名称 | 描述 | 类型 | 组件覆盖 |
 |------|------|------|----------|
 | [`code-reviewer`](plugins/code-reviewer/) | 自动化代码审查 — checklist 审查、质量评分、报告生成 | user | commands + agents + skills |
+| [`codegraph-tools`](plugins/codegraph-tools/) | CodeGraph 语义级代码智能 — 搜索/调用链/影响分析/索引管理（codegraph_explore） | user | tools |
 | [`evolver`](plugins/evolver/) | Evolver 自进化引擎 — 通过 GEP 协议沉淀 Agent 经验 | user | commands + hooks + skills |
-| [`example-plugin`](plugins/example-plugin/) | 最小参考实现，展示全部 8 类组件的标准写法 | user | 全部 8 类 |
+| [`example-plugin`](plugins/example-plugin/) | 最小参考实现，展示全部 9 类组件的标准写法 | user | 全部 9 类 |
 | [`frontend-pro`](plugins/frontend-pro/) | 前端开发增强 — 组件规范、a11y 检查、性能最佳实践 | user | commands + skills |
 | [`git-workflow`](plugins/git-workflow/) | Git 工作流增强 — 分支检查、提交规范、PR 模板 | user | commands + hooks + skills |
 | [`python-pro`](plugins/python-pro/) | Python 开发增强 — PEP 8 / 类型标注 / lint 自动检查 | user | skills + hooks |
@@ -137,8 +140,8 @@ cp -r plugins/evolver ~/.drifox/plugins/
 
 1. 阅读 [docs/plugin-development.md](docs/plugin-development.md)
 2. 复制 `plugins/example-plugin/` 作为起点
-3. 修改 manifest (`plugins/<your-plugin>/.drifox-plugin/plugin.json`)，按需启用 8 类组件
-4. 实现 commands / agents / skills / themes / hooks / mcp / lsp / ui
+3. 修改 manifest (`plugins/<your-plugin>/.drifox-plugin/plugin.json`)，按需启用 9 类组件
+4. 实现 tools / commands / agents / skills / themes / hooks / mcp / lsp / ui
 5. 跑校验脚本：`python tools/validate_plugins.py`
 6. 生成市场清单：`python tools/generate_marketplace.py`
 7. 提交 PR
@@ -153,7 +156,7 @@ python tools/validate_plugins.py
 校验脚本会检查：
 
 - 每个 `plugins/*/.drifox-plugin/plugin.json` 符合 [JSON Schema](schemas/plugin.schema.json)
-- 启用的组件（commands/agents/skills/themes/hooks/mcp/lsp/ui）对应资源存在
+- 启用的组件（tools/commands/agents/skills/themes/hooks/mcp/lsp/ui）对应资源存在
 - 钩子 Python 文件能通过 `ast.parse` 语法检查
 - 钩子 `.mcp.json` / `.lsp.json` 是合法 JSON
 - 主题 yaml 文件可读
