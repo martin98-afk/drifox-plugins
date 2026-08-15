@@ -51,19 +51,19 @@ DriFox 启动时自动发现并加载。插件为 `type: user`，同名工具注
 ### edit 参数
 
 ```text
-edit(path="src/main.py", edits=[
-  {"op": "replace", "pos": "3#KT", "lines": ["def main():", "    print('hi')"]},
-  {"op": "append",  "pos": "1#ZM", "content": "  # 行尾追加"},
-  {"op": "prepend", "pos": "2#NW", "content": "import sys  # 行首插入"},
-  {"op": "replace_text", "pos": "3#KT", "content": '{"old": "main", "new": "run"}'},
+edit(path="src/main.py", operations=[
+  {"op": "replace", "anchor": "3#KT", "lines": ["def main():", "    print('hi')"]},
+  {"op": "append",  "anchor": "1#ZM", "content": "  # 行尾追加"},
+  {"op": "prepend", "anchor": "2#NW", "content": "import sys  # 行首插入"},
+  {"op": "replace_text", "anchor": "3#KT", "content": '{"old": "main", "new": "run"}'},
 ])
 ```
 
 | 字段 | 说明 |
 |------|------|
 | `op` | `replace`（整行替换，`lines` 为新行内容，空列表=删除）、`append`（行尾追加）、`prepend`（行首插入）、`replace_text`（行内文本替换） |
-| `pos` | 目标锚点 `LINE#HASH`（来自 read 输出） |
-| `end` | 可选，仅 `replace`：区间结束锚点，替换/删除 `[pos, end]` 整段 |
+| `anchor` | 目标锚点 `LINE#HASH`（来自 read 输出） |
+| `end` | 可选，仅 `replace`：区间结束锚点，替换/删除 `[anchor, end]` 整段 |
 | `lines` | `replace` 的新行内容列表 |
 | `content` | `append`/`prepend` 的文本；`replace_text` 时为 JSON 字符串 `{"old":..,"new":..}` |
 | `textHint` | 可选第二因子：目标行内容前缀，防止陈旧锚点误编辑 |
@@ -95,16 +95,16 @@ edit(path="src/main.py", edits=[
 # 1. 读取文件拿锚点
 read(path="src/main.py")
 
-# 2. 用锚点精准编辑
-edit(path="src/main.py", edits=[{"op": "replace", "pos": "3#KT", "lines": ["def run():"]}])
+# 2. 用锚点精准编辑（参数命名对齐主程序预留接口：operations/anchor）
+edit(path="src/main.py", operations=[{"op": "replace", "anchor": "3#KT", "lines": ["def run():"]}])
 
 # 3. 用返回的新锚点块继续链式编辑
-edit(path="src/main.py", edits=[{"op": "append", "pos": "3#JT", "content": "  pass"}])
+edit(path="src/main.py", operations=[{"op": "append", "anchor": "3#JT", "content": "  pass"}])
 
 # 4. 批量编辑（自底向上，任一失败整体拒绝）
-multi_edit(path="src/main.py", edits=[
-  {"op": "replace_text", "pos": "1#ZM", "content": '{"old": "os", "new": "sys"}'},
-  {"op": "replace", "pos": "5#KY", "lines": ["if __name__ == '__main__':"]},
+multi_edit(path="src/main.py", operations=[
+  {"op": "replace_text", "anchor": "1#ZM", "content": '{"old": "os", "new": "sys"}'},
+  {"op": "replace", "anchor": "5#KY", "lines": ["if __name__ == '__main__':"]},
 ])
 ```
 
@@ -114,8 +114,13 @@ multi_edit(path="src/main.py", edits=[
 - **契约对齐**：`danger`（read=safe，edit/multi_edit=dangerous）、
   `metadata`（`permission_arg=filePath`；read 另带 `provides_image`；edit 另带 `reconstruct_diff`）
   与系统基线一致
+- **参数契约**：顶层 `operations` 数组 + 每项 `anchor`（=LINE#HASH），对齐主程序预留接口
+  （chat_worker 畸形 JSON 提取、tool_call_parser `_rebuild_edit_json`、message_card
+  reconstruct_diff 历史重建三条消费路径共用）；`edits`/`pos` 为旧参数兼容兜底
 - **差异**：edit/multi_edit **无 oldString/newString 纯文本兼容路径**（用户拍板的纯锚点模式设计）
-- 图片读取协议（base64 image_data）与系统行为一致
+- 图片读取协议（base64 image_data）与系统行为一致；read 遇目录自动转 list（与系统一致）
+- **已知边界**：同一次 `operations` 中多个编辑点作用于同一行的重叠编辑不做专门检测
+  （按自底向上顺序应用，结果取决于编辑顺序；如需覆盖检测属后续增强）
 
 ## 架构
 
@@ -131,7 +136,8 @@ tools/
 
 - 完全自包含：仅依赖 Python 标准库（zlib/difflib），无第三方依赖
 - 状态池放 `services.window_state`（窗口隔离；无则模块级降级）
-- 渲染闭包 `_render_diff_body` 为自包含简化 diff 预览，不依赖主程序内部 API
+- 渲染闭包 `_render_diff_body` 与系统 `_render_edit_diff_body` 同款实现
+  （复用 `app.widgets.render_helpers` 的 `_render_diff_preview`，差异框与系统一致）
 
 ## 测试
 

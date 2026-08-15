@@ -33,7 +33,9 @@ E_NOOP_LOOP = "E_NOOP_LOOP"
 NOOP_LIMIT = 3
 
 # 模块级 no-op 状态（无 window_state 时降级）
-_noop_state: dict = {}
+# 注意：不能与下方 _noop_state 函数同名（函数定义会覆盖变量，
+# 导致降级路径返回函数对象而非 dict → AttributeError）
+_noop_state_store: dict = {}
 
 _OPERATIONS = ("replace", "append", "prepend", "replace_text")
 
@@ -50,7 +52,7 @@ def _noop_state(tool_ctx) -> dict:
             return d
     except Exception:
         pass
-    return _noop_state
+    return _noop_state_store
 
 
 def _edit_sig(edits) -> str:
@@ -85,6 +87,11 @@ def _parse_replace_pair(content):
     return (old, new)
 
 
+def _edit_anchor(edit: dict) -> str:
+    """编辑项定位锚点：anchor（主程序预留字段）优先，pos 兼容旧参数"""
+    return edit.get("anchor") or edit.get("pos") or ""
+
+
 def validate_edit(edit: dict, lines: list, hashes: list, width: int = DEFAULT_WIDTH) -> Optional[str]:
     """校验单条编辑（基于 pre-edit lines+hashes）。返回错误消息或 None。
 
@@ -94,7 +101,7 @@ def validate_edit(edit: dict, lines: list, hashes: list, width: int = DEFAULT_WI
     if op not in _OPERATIONS:
         return f"{E_INVALID_PATCH}: 未知 op {op!r}（可选 {'/'.join(_OPERATIONS)}）"
     try:
-        lineno, anchor_hash = parse_anchor(edit.get("pos", ""))
+        lineno, anchor_hash = parse_anchor(_edit_anchor(edit))
     except ValueError as e:
         return f"{E_INVALID_PATCH}: {e}"
     if lineno < 1 or lineno > len(lines):
@@ -126,7 +133,7 @@ def validate_edit(edit: dict, lines: list, hashes: list, width: int = DEFAULT_WI
             except ValueError as e:
                 return f"{E_INVALID_PATCH}: {e}"
             if end_lineno < lineno or end_lineno > len(lines):
-                return f"{E_INVALID_PATCH}: 区间 end 行号必须在 pos 之后且不超出文件范围"
+                return f"{E_INVALID_PATCH}: 区间 end 行号必须在 anchor 之后且不超出文件范围"
             if hashes[end_lineno - 1] != end_hash:
                 return (
                     f"{E_STALE_ANCHOR}: 区间结束锚点 {end_lineno}#{end_hash} 已失效，"
@@ -209,14 +216,16 @@ def apply_edits(lines: list, edits: list, width: int = DEFAULT_WIDTH) -> tuple:
     for i, edit in enumerate(edits):
         err = validate_edit(edit, lines, hashes, width)
         if err:
-            meta["errors"].append(f"Edit #{i + 1} ({edit.get('op', '?')} @ {edit.get('pos', '?')}): {err}")
+            meta["errors"].append(
+                f"Edit #{i + 1} ({edit.get('op', '?')} @ {_edit_anchor(edit) or '?'}): {err}"
+            )
     if meta["errors"]:
         return lines, meta
 
-    # 2) 自底向上应用（pos 行号降序；区间 replace 按 pos 排序）
+    # 2) 自底向上应用（anchor 行号降序；区间 replace 按 anchor 排序）
     def _order(edit):
         try:
-            return parse_anchor(edit.get("pos", ""))[0]
+            return parse_anchor(_edit_anchor(edit))[0]
         except ValueError:
             return -1
 
@@ -225,7 +234,7 @@ def apply_edits(lines: list, edits: list, width: int = DEFAULT_WIDTH) -> tuple:
     applied = []
     affected_lo, affected_hi = old_len + 1, 0
     for i, edit in sorted(enumerate(edits), key=lambda t: _order(t[1]), reverse=True):
-        lineno = parse_anchor(edit["pos"])[0]
+        lineno = parse_anchor(_edit_anchor(edit))[0]
         idx = lineno - 1
         op = edit["op"]
         if op == "replace":

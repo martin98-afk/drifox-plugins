@@ -37,6 +37,22 @@ from hashline_engine import DEFAULT_WIDTH, context_hash, format_line  # noqa: E4
 
 GROUP_READ = "文件读取"
 
+
+def _list_dir(workdir, full_path: Path, display: str) -> ToolResult:
+    """目录 → 列目录输出（对齐系统 file_tools._list_impl 格式）
+
+    目录在前、文件在后，名称不区分大小写排序；[DIR] 标记目录项。
+    """
+    try:
+        items = sorted(full_path.iterdir(), key=lambda p: (p.is_file(), p.name.lower()))
+        lines = []
+        for item in items:
+            marker = "[DIR] " if item.is_dir() else ""
+            lines.append(f"{marker}{item.name}")
+        return ToolResult(True, content=f"目录: {display}\n" + "\n".join(lines))
+    except OSError as e:
+        return ToolResult(False, error=f"List error: {str(e)}")
+
 _READ_SCHEMA = {
     "type": "function",
     "function": {
@@ -79,9 +95,10 @@ def _read_impl(tool_ctx, **kwargs):
         full_path = resolve(workdir, path)
         if not full_path.exists():
             return ToolResult(False, error=f"File not found: {path}")
-        if full_path.is_dir():
-            return ToolResult(False, error=f"hashline read 仅支持文件（目录请用 list）：{path}")
         display = display_path(workdir, full_path, path)
+        if full_path.is_dir():
+            # 目录 → 自动转 list 列目录（与系统 read 行为一致）
+            return _list_dir(workdir, full_path, display)
 
         # 图片：base64 返回（视觉模型注入，协议 B）
         ext = full_path.suffix.lower()

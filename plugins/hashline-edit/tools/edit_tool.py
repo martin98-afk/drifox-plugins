@@ -5,7 +5,10 @@ hashline edit / multi_edit — 纯锚点模式编辑（覆盖系统 edit/multi_e
 核心契约（用户拍板）：
 - **纯锚点模式**：无 oldString/newString 文本兼容路径，全部基于 read 输出的
   `LINE#HASH` 锚点定位
-- 所有编辑对同一 pre-edit 快照校验，**自底向上**应用（pos 行号降序）
+- 参数命名对齐主程序预留接口：顶层 `operations` 数组，每项 `anchor`（=LINE#HASH）
+  + `op`/`lines`/`content`/`end`/`textHint`（chat_worker / tool_call_parser /
+  message_card reconstruct_diff 三处消费路径共用同一契约）
+- 所有编辑对同一 pre-edit 快照校验，**自底向上**应用（anchor 行号降序）
 - 陈旧锚点（hash 不匹配）→ E_STALE_ANCHOR，绝不静默移位
 - lines 含显示前缀/diff 标记 → E_INVALID_PATCH；连续 3 次相同 no-op → E_NOOP_LOOP
 - 编辑前校验 mtime（外部修改检测）
@@ -45,7 +48,11 @@ from snapshot import (  # noqa: E402
 GROUP_WRITE = "文件写入"
 
 
-# ========== schema（edit / multi_edit 共用 edits 结构） ==========
+# ========== schema（edit / multi_edit 共用 operations 结构） ==========
+# 命名对齐主程序预留接口（T6）：顶层 `operations`、每项 `anchor`。
+# 消费路径：chat_worker.py:4596（edit 畸形 JSON 提取 operations）、
+# tool_call_parser.py:358（_rebuild_edit_json 提取 path+operations）、
+# message_card.py:1475（reconstruct_diff 按 operations 的 op/anchor/lines 重建伪 diff）
 
 _EDIT_ITEMS_SCHEMA = {
     "type": "object",
@@ -54,18 +61,18 @@ _EDIT_ITEMS_SCHEMA = {
             "type": "string",
             "enum": ["replace", "append", "prepend", "replace_text"],
             "description": (
-                "操作类型：replace=整行替换（lines 为新行内容，可多行）；"
+                "操作类型：replace=整行替换（lines 为新行内容，可多行，空列表=删除）；"
                 "append=行尾追加（content）；prepend=行首插入（content）；"
                 "replace_text=行内文本替换（content 为 JSON 字符串 {\"old\":..,\"new\":..}）"
             ),
         },
-        "pos": {
+        "anchor": {
             "type": "string",
-            "description": "锚点 LINE#HASH（read 输出），如 9#KT",
+            "description": "目标行锚点 LINE#HASH（read 输出），如 9#KT",
         },
         "end": {
             "type": "string",
-            "description": "区间结束锚点（仅 replace：多行替换/删除 [pos, end] 区间）",
+            "description": "区间结束锚点（仅 replace：多行替换/删除 [anchor, end] 区间）",
         },
         "lines": {
             "type": "array",
@@ -84,7 +91,7 @@ _EDIT_ITEMS_SCHEMA = {
             "description": "可选第二因子：目标行内容前缀，防止陈旧锚点误编辑",
         },
     },
-    "required": ["op", "pos"],
+    "required": ["op", "anchor"],
 }
 
 _EDIT_SCHEMA = {
@@ -101,9 +108,9 @@ _EDIT_SCHEMA = {
             "type": "object",
             "properties": {
                 "path": {"type": "string", "description": "文件路径（建议先用 read 读取）"},
-                "edits": {
+                "operations": {
                     "type": "array",
-                    "description": "编辑列表（1 个或多个），每项 {op, pos, end?, lines?, content?, textHint?}",
+                    "description": "编辑列表（1 个或多个），每项 {op, anchor, end?, lines?, content?, textHint?}",
                     "items": _EDIT_ITEMS_SCHEMA,
                 },
                 "hash_width": {
@@ -112,7 +119,7 @@ _EDIT_SCHEMA = {
                     "default": 2,
                 },
             },
-            "required": ["path", "edits"],
+            "required": ["path", "operations"],
         },
     },
 }
@@ -130,9 +137,9 @@ _MULTI_EDIT_SCHEMA = {
             "type": "object",
             "properties": {
                 "path": {"type": "string", "description": "文件路径（建议先用 read 读取）"},
-                "edits": {
+                "operations": {
                     "type": "array",
-                    "description": "批量编辑列表，每项 {op, pos, end?, lines?, content?, textHint?}",
+                    "description": "批量编辑列表，每项 {op, anchor, end?, lines?, content?, textHint?}",
                     "items": _EDIT_ITEMS_SCHEMA,
                 },
                 "hash_width": {
@@ -141,7 +148,7 @@ _MULTI_EDIT_SCHEMA = {
                     "default": 2,
                 },
             },
-            "required": ["path", "edits"],
+            "required": ["path", "operations"],
         },
     },
 }
@@ -153,7 +160,10 @@ _MULTI_EDIT_SCHEMA = {
 def _edit_core(tool_ctx, kwargs, tool_name: str) -> ToolResult:
     workdir = Path(tool_ctx["workdir"]) if tool_ctx.get("workdir") else None
     path = kwargs.get("path", "")
-    edits = kwargs.get("edits", [])
+    # 主契约：operations（对齐主程序预留接口）；edits 为 T3 旧参数兼容兜底
+    edits = kwargs.get("operations")
+    if edits is None:
+        edits = kwargs.get("edits", [])
     width = int(kwargs.get("hash_width") or DEFAULT_WIDTH)
     try:
         full_path = resolve(workdir, path)
@@ -275,14 +285,18 @@ def _render_diff_body(result, tool_name, tool_args, success):
 
 def _preview_edit(tool_args: dict) -> str:
     path = (tool_args or {}).get("path", "") or "文件"
-    edits = (tool_args or {}).get("edits", [])
+    edits = (tool_args or {}).get("operations")
+    if edits is None:
+        edits = (tool_args or {}).get("edits", [])
     n = len(edits) if isinstance(edits, list) else 0
     return f'编辑 "{path}"（{n} 处锚点编辑）'
 
 
 def _preview_multi_edit(tool_args: dict) -> str:
     path = (tool_args or {}).get("path", "") or "文件"
-    edits = (tool_args or {}).get("edits", [])
+    edits = (tool_args or {}).get("operations")
+    if edits is None:
+        edits = (tool_args or {}).get("edits", [])
     n = len(edits) if isinstance(edits, list) else 0
     return f'批量编辑 "{path}"（{n} 处）'
 
@@ -292,7 +306,9 @@ def _summarize_edit(tool_name: str):
 
     def _summarize(name, tool_args, tool_content):
         path = (tool_args or {}).get("path", "?")
-        edits = (tool_args or {}).get("edits", [])
+        edits = (tool_args or {}).get("operations")
+        if edits is None:
+            edits = (tool_args or {}).get("edits", [])
         n = len(edits) if isinstance(edits, list) else 0
         content_len = len(tool_content or "")
         return f"[{name}] anchor-edit {path} ({n} ops, {content_len:,} chars)"

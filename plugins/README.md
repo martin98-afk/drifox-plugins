@@ -12,6 +12,7 @@
 | [`example-plugin`](example-plugin/) | 最小参考实现，定义官方插件结构与全部 9 类组件约定 | 全部 9 类 | 1.0.0 |
 | [`frontend-pro`](frontend-pro/) | 前端开发增强 — 组件规范、a11y 检查、性能最佳实践 | commands + skills | 1.0.0 |
 | [`git-workflow`](git-workflow/) | Git 工作流增强 — 分支检查、提交规范、PR 模板生成 | commands + hooks + skills | 1.0.0 |
+| [`hashline-edit`](hashline-edit/) | pi 式 hashline 锚点编辑 — 覆盖 read/edit/multi_edit（纯锚点模式），行号+上下文哈希定位，链式编辑 | tools | 0.1.0 |
 | [`nuwa-skill`](nuwa-skill/) | 女娲·Skill造人术 — 蒸馏任何人思维框架，附 14 个人物视角 Skill | skills | 1.0.0 |
 | [`python-pro`](python-pro/) | Python 开发增强 — PEP 8 / 类型标注 / lint 自动检查 | skills + hooks | 1.0.0 |
 | [`test-scaffold`](test-scaffold/) | 测试脚手架生成 — 测试骨架、覆盖率分析、边界场景推荐 | commands + skills | 1.0.0 |
@@ -74,6 +75,7 @@
 | example-plugin | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | frontend-pro | ✅ | — | ✅ | — | — | — | — | — |
 | git-workflow | ✅ | — | ✅ | — | ✅ | — | — | — |
+| hashline-edit | — | — | — | — | — | — | — | — | ✅ |
 | nuwa-skill | — | — | ✅ | — | — | — | — | — |
 | python-pro | — | — | ✅ | — | ✅ | — | — | — |
 | test-scaffold | ✅ | — | ✅ | — | — | — | — | — |

@@ -275,7 +275,7 @@ class TestApplyEdits:
         lines = ["a", "b", "c"]
         hs = engine.hash_all(lines)
         new, meta = snapshot.apply_edits(lines, [
-            {"op": "replace", "pos": f"2#{hs[1]}", "lines": ["B"]},
+            {"op": "replace", "anchor": f"2#{hs[1]}", "lines": ["B"]},
         ])
         assert not meta["errors"]
         assert new == ["a", "B", "c"]
@@ -286,8 +286,8 @@ class TestApplyEdits:
         lines = ["a", "b", "c"]
         hs = engine.hash_all(lines)
         new, meta = snapshot.apply_edits(lines, [
-            {"op": "append", "pos": f"1#{hs[0]}", "content": "!"},
-            {"op": "prepend", "pos": f"3#{hs[2]}", "content": ">> "},
+            {"op": "append", "anchor": f"1#{hs[0]}", "content": "!"},
+            {"op": "prepend", "anchor": f"3#{hs[2]}", "content": ">> "},
         ])
         assert not meta["errors"]
         assert new == ["a!", "b", ">> c"]
@@ -296,7 +296,7 @@ class TestApplyEdits:
         lines = ["def foo(x): return x", "y = 1"]
         hs = engine.hash_all(lines)
         new, meta = snapshot.apply_edits(lines, [
-            {"op": "replace_text", "pos": f"1#{hs[0]}",
+            {"op": "replace_text", "anchor": f"1#{hs[0]}",
              "content": '{"old": "foo", "new": "bar"}'},
         ])
         assert not meta["errors"]
@@ -308,8 +308,8 @@ class TestApplyEdits:
         lines = ["a", "b", "c"]
         hs = engine.hash_all(lines)
         new, meta = snapshot.apply_edits(lines, [
-            {"op": "replace", "pos": f"1#{hs[0]}", "lines": ["x", "y"]},  # 行 1 插入两行
-            {"op": "replace", "pos": f"3#{hs[2]}", "lines": ["Z"]},      # 行 3 基于 pre-edit
+            {"op": "replace", "anchor": f"1#{hs[0]}", "lines": ["x", "y"]},  # 行 1 插入两行
+            {"op": "replace", "anchor": f"3#{hs[2]}", "lines": ["Z"]},      # 行 3 基于 pre-edit
         ])
         assert not meta["errors"]
         assert new == ["x", "y", "b", "Z"]  # 若顺序错会得 ["x","y","Z","c"]
@@ -319,7 +319,7 @@ class TestApplyEdits:
         lines = ["a", "b", "c", "d", "e"]
         hs = engine.hash_all(lines)
         new, meta = snapshot.apply_edits(lines, [
-            {"op": "replace", "pos": f"2#{hs[1]}", "end": f"4#{hs[3]}", "lines": ["BB"]},
+            {"op": "replace", "anchor": f"2#{hs[1]}", "end": f"4#{hs[3]}", "lines": ["BB"]},
         ])
         assert not meta["errors"]
         assert new == ["a", "BB", "e"]
@@ -328,7 +328,7 @@ class TestApplyEdits:
         lines = ["a", "b", "c", "d", "e"]
         hs = engine.hash_all(lines)
         new, meta = snapshot.apply_edits(lines, [
-            {"op": "replace", "pos": f"2#{hs[1]}", "end": f"4#{hs[3]}", "lines": []},
+            {"op": "replace", "anchor": f"2#{hs[1]}", "end": f"4#{hs[3]}", "lines": []},
         ])
         assert not meta["errors"]
         assert new == ["a", "e"]
@@ -337,7 +337,7 @@ class TestApplyEdits:
         lines = ["a", "b", "c"]
         hs = engine.hash_all(lines)
         new, meta = snapshot.apply_edits(lines, [
-            {"op": "replace", "pos": f"2#{hs[1]}", "lines": ["b"]},  # 与原行相同
+            {"op": "replace", "anchor": f"2#{hs[1]}", "lines": ["b"]},  # 与原行相同
         ])
         assert not meta["errors"]
         assert meta["noop"] is True
@@ -349,7 +349,7 @@ class TestApplyEdits:
         hs = engine.hash_all(lines)
         for bad_lines in (["9#KT: x"], ["+ new"], ["- old"], ["@@ -1 +1 @@"]):
             new, meta = snapshot.apply_edits(lines, [
-                {"op": "replace", "pos": f"2#{hs[1]}", "lines": bad_lines},
+                {"op": "replace", "anchor": f"2#{hs[1]}", "lines": bad_lines},
             ])
             assert meta["errors"], f"应拒绝: {bad_lines!r}"
             assert snapshot.E_INVALID_PATCH in meta["errors"][0]
@@ -360,12 +360,12 @@ class TestApplyEdits:
         hs = engine.hash_all(lines)
         # content 含换行（跨行操作）→ 拒绝
         new, meta = snapshot.apply_edits(lines, [
-            {"op": "append", "pos": f"2#{hs[1]}", "content": "x\ny"},
+            {"op": "append", "anchor": f"2#{hs[1]}", "content": "x\ny"},
         ])
         assert meta["errors"] and snapshot.E_INVALID_PATCH in meta["errors"][0]
         # content 含 diff 标记 → 拒绝
         new, meta = snapshot.apply_edits(lines, [
-            {"op": "prepend", "pos": f"2#{hs[1]}", "content": "- "},
+            {"op": "prepend", "anchor": f"2#{hs[1]}", "content": "- "},
         ])
         assert meta["errors"] and snapshot.E_INVALID_PATCH in meta["errors"][0]
 
@@ -373,7 +373,7 @@ class TestApplyEdits:
         lines = ["x = x + 1  # comment", "y = 2"]
         hs = engine.hash_all(lines)
         new, meta = snapshot.apply_edits(lines, [
-            {"op": "replace_text", "pos": f"1#{hs[0]}",
+            {"op": "replace_text", "anchor": f"1#{hs[0]}",
              "content": '{"old": "x", "new": "z"}'},  # x 出现多次
         ])
         assert meta["errors"] and snapshot.E_INVALID_PATCH in meta["errors"][0]
@@ -382,7 +382,7 @@ class TestApplyEdits:
         lines = ["a", "b"]
         hs = engine.hash_all(lines)
         new, meta = snapshot.apply_edits(lines, [
-            {"op": "delete_line", "pos": f"1#{hs[0]}"},
+            {"op": "delete_line", "anchor": f"1#{hs[0]}"},
         ])
         assert meta["errors"] and snapshot.E_INVALID_PATCH in meta["errors"][0]
 
@@ -391,8 +391,8 @@ class TestApplyEdits:
         lines = ["a", "b", "c"]
         hs = engine.hash_all(lines)
         new, meta = snapshot.apply_edits(lines, [
-            {"op": "replace", "pos": f"1#{hs[0]}", "lines": ["A"]},
-            {"op": "replace", "pos": "3#ZZ", "lines": ["C"]},  # 陈旧锚点
+            {"op": "replace", "anchor": f"1#{hs[0]}", "lines": ["A"]},
+            {"op": "replace", "anchor": "3#ZZ", "lines": ["C"]},  # 陈旧锚点
         ])
         assert meta["errors"] and snapshot.E_STALE_ANCHOR in meta["errors"][0]
         assert new == lines
@@ -407,7 +407,7 @@ class TestStaleAnchor:
         lines = ["a", "b", "c"]
         hs = engine.hash_all(lines)
         new, meta = snapshot.apply_edits(lines, [
-            {"op": "replace", "pos": f"2#{hs[1][0]}{'X' if hs[1][1] != 'X' else 'Y'}", "lines": ["B"]},
+            {"op": "replace", "anchor": f"2#{hs[1][0]}{'X' if hs[1][1] != 'X' else 'Y'}", "lines": ["B"]},
         ])
         assert meta["errors"] and snapshot.E_STALE_ANCHOR in meta["errors"][0]
         assert new == lines
@@ -416,7 +416,7 @@ class TestStaleAnchor:
         lines = ["a", "b"]
         hs = engine.hash_all(lines)
         new, meta = snapshot.apply_edits(lines, [
-            {"op": "replace", "pos": f"9#{hs[0]}", "lines": ["X"]},
+            {"op": "replace", "anchor": f"9#{hs[0]}", "lines": ["X"]},
         ])
         assert meta["errors"] and snapshot.E_STALE_ANCHOR in meta["errors"][0]
 
@@ -424,12 +424,12 @@ class TestStaleAnchor:
         lines = ["keep", "target", "tail"]
         hs = engine.hash_all(lines)
         new, meta = snapshot.apply_edits(lines, [
-            {"op": "replace", "pos": f"2#{hs[1]}", "lines": ["NEW"], "textHint": "target"},
+            {"op": "replace", "anchor": f"2#{hs[1]}", "lines": ["NEW"], "textHint": "target"},
         ])
         assert not meta["errors"] and new == ["keep", "NEW", "tail"]
         # textHint 不匹配 → 拒绝
         new, meta = snapshot.apply_edits(lines, [
-            {"op": "replace", "pos": f"2#{hs[1]}", "lines": ["NEW"], "textHint": "WRONG"},
+            {"op": "replace", "anchor": f"2#{hs[1]}", "lines": ["NEW"], "textHint": "WRONG"},
         ])
         assert meta["errors"] and snapshot.E_STALE_ANCHOR in meta["errors"][0]
 
@@ -497,10 +497,24 @@ class TestReadTool:
         r = read_tool._read_impl(ctx, path="nope.txt")
         assert not r.success and "not found" in r.error
 
-    def test_read_directory(self, tmp_path):
+    def test_read_directory_lists(self, tmp_path):
+        """目录 → 自动转 list 列目录（与系统 read 行为一致）"""
+        (tmp_path / "sub").mkdir()
+        (tmp_path / "a.txt").write_text("x", encoding="utf-8")
         ctx = make_ctx(tmp_path)
         r = read_tool._read_impl(ctx, path=".")
-        assert not r.success
+        assert r.success, r.error
+        assert r.content.startswith("目录: ")
+        assert "[DIR] sub" in r.content  # 目录在前、[DIR] 标记
+        assert "a.txt" in r.content
+
+    def test_read_directory_relative(self, tmp_path):
+        """相对目录路径同样转 list"""
+        (tmp_path / "sub").mkdir()
+        ctx = make_ctx(tmp_path)
+        r = read_tool._read_impl(ctx, path="sub")
+        assert r.success
+        assert r.content.startswith("目录: ") and "sub" in r.content
 
     def test_read_image_protocol(self, tmp_path):
         png = bytes.fromhex("89504e470d0a1a0a00000000")  # 最小 PNG 头（含魔数即可）
@@ -526,8 +540,8 @@ class TestEditFlow:
         ctx = make_ctx(tmp_path)
         r1 = read_tool._read_impl(ctx, path="t.txt")
         pos = read_pos(r1, 2)
-        r2 = edit_tool._edit_impl(ctx, path="t.txt", edits=[
-            {"op": "replace", "pos": pos, "lines": ["B2"]},
+        r2 = edit_tool._edit_impl(ctx, path="t.txt", operations=[
+            {"op": "replace", "anchor": pos, "lines": ["B2"]},
         ])
         assert r2.success, r2.error
         assert "B2" in (r2.diff or "")
@@ -539,14 +553,14 @@ class TestEditFlow:
         write_file(tmp_path, "a\nb\nc\n")
         ctx = make_ctx(tmp_path)
         r1 = read_tool._read_impl(ctx, path="t.txt")
-        r2 = edit_tool._edit_impl(ctx, path="t.txt", edits=[
-            {"op": "replace", "pos": read_pos(r1, 2), "lines": ["B2"]},
+        r2 = edit_tool._edit_impl(ctx, path="t.txt", operations=[
+            {"op": "replace", "anchor": read_pos(r1, 2), "lines": ["B2"]},
         ])
         # 从新锚点块取行 3 的锚点继续编辑
         anchor_line3 = [ln for ln in r2.anchors.split("\n") if ln.startswith("3#")][0]
         pos3 = anchor_line3.split(":")[0]
-        r3 = edit_tool._edit_impl(ctx, path="t.txt", edits=[
-            {"op": "append", "pos": pos3, "content": "!"},
+        r3 = edit_tool._edit_impl(ctx, path="t.txt", operations=[
+            {"op": "append", "anchor": pos3, "content": "!"},
         ])
         assert r3.success, r3.error
         assert (tmp_path / "t.txt").read_text(encoding="utf-8") == "a\nB2\nc!\n"
@@ -555,10 +569,10 @@ class TestEditFlow:
         write_file(tmp_path, "a\nb\nc\nd\n")
         ctx = make_ctx(tmp_path)
         r1 = read_tool._read_impl(ctx, path="t.txt")
-        r2 = edit_tool._multi_edit_impl(ctx, path="t.txt", edits=[
-            {"op": "replace", "pos": read_pos(r1, 1), "lines": ["A1"]},
-            {"op": "prepend", "pos": read_pos(r1, 3), "content": ">> "},
-            {"op": "replace_text", "pos": read_pos(r1, 4),
+        r2 = edit_tool._multi_edit_impl(ctx, path="t.txt", operations=[
+            {"op": "replace", "anchor": read_pos(r1, 1), "lines": ["A1"]},
+            {"op": "prepend", "anchor": read_pos(r1, 3), "content": ">> "},
+            {"op": "replace_text", "anchor": read_pos(r1, 4),
              "content": '{"old": "d", "new": "D4"}'},
         ])
         assert r2.success, r2.error
@@ -575,8 +589,8 @@ class TestEditFlow:
         old_mtime = st.st_mtime
         f.write_text("a\nCHANGED\nc\n", encoding="utf-8")
         os.utime(f, (st.st_atime, old_mtime))  # 恢复 mtime，绕过外部修改检测
-        r2 = edit_tool._edit_impl(ctx, path="t.txt", edits=[
-            {"op": "replace", "pos": pos, "lines": ["B2"]},
+        r2 = edit_tool._edit_impl(ctx, path="t.txt", operations=[
+            {"op": "replace", "anchor": pos, "lines": ["B2"]},
         ])
         assert not r2.success
         assert snapshot.E_STALE_ANCHOR in r2.error
@@ -588,8 +602,8 @@ class TestEditFlow:
         r1 = read_tool._read_impl(ctx, path="t.txt")
         pos = read_pos(r1, 2)
         f.write_text("a\nb\nc\nd\n", encoding="utf-8")  # mtime 变化
-        r2 = edit_tool._edit_impl(ctx, path="t.txt", edits=[
-            {"op": "replace", "pos": pos, "lines": ["B2"]},
+        r2 = edit_tool._edit_impl(ctx, path="t.txt", operations=[
+            {"op": "replace", "anchor": pos, "lines": ["B2"]},
         ])
         assert not r2.success
         assert "外部修改" in r2.error
@@ -602,12 +616,12 @@ class TestEditFlow:
         r1 = read_tool._read_impl(ctx, path="t.txt")
         pos = read_pos(r1, 2)
         for i in range(2):
-            r = edit_tool._edit_impl(ctx, path="t.txt", edits=[
-                {"op": "replace", "pos": pos, "lines": ["b"]},  # 与原行相同 → no-op
+            r = edit_tool._edit_impl(ctx, path="t.txt", operations=[
+                {"op": "replace", "anchor": pos, "lines": ["b"]},  # 与原行相同 → no-op
             ])
             assert r.success and "no-op" in r.content
-        r3 = edit_tool._edit_impl(ctx, path="t.txt", edits=[
-            {"op": "replace", "pos": pos, "lines": ["b"]},
+        r3 = edit_tool._edit_impl(ctx, path="t.txt", operations=[
+            {"op": "replace", "anchor": pos, "lines": ["b"]},
         ])
         assert not r3.success
         assert snapshot.E_NOOP_LOOP in r3.error
@@ -617,8 +631,8 @@ class TestEditFlow:
         ctx = make_ctx(tmp_path)
         r1 = read_tool._read_impl(ctx, path="t.txt")
         pos = read_pos(r1, 2)
-        r2 = edit_tool._edit_impl(ctx, path="t.txt", edits=[
-            {"op": "replace", "pos": pos, "lines": ["2#XX: b"]},  # 锚点前缀注入
+        r2 = edit_tool._edit_impl(ctx, path="t.txt", operations=[
+            {"op": "replace", "anchor": pos, "lines": ["2#XX: b"]},  # 锚点前缀注入
         ])
         assert not r2.success
         assert snapshot.E_INVALID_PATCH in r2.error
@@ -627,16 +641,16 @@ class TestEditFlow:
 
     def test_edit_unknown_file(self, tmp_path):
         ctx = make_ctx(tmp_path)
-        r = edit_tool._edit_impl(ctx, path="missing.txt", edits=[
-            {"op": "replace", "pos": "1#ZZ", "lines": ["x"]},
+        r = edit_tool._edit_impl(ctx, path="missing.txt", operations=[
+            {"op": "replace", "anchor": "1#ZZ", "lines": ["x"]},
         ])
         assert not r.success and "not found" in r.error
 
     def test_edit_bad_anchor_format(self, tmp_path):
         write_file(tmp_path, "a\nb\n")
         ctx = make_ctx(tmp_path)
-        r = edit_tool._edit_impl(ctx, path="t.txt", edits=[
-            {"op": "replace", "pos": "not-an-anchor", "lines": ["x"]},
+        r = edit_tool._edit_impl(ctx, path="t.txt", operations=[
+            {"op": "replace", "anchor": "not-an-anchor", "lines": ["x"]},
         ])
         assert not r.success
         assert snapshot.E_INVALID_PATCH in r.error
@@ -645,8 +659,8 @@ class TestEditFlow:
         write_file(tmp_path, "a\nb\nc\n")
         ctx = make_ctx(tmp_path)
         r1 = read_tool._read_impl(ctx, path="t.txt")
-        r2 = edit_tool._edit_impl(ctx, path="t.txt", edits=[
-            {"op": "replace", "pos": read_pos(r1, 1), "lines": ["A"]},
+        r2 = edit_tool._edit_impl(ctx, path="t.txt", operations=[
+            {"op": "replace", "anchor": read_pos(r1, 1), "lines": ["A"]},
         ])
         assert r2.success
         assert "---" in (r2.diff or "")  # unified diff 头
@@ -661,8 +675,8 @@ class TestRenderDiff:
         write_file(tmp_path, "a\nb\nc\n")
         ctx = make_ctx(tmp_path)
         r1 = read_tool._read_impl(ctx, path="t.txt")
-        r2 = edit_tool._edit_impl(ctx, path="t.txt", edits=[
-            {"op": "replace", "pos": read_pos(r1, 1), "lines": ["A"]},
+        r2 = edit_tool._edit_impl(ctx, path="t.txt", operations=[
+            {"op": "replace", "anchor": read_pos(r1, 1), "lines": ["A"]},
         ])
         assert r2.success and r2.diff
         h = edit_tool._render_diff_body(r2, "edit", {"path": "t.txt"}, True)
@@ -694,3 +708,100 @@ class TestRenderDiff:
         h = edit_tool._render_diff_body(r, "edit", {"path": "x.py"}, True)
         assert "x.py 等 2 个文件" in h
         assert "+2" in h and "-2" in h
+
+
+class TestDegradedNoWindowState:
+    """Block-2：无 window_state 时降级路径不崩溃（模块级状态兜底）"""
+
+    def _no_ws_ctx(self):
+        # 无 services.window_state → file_io/snapshot 走模块级降级
+        return {"workdir": ".", "services": {}}
+
+    def test_noop_detection_degraded(self):
+        """no-op 计数降级路径：连续 3 次 → E_NOOP_LOOP（不抛 AttributeError）"""
+        ctx = self._no_ws_ctx()
+        fake_path = Path("deg_noop_x.txt")  # 独立路径，避免污染其他用例
+        sig = '{"op": "replace"}'
+        assert snapshot.note_noop(ctx, fake_path, sig) is None        # 第 1 次
+        assert snapshot.note_noop(ctx, fake_path, sig) is None        # 第 2 次
+        err = snapshot.note_noop(ctx, fake_path, sig)                 # 第 3 次 → 报错
+        assert err and snapshot.E_NOOP_LOOP in err
+        # 不同 sig 重置
+        assert snapshot.note_noop(ctx, fake_path, "other-sig") is None
+
+    def test_noop_reset_degraded(self):
+        ctx = self._no_ws_ctx()
+        fake_path = Path("deg_noop_y.txt")
+        snapshot.note_noop(ctx, fake_path, "s")
+        snapshot.note_noop(ctx, fake_path, "s")
+        snapshot.reset_noop(ctx, fake_path)
+        assert snapshot.note_noop(ctx, fake_path, "s") is None  # 重置后重新计数
+
+    def test_mtime_degraded(self, tmp_path):
+        """mtime 记录/外部修改检测降级路径（无 window_state）"""
+        f = write_file(tmp_path, "a\nb\nc\n", name="deg_mtime.txt")
+        ctx = {"workdir": str(tmp_path), "services": {}}
+        r1 = read_tool._read_impl(ctx, path="deg_mtime.txt")
+        assert r1.success
+        pos = read_pos(r1, 2)
+        # 外部修改（内容变 + mtime 变）→ 拒绝
+        f.write_text("a\nCHANGED\nc\n", encoding="utf-8")
+        r2 = edit_tool._edit_impl(ctx, path="deg_mtime.txt", operations=[
+            {"op": "replace", "anchor": pos, "lines": ["B2"]},
+        ])
+        assert not r2.success
+        assert "外部修改" in r2.error
+        # 重新 read 后正常编辑（降级状态可写）
+        r3 = read_tool._read_impl(ctx, path="deg_mtime.txt")
+        pos2 = read_pos(r3, 2)
+        r4 = edit_tool._edit_impl(ctx, path="deg_mtime.txt", operations=[
+            {"op": "replace", "anchor": pos2, "lines": ["B2"]},
+        ])
+        assert r4.success, r4.error
+        assert "B2" in (tmp_path / "deg_mtime.txt").read_text(encoding="utf-8")
+
+
+class TestLegacyParamCompatibility:
+    """Block-1：旧参数兼容兜底（edits / pos 仍可用，不破坏 T3 既有调用）"""
+
+    def test_legacy_edits_pos(self, tmp_path):
+        write_file(tmp_path, "a\nb\nc\n")
+        ctx = make_ctx(tmp_path)
+        r1 = read_tool._read_impl(ctx, path="t.txt")
+        pos = read_pos(r1, 2)
+        r2 = edit_tool._edit_impl(ctx, path="t.txt", edits=[
+            {"op": "replace", "pos": pos, "lines": ["B2"]},
+        ])
+        assert r2.success, r2.error
+        assert (tmp_path / "t.txt").read_text(encoding="utf-8") == "a\nB2\nc\n"
+
+    def test_operations_takes_precedence(self, tmp_path):
+        """同时传 operations 与 edits 时以 operations 为准"""
+        write_file(tmp_path, "a\nb\nc\n")
+        ctx = make_ctx(tmp_path)
+        r1 = read_tool._read_impl(ctx, path="t.txt")
+        pos = read_pos(r1, 1)
+        r2 = edit_tool._edit_impl(ctx, path="t.txt",
+                                  operations=[{"op": "replace", "anchor": pos, "lines": ["A1"]}],
+                                  edits=[{"op": "replace", "anchor": pos, "lines": ["IGNORED"]}])
+        assert r2.success, r2.error
+        assert (tmp_path / "t.txt").read_text(encoding="utf-8") == "A1\nb\nc\n"
+
+    def test_snapshot_accepts_anchor_and_pos(self):
+        lines = ["a", "b", "c"]
+        hs = engine.hash_all(lines)
+        # anchor 主字段
+        new, meta = snapshot.apply_edits(lines, [
+            {"op": "replace", "anchor": f"2#{hs[1]}", "lines": ["B"]},
+        ])
+        assert not meta["errors"] and new == ["a", "B", "c"]
+        # pos 兼容兜底
+        new, meta = snapshot.apply_edits(lines, [
+            {"op": "replace", "pos": f"3#{hs[2]}", "lines": ["C"]},
+        ])
+        assert not meta["errors"] and new == ["a", "b", "C"]
+        # 缺 anchor 且缺 pos → E_INVALID_PATCH
+        new, meta = snapshot.apply_edits(lines, [
+            {"op": "replace", "lines": ["X"]},
+        ])
+        assert meta["errors"] and snapshot.E_INVALID_PATCH in meta["errors"][0]
