@@ -996,6 +996,37 @@
             }
         },
         {
+            "name": "hashline-edit",
+            "description": "pi 式 hashline 锚点编辑工具（覆盖 read/edit/multi_edit，纯锚点模式）—— 行号+上下文哈希定位，编辑行 N 只影响相邻锚点，支持链式编辑",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/hashline-edit",
+                "ref": "main"
+            },
+            "components": {
+                "tools": true
+            },
+            "keywords": [
+                "file",
+                "edit",
+                "anchor",
+                "hashline",
+                "hash"
+            ],
+            "homepage": "https://github.com/martin98-afk/drifox-plugins",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "hookify",
             "description": "Easily create hooks to prevent unwanted behaviors by analyzing conversation patterns",
             "version": "1.0.0",
