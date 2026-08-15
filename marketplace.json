@@ -480,6 +480,7 @@
             "components": {
                 "tools": true
             },
+            "downloads": 2,
             "keywords": [
                 "desktop",
                 "automation",
