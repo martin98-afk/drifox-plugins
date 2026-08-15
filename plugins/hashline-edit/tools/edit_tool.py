@@ -227,30 +227,50 @@ def _multi_edit_impl(tool_ctx, **kwargs):
 
 
 def _render_diff_body(result, tool_name, tool_args, success):
-    """编辑类工具完成框渲染闭包：简化 inline diff 预览（自包含，不依赖主程序）
+    """编辑类工具（edit/multi_edit）完成框渲染闭包：inline diff 预览
 
-    与系统 _render_edit_diff_body 同签名：render(result, tool_name, tool_args, success)。
-    返回 None 时渲染层回退通用渲染。
+    与系统 file_tools._render_edit_diff_body 同款实现（从主程序 render_helpers
+    迁出的封装）：复用 app.widgets.render_helpers 的 _render_diff_preview
+    （行号/词级差异高亮/增删配色/hunk 高亮）+ _summarize_diff（+N/-N 统计），
+    保证差异框渲染与系统工具完全一致。返回 None 时渲染层回退通用渲染。
     """
-    from html import escape
+    import os
+
+    from app.widgets.render_helpers import (
+        _get_global_font,
+        _render_diff_preview,
+        _summarize_diff,
+        escape,
+        get_font_family_css,
+        scale_font_size,
+    )
 
     diff = getattr(result, "diff", None) or ""
     if not diff:
-        return None
-    diff_lines = diff.splitlines()
-    added = sum(1 for ln in diff_lines if ln.startswith("+") and not ln.startswith("+++"))
-    deleted = sum(1 for ln in diff_lines if ln.startswith("-") and not ln.startswith("---"))
-    body = escape(diff)
-    return (
-        '<div class="tool-diff-inline" '
-        'style="font-family: Consolas, \'Courier New\', monospace; font-size: 12px;">'
-        f'<div class="tool-diff-inline__summary" style="margin-bottom: 4px;">'
-        f'<span style="color: #56d364;">+{added}</span> '
-        f'<span style="color: #ff7b72;">-{deleted}</span></div>'
-        f'<pre style="white-space: pre-wrap; margin: 0; max-height: 300px; '
-        f'overflow: auto; background: rgba(0,0,0,0.04); padding: 8px; '
-        f'border-radius: 4px;">{body}</pre></div>'
-    )
+        return None  # 无 diff → 回退默认
+    diff_summary = _summarize_diff(diff)
+    diff_body = _render_diff_preview(diff)
+    diff_files = diff_summary["files"]
+    file_label = diff_files[0] if diff_files else "文件变更"
+    file_label = os.path.basename(file_label)
+    if len(diff_files) > 1:
+        file_label = f"{file_label} 等 {len(diff_files)} 个文件"
+    added = diff_summary["added"]
+    deleted = diff_summary["deleted"]
+    _gf = _get_global_font()
+    return f"""
+    <div class="tool-diff-inline">
+        <div class="tool-diff-inline__header" style="{get_font_family_css()}">
+            <span class="tool-diff-inline__file" title="{escape(file_label)}">{escape(file_label)}</span>
+            <span class="tool-diff-inline__summary">
+                <span class="tool-diff-inline__add" style="color: #56d364;">+{added}</span>
+                <span class="tool-diff-inline__del" style="color: #ff7b72;">-{deleted}</span>
+            </span>
+        </div>
+        <div class="tool-diff-inline__body" style="font-family: '{_gf}', Consolas, 'Courier New', monospace; font-size: {scale_font_size(12)}px;">
+            {diff_body}
+        </div>
+    </div>"""
 
 
 def _preview_edit(tool_args: dict) -> str:

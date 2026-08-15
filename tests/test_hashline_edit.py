@@ -13,6 +13,7 @@ hashline-edit 插件单元测试（纯标准库，无 DriFox 依赖）
 - read/edit 全流程集成（锚点输出 + diff + 链式续编）
 """
 import importlib.util
+import html
 import os
 import re
 import sys
@@ -103,6 +104,53 @@ file_io = _load("file_io", "file_io.py")
 snapshot = _load("snapshot", "snapshot.py")
 read_tool = _load("read_tool", "read_tool.py")
 edit_tool = _load("edit_tool", "edit_tool.py")
+
+
+# ---- render 闭包依赖的 app.widgets.render_helpers stub（render 闭包 lazy import） ----
+
+def _make_render_helpers_stub():
+    if "app.widgets" in sys.modules:
+        return
+    widgets = types.ModuleType("app.widgets")
+    rh = types.ModuleType("app.widgets.render_helpers")
+
+    def _summarize_diff(diff_text):
+        added = deleted = 0
+        files = []
+        for line in diff_text.splitlines():
+            if line.startswith("--- "):
+                files.append(line[4:])
+            elif line.startswith("+") and not line.startswith("+++"):
+                added += 1
+            elif line.startswith("-") and not line.startswith("---"):
+                deleted += 1
+        return {"added": added, "deleted": deleted, "files": files}
+
+    def _render_diff_preview(diff_text):
+        rows = []
+        for line in diff_text.splitlines():
+            kind = "ctx"
+            if line.startswith("@@"):
+                kind = "hunk"
+            elif line.startswith("+") and not line.startswith("+++"):
+                kind = "add"
+            elif line.startswith("-") and not line.startswith("---"):
+                kind = "del"
+            rows.append(f'<div class="diff-line diff-{kind}">{line}</div>')
+        return '<div class="diff-body">' + "".join(rows) + "</div>"
+
+    rh._summarize_diff = _summarize_diff
+    rh._render_diff_preview = _render_diff_preview
+    rh._get_global_font = lambda: "Segoe UI"
+    rh.escape = html.escape
+    rh.get_font_family_css = lambda: "font-family: 'Segoe UI';"
+    rh.scale_font_size = lambda n: n
+    widgets.render_helpers = rh
+    sys.modules["app.widgets"] = widgets
+    sys.modules["app.widgets.render_helpers"] = rh
+
+
+_make_render_helpers_stub()
 
 
 class FakeWindowState(dict):
@@ -604,3 +652,45 @@ class TestEditFlow:
         assert "---" in (r2.diff or "")  # unified diff 头
         assert "+A" in r2.diff
         assert "-a" in r2.diff
+
+
+class TestRenderDiff:
+    """render 闭包与系统 _render_edit_diff_body 同款结构（差异框渲染）"""
+
+    def test_render_diff_body_structure(self, tmp_path):
+        write_file(tmp_path, "a\nb\nc\n")
+        ctx = make_ctx(tmp_path)
+        r1 = read_tool._read_impl(ctx, path="t.txt")
+        r2 = edit_tool._edit_impl(ctx, path="t.txt", edits=[
+            {"op": "replace", "pos": read_pos(r1, 1), "lines": ["A"]},
+        ])
+        assert r2.success and r2.diff
+        h = edit_tool._render_diff_body(r2, "edit", {"path": "t.txt"}, True)
+        assert h and 'class="tool-diff-inline"' in h
+        assert "tool-diff-inline__header" in h
+        assert "tool-diff-inline__file" in h and "t.txt" in h  # 文件标签
+        assert "tool-diff-inline__summary" in h
+        assert "tool-diff-inline__add" in h and "+1" in h       # +N 统计
+        assert "tool-diff-inline__del" in h and "-1" in h       # -N 统计
+        assert "tool-diff-inline__body" in h
+        assert 'diff-add' in h  # _render_diff_preview 输出（stub 保留类名）
+        assert 'diff-del' in h
+
+    def test_render_diff_body_no_diff_returns_none(self):
+        """无 diff → 返回 None（渲染层回退通用渲染，与系统行为一致）"""
+        from app.tools.result import ToolResult
+
+        r = ToolResult(True, content="x")
+        assert edit_tool._render_diff_body(r, "edit", {}, True) is None
+        r2 = ToolResult(False, error="e")
+        assert edit_tool._render_diff_body(r2, "edit", {}, False) is None
+
+    def test_render_diff_body_multiple_files_label(self):
+        from app.tools.result import ToolResult
+
+        diff = "--- a/x.py\n+++ b/x.py\n@@ -1 +1 @@\n-old\n+new\n" \
+               "--- a/y.py\n+++ b/y.py\n@@ -1 +1 @@\n-old\n+new\n"
+        r = ToolResult(True, content="ok", diff=diff)
+        h = edit_tool._render_diff_body(r, "edit", {"path": "x.py"}, True)
+        assert "x.py 等 2 个文件" in h
+        assert "+2" in h and "-2" in h
