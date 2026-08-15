@@ -1013,6 +1013,7 @@
             "components": {
                 "tools": true
             },
+            "downloads": 1,
             "keywords": [
                 "file",
                 "edit",
@@ -2092,7 +2093,7 @@
             "components": {
                 "hooks": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
