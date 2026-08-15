@@ -378,6 +378,7 @@
             "components": {
                 "tools": true
             },
+            "downloads": 1,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -823,7 +824,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 18,
+            "downloads": 19,
             "keywords": [
                 "git",
                 "source-control",

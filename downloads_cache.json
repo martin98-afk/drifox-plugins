@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1786792231.8227477,
+  "fetched_at": 1786794084.1217518,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -13,6 +13,7 @@
     "claude-api": 0,
     "code-reviewer": 1,
     "code-simplifier": 1,
+    "codegraph-tools": 1,
     "context-stats": 10,
     "context7": 3,
     "doc-coauthoring": 1,
@@ -25,7 +26,7 @@
     "frontend-pro": 1,
     "game2048": 2,
     "git-dashboard": 6,
-    "git-panel": 18,
+    "git-panel": 19,
     "git-status": 0,
     "git-workflow": 1,
     "gpt-image-2": 5,
