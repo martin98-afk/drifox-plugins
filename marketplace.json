@@ -1632,6 +1632,40 @@
             }
         },
         {
+            "name": "rdr2",
+            "description": "荒野大镖客主题 — Red Dead Redemption 2 灵感深色主题，血红主调、荒漠暖金点缀。",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "theme"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/rdr2",
+                "ref": "main"
+            },
+            "components": {
+                "themes": true
+            },
+            "keywords": [
+                "theme",
+                "rdr2",
+                "red-dead-redemption",
+                "dark",
+                "主题"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/martin98-afk/drifox-plugins",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "react-pro",
             "description": "React / Next.js 性能优化与最佳实践 — 45 条 RSC 边界、Server Components、App Router、缓存策略、Streaming、Bundle 优化。",
             "version": "1.0.0",
