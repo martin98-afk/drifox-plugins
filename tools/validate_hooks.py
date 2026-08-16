@@ -27,7 +27,6 @@ import argparse
 import json
 import os
 import shutil
-import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass, field
@@ -45,6 +44,7 @@ DRIFOX_CANDIDATES = [
 ]
 
 SUPPORTED_EVENTS = {
+    "BuildSystemPrompt",
     "SessionStart",
     "Stop",
     "UserPromptSubmit",
@@ -58,6 +58,7 @@ SUPPORTED_EVENTS = {
 
 # 事件 → 最小触发上下文（仅保证 hook 函数能跑通，不含真实业务数据）
 _EVENT_CONTEXTS: dict[str, dict] = {
+    "BuildSystemPrompt": {"agent_name": "test-agent", "is_subagent_call": False},
     "SessionStart": {"state": "startup"},
     "Stop": {"reason": "completed"},
     "UserPromptSubmit": {"message": "test"},

@@ -36,6 +36,7 @@ MARKETPLACE_PATH = REPO_ROOT / "marketplace.json"
 MANIFEST_PATH = Path(".drifox-plugin") / "plugin.json"
 
 SUPPORTED_EVENTS = {
+    "BuildSystemPrompt",
     "SessionStart",
     "Stop",
     "UserPromptSubmit",
