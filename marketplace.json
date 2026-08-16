@@ -274,6 +274,7 @@
                 "commands": true,
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "sdk",
                 "prompt-engineering",
@@ -887,6 +888,7 @@
             "components": {
                 "hooks": true
             },
+            "downloads": 2,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -912,7 +914,7 @@
                 "hooks": true,
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "git",
                 "workflow",
@@ -1048,6 +1050,7 @@
                 "skills": true,
                 "hooks": true
             },
+            "downloads": 1,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1668,6 +1671,7 @@
                 "commands": true,
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "seo",
                 "audit",
@@ -1734,6 +1738,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "animation",
                 "communication",
