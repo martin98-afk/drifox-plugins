@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.8.0 (2026-08-16)
+### ✨ 新增 dsh-router + dsh-super-injector 插件（dsh-routing-suite 迁移）
+- **`dsh-router`** — 任务感知思维模式路由（源自 dsh-router-standard，MIT）：build/fix 行为带划分（spec/react/mixed/weak + 关键词正则分类）、persona 选择、引导注入；components = commands + agents + skills
+- **`dsh-super-injector`** — 运行时注入观测（源自 dsh-super-injector，MIT）：会话审计记录 + 插件状态/自检工具；components = hooks + tools
+- **机制**：`marketplace.json` 重新生成（收录 dsh-router 与 dsh-super-injector），两插件均通过 `validate_plugins.py` 校验（零 error/warning）
+
 ## 2.7.0 (2026-08-15)
 ### ✨ 新增 codegraph-tools 工具插件 + tools 组件支持
 - **`codegraph-tools`** — CodeGraph 语义级代码智能工具（`codegraph_explore`）：搜索 / 调用链 / 影响分析 / 索引管理，从 DriFox 主程序迁出（工具插件化），依赖 `codegraph-py` 库
