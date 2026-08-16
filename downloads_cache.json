@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1786864044.635696,
+  "fetched_at": 1786866712.883642,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -32,7 +32,7 @@
     "git-workflow": 1,
     "gpt-image-2": 5,
     "guizang-ppt-skill": 4,
-    "hashline-edit": 4,
+    "hashline-edit": 6,
     "hookify": 0,
     "internal-comms": 1,
     "ip-switcher": 2,
