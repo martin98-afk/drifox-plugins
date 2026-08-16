@@ -9,6 +9,7 @@ dsh-super-injector Hook Handler
 - PostToolUse            审计日志（工具名/文件/结果摘要）+ 轻量异常检测（不调 LLM）
 - PostAssistantMessage   记录模型回复摘要（assistant_response/response 探测）
 - Stop                   会话统计收尾（工具调用数/告警数/起止时间）
+- BuildSystemPrompt      返回静态能力声明（会话构建时注入 system prompt 尾部）
 
 关键约束（drifox hooks 以 subprocess 每次全新调用，无内存共享）：
 - 所有状态必须落盘 memory/ 目录 JSON 文件
@@ -29,6 +30,16 @@ STATE_FILENAME = "dsh-super-injector-state.json"
 AUDIT_FILENAME = "dsh-super-injector-audit.jsonl"
 WARN_FILENAME = "dsh-super-injector-warnings.jsonl"
 SUMMARY_MAX = 500
+
+# BuildSystemPrompt 静态能力声明（静态到头：不随状态变，会话缓存稳定）
+SYSTEM_PROMPT_DECLARATION = (
+    "本环境装有 dsh-super-injector（会话审计 hooks + 插件状态工具）："
+    "会话审计与插件状态管理——SessionStart/PostToolUse/PostAssistantMessage/Stop "
+    "审计落盘 memory/，插件状态查询/自检/能力声明三个工具"
+    "（dsh_injector_info / dsh_plugin_status / dsh_plugin_self_test）。"
+    "插件自身的提示词/工具/钩子皆可自我优化；"
+    "从零体验路径：dsh_plugin_status → dsh_plugin_self_test → dsh_injector_info。"
+)
 
 
 # ============================================================
@@ -219,6 +230,16 @@ def hook_stop(event: str, context: dict):
     return "ok"
 
 
+def hook_build_system_prompt(event: str, context: dict) -> str:
+    """BuildSystemPrompt：返回静态能力声明（静态到头，会话缓存稳定）。"""
+    return SYSTEM_PROMPT_DECLARATION
+
+
+def handle_build_system_prompt(ctx: dict) -> str:
+    """CLI 调试用：返回能力声明文本。"""
+    return SYSTEM_PROMPT_DECLARATION
+
+
 # ============================================================
 # CLI 入口（独立调试用）
 # 用法:
@@ -231,6 +252,7 @@ _HANDLER_MAP = {
     "PostToolUse": handle_post_tool_use,
     "PostAssistantMessage": handle_post_assistant_message,
     "Stop": handle_stop,
+    "BuildSystemPrompt": handle_build_system_prompt,
 }
 
 
@@ -245,7 +267,9 @@ def main():
     except json.JSONDecodeError:
         ctx = {}
 
-    _HANDLER_MAP[args.event](ctx)
+    result = _HANDLER_MAP[args.event](ctx)
+    if isinstance(result, str):
+        print(result)
 
 
 if __name__ == "__main__":

@@ -19,11 +19,12 @@
 
 ## 与 dsh 原版差异声明
 
-原版 dsh-super-injector 的 **system prompt 注入 / 运行时热重载 / 进程内状态** 等能力，
-因 DriFox 无等价 API，本插件已降级为 **hooks 观测 + 状态查询工具** 形态：
+原版 dsh-super-injector 的 **system prompt 声明注入** 已通过 DriFox
+**BuildSystemPrompt 事件**复刻：会话构建时把静态能力声明注入 system prompt 尾部（静态到头，
+会话缓存稳定）。其余能力差异：
 - 原 dev_* 工具全家桶（18 个）→ 精简为 3 个只读观测工具（信息/状态/自检）
-- 原进程内注入状态 → memory/ 目录 JSON 文件落盘（subprocess 无内存共享）
-- 原热重载/卸载 → 由 DriFox 插件管理器（plugin-manager）承担
+- 原运行时热重载/进程内状态 → 由 DriFox 插件管理器（plugin-manager）承担，
+  memory/ 目录 JSON 文件落盘（subprocess 无内存共享）
 
 详见 dsh 侧原始文档：`D:/work/tmp/dsh-src/injector/README.md`（或上游仓库
 [dsh-super-injector](https://github.com/yjh051108/dsh-super-injector)）。

@@ -1,5 +1,5 @@
 {
-    "description": "dsh-super-injector Hook — 运行时注入状态管理：会话审计 / 轻量异常检测 / 回复摘要 / 统计收尾",
+    "description": "dsh-super-injector Hook — 运行时注入状态管理：能力声明 / 会话审计 / 轻量异常检测 / 回复摘要 / 统计收尾",
     "hooks": {
         "SessionStart": [
             {
@@ -49,6 +49,19 @@
                         "timeout": 15,
                         "enabled": true,
                         "id": "d1a2b3c4-0004-4000-8000-000000000004"
+                    }
+                ]
+            }
+        ],
+        "BuildSystemPrompt": [
+            {
+                "hooks": [
+                    {
+                        "type": "python",
+                        "function": ".dsh_super_injector_hook:hook_build_system_prompt",
+                        "timeout": 15,
+                        "enabled": true,
+                        "id": "d1a2b3c4-0005-4000-8000-000000000005"
                     }
                 ]
             }

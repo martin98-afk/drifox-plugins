@@ -59,7 +59,10 @@ hooks 让插件在 DriFox 生命周期的特定事件上自动执行代码。常
 | `PostToolUse` | 工具执行后 | `project_root`, `tool_name`, `file`, `message`, `result` |
 | `UserMessageSubmit` | 用户提交消息 | `project_root`, `message` |
 | `PostAssistantMessage` | AI 回复后 | `project_root`, `message`, `response`, `error` |
+| `BuildSystemPrompt` | 构建 system prompt 时（会话首次构建 / 切换 agent 后） | `agent_name`, `is_subagent_call`, `current_role`, `agent_identity_content`, `enabled_skills_content`, `available_subagents_content`, `extra_context`（由 context_builder 传入 project_root/project_name） |
 
+> `BuildSystemPrompt` 注入语义：hook 的返回字符串会拼接进 system prompt 尾部（agent.py 触发，
+> 会话首次构建/切 agent 时）。建议返回**静态文本**（能力声明类），保证会话缓存稳定；不要动态拼接会话状态。
 > 详细事件规范将在 DriFox 0.5+ 文档中固化。
 
 ## 处理器签名
