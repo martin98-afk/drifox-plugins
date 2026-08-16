@@ -129,6 +129,32 @@ GUIDE_DEEP_TAIL = (
 
 GUIDE_CLOSURE = " End each reasoning block with a decision or an information need."
 
+# 注入形态（T-FIX-3）：DriFox hook 输出为独立 user 消息，注入文本必须**自包含**
+# （指令声明 + 作用对象）。非 weak 带不再注入 persona 全文，改短分类声明。
+_ROUTER_PREFIX = (
+    "<ROUTER-INSTRUCTION>这是一条路由指令，作用于本会话的用户任务消息："
+    "</ROUTER-INSTRUCTION>"
+)
+
+_REACT_INSTRUCTION = (
+    "<ROUTER-INSTRUCTION>本会话当前任务已确定性分类为 react（直接执行带）。"
+    "请采用 produce-verify-fix 快速交付风格：直接写代码、运行验证、修复、简短总结；"
+    "不搭建用户未要求的脚手架或测试框架。此指令作用于本会话的用户任务消息。"
+    "</ROUTER-INSTRUCTION>"
+)
+
+_SPEC_INSTRUCTION = (
+    "<ROUTER-INSTRUCTION>本会话当前任务已确定性分类为 spec（计划优先带）。"
+    "请采用 inspect-and-plan 风格：先探索（read/glob/grep）再出计划，确认后再动手改代码。"
+    "此指令作用于本会话的用户任务消息。</ROUTER-INSTRUCTION>"
+)
+
+_MIXED_INSTRUCTION = (
+    "<ROUTER-INSTRUCTION>本会话当前任务已确定性分类为 mixed（平衡带）。"
+    "计划与执行混合：简述影响面后直接动手。此指令作用于本会话的用户任务消息。"
+    "</ROUTER-INSTRUCTION>"
+)
+
 # ============================================================
 # 会话状态（memory/dsh-router-state.json）
 # 键：稳定会话标识（用 ctx 的 project_root；无则 'default'）。
@@ -302,7 +328,13 @@ def handle_build_system_prompt(ctx: dict) -> str:
 
 
 def handle_user_prompt_submit(ctx: dict) -> str:
-    """UserPromptSubmit：确定性分类 + 近场引导注入（weak 带引导 / 非 weak 补 persona）。"""
+    """UserPromptSubmit：确定性分类 + 近场引导注入。
+
+    注入形态（T-FIX-3）：hook 输出为独立 user 消息，注入文本自包含
+    （<ROUTER-INSTRUCTION> 指令声明 + 作用对象）——
+    - weak 带：前置声明 + 引导（round≥3 BOOST / 复杂度尾句）
+    - spec/react/mixed：短分类声明（不再注入 persona 全文）
+    """
     message = (ctx or {}).get("message", "")
     if should_filter(message):
         return ""
@@ -324,12 +356,14 @@ def handle_user_prompt_submit(ctx: dict) -> str:
     _save_state(state)
 
     if mode == "weak":
-        # weak 带：引导 + 复杂度尾句（persona 已由 BuildSystemPrompt 全局注入）
-        return guide_for(round_no, message)
-    # 非 weak：drifox 无 assemble-persona-per-message，消息层补 persona 首行
+        # weak 带：前置声明 + 引导 + 复杂度尾句（自包含）
+        return _ROUTER_PREFIX + guide_for(round_no, message)
+    # 非 weak：短自包含分类声明（不再注入 persona 全文——独立消息语义割裂）
     if mode == "react":
-        return REACT_PERSONA
-    return SPEC_PERSONA
+        return _REACT_INSTRUCTION
+    if mode == "mixed":
+        return _MIXED_INSTRUCTION
+    return _SPEC_INSTRUCTION
 
 
 # ============================================================

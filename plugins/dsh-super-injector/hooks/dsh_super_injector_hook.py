@@ -12,6 +12,10 @@ dsh-super-injector Hook Handler
 - BuildSystemPrompt      返回静态能力声明（会话构建时注入 system prompt 尾部）
 
 关键约束（drifox hooks 以 subprocess 每次全新调用，无内存共享）：
+- 观测型 hook（SessionStart/PostToolUse/PostAssistantMessage/Stop）返回**空串**，
+  避免返回值被注入 session.messages（DriFox 消息级 hook 会拼接收回值进消息流）；
+  审计/统计全部走 memory/ 文件落盘。BuildSystemPrompt 除外（声明文本注入 system
+  prompt 尾部是设计行为）。
 - 所有状态必须落盘 memory/ 目录 JSON 文件
 - 全部幂等（可重复触发）
 - JSON 原子写（tmp + rename）
@@ -210,24 +214,28 @@ def handle_stop(ctx: dict) -> None:
 # ============================================================
 
 
-def hook_session_start(event: str, context: dict):
+def hook_session_start(event: str, context: dict) -> str:
+    """观测型 hook：返回空串避免注入消息流（审计走文件落盘）。"""
     handle_session_start(context)
-    return "ok"
+    return ""
 
 
-def hook_post_tool_use(event: str, context: dict):
+def hook_post_tool_use(event: str, context: dict) -> str:
+    """观测型 hook：返回空串避免注入消息流（审计走文件落盘）。"""
     handle_post_tool_use(context)
-    return "ok"
+    return ""
 
 
-def hook_post_assistant_message(event: str, context: dict):
+def hook_post_assistant_message(event: str, context: dict) -> str:
+    """观测型 hook：返回空串避免注入消息流（审计走文件落盘）。"""
     handle_post_assistant_message(context)
-    return "ok"
+    return ""
 
 
-def hook_stop(event: str, context: dict):
+def hook_stop(event: str, context: dict) -> str:
+    """观测型 hook：返回空串避免注入消息流（统计走文件落盘）。"""
     handle_stop(context)
-    return "ok"
+    return ""
 
 
 def hook_build_system_prompt(event: str, context: dict) -> str:

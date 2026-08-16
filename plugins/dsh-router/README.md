@@ -8,6 +8,7 @@
 - **确定性自动路由（硬路由）**：Hook 按关键词计数确定性分类——生成任务走 react（执行者）、维护任务走 spec（计划-集体）、模糊任务进 weak 内路由（模型自分类）。分类规则为硬编码正则，模型无法自改。
 - **两步注入**：`BuildSystemPrompt` 在会话构建时注入 persona（按当前 mode）＋ 静态路由说明；`UserPromptSubmit` 每轮消息按分类注入近场引导（weak 带：多轮重分类 + 复杂度尾句；spec/react 带：消息层补 persona 首行）。
 - **防缓存污染**：斜杠命令（/route /status）、闲聊（你好/谢谢/ok 等）、过短无意图消息 → 返回空串不注入，避免污染可缓存消息（短文本命中任务关键词仍放行）。
+- **注入形态说明**：DriFox 的 hook 输出为**独立 user 消息**（无并入通道），故注入文本**自包含**——带 `<ROUTER-INSTRUCTION>` 指令声明与作用对象；spec/react/mixed 带返回**短分类声明**（不再注入 persona 全文），weak 带为前置声明 + 引导（round≥3 抗稀释重分类）。
 - **状态存储**：路由状态（mode/round）落盘 `~/.drifox/memory/dsh-router-state.json`（固定绝对路径，两事件共享；滚动上限 100 会话键）。
 - **已知局限**：persona 动态化（BuildSystemPrompt 按分类读 mode）依赖主程序在 `UserPromptSubmit` ctx 补充 `project_root`/会话标识——当前读不到时回退静态 WEAK_PRO + 路由说明（静态到头保缓存）。
 - **三行为带 + 单任务三锚**：persona 静态锚定（回顾 + 收敛 + 反跑题），开放任务完成率 0% → 100%（P1-P23 实测）。
