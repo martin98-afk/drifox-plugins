@@ -62,6 +62,7 @@ _EDIT_ITEMS_SCHEMA = {
             "enum": ["replace", "append", "prepend", "replace_text"],
             "description": (
                 "操作类型：replace=整行替换（lines 为新行内容，可多行，空列表=删除）；"
+                "⚠️ 单行锚点 replace 只替换锚点行自身，覆盖/删除相邻行必须传 end 区间；"
                 "append=行尾追加（content）；prepend=行首插入（content）；"
                 "replace_text=行内文本替换（content 为 JSON 字符串 {\"old\":..,\"new\":..}）"
             ),
@@ -77,7 +78,8 @@ _EDIT_ITEMS_SCHEMA = {
         "lines": {
             "type": "array",
             "items": {"type": "string"},
-            "description": "replace 的新行内容（不允许含锚点前缀或 diff 标记）",
+            "description": "replace 的新行内容（不允许含锚点前缀或 diff 标记）；"
+            "注：lines 只替换锚点行自身，不能靠 lines 包含相邻行副本来覆盖相邻行（需 end 区间）",
         },
         "content": {
             "type": "string",
@@ -88,7 +90,10 @@ _EDIT_ITEMS_SCHEMA = {
         },
         "textHint": {
             "type": "string",
-            "description": "可选第二因子：目标行内容前缀，防止陈旧锚点误编辑",
+            "description": (
+                "可选第二因子：目标行内容前缀（含行首缩进），防止陈旧锚点误编辑；"
+                "空字符串合法（目标行为空行时传 \"\" 或省略）"
+            ),
         },
     },
     "required": ["op", "anchor"],

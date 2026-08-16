@@ -110,20 +110,31 @@ def validate_edit(edit: dict, lines: list, hashes: list, width: int = DEFAULT_WI
             f"（文件共 {len(lines)} 行），文件可能已变化，请重新 read 拿最新锚点"
         )
     if hashes[lineno - 1] != anchor_hash:
+        # 错行检测：锚点哈希若与相邻行匹配 → 大概率是 read 输出复制错行
+        hint_prev = hashes[lineno - 2] if lineno > 1 else None
+        hint_next = hashes[lineno] if lineno < len(lines) else None
+        shift = ""
+        if anchor_hash == hint_prev:
+            shift = f"；注意：{anchor_hash} 是上一行（{lineno - 1} 行）的哈希，疑似锚点错行"
+        elif anchor_hash == hint_next:
+            shift = f"；注意：{anchor_hash} 是下一行（{lineno + 1} 行）的哈希，疑似锚点错行"
         return (
             f"{E_STALE_ANCHOR}: 锚点 {lineno}#{anchor_hash} 已失效"
-            f"（当前 {lineno}#{hashes[lineno - 1]}），文件可能已被修改，"
+            f"（当前 {lineno}#{hashes[lineno - 1]}）{shift}，文件可能已被修改，"
             f"请重新 read 拿最新锚点后再编辑"
+            f"（若确认文件未变，请检查 read/edit 的 hash_width 是否一致，当前 width={width}）"
         )
     # textHint 第二因子（可选）：目标行内容前缀
+    # 空串视为未提供（目标行为空行时传 "" 合法）；前缀须含行首缩进
     hint = edit.get("textHint")
-    if hint is not None and not str(hint):
-        return f"{E_INVALID_PATCH}: textHint 不允许为空"
-    if hint is not None and not lines[lineno - 1].startswith(str(hint)):
-        return (
-            f"{E_STALE_ANCHOR}: 锚点 {lineno}#{anchor_hash} 内容与 textHint 不匹配"
-            f"（当前行开头 {lines[lineno - 1][:30]!r}），请重新 read 确认"
-        )
+    if hint is not None:
+        if not isinstance(hint, str):
+            return f"{E_INVALID_PATCH}: textHint 必须是字符串，当前为 {hint!r}"
+        if hint and not lines[lineno - 1].startswith(hint):
+            return (
+                f"{E_STALE_ANCHOR}: 锚点 {lineno}#{anchor_hash} 内容与 textHint 不匹配"
+                f"（当前行开头 {lines[lineno - 1][:30]!r}），textHint 需为行内容前缀且含行首缩进，请重新 read 确认"
+            )
 
     if op == "replace":
         end = edit.get("end")
@@ -138,6 +149,7 @@ def validate_edit(edit: dict, lines: list, hashes: list, width: int = DEFAULT_WI
                 return (
                     f"{E_STALE_ANCHOR}: 区间结束锚点 {end_lineno}#{end_hash} 已失效，"
                     f"请重新 read 拿最新锚点"
+                    f"（若确认文件未变，请检查 read/edit 的 hash_width 是否一致，当前 width={width}）"
                 )
         new_lines = edit.get("lines")
         if not isinstance(new_lines, list):
@@ -148,6 +160,13 @@ def validate_edit(edit: dict, lines: list, hashes: list, width: int = DEFAULT_WI
             err = validate_line_content(text)
             if err:
                 return f"{E_INVALID_PATCH}: {err}"
+        # 防呆：单行锚点 replace 只替换锚点行自身；lines 末行若与下一行相同，
+        # 大概率是调用方意图覆盖相邻行却漏传 end 区间 → 提示而非静默产生重复
+        if end is None and len(new_lines) > 1 and lineno < len(lines) and new_lines[-1] == lines[lineno]:
+            return (
+                f"{E_INVALID_PATCH}: lines 末行与下一行（{lineno + 1} 行）内容相同，疑似漏传 end 区间。"
+                f"单行锚点 replace 只替换锚点行自身，覆盖相邻行必须传 end 锚点"
+            )
     else:
         content = edit.get("content")
         if not isinstance(content, str) or not content:
