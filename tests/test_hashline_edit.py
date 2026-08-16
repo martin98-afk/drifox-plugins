@@ -709,6 +709,25 @@ class TestRenderDiff:
         assert "x.py 等 2 个文件" in h
         assert "+2" in h and "-2" in h
 
+    def test_render_diff_failure_note_shown(self):
+        """success=False + diff 非空 → 错误详情输出为提示块（不被 diff 吞掉）"""
+        from app.tools.result import ToolResult
+
+        diff = "--- a/t.txt\n+++ b/t.txt\n@@ -1 +1 @@\n-old\n+new\n"
+        r = ToolResult(False, error="E_STALE_ANCHOR: 锚点已过期", diff=diff)
+        h = edit_tool._render_diff_body(r, "edit", {"path": "t.txt"}, False)
+        assert h and "tool-diff-inline__note" in h
+        assert "E_STALE_ANCHOR" in h
+
+    def test_render_diff_success_no_note(self):
+        """全部成功 → 不输出提示块（无失败关键词，与系统行为一致）"""
+        from app.tools.result import ToolResult
+
+        diff = "--- a/t.txt\n+++ b/t.txt\n@@ -1 +1 @@\n-old\n+new\n"
+        r = ToolResult(True, content="已编辑 t.txt（1 处锚点编辑成功）", diff=diff)
+        h = edit_tool._render_diff_body(r, "edit", {"path": "t.txt"}, True)
+        assert h and "tool-diff-inline__note" not in h
+
 
 class TestDegradedNoWindowState:
     """Block-2：无 window_state 时降级路径不崩溃（模块级状态兜底）"""
