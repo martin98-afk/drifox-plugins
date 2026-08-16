@@ -480,7 +480,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "desktop",
                 "automation",
@@ -2093,7 +2093,7 @@
             "components": {
                 "hooks": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"

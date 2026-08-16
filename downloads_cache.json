@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1786840896.9270298,
+  "fetched_at": 1786846545.9737873,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -16,7 +16,7 @@
     "codegraph-tools": 1,
     "context-stats": 10,
     "context7": 3,
-    "desktop-automation": 2,
+    "desktop-automation": 3,
     "doc-coauthoring": 1,
     "ecc": 8,
     "evolver": 1,
@@ -65,7 +65,7 @@
     "theme-factory": 0,
     "ui-motion-skills": 2,
     "voice-clone": 1,
-    "voice-reply": 5,
+    "voice-reply": 6,
     "web-artifacts-builder": 1,
     "web-design-skills": 1,
     "webapp-testing": 1
