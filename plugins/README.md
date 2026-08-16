@@ -8,6 +8,8 @@
 |------|------|------|------|
 | [`code-reviewer`](code-reviewer/) | 自动化代码审查 — checklist 审查、质量评分、报告生成 | commands + agents + skills | 1.0.0 |
 | [`codegraph-tools`](codegraph-tools/) | CodeGraph 语义级代码智能 — 搜索/调用链/影响分析/索引管理（codegraph_explore） | tools | 1.0.0 |
+| [`dsh-router`](dsh-router/) | 任务感知路由 — build/fix 行为带划分、persona 选择、引导注入（源自 dsh-router-standard） | commands + agents + skills | 1.0.0 |
+| [`dsh-super-injector`](dsh-super-injector/) | 运行时注入观测 — 会话审计记录 + 插件状态/自检（源自 dsh-super-injector） | hooks + tools | 1.0.0 |
 | [`evolver`](evolver/) | Evolver 自进化引擎 — 基于 GEP 协议沉淀 Agent 经验 | commands + hooks + skills | 1.0.0 |
 | [`example-plugin`](example-plugin/) | 最小参考实现，定义官方插件结构与全部 9 类组件约定 | 全部 9 类 | 1.0.0 |
 | [`frontend-pro`](frontend-pro/) | 前端开发增强 — 组件规范、a11y 检查、性能最佳实践 | commands + skills | 1.0.0 |
@@ -71,6 +73,8 @@
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | code-reviewer | ✅ | ✅ | ✅ | — | — | — | — | — | — |
 | codegraph-tools | — | — | — | — | — | — | — | — | ✅ |
+| dsh-router | ✅ | ✅ | ✅ | — | — | — | — | — | — |
+| dsh-super-injector | — | — | — | — | ✅ | — | — | — | ✅ |
 | evolver | ✅ | — | ✅ | — | ✅ | — | — | — |
 | example-plugin | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | frontend-pro | ✅ | — | ✅ | — | — | — | — | — |

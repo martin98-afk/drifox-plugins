@@ -89,6 +89,8 @@ drifox-plugins/
 | [`test-scaffold`](plugins/test-scaffold/) | 测试脚手架生成 — 测试骨架、覆盖率分析 | user | commands + skills |
 | [`minimax-h3`](plugins/minimax-h3/) | MiniMax H3 全模态视频生成 — 文/图/视频/音频转带立体声视频 + H3 提示词技能 | user | commands + skills |
 | [`ui-motion-skills`](plugins/ui-motion-skills/) | UI 动效设计技能集 — 动画构建/评审/审计/词汇 + Apple 设计 + UI 库选型 + 原型对比 + Sonner 指南（源自 emilkowalski/skills） | user | skills |
+| [`dsh-router`](plugins/dsh-router/) | 任务感知路由 — build/fix 行为带划分、persona 选择、引导注入（源自 dsh-router-standard） | user | commands + agents + skills |
+| [`dsh-super-injector`](plugins/dsh-super-injector/) | 运行时注入观测 — 会话审计记录 + 插件状态/自检（源自 dsh-super-injector） | user | hooks + tools |
 
 ### Claude Code 市场适配精选
 

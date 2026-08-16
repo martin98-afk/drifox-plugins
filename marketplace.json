@@ -530,6 +530,53 @@
             }
         },
         {
+            "name": "dsh-router",
+            "description": "dsh-routing-suite 路由预设的 DriFox 翻译版 — 任务感知思维模式路由（router-standard）：按任务类型自动选择推理模式（生成→react / 维护→spec / 模糊→weak 内路由），实测 P1-P23 收敛提升。",
+            "version": "1.0.0",
+            "author": "DriFox 社区",
+            "license": "MIT",
+            "categories": [
+                "agent"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/dsh-router",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true,
+                "agents": true,
+                "skills": true
+            },
+            "drifox": {
+                "min_version": "0.5.0"
+            }
+        },
+        {
+            "name": "dsh-super-injector",
+            "description": "会话审计与插件状态管理（源自 dsh-super-injector 的 DriFox 重写版）— SessionStart/PostToolUse/PostAssistantMessage/Stop 审计落盘 memory/ + 插件状态查询/自检工具。",
+            "version": "1.0.0",
+            "author": "DriFox 社区",
+            "license": "MIT",
+            "categories": [
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/dsh-super-injector",
+                "ref": "main"
+            },
+            "components": {
+                "hooks": true,
+                "tools": true
+            },
+            "drifox": {
+                "min_version": "0.5.0"
+            }
+        },
+        {
             "name": "ecc",
             "description": "Everything Claude Code (ECC) — 社区 25k★ 工程工作流全集：67 个专业智能体、284 个领域技能、94 个开发命令（TDD/代码审查/安全/架构等），适配 DriFox 提示词层。",
             "version": "2.2.1",
