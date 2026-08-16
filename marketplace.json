@@ -378,7 +378,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -480,7 +480,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "desktop",
                 "automation",
