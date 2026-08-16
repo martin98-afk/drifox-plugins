@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1786889596.751945,
+  "fetched_at": 1786891550.3375576,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -18,6 +18,8 @@
     "context7": 3,
     "desktop-automation": 4,
     "doc-coauthoring": 1,
+    "dsh-router": 0,
+    "dsh-super-injector": 0,
     "ecc": 8,
     "evolver": 1,
     "example-plugin": 1,
