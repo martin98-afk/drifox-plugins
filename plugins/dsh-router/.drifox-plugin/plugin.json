@@ -1,0 +1,18 @@
+{
+    "name": "dsh-router",
+    "description": "dsh-routing-suite 路由预设的 DriFox 翻译版 — 任务感知思维模式路由（router-standard）：按任务类型自动选择推理模式（生成→react / 维护→spec / 模糊→weak 内路由），实测 P1-P23 收敛提升。",
+    "version": "1.0.0",
+    "author": {
+        "name": "DriFox 社区"
+    },
+    "license": "MIT",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "components": {
+        "commands": true,
+        "agents": true,
+        "skills": true
+    }
+}
