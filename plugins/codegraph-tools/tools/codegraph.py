@@ -24,6 +24,7 @@ CodeGraph 工具集 — 语义级代码智能引擎（单入口）
 """
 
 import os
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -33,6 +34,12 @@ from loguru import logger
 
 from app.tools.result import ToolResult
 from app.tools.registry import make_summarize_from_preview
+
+# ── 插件自包含依赖注入：优先加载本插件 deps/ 目录 ────────────────
+# 主程序打包时已排除 codegraph-py，运行时依赖本插件自带 deps/
+_plugin_deps = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "deps"))
+if _plugin_deps not in sys.path:
+    sys.path.insert(0, _plugin_deps)
 
 # ── 尝试导入 codegraph-py ─────────────────────────────────────────────────
 try:

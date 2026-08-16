@@ -15,12 +15,19 @@ desktop_automation 开关）。
 """
 import ast
 import os
+import sys
 import re
 import time
 from datetime import datetime
 from html import escape
 from pathlib import Path
 from typing import Optional
+
+# ── 插件自包含依赖注入：优先加载本插件 deps/ 目录 ────────────────
+# 主程序打包时已排除 pynput/mss，运行时依赖本插件自带 deps/
+_plugin_deps = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "deps"))
+if _plugin_deps not in sys.path:
+    sys.path.insert(0, _plugin_deps)
 
 from loguru import logger
 from pynput import keyboard as _pynput_kb
