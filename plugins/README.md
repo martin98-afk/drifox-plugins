@@ -57,6 +57,7 @@
 | 插件 | 描述 | 组件 | 版本 | 来源 |
 |------|------|------|------|------|
 | [`laputa-fog`](laputa-fog/) | 浮岛·雾青主题 — 宫崎骏《天空之城》灵感浅色主题，灰蓝主调 + 琥珀暖金点缀 + 专属背景图 | themes | 1.0.0 | DriFox 原生 |
+| [`rdr2`](rdr2/) | 荒野大镖客主题 — Red Dead Redemption 2 灵感深色主题，血红主调 + 荒漠暖金点缀 + 专属背景图 | themes | 1.0.0 | DriFox 原生 |
 
 ### 语音与多媒体
 
@@ -101,6 +102,7 @@
 | calendar | — | — | — | — | — | — | — | ✅ |
 | project-dashboard | — | — | — | — | — | — | — | ✅ |
 | laputa-fog | — | — | — | ✅ | — | — | — | — |
+| rdr2 | — | — | — | ✅ | — | — | — | — |
 | ui-motion-skills | — | — | ✅ | — | — | — | — | — |
 
 > **tools 组件说明**：tools 插件通过 `tools/*.py` 中的 `register(registry)` 函数注册内置工具，由 DriFox 启动时 `PluginToolLoader` 加载（危险级别强制声明）。真实示例见 DriFox 运行时内置插件（`plugins/system/tools/`：file/web/automation/codegraph/terminal/diagnostics 等）。
