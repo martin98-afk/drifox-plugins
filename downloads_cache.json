@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1786888224.7917485,
+  "fetched_at": 1786889596.751945,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -47,7 +47,7 @@
     "office-docs": 1,
     "omml-docx": 4,
     "playground": 2,
-    "ponytail": 8,
+    "ponytail": 9,
     "project-dashboard": 12,
     "python-pro": 1,
     "react-pro": 1,
