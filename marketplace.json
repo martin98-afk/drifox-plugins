@@ -905,7 +905,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 21,
+            "downloads": 22,
             "keywords": [
                 "git",
                 "source-control",
@@ -1580,7 +1580,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 12,
+            "downloads": 13,
             "keywords": [
                 "dashboard",
                 "stats",
