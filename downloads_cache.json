@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1786959028.5547595,
+  "fetched_at": 1786962121.3779328,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -38,7 +38,7 @@
     "hookify": 1,
     "internal-comms": 1,
     "ip-switcher": 2,
-    "j-space": 1,
+    "j-space": 2,
     "kim-service": 6,
     "knowledge-base-skills": 2,
     "laputa-fog": 3,
