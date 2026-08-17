@@ -178,7 +178,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 17,
+            "downloads": 18,
             "keywords": [
                 "browser",
                 "web",
@@ -1196,6 +1196,7 @@
                 "lsp": false,
                 "ui": false
             },
+            "downloads": 1,
             "keywords": [
                 "reasoning",
                 "cognitive-control",
@@ -1691,7 +1692,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "theme",
                 "rdr2",
