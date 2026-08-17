@@ -50,7 +50,7 @@ plugins/rdr2/
 │   └── rdr2/
 │       ├── rdr2.yaml        # 主题定义（血红 + 荒漠暖金）
 │       └── rdr2_bg.jpg      # 聊天列表背景图
-├── icon.svg / icon_dark.svg # 插件图标（六角星徽章）
+├── icon.png / icon_dark.png # 插件图标（荒野大镖客主题截图）
 └── README.md                # 本文件
 ```
 
