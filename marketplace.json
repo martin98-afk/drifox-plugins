@@ -1662,8 +1662,8 @@
             },
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
