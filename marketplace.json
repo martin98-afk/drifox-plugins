@@ -1171,6 +1171,48 @@
             }
         },
         {
+            "name": "j-space",
+            "description": "J-Space 认知推理控制套件 — 将语言模型可访问的工作表征组织为可主动管理的工作空间，提供选择性工作集加载、广播枢纽、稠密轨、结论前桥接推理、元认知控制、经验逃逸与验证等推理时认知控制协议。模型不可知，不修改权重、不微调、无隐藏服务。",
+            "version": "3.6.0",
+            "author": "Tiger3807861189",
+            "license": "Apache-2.0",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/j-space",
+                "ref": "main"
+            },
+            "components": {
+                "tools": false,
+                "commands": false,
+                "agents": false,
+                "skills": true,
+                "themes": false,
+                "hooks": false,
+                "mcp": false,
+                "lsp": false,
+                "ui": false
+            },
+            "keywords": [
+                "reasoning",
+                "cognitive-control",
+                "workspace",
+                "metacognition",
+                "j-space"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/Tiger3807861189/J-Space-Cognition-Suite-V3.6",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "kim-service",
             "description": "Kim Service — AI Hook 与 Agent Skills 合集：HookPrompt 提示词自动优化 + 8 个 Skill（Agent Teams / Memory 3-Layer / Find Skill / GoalPro / Kim Decision / Meta Skill Creator / Semgrep / Xiaohongshu）。",
             "version": "0.1.0",
