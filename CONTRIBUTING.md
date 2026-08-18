@@ -13,20 +13,30 @@
    ↓
 4. 本地运行 python tools/validate_plugins.py
    ↓
-5. 提交 commit（遵循 Conventional Commits）
+5. 提交 commit（**不要**手动改 marketplace.json；不需要本地跑 generate_marketplace.py）
    ↓
 6. 创建 Pull Request
    ↓
-7. CI 校验：失败时 marketplace.json 由 drifox-bot 自动 commit 修复
+7. CI 自动跑 generate_marketplace.py + validate_plugins.py，失败时 drifox-bot 自动 commit 修复
    ↓
 8. Maintainer 评审 & merge
 ```
 
-> **marketplace.json 自动同步**：当你修改 `plugin.json` 后忘记跑 `generate_marketplace.py` 时，CI 会自动跑生成并把修复 commit：
-> - PR 场景 → commit 到 PR head 分支
-> - push main 场景 → commit 到 main（保证 main 始终 green）
+> **marketplace.json 由 CI 自动同步 — 不要本地手动改！**
 >
-> bot commit 含 `[skip ci]`，GitHub Actions 原生跳过整个 workflow，不会无限循环。详见 `.github/workflows/validate.yml` 的 `auto-fix-marketplace` job。
+> `marketplace.json` 是机器生成的清单（`drifox plugin install` 的数据源）。**开发者不需要、也不应该本地修改它**，原因：
+> - 任何本地生成的版本与远端不一致，push 时必然冲突（marketplace.json 是 CI bot 频繁 commit 的热点文件）
+> - 即使本地成功生成并合并，bot 下一次 commit 也会把它覆盖回去
+> - 真正的权威源是 `plugins/<name>/.drifox-plugin/plugin.json`，CI 会从中读出字段并生成
+>
+> 何时跑 `generate_marketplace.py`？
+> - **本地排查**：仅当你想看新增插件在 marketplace.json 里渲染成什么格式、方便对照 schema
+> - **CI 修复路径**：`auto-fix-marketplace` job（`.github/workflows/validate.yml`）是唯一权威入口
+>
+> 工作机制：
+> - PR 场景 → 校验失败时 bot 把修复 commit 到 PR head 分支
+> - push main 场景 → bot 把修复 commit 到 main（保证 main 始终 green）
+> - bot commit 含 `[skip ci]`，GitHub Actions 原生跳过整个 workflow，不会无限循环
 
 ## 插件开发
 
@@ -88,12 +98,11 @@ chore: 升级 schema 到 v2
 ```bash
 # 1. 校验插件 manifest + 组件完整性 + marketplace 一致性
 python tools/validate_plugins.py
-
-# 2. 确保 marketplace.json 已更新
-python tools/generate_marketplace.py
 ```
 
 输出应全部为 `OK`。如果失败，PR 不会被合入。
+
+> ⚠️ **不要**跑 `python tools/generate_marketplace.py` 并把 marketplace.json 改动一起 commit —— CI 会自动同步。如果你本地改了 marketplace.json，push 时会和远端 bot 的自动 commit 冲突，且你的本地版本会被覆盖（详见顶部"工作流概览"）。
 
 ## 插件维护
 

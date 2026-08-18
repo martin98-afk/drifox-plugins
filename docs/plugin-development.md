@@ -93,10 +93,11 @@ DriFox 启动时会自动捕获 `logging` 输出到 `~/.drifox/logs/`。
 1. 在 GitHub 上 fork 本仓库
 2. 创建分支 `feat/your-plugin`
 3. 跑 `python tools/validate_plugins.py`，确保全 OK
-4. 提交 commit（`feat(your-plugin): 初始实现`）
-4. 跑 `python tools/validate_plugins.py`，确保全 OK
-5. 运行 `python tools/generate_marketplace.py` 更新市场清单
-6. 创建 PR，描述插件功能与使用方式
+4. 提交 commit（`feat(your-plugin): 初始实现`）— **只提交插件本身的文件，不要包含 marketplace.json 改动**
+5. push 分支并创建 PR，描述插件功能与使用方式
+
+> ⚠️ **marketplace.json 不要本地改、不要本地 commit。**
+> 该文件由 `.github/workflows/validate.yml` 的 `auto-fix-marketplace` job 在 CI 中从 `plugins/*/.drifox-plugin/plugin.json` 自动生成并 commit 到 head。如果你本地也跑并改了 marketplace.json，push 时会和远端 bot 的自动 commit 冲突，且你的本地版本会被覆盖。详见 [CONTRIBUTING.md](../CONTRIBUTING.md#工作流概览)。
 
 PR 模板：
 
@@ -124,6 +125,8 @@ your-plugin
 
 ## 进阶：发布到插件市场
 
-插件合并到本仓库 `plugins/` 目录后，运行 `python tools/generate_marketplace.py` 更新市场清单。`marketplace.json` 是 DriFox 运行时 `drifox plugin install` 命令的数据源。
+插件合并到本仓库 `plugins/` 目录后，**CI 自动同步** marketplace.json（详见顶部"提 PR"说明）。
+
+`marketplace.json` 是 DriFox 运行时 `drifox plugin install` 命令的数据源。每次 PR 推送或 merge 后，bot 都会跑 `tools/generate_marketplace.py` 并把更新 commit 到 head/main（commit message 含 `[skip ci]` 防止无限循环）。
 
 未来 DriFox 运行时将提供完整的 `drifox plugin` CLI（install / search / list / update / remove），届时用户可直接通过命令行安装本仓库中的插件。
