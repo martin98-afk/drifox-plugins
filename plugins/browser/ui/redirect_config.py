@@ -9,7 +9,8 @@
 - intercept_system     拦截「打开系统默认浏览器」入口（webbrowser.open /
                        QDesktopServices.openUrl 的 http/https 外链）→ 内置浏览器
 - intercept_shell      拦截「shell 工具打开 URL」（bash start/explorer <url>）→ 内置浏览器
-- intercept_html       拦截「打开本地 html 文件」（file:// 或本地 .html 路径）→ 内置浏览器
+- intercept_html       拦截「打开本地 html 文件」（file:// / os.startfile /
+                       磁盘 .html 路径）→ 内置浏览器
 
 （原实现只拦 http/https；本模块新增 intercept_html 修复「打开 html 不拦截」问题。
  拦截行为一律为重定向到内置浏览器新标签打开，不做询问弹窗。）
@@ -130,6 +131,60 @@ def reset_config_for_test(path: Path) -> ConfigStore:
 _HTML_SUFFIX_RE = re.compile(r"\.(?:html?|xhtml)$", re.IGNORECASE)
 
 
+_URL_SCHEMES = ("http", "https", "file", "ftp", "sftp", "ws", "wss")
+
+
+def _normalize_to_str(url: Any) -> str:
+    """把 str / os.PathLike / QUrl / Path 等统一规范成字符串
+
+    - 字符串 → 原样（去空白）
+    - os.PathLike（pathlib.Path 等）→ str()；但 Windows Path 会把 ``://``
+      改成 ``\\``（如 ``Path("http://x.com")`` → ``WindowsPath('http:/x.com')``），
+      此时若还原后第一个冒号前是已知 URL scheme，则还原成 ``scheme://rest``。
+      （不能用更激进的启发式：``C:\test.html`` 也含冒号，会被误判为 scheme）
+    - Qt QUrl → toString()，本地路径走 toLocalFile() 补 file://
+    - 其他对象 → str(url)
+
+    返回空串表示无意义输入（None / 转换异常）。
+    """
+    if url is None:
+        return ""
+    if isinstance(url, str):
+        return url.strip()
+    # os.PathLike 优先（pathlib.Path 在 Windows 上即属于此）
+    try:
+        import os as _os
+
+        if isinstance(url, _os.PathLike):
+            as_str = str(url).strip()
+            if "://" not in as_str:
+                # 检查第一个冒号前是否是已知 URL scheme，是则还原
+                head, sep, rest = as_str.partition(":")
+                if sep and head.lower() in _URL_SCHEMES and (rest.startswith("\\") or rest.startswith("/")):
+                    return f"{head}://{rest.lstrip('\\/')}"
+            return as_str
+    except Exception:
+        pass
+    # QUrl / QtCore.QUrl：本地文件需走 toLocalFile → file:// 再 toString
+    try:
+        from PyQt5.QtCore import QUrl as _QUrl  # type: ignore
+
+        if isinstance(url, _QUrl):
+            if url.isLocalFile():
+                local = url.toLocalFile()
+                try:
+                    return Path(local).resolve().as_uri()
+                except OSError:
+                    return local
+            return url.toString().strip()
+    except Exception:
+        pass
+    try:
+        return str(url).strip()
+    except Exception:
+        return ""
+
+
 def _is_http(url: str) -> bool:
     """仅 http/https（scheme 大小写不敏感）"""
     u = url.strip().lower()
@@ -158,14 +213,18 @@ def _is_local_html(url: str) -> bool:
     return not bool(re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", u))
 
 
-def to_browser_url(url: str) -> str:
+def to_browser_url(url: Any) -> str:
     """把任意目标转成内置浏览器可加载的 URL
 
     - file:// 协议 → 原样
     - 本地 html 路径（D:/x.html 等）→ 转成 file:/// 形式
     - http/https → 原样
+    - QUrl 本地文件 → 走 toLocalFile 转 file://
+    - pathlib.Path / PathLike → 转 file:// 绝对路径
     """
-    u = url.strip()
+    u = _normalize_to_str(url)
+    if not u:
+        return u
     if u.lower().startswith("file://"):
         return u
     if _is_http(u):
@@ -182,19 +241,25 @@ def to_browser_url(url: str) -> str:
         return u
 
 
-def should_intercept(url: str, entry: str) -> bool:
+def should_intercept(url: Any, entry: str) -> bool:
     """按配置判断某入口是否应拦截该 URL
 
-    entry: "system"（webbrowser/QDesktopServices）| "shell"（bash）
+    entry:
+    - "system"   webbrowser.open / QDesktopServices.openUrl
+    - "shell"    bash start/explorer 命令
+    - "startfile" os.startfile 拦截入口，本地文件专属
+
     规则（全局 enabled 关闭一律不拦）：
     - http/https：system -> intercept_system，shell -> intercept_shell
     - 本地 html：统一受 intercept_html 控制（三入口均适用）
     - 其余（file 非 html / mailto / 本地可执行文件等）→ 不拦
+
+    接受 str / PathLike / QUrl 输入（非字符串输入也能拦截）。
     """
     cfg = get_config()
     if not cfg.get("enabled", True):
         return False
-    u = url.strip()
+    u = _normalize_to_str(url)
     if not u:
         return False
     if _is_local_html(u):
@@ -203,3 +268,20 @@ def should_intercept(url: str, entry: str) -> bool:
         key = "intercept_system" if entry == "system" else "intercept_shell"
         return bool(cfg.get(key, True))
     return False
+
+
+def config_summary() -> str:
+    """返回当前配置的简短文字描述（用于状态栏显示拦截状态）
+
+    例：拦截:开 [系统·开 Shell·开 HTML·开]
+        拦截:关
+    """
+    cfg = get_config()
+    if not cfg.get("enabled", True):
+        return "拦截:关"
+    parts = []
+    for k in ("intercept_system", "intercept_shell", "intercept_html"):
+        if cfg.get(k, True):
+            label = {"intercept_system": "系统", "intercept_shell": "Shell", "intercept_html": "HTML"}[k]
+            parts.append(f"{label}·开")
+    return "拦截:开 [" + " ".join(parts) + "]" if parts else "拦截:开"

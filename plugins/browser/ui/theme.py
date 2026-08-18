@@ -219,32 +219,42 @@ def scrollbar_style(owner=None) -> str:
 
 
 def dialog_style(owner=None, include_line_edit=False) -> str:
-    """通用弹窗样式：背景/文字/输入框/列表/按钮，全部走主题 token。"""
+    """通用弹窗样式：背景/文字/输入框/列表/按钮，全部走主题 token。
+
+    字体走 context_provider 的 font_family/font_size（_ctx + theme_colors），
+    保证全应用统一系统字体；不依赖具体 QApplication 字体设置。
+    """
     c = theme_colors(owner)
     colors = _ctx_colors(_ctx(owner))
     is_dark = c["is_dark"]
     hover_strong = colors.get("hover_bg_strong") or (
         "rgba(255,255,255,0.16)" if is_dark else "rgba(0,0,0,0.10)"
     )
+    # 统一字体声明：所有可见文本控件都走上下文字体 + 字号 -1
+    body_font = font_css(c["ff"], max(10, c["fs"] - 1))
+    list_font = font_css(c["ff"], max(10, c["fs"] - 1))
     line_edit = ""
     if include_line_edit:
         line_edit = (
             f"QLineEdit {{ background: {c['raised']}; border: 1px solid {c['input_border']};"
-            f" border-radius: 6px; color: {c['text']}; padding: 5px 10px; }}"
+            f" border-radius: 6px; color: {c['text']}; padding: 5px 10px; {body_font} }}"
             f"QLineEdit:focus {{ border-color: {c['focus_border']}; }}"
         )
     return (
-        f"QDialog {{ background: {c['surface']}; }}"
-        f"QLabel {{ color: {c['text']}; }}"
+        f"QDialog {{ background: {c['surface']}; {body_font} }}"
+        f"QDialog * {{ {body_font} }}"  # 兜底：所有子控件继承字体
+        f"QLabel {{ color: {c['text']}; {body_font} }}"
+        f"QToolTip {{ {body_font} color: {c['text']}; background: {c['raised']};"
+        f" border: 1px solid {c['border']}; }}"
         + line_edit
         + f"QListWidget {{ background: {c['raised']}; border: 1px solid {c['border']};"
-        f" border-radius: 8px; color: {c['text']}; }}"
-        f"QListWidget::item {{ padding: 8px; border-radius: 4px; }}"
+        f" border-radius: 8px; color: {c['text']}; {list_font} }}"
+        f"QListWidget::item {{ padding: 8px; border-radius: 4px; {list_font} }}"
         f"QListWidget::item:hover {{ background: {c['hover']}; }}"
         f"QListWidget::item:selected {{ background: {c['selected']}; }}"
         f"QPushButton {{ background: {c['raised']}; border: 1px solid {c['border']};"
-        f" border-radius: 6px; color: {c['text']}; padding: 6px 16px;"
-        f" font-size: {max(10, c['fs'] - 1)}px; }}"
+        f" border-radius: 6px; color: {c['text']}; padding: 6px 16px; {body_font} }}"
         f"QPushButton:hover {{ background: {c['hover']}; }}"
         f"QPushButton:pressed {{ background: {hover_strong}; }}"
+        f"QPushButton:disabled {{ color: {c['muted']}; }}"
     )

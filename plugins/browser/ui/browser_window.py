@@ -251,6 +251,19 @@ class BrowserWindowCard(QWidget):
         sly.addWidget(self._status_lb)
         sly.addStretch(1)
 
+        # 拦截配置摘要（右侧）：让用户一眼看到拦截开关状态
+        from .redirect_config import config_summary
+
+        self._intercept_status_lb = QLabel(config_summary(), status)
+        self._intercept_status_lb.setStyleSheet(
+            f"{font_css(self._c['ff'], max(10, self._c['fs'] - 2))}"
+            f" color: {self._c['muted']}; background: transparent; padding: 0 4px;"
+        )
+        self._intercept_status_lb.setCursor(Qt.PointingHandCursor)
+        self._intercept_status_lb.setToolTip("点击打开浏览器拦截设置")
+        self._intercept_status_lb.mousePressEvent = lambda _e: self._open_redirect_settings()
+        sly.addWidget(self._intercept_status_lb)
+
         self._menu_panel = self._build_menu_panel(self)
         self._menu_panel.setVisible(False)
 
@@ -633,6 +646,15 @@ class BrowserWindowCard(QWidget):
         self._status_lb.setStyleSheet(
             f"{font_css(c['ff'], max(10, c['fs'] - 1))} color: {c['secondary']}; background: transparent;"
         )
+        # 拦截摘要 label 同步主题色 + 刷新文字（配置可能已变更）
+        if hasattr(self, "_intercept_status_lb"):
+            from .redirect_config import config_summary
+
+            self._intercept_status_lb.setStyleSheet(
+                f"{font_css(c['ff'], max(10, c['fs'] - 2))}"
+                f" color: {c['muted']}; background: transparent; padding: 0 4px;"
+            )
+            self._intercept_status_lb.setText(config_summary())
         self._incognito_badge.setStyleSheet(
             f"{font_css(c['ff'], max(10, c['fs'] - 2))} color: {c['tag_purple']}; padding: 0 8px;"
         )
@@ -765,7 +787,7 @@ class BrowserWindowCard(QWidget):
         from .redirect_settings import show_redirect_settings
 
         self._menu_panel.setVisible(False)
-        show_redirect_settings(self)
+        show_redirect_settings(self, owner=self)
 
     def open_devtools(self):
         from .devtools import open_devtools_for
