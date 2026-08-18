@@ -747,12 +747,28 @@ class BrowserWindowCard(QWidget):
     def _position_menu(self):
         self._position_popup(self._menu_panel)
 
+    # 卡片内嵌悬浮面板（历史/收藏/下载统一弹窗格式）的属性名清单：
+    # 菜单打开时互斥隐藏、resize 时统一重定位
+    _POPUP_PANEL_ATTRS = ("_history_panel", "_bookmarks_panel", "_downloads_panel")
+
+    def _hide_popup_panels(self):
+        """隐藏全部卡片内嵌悬浮面板（互斥显示，同一时刻只留一个）"""
+        for attr in self._POPUP_PANEL_ATTRS:
+            panel = getattr(self, attr, None)
+            if panel is not None:
+                panel.hide()
+
+    def _reposition_popup_panels(self):
+        """resize 时重定位所有可见悬浮面板（越界会被卡片裁切）"""
+        for attr in self._POPUP_PANEL_ATTRS:
+            panel = getattr(self, attr, None)
+            if panel is not None and panel.isVisible():
+                self._position_popup(panel)
+
     def _toggle_menu(self):
         visible = not self._menu_panel.isVisible()
         if visible:
-            history_panel = getattr(self, "_history_panel", None)
-            if history_panel is not None:
-                history_panel.hide()
+            self._hide_popup_panels()
             self._position_menu()
         self._menu_panel.setVisible(visible)
 
@@ -760,26 +776,27 @@ class BrowserWindowCard(QWidget):
         super().resizeEvent(event)
         if hasattr(self, "_menu_panel") and self._menu_panel.isVisible():
             self._position_menu()
-        history_panel = getattr(self, "_history_panel", None)
-        if history_panel is not None and history_panel.isVisible():
-            self._position_popup(history_panel)
+        self._reposition_popup_panels()
 
     def _toggle_bookmarks(self):
         from .bookmarks import show_bookmarks_panel
 
         self._menu_panel.setVisible(False)
+        self._hide_popup_panels()  # 互斥：同一时刻只显示一个悬浮面板
         show_bookmarks_panel(self)
 
     def _toggle_history(self):
         from .history import show_history_panel
 
         self._menu_panel.setVisible(False)
+        self._hide_popup_panels()
         show_history_panel(self)
 
     def _toggle_downloads(self):
         from .downloads import show_downloads_panel
 
         self._menu_panel.setVisible(False)
+        self._hide_popup_panels()
         show_downloads_panel(self)
 
     def _open_redirect_settings(self):
@@ -1026,22 +1043,17 @@ def _to_qurl(url: str):
 def open_in_system_browser(url: str) -> bool:
     """在系统默认浏览器中打开 URL
 
-    ⚠️ 不能直接用 webbrowser.open / QDesktopServices.openUrl：
-    它们已被 external_open 重定向到内置浏览器，会形成回环。
-    Windows 用 os.startfile，其他平台用系统 opener 命令。
+    ⚠️ 不能直接用 webbrowser.open / QDesktopServices.openUrl / os.startfile：
+    它们已被 external_open 重定向到内置浏览器，会形成回环
+    （v1.3.3 修复：os.startfile 也被 patch，「外部打开」按钮曾再次被拦回）。
+    统一走 external_open.open_url_external —— 通过代理属性取回原始入口。
     """
     if not url:
         return False
     try:
-        if hasattr(os, "startfile"):
-            os.startfile(url)  # type: ignore[attr-defined]  # noqa: S606
-        else:
-            import subprocess
-            import sys
+        from .external_open import open_url_external
 
-            opener = "open" if sys.platform == "darwin" else "xdg-open"
-            subprocess.Popen([opener, url])
-        return True
+        return open_url_external(url)
     except Exception:
         return False
 

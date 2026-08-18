@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
 """浏览器拦截设置弹窗 — 控制系统软件浏览器拦截行为
 
-宿主 MaskDialogBase 风格（与 git-panel 弹窗一致），提供 4 个开关：
+宿主 MaskDialogBase 风格（与 git-panel 弹窗一致），提供 3 个开关：
 - 启用拦截（全局总开关）
-- 拦截打开系统默认浏览器（webbrowser/QDesktopServices 的 http/https 外链）
-- 拦截 shell 工具打开 URL（bash start/explorer <url>）
+- 拦截打开网页（http/https —— 系统 webbrowser/QDesktopServices、
+  os.startfile、bash start/explorer 全部入口统一控制）
 - 拦截打开本地 html 文件（file:// / os.startfile / 磁盘 .html 路径）
 
-保存即写盘生效（external_open 每次调用实时读配置，无需重启）。
+保存即写盘生效（external_open 代理调用时动态读当前配置，无需重启；
+热重载后同样实时生效 —— v1.3.3 修复了旧代理冻结旧配置导致的「失效」）。
 
+配色：深浅主题自适应（v1.3.3 修复 —— 原硬编码深色 rgba(33,33,38,242)
+背景 + #f2f2f2 浅字，浅色主题下也是黑的；现全部走 theme_colors token：
+深色主题深底浅字 / 浅色主题白底深字）。
 字体走 context_provider（与历史/收藏/下载弹窗一致），保证全应用统一。
 """
 
@@ -27,7 +31,7 @@ from PyQt5.QtWidgets import (
 from qfluentwidgets import MaskDialogBase, SwitchButton
 
 from .redirect_config import get_config
-from .theme import font_css, theme_colors
+from .theme import _adjust_color, font_css, theme_colors
 
 # MaskDialogBase 要求 parent 非 None（__init__ 里取 parent.width()）；
 # 无有效父窗口时兜底到常驻隐藏 QWidget（惰性创建，避免 app 未实例化崩溃）。
@@ -67,10 +71,9 @@ class _RedirectSettingsDialog(MaskDialogBase):
     WIDTH = 460
     TITLE = "浏览器拦截设置"
     _FIELDS = (
-        ("enabled", "启用拦截", "总开关，关闭后所有拦截失效（http/shell/html 全部走系统默认行为）"),
-        ("intercept_system", "拦截系统浏览器外链", "webbrowser / QDesktopServices 打开的 http/https 链接 → 内置浏览器"),
-        ("intercept_shell", "拦截 Shell 打开 URL", "大模型 bash 执行 start/explorer <url> → 内置浏览器"),
-        ("intercept_html", "拦截本地 HTML 文件", "打开 file:// / os.startfile / 磁盘 .html/.htm 文件 → 内置浏览器"),
+        ("enabled", "启用拦截", "总开关，关闭后所有拦截失效（网页 / HTML 全部走系统默认行为）"),
+        ("intercept_web", "拦截打开网页", "http/https 链接（系统浏览器外链、os.startfile、bash start 全入口）→ 内置浏览器"),
+        ("intercept_html", "拦截打开本地 HTML", "打开 file:// / 磁盘 .html/.htm 文件 → 内置浏览器"),
     )
 
     def __init__(self, parent=None, owner=None):
@@ -88,16 +91,18 @@ class _RedirectSettingsDialog(MaskDialogBase):
 
     def _setup_ui(self):
         self.widget.setObjectName("redirectSettingsWidget")
-        # 字体走 context_provider（优先 owner，回退到 parent）
+        # 字体 + 配色全部走 theme_colors（深浅主题自适应，修复「浅色主题下也全黑」）
         c = theme_colors(self._owner)
         ff, fs = c["ff"], c["fs"]
         title_font = font_css(ff, fs + 1)
         body_font = font_css(ff, fs - 1)
         small_font = font_css(ff, fs - 3)
         btn_font = font_css(ff, fs - 1)
+        text, secondary, surface = c["text"], c["secondary"], c["surface"]
+        border, raised, hover, accent = c["border"], c["raised"], c["hover"], c["accent"]
         self.widget.setStyleSheet(
-            f"#redirectSettingsWidget {{ background: rgba(33,33,38,242);"
-            f" border: 1px solid rgba(128,128,128,0.15); border-radius: 12px; {body_font} }}"
+            f"#redirectSettingsWidget {{ background: {surface};"
+            f" border: 1px solid {border}; border-radius: 12px; {body_font} }}"
         )
         ly = QVBoxLayout(self.widget)
         ly.setContentsMargins(20, 16, 20, 16)
@@ -106,7 +111,7 @@ class _RedirectSettingsDialog(MaskDialogBase):
         # 标题
         title = QLabel(self.TITLE, self.widget)
         title.setStyleSheet(
-            f"color: #f2f2f2; {title_font} font-weight: 600; background: transparent;"
+            f"color: {text}; {title_font} font-weight: 600; background: transparent;"
         )
         ly.addWidget(title)
 
@@ -122,12 +127,12 @@ class _RedirectSettingsDialog(MaskDialogBase):
             text_col.setSpacing(2)
             name_lb = QLabel(name, row)
             name_lb.setStyleSheet(
-                f"color: #f2f2f2; {body_font} font-weight: 500; background: transparent;"
+                f"color: {text}; {body_font} font-weight: 500; background: transparent;"
             )
             desc_lb = QLabel(desc, row)
             desc_lb.setWordWrap(True)
             desc_lb.setStyleSheet(
-                f"color: rgba(200,200,200,0.75); {small_font} background: transparent;"
+                f"color: {secondary}; {small_font} background: transparent;"
             )
             text_col.addWidget(name_lb)
             text_col.addWidget(desc_lb)
@@ -142,7 +147,7 @@ class _RedirectSettingsDialog(MaskDialogBase):
         # 分隔 + 按钮
         sep = QWidget(self.widget)
         sep.setFixedHeight(1)
-        sep.setStyleSheet("background: rgba(128,128,128,0.15);")
+        sep.setStyleSheet(f"background: {border};")
         ly.addSpacing(4)
         ly.addWidget(sep)
         ly.addSpacing(4)
@@ -152,9 +157,9 @@ class _RedirectSettingsDialog(MaskDialogBase):
         close_btn = QPushButton("取消", self.widget)
         close_btn.setFixedSize(80, 30)
         close_btn.setStyleSheet(
-            f"QPushButton {{ background: rgba(128,128,128,0.12); border: none;"
-            f" border-radius: 6px; color: #d0d0d0; {btn_font} }}"
-            f"QPushButton:hover {{ background: rgba(128,128,128,0.22); }}"
+            f"QPushButton {{ background: {raised}; border: none;"
+            f" border-radius: 6px; color: {text}; {btn_font} }}"
+            f"QPushButton:hover {{ background: {hover}; }}"
         )
         close_btn.clicked.connect(self.reject)
         btn_row.addWidget(close_btn)
@@ -162,9 +167,9 @@ class _RedirectSettingsDialog(MaskDialogBase):
         save_btn = QPushButton("保存", self.widget)
         save_btn.setFixedSize(80, 30)
         save_btn.setStyleSheet(
-            f"QPushButton {{ background: rgba(98,160,234,0.2); border: none;"
-            f" border-radius: 6px; color: #62a0ea; {btn_font} font-weight: 600; }}"
-            f"QPushButton:hover {{ background: rgba(98,160,234,0.35); }}"
+            f"QPushButton {{ background: {accent}; border: none;"
+            f" border-radius: 6px; color: white; {btn_font} font-weight: 600; }}"
+            f"QPushButton:hover {{ background: {_adjust_color(accent, 20)}; }}"
         )
         save_btn.clicked.connect(self._on_save)
         btn_row.addWidget(save_btn)

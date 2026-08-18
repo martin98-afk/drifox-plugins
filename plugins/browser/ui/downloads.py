@@ -15,7 +15,7 @@ from pathlib import Path
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import (
-    QDialog,
+    QFrame,
     QHBoxLayout,
     QLabel,
     QListWidget,
@@ -123,15 +123,19 @@ def _on_download_requested(owner, item) -> None:
         pass
 
 
-class DownloadsPanel(QDialog, _PanelMixin):
-    """下载管理面板（H2 修复：异步加载，统一基类 _PanelMixin）"""
+class DownloadsPanel(QFrame, _PanelMixin):
+    """下载管理面板（卡片内嵌悬浮 QFrame，与历史/收藏弹窗同格式）
+
+    H2 修复：异步加载，统一基类 _PanelMixin。
+    弹窗格式统一：原为 QDialog 独立窗口，现与历史面板一致 —
+    浏览器卡片内悬浮、菜单按钮下方定位（owner._position_popup）。
+    """
 
     def __init__(self, owner, parent=None):
-        super().__init__(parent)
+        super().__init__(parent or owner)
         self._owner = owner
-        self.setWindowTitle("下载管理")
-        self.setMinimumSize(520, 400)
-        self.setWindowFlag(Qt.Window)
+        self.setObjectName("downloadsPanel")
+        self.setFixedSize(460, 320)
         self._loader = AsyncDataLoader(self)
         self._items_cache: list = []
         self._setup_ui()
@@ -315,8 +319,13 @@ class _DownloadItemWidget(QWidget):
 
 
 def show_downloads_panel(owner):
-    """从浏览器卡片打开下载面板（单例复用 + 主题刷新）"""
+    """从浏览器卡片打开下载面板（单例复用 + 主题刷新 + 卡片内定位）
+
+    与历史/收藏面板同格式：position=True → owner._position_popup 在
+    菜单按钮下方定位，卡片内悬浮显示。
+    """
     show_singleton_panel(
         owner, "_downloads_panel",
-        factory=lambda o: DownloadsPanel(o),
+        factory=lambda o: DownloadsPanel(o, o),
+        position=True,
     )
