@@ -16,7 +16,7 @@
  本版按需求收敛为「网页 / HTML」两类语义开关；旧配置文件加载时自动迁移：
  intercept_web = intercept_system OR intercept_shell，任一开则网页拦截保持开。）
 
-⚠️ 热重载陷阱（v1.3.3 修复「拦截失效」的根因）：external_open 的代理函数
+⚠️ 热重载陷阱（v1.4.0 修复「拦截失效」的根因）：external_open 的代理函数
 不再顶层 from .redirect_config import should_intercept —— 顶层 import 会在
 热重载后冻结为旧模块实例，旧模块的 ConfigStore 单例不再从磁盘 reload，
 导致设置弹窗里的开关怎么改都不生效。代理函数改为调用时动态解析当前模块。

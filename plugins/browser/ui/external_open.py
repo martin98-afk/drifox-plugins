@@ -19,7 +19,7 @@
   ``start <url>`` / ``cmd /c start <url>`` / ``explorer <url>``，
   同样转交内置浏览器（用户明确要求大模型 start 开网页也走插件浏览器）。
 
-拦截行为（配置驱动，见 redirect_config.py；v1.3.3 收敛为两类语义开关）：
+拦截行为（配置驱动，见 redirect_config.py；v1.4.0 收敛为两类语义开关）：
 - 全局开关 enabled：总闸，关闭后一切放行
 - intercept_web：拦截「打开网页」（http/https，system / shell / startfile 全入口统一）
 - intercept_html：拦截「打开本地 html 文件」（file:// / os.startfile / 磁盘 .html 路径）
@@ -28,7 +28,7 @@
 - 浏览器插件未注册 / 卡片不可用 → 回退系统浏览器
 - 拦截执行时会在浏览器底部状态栏打一条提示，方便用户感知「拦截是否真的生效」
 
-热重载安全（v1.3.3 修复「拦截失效」）：
+热重载安全（v1.4.0 修复「拦截失效」）：
 - 代理函数不再顶层 import redirect_config —— 顶层 import 会在热重载后冻结为
   旧模块实例（旧 ConfigStore 单例永不读盘 → 设置弹窗开关改了不生效）；
   改为调用时按 sys.modules 动态解析当前模块。
@@ -51,7 +51,7 @@ from PyQt5.QtCore import QObject, pyqtSignal
 # ⚠️ 不能顶层 ``from .redirect_config import should_intercept``：
 # 插件热重载后，旧代理函数（仍挂在 webbrowser.open / os.startfile 上）
 # 会带着旧模块的函数引用与旧 ConfigStore 单例 —— 设置弹窗（新模块）写盘，
-# 旧 store 永不 reload → 开关怎么改都不生效（v1.3.3 前的「拦截失效」根因）。
+# 旧 store 永不 reload → 开关怎么改都不生效（v1.4.0 前的「拦截失效」根因）。
 # 改为调用时按 sys.modules 解析当前模块，配置与决策逻辑永远是最新的。
 
 
@@ -308,7 +308,7 @@ def install_redirect() -> bool:
     - 本模块实例重复调用 → 直接返回；
     - 检测到「上次热重载遗留的旧模块代理」（有 _drifox_redirect 标记但不是
       本模块函数）→ **接管**而非跳过：从旧代理取回原始函数，重绑到本模块
-      的动态代理上。v1.3.3 之前这里是直接 return True —— 旧代理带着冻结的
+      的动态代理上。v1.4.0 之前这里是直接 return True —— 旧代理带着冻结的
       旧 ConfigStore 单例（永不读盘），设置弹窗改了开关也只写新 store，
       运行中的拦截决策永远用旧配置 → 「关了还是拦截」。接管后代理按
       sys.modules 动态解析当前 redirect_config，开关保存即生效。
