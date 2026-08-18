@@ -10,6 +10,11 @@
   message_card.py / update_checker.py 均为函数内延迟 import，
   patch 后拿到代理类；main_widget.py 顶层 import 的旧引用不受影响
   （本地文件打开本就走系统，且非 http 协议会放行）。
+- patch ``os.startfile``：Windows 下打开本地文件的「事实标准」入口，
+  绕过 webbrowser/QDesktopServices（如直接 ``os.startfile("C:/x.html")``）。
+  修复「本地 HTML 文件拦截不生效」的根因之一：原本只 patch 了 webbrowser.open，
+  而 ``webbrowser.WindowsDefault.open`` 内部就是 ``os.startfile``；
+  对于未走 webbrowser 的调用方（如某些工具直接 ``os.startfile``）则完全漏过。
 - patch ``TerminalTools.execute_bash``：拦截大模型通过 bash 执行的
   ``start <url>`` / ``cmd /c start <url>`` / ``explorer <url>``，
   同样转交内置浏览器（用户明确要求大模型 start 开网页也走插件浏览器）。
@@ -18,14 +23,16 @@
 - 全局开关 enabled：总闸，关闭后一切放行
 - intercept_system：拦截 webbrowser/QDesktopServices 的 http/https 外链
 - intercept_shell：拦截 bash start/explorer <url>
-- intercept_html：拦截本地 html 文件（file:// 或磁盘 .html 路径）→ 内置浏览器
-  （修复原实现「打开 html 文件不拦截」的问题）
+- intercept_html：拦截本地 html 文件（file:// / os.startfile / 磁盘 .html 路径）
+  → 内置浏览器（修复原实现「打开 html 文件不拦截」的问题）
 - 其余（file 非 html / mailto:/本地可执行文件等）→ 原系统逻辑
 - 浏览器插件未注册 / 卡片不可用 → 回退系统浏览器
+- 拦截执行时会在浏览器底部状态栏打一条提示，方便用户感知「拦截是否真的生效」
 
 幂等：热重载时 register_ui 再次执行，通过标记检测避免重复嵌套 patch。
 """
 
+import os
 import re
 import webbrowser
 from typing import Any, Optional
@@ -39,6 +46,7 @@ from .redirect_config import should_intercept, to_browser_url
 _installed = False
 _orig_webbrowser_open: Any = None
 _orig_qdesktop_openurl: Any = None
+_orig_os_startfile: Any = None
 
 
 class _MainThreadDispatcher(QObject):
@@ -94,11 +102,15 @@ def _is_http(url: str) -> bool:
     return u.startswith("http://") or u.startswith("https://")
 
 
-def _open_in_browser(url: str) -> bool:
+def _open_in_browser(url: Any) -> bool:
     """尝试用内置浏览器打开链接：显示浏览器卡片 + 新开标签页导航
 
     浏览器不可用（插件未注册 / 卡片创建失败）返回 False，由调用方回退系统。
     """
+    # 先规范化（Path / QUrl / 含空白 str → 字符串 + file:// URL）
+    from .redirect_config import _normalize_to_str
+
+    url = _normalize_to_str(url) if url else url
     try:
         from app.core.ui_plugin_registry import UIPluginRegistry
         from app.widgets.cards.card_manager import CardManager
@@ -110,7 +122,11 @@ def _open_in_browser(url: str) -> bool:
             logger.warning(f"[browser-redirect] browser 卡片未注册，回退系统浏览器: {url}")
             return False  # 浏览器插件未注册 → 回退系统浏览器
 
-        target = normalize_url(url) or url
+        # http/https 走 normalize_url（地址栏 URL 规范化），file:// 直接用
+        if url and url.lower().startswith("file://"):
+            target = url
+        else:
+            target = normalize_url(url) or url
 
         # 确保浏览器卡片可见（已可见则不重复触发 toggle 关闭）
         cm = CardManager.get_instance()
@@ -170,11 +186,37 @@ def _open_in_browser_threadsafe(url: str, timeout: float = 8.0) -> bool:
     return _open_in_browser(url)
 
 
+def _notify_status(text: str) -> None:
+    """在浏览器底部状态栏打一条拦截结果反馈（静默失败：浏览器卡片未注册也行）
+
+    用 QTimer.singleShot 派发到主线程，避免后台线程崩溃。
+    用户看到这条提示就明确知道「拦截是否真的生效」。
+    """
+    try:
+        from PyQt5.QtCore import QTimer
+        from .browser_window import _get_current_card
+
+        def _apply():
+            card = _get_current_card()
+            if card is not None and hasattr(card, "_set_status"):
+                card._set_status(text)
+
+        QTimer.singleShot(0, _apply)
+    except Exception:
+        pass
+
+
 def _redirect_webbrowser_open(url, new=0, autoraise=True):
-    """webbrowser.open 代理：按配置拦截 http/https + 本地 html → 内置浏览器"""
-    if isinstance(url, str) and should_intercept(url, "system"):
-        if _open_in_browser_threadsafe(to_browser_url(url)):
+    """webbrowser.open 代理：按配置拦截 http/https + 本地 html → 内置浏览器
+
+    接受 str / Path / QUrl 等任意类型（should_intercept 内部已统一规范化）。
+    """
+    if should_intercept(url, "system"):
+        target = to_browser_url(url)
+        if _open_in_browser_threadsafe(target):
+            _notify_status(f"🛡 已拦截 → 内置浏览器: {target[:80]}")
             return True
+        _notify_status(f"⚠ 拦截失败回退系统: {target[:80]}")
     return _orig_webbrowser_open(url, new, autoraise)
 
 
@@ -190,9 +232,28 @@ class _RedirectDesktopServices:
         except Exception:
             url_str = str(url)
         if should_intercept(url_str, "system"):
-            if _open_in_browser_threadsafe(to_browser_url(url_str)):
+            target = to_browser_url(url_str)
+            if _open_in_browser_threadsafe(target):
+                _notify_status(f"🛡 已拦截 → 内置浏览器: {target[:80]}")
                 return True
+            _notify_status(f"⚠ 拦截失败回退系统: {target[:80]}")
         return _orig_qdesktop_openurl(url)
+
+
+def _redirect_os_startfile(filepath):
+    """os.startfile 代理：拦截本地 html 文件 → 内置浏览器
+
+    Windows 上 ``os.startfile("C:/test.html")`` 走 ShellExecute 直接打开关联程序，
+    不经过 webbrowser.open / QDesktopServices，因此必须额外 patch。
+    非 Windows 平台 os.startfile 不存在（直接调用原函数）。
+    """
+    if should_intercept(filepath, "startfile"):
+        target = to_browser_url(filepath)
+        if _open_in_browser_threadsafe(target):
+            _notify_status(f"🛡 已拦截 → 内置浏览器: {target[:80]}")
+            return None  # 已拦截：吞掉 os.startfile 调用
+        _notify_status(f"⚠ 拦截失败回退系统: {target[:80]}")
+    return _orig_os_startfile(filepath)
 
 
 def install_redirect() -> bool:
@@ -200,7 +261,7 @@ def install_redirect() -> bool:
 
     幂等：已注入过（含上次热重载遗留的代理）→ 直接返回，避免嵌套 patch。
     """
-    global _installed, _orig_webbrowser_open, _orig_qdesktop_openurl
+    global _installed, _orig_webbrowser_open, _orig_qdesktop_openurl, _orig_os_startfile
 
     # 已注入标记（本模块实例 / 热重载遗留代理）
     if _installed or getattr(webbrowser.open, "_drifox_redirect", False):
@@ -224,15 +285,27 @@ def install_redirect() -> bool:
         _orig_qdesktop_openurl = _qtgui.QDesktopServices.openUrl
         _qtgui.QDesktopServices = _RedirectDesktopServices
 
-    # 3) patch TerminalTools.execute_bash：拦截 start <url> 等命令
+    # 3) patch os.startfile（Windows：本地文件打开的「事实标准」入口）
+    #    已注入（热重载遗留）→ 跳过避免嵌套 patch
+    if hasattr(os, "startfile") and not getattr(os.startfile, "_drifox_redirect", False):
+        _orig_os_startfile = os.startfile
+        _redirect_os_startfile._drifox_redirect = True  # type: ignore[attr-defined]
+        os.startfile = _redirect_os_startfile  # type: ignore[assignment]
+
+    # 4) patch TerminalTools.execute_bash：拦截 start <url> 等命令
     bash_ok = install_bash_redirect()
 
-    # 4) 预创建主线程派发器（register_ui 在主线程执行，必须在此创建，
+    # 5) 预创建主线程派发器（register_ui 在主线程执行，必须在此创建，
     #    否则工作线程首次调用 _get_dispatcher 会因不在主线程而拒绝创建）
     _get_dispatcher()
 
     _installed = True
-    logger.info(f"[browser-redirect] 外部链接重定向已安装 (bash拦截={'OK' if bash_ok else '跳过'}, 派发器={'OK' if _dispatcher is not None else '不可用'})")
+    logger.info(
+        f"[browser-redirect] 外部链接重定向已安装 "
+        f"(bash拦截={'OK' if bash_ok else '跳过'}, "
+        f"派发器={'OK' if _dispatcher is not None else '不可用'}, "
+        f"os.startfile={'OK' if _orig_os_startfile is not None else 'N/A'})"
+    )
     return True
 
 
@@ -348,10 +421,13 @@ def install_bash_redirect() -> bool:
                 url = None
             if url is not None and should_intercept(url, "shell"):
                 logger.info(f"[browser-redirect] bash 拦截 start 命令: {command!r} → {url}")
-                if _open_in_browser_threadsafe(to_browser_url(url)):
+                target = to_browser_url(url)
+                if _open_in_browser_threadsafe(target):
+                    _notify_status(f"🛡 bash 拦截 → 内置浏览器: {target[:80]}")
                     from app.tools.result import ToolResult
 
                     return ToolResult(True, content=f"🌐 已在 DriFox 内置浏览器打开: {url}")
+                _notify_status(f"⚠ bash 拦截失败回退: {command[:80]}")
                 logger.warning(f"[browser-redirect] 内置浏览器打开失败，回退原始命令: {command!r}")
         return orig(self, command, timeout)
 

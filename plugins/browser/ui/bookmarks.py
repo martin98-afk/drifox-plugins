@@ -14,7 +14,6 @@ from PyQt5.QtWidgets import (
     QDialog,
     QFrame,
     QHBoxLayout,
-    QLabel,
     QListWidget,
     QListWidgetItem,
     QPushButton,
@@ -23,10 +22,11 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from qfluentwidgets import FluentIcon, IconWidget
+from qfluentwidgets import FluentIcon
 
 from .data import AsyncDataLoader, add_bookmark, remove_bookmark
-from .theme import dialog_style, font_css, scrollbar_style, theme_colors
+from .panel_base import _PanelMixin, build_footer, build_header, show_singleton_panel
+from .theme import font_css, scrollbar_style, theme_colors
 
 
 class BookmarkBar(QWidget):
@@ -173,8 +173,8 @@ class BookmarkBar(QWidget):
         self._rebuild()
 
 
-class BookmarksPanel(QDialog):
-    """收藏管理面板（H2 修复：异步加载）"""
+class BookmarksPanel(QDialog, _PanelMixin):
+    """收藏管理面板（H2 修复：异步加载，统一基类 _PanelMixin）"""
 
     open_url = pyqtSignal(str)
 
@@ -194,61 +194,46 @@ class BookmarksPanel(QDialog):
         root.setContentsMargins(12, 12, 12, 12)
         root.setSpacing(8)
 
-        colors = theme_colors(self._owner)
-        header = QHBoxLayout()
-        icon = IconWidget(FluentIcon.BOOK_SHELF, self)
-        icon.setFixedSize(16, 16)
-        header.addWidget(icon)
-        title = QLabel("收藏夹")
-        title.setStyleSheet(
-            f"{font_css(colors['ff'], colors['fs'] + 2)} font-weight: 600;"
-        )
-        header.addWidget(title)
-        header.addStretch(1)
+        def _header_actions(header: QHBoxLayout, _colors):
+            self._btn_add = QPushButton("收藏当前页", self)
+            self._btn_add.clicked.connect(self._add_current)
+            header.addWidget(self._btn_add)
 
-        self._btn_add = QPushButton("收藏当前页")
-        self._btn_add.clicked.connect(self._add_current)
-        header.addWidget(self._btn_add)
-        root.addLayout(header)
+        root.addLayout(
+            build_header(
+                self, self._owner, "收藏夹",
+                icon=FluentIcon.BOOK_SHELF, actions=_header_actions,
+            )
+        )
 
         self._list = QListWidget(self)
         self._list.itemDoubleClicked.connect(self._open_item)
         root.addWidget(self._list, 1)
 
-        footer = QHBoxLayout()
-        self._btn_open = QPushButton("打开")
-        self._btn_delete = QPushButton("删除")
-        self._btn_close = QPushButton("关闭")
-        self._btn_open.clicked.connect(self._open_selected)
-        self._btn_delete.clicked.connect(self._delete_selected)
-        self._btn_close.clicked.connect(self.close)
-        footer.addWidget(self._btn_open)
-        footer.addWidget(self._btn_delete)
-        footer.addStretch(1)
-        footer.addWidget(self._btn_close)
-        root.addLayout(footer)
+        def _footer_actions(footer: QHBoxLayout):
+            self._btn_open = QPushButton("打开", self)
+            self._btn_delete = QPushButton("删除", self)
+            self._btn_open.clicked.connect(self._open_selected)
+            self._btn_delete.clicked.connect(self._delete_selected)
+            footer.addWidget(self._btn_open)
+            footer.addWidget(self._btn_delete)
 
-        self.setStyleSheet(dialog_style(self._owner) + scrollbar_style(self._owner))
+        root.addLayout(build_footer(self, actions=_footer_actions))
 
-    # ── H2 修复：异步加载 ──
+        from .panel_base import apply_panel_theme
+        apply_panel_theme(self, self._owner)
 
-    def _reload(self):
+    # ── H2 修复：异步加载（统一基类 _reload_async） ──
+
+    def _reload_async(self):
         """异步查询 bookmarks，缓存后渲染"""
-        self._list.clear()
-        placeholder = QListWidgetItem("加载中…")
-        self._list.addItem(placeholder)
         self._loader.load(
             "bookmarks",
-            self._on_bookmarks_loaded,
+            self._on_items_loaded,
             limit=500,
         )
 
-    def _on_bookmarks_loaded(self, items):
-        """后台线程回调 → 缓存 + 渲染"""
-        self._items_cache = list(items)
-        self._render_list()
-
-    def _render_list(self):
+    def _render_items(self):
         """同步渲染缓存到 QListWidget"""
         self._list.clear()
         if not self._items_cache:
@@ -295,12 +280,15 @@ class BookmarksPanel(QDialog):
                 remove_bookmark(url)
             self._reload()
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        from .panel_base import apply_panel_theme
+        apply_panel_theme(self, self._owner)
+
 
 def show_bookmarks_panel(owner):
-    """从浏览器卡片打开收藏面板（单例复用）"""
-    if not hasattr(owner, "_bookmarks_panel") or owner._bookmarks_panel is None:
-        owner._bookmarks_panel = BookmarksPanel(owner)
-    owner._bookmarks_panel.setStyleSheet(dialog_style(owner) + scrollbar_style(owner))
-    owner._bookmarks_panel._reload()
-    owner._bookmarks_panel.show()
-    owner._bookmarks_panel.raise_()
+    """从浏览器卡片打开收藏面板（单例复用 + 主题刷新）"""
+    show_singleton_panel(
+        owner, "_bookmarks_panel",
+        factory=lambda o: BookmarksPanel(o),
+    )

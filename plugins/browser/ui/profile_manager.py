@@ -22,6 +22,11 @@ PROFILE_DIR = DATA_DIR / "profile"
 CACHE_DIR = DATA_DIR / "cache"
 DOWNLOAD_DIR = Path.home() / "Downloads"
 
+
+def get_default_download_dir() -> str:
+    """返回当前 Profile 的默认下载目录（绝对路径字符串）"""
+    return str(DOWNLOAD_DIR)
+
 # 单例：持久浏览器 Profile（跨窗口共享）
 _browser_profile: Optional[object] = None
 

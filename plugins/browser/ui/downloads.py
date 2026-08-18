@@ -26,12 +26,13 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 
-from qfluentwidgets import FluentIcon, IconWidget
+from qfluentwidgets import FluentIcon
 
 from app.utils.design_tokens import Colors
 
-from .data import AsyncDataLoader, update_download_state, upsert_download
-from .theme import dialog_style, font_css, scrollbar_style, theme_colors
+from .data import AsyncDataLoader, clear_downloads, update_download_state, upsert_download
+from .panel_base import _PanelMixin, apply_panel_theme, build_footer, build_header, show_singleton_panel
+from .theme import font_css, theme_colors
 
 # 状态色（design_tokens 常量，仅状态文字用，不作主题主色）
 _STATE_COLORS = {
@@ -122,8 +123,8 @@ def _on_download_requested(owner, item) -> None:
         pass
 
 
-class DownloadsPanel(QDialog):
-    """下载管理面板"""
+class DownloadsPanel(QDialog, _PanelMixin):
+    """下载管理面板（H2 修复：异步加载，统一基类 _PanelMixin）"""
 
     def __init__(self, owner, parent=None):
         super().__init__(parent)
@@ -141,48 +142,44 @@ class DownloadsPanel(QDialog):
         root.setContentsMargins(12, 12, 12, 12)
         root.setSpacing(8)
 
-        colors = theme_colors(self._owner)
-        header = QHBoxLayout()
-        icon = IconWidget(FluentIcon.DOWNLOAD, self)
-        icon.setFixedSize(16, 16)
-        header.addWidget(icon)
-        title = QLabel("下载管理")
-        title.setStyleSheet(
-            f"{font_css(colors['ff'], colors['fs'] + 2)} font-weight: 600;"
-        )
-        header.addWidget(title)
-        header.addStretch(1)
+        def _header_actions(header: QHBoxLayout, _colors):
+            self._btn_refresh = QPushButton("刷新", self)
+            self._btn_refresh.clicked.connect(self._reload)
+            header.addWidget(self._btn_refresh)
 
-        self._btn_refresh = QPushButton("刷新")
-        self._btn_close = QPushButton("关闭")
-        self._btn_refresh.clicked.connect(self._reload)
-        self._btn_close.clicked.connect(self.close)
-        header.addWidget(self._btn_refresh)
-        header.addWidget(self._btn_close)
-        root.addLayout(header)
+        root.addLayout(
+            build_header(
+                self, self._owner, "下载管理",
+                icon=FluentIcon.DOWNLOAD, actions=_header_actions,
+            )
+        )
 
         self._list = QListWidget(self)
         root.addWidget(self._list, 1)
 
-        self.setStyleSheet(dialog_style(self._owner) + scrollbar_style(self._owner))
+        def _footer_actions(footer: QHBoxLayout):
+            self._btn_open_folder = QPushButton("打开下载目录", self)
+            self._btn_clear = QPushButton("清空记录", self)
+            self._btn_open_folder.clicked.connect(self._open_download_dir)
+            self._btn_clear.clicked.connect(self._clear)
+            footer.addWidget(self._btn_open_folder)
+            footer.addWidget(self._btn_clear)
 
-    def _reload(self):
-        """H2 修复：异步加载下载列表（主线程不阻塞）"""
-        self._list.clear()
-        placeholder = QListWidgetItem("加载中…")
-        self._list.addItem(placeholder)
+        root.addLayout(build_footer(self, actions=_footer_actions))
+
+        apply_panel_theme(self, self._owner)
+
+    # ── H2 修复：异步加载（统一基类 _reload_async） ──
+
+    def _reload_async(self):
+        """异步查询 downloads，缓存后渲染"""
         self._loader.load(
             "downloads",
-            self._on_downloads_loaded,
+            self._on_items_loaded,
             limit=100,
         )
 
-    def _on_downloads_loaded(self, items):
-        """后台线程回调 → 缓存 + 渲染"""
-        self._items_cache = list(items)
-        self._render_list()
-
-    def _render_list(self):
+    def _render_items(self):
         """同步渲染缓存"""
         self._list.clear()
         if not self._items_cache:
@@ -196,6 +193,34 @@ class DownloadsPanel(QDialog):
             item.setData(Qt.UserRole, d.get("path", ""))
             self._list.addItem(item)
             self._list.setItemWidget(item, widget)
+
+    def _open_download_dir(self):
+        """打开默认下载目录（不存在则提示）"""
+        from .profile_manager import get_default_download_dir
+
+        path = get_default_download_dir()
+        if path and Path(path).exists():
+            if open_folder(path):
+                self._owner._set_status(f"已打开下载目录: {path}")
+            else:
+                self._owner._set_status(f"打开下载目录失败: {path}")
+        else:
+            self._owner._set_status("下载目录不存在")
+
+    def _clear(self):
+        from PyQt5.QtWidgets import QMessageBox
+
+        if (
+            QMessageBox.question(self, "清空下载", "确定要清空全部下载记录吗？")
+            == QMessageBox.Yes
+        ):
+            n = clear_downloads()
+            self._reload()
+            self._owner._set_status(f"已清空 {n} 条下载记录")
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        apply_panel_theme(self, self._owner)
 
 
 def open_folder(path: str) -> bool:
@@ -290,10 +315,8 @@ class _DownloadItemWidget(QWidget):
 
 
 def show_downloads_panel(owner):
-    """从浏览器卡片打开下载面板（单例复用）"""
-    if not hasattr(owner, "_downloads_panel") or owner._downloads_panel is None:
-        owner._downloads_panel = DownloadsPanel(owner)
-    owner._downloads_panel.setStyleSheet(dialog_style(owner) + scrollbar_style(owner))
-    owner._downloads_panel._reload()
-    owner._downloads_panel.show()
-    owner._downloads_panel.raise_()
+    """从浏览器卡片打开下载面板（单例复用 + 主题刷新）"""
+    show_singleton_panel(
+        owner, "_downloads_panel",
+        factory=lambda o: DownloadsPanel(o),
+    )

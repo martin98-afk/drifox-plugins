@@ -230,6 +230,21 @@ def query_downloads(limit: int = 100) -> List[dict]:
         return []
 
 
+def clear_downloads() -> int:
+    """清空下载记录，返回删除条数"""
+    _ensure_db()
+    try:
+        conn = _get_conn()
+        cur = conn.execute("DELETE FROM downloads")
+        conn.commit()
+        n = cur.rowcount
+        conn.close()
+        return n
+    except Exception as e:
+        logger.error(f"[browser] 清空下载失败: {e}")
+        return 0
+
+
 def query_suggestions(limit: int = 50) -> List[Tuple[str, str]]:
     """地址栏补全数据：历史 + 收藏 合并，按权重排序
 
