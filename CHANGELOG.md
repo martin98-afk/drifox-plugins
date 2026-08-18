@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.8.1 (2026-08-18)
+### 🔧 修复 browser 插件弹窗与拦截五项问题（v1.4.0）
+- **历史弹窗透明**：`panel_base.apply_panel_theme` 修复 —— `dialog_style` 只给 `QDialog` 设背景，卡片内嵌 QFrame 面板无背景变透明；现按 objectName 追加 `QFrame#xxx` 容器背景（surface + border + 圆角），并统一 QLineEdit 样式（历史搜索框）
+- **弹窗格式统一**：收藏/下载面板由 QDialog 独立窗口改为与历史面板同款「卡片内悬浮 QFrame 弹窗」（460×320，菜单按钮下方定位，三面板互斥显示、resize 同步重定位）
+- **拦截开关失效（热重载根因）**：旧代理函数顶层 import 冻结旧模块的 ConfigStore 单例（永不读盘）→ 设置弹窗改开关无效；修复为 ① 代理调用时按 sys.modules 动态解析当前 `redirect_config`，② `install_redirect` 热重载时**接管**旧模块遗留代理（webbrowser.open / QDesktopServices / os.startfile / TerminalTools.execute_bash 四入口，从旧代理 stash 属性/`__globals__`/闭包取回原始函数后重绑），开关保存即生效
+- **拦截配置收敛**：`intercept_system` + `intercept_shell` 合并为 `intercept_web`（拦截打开网页，全入口统一），与 `intercept_html`（拦截打开本地 HTML）构成两类语义开关，旧配置文件自动迁移；设置弹窗同步改为 3 开关
+- **拦截设置卡片配色**：原硬编码深色背景/浅字（浅色主题下全黑），改为 `theme_colors` 深浅主题自适应
+- **「在外部浏览器打开」回环修复**：该按钮原来走 `os.startfile`（已被拦截 patch）→ 又被拦回内置浏览器；新增 `external_open.open_url_external` 通过代理 stash 取回原始入口绕过拦截
+- **验证**：拦截决策/配置迁移逻辑自测 + 热重载接管仿真测试（四入口接管、关掉拦截直达原始函数、幂等安装、防回环）全部通过；ruff 零告警
+
 ## 2.8.0 (2026-08-16)
 ### ✨ 新增 dsh-router + dsh-super-injector 插件（dsh-routing-suite 迁移）
 - **`dsh-router`** — 任务感知思维模式路由（源自 dsh-router-standard，MIT）：build/fix 行为带划分（spec/react/mixed/weak + 关键词正则分类）、persona 选择、引导注入；components = commands + agents + skills

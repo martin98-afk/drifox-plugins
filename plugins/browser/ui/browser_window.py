@@ -1045,7 +1045,7 @@ def open_in_system_browser(url: str) -> bool:
 
     ⚠️ 不能直接用 webbrowser.open / QDesktopServices.openUrl / os.startfile：
     它们已被 external_open 重定向到内置浏览器，会形成回环
-    （v1.3.3 修复：os.startfile 也被 patch，「外部打开」按钮曾再次被拦回）。
+    （v1.4.0 修复：os.startfile 也被 patch，「外部打开」按钮曾再次被拦回）。
     统一走 external_open.open_url_external —— 通过代理属性取回原始入口。
     """
     if not url:
