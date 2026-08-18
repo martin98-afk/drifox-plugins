@@ -178,7 +178,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 20,
+            "downloads": 21,
             "keywords": [
                 "browser",
                 "web",
@@ -1334,7 +1334,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "theme",
                 "laputa",
