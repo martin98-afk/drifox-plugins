@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787059002.7237916,
+  "fetched_at": 1787061821.1173,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -24,7 +24,7 @@
     "evolver": 1,
     "example-plugin": 1,
     "excalidraw-diagram": 1,
-    "fe-fw": 0,
+    "fe-fw": 2,
     "feature-dev": 1,
     "frontend-design": 1,
     "frontend-pro": 1,
