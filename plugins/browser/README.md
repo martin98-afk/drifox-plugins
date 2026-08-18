@@ -37,9 +37,8 @@
 - **右侧卡片控制**：工具栏右上角关闭按钮可快速隐藏浏览器
 - **地址栏**：`localhost:8080` 自动补 `http://`，历史+收藏合并补全
 - **收藏夹**：`Ctrl+D` 收藏，菜单 → 收藏夹管理（打开/删除）
-- **历史记录**：卡片内悬浮面板，自动记录访问，支持搜索与清空
-- **下载管理**：downloadRequested 托管，进度条实时显示，可打开所在文件夹
-- **外部链接拦截**：主程序 http/https 外链、Shell 打开的 URL、本地 HTML 文件默认重定向到内置浏览器；浏览器菜单 → 「拦截设置」可分别控制三类拦截与全局总开关，配置实时生效
+- **历史记录 / 收藏夹 / 下载管理**：三者均为卡片内悬浮面板（同款弹窗格式，互斥显示，菜单按钮下方定位），历史支持搜索与清空，下载进度实时显示
+- **外部链接拦截**：主程序 http/https 外链、`os.startfile`、Shell `start` 命令、本地 HTML 文件默认重定向到内置浏览器；浏览器菜单 → 「拦截设置」提供总开关 + 「拦截打开网页」/「拦截打开本地 HTML」两个分类开关，保存即生效（含热重载场景）；设置卡片深浅主题自适应配色
 - **DevTools**：F12 打开独立开发者工具窗口
 - **隐身模式**：OTR Profile，关闭即焚，与正常浏览完全隔离
 
@@ -56,7 +55,7 @@
 - 截图：`~/.drifox/plugins/browser/data/screenshots/`（MCP 截图工具保存）
 - Profile：`~/.drifox/plugins/browser/data/profile/`（Cookie/localStorage）
 - Cache：`~/.drifox/plugins/browser/data/cache/`
-- 拦截配置：`~/.drifox/plugins/browser/data/browser-redirect.json`（enabled / intercept_system / intercept_shell / intercept_html）
+- 拦截配置：`~/.drifox/plugins/browser/data/browser-redirect.json`（enabled / intercept_web / intercept_html；旧版 intercept_system/intercept_shell 键自动迁移为 intercept_web）
 
 ## 架构
 

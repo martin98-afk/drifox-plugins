@@ -156,8 +156,23 @@ def apply_panel_theme(widget: QWidget, owner: Any) -> None:
     """统一应用 dialog_style + scrollbar_style 到弹窗容器
 
     弹窗创建 + 主题切换 + 重新显示 时调用。
+
+    修复透明背景：历史/收藏/下载面板均为卡片内嵌 QFrame（非 QDialog），
+    dialog_style 只给 QDialog 设背景 → QFrame 无背景 → 透明。
+    这里按 objectName 追加 QFrame 容器背景规则（surface + border + 圆角）。
+    include_line_edit=True 顺带给面板内输入框（历史搜索）统一 raised 底/
+    边框/聚焦色，避免深色主题下 QLineEdit 默认白底刺眼。
     """
-    widget.setStyleSheet(dialog_style(owner) + scrollbar_style(owner))
+    c = theme_colors(owner)
+    style = dialog_style(owner, include_line_edit=True) + scrollbar_style(owner)
+    name = widget.objectName()
+    if name:
+        style += (
+            f"QFrame#{name} {{ background: {c['surface']};"
+            f" border: 1px solid {c['border']}; border-radius: 8px;"
+            f" {font_css(c['ff'], max(10, c['fs'] - 1))} }}"
+        )
+    widget.setStyleSheet(style)
 
 
 def show_singleton_panel(

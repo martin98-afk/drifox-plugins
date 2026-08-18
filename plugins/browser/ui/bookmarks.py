@@ -11,7 +11,6 @@ from typing import List
 
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (
-    QDialog,
     QFrame,
     QHBoxLayout,
     QListWidget,
@@ -173,17 +172,21 @@ class BookmarkBar(QWidget):
         self._rebuild()
 
 
-class BookmarksPanel(QDialog, _PanelMixin):
-    """收藏管理面板（H2 修复：异步加载，统一基类 _PanelMixin）"""
+class BookmarksPanel(QFrame, _PanelMixin):
+    """收藏管理面板（卡片内嵌悬浮 QFrame，与历史/下载弹窗同格式）
+
+    H2 修复：异步加载，统一基类 _PanelMixin。
+    弹窗格式统一：原为 QDialog 独立窗口，现与历史面板一致 —
+    浏览器卡片内悬浮、菜单按钮下方定位（owner._position_popup）。
+    """
 
     open_url = pyqtSignal(str)
 
     def __init__(self, owner, parent=None):
-        super().__init__(parent)
+        super().__init__(parent or owner)
         self._owner = owner
-        self.setWindowTitle("收藏夹")
-        self.setMinimumSize(480, 420)
-        self.setWindowFlag(Qt.Window)
+        self.setObjectName("bookmarksPanel")
+        self.setFixedSize(460, 320)
         self._loader = AsyncDataLoader(self)
         self._items_cache: List[dict] = []
         self._setup_ui()
@@ -271,6 +274,7 @@ class BookmarksPanel(QDialog, _PanelMixin):
         url = item.data(Qt.UserRole)
         if url:
             self._owner._new_tab(url)
+            self.hide()  # 与历史面板一致：打开后收起悬浮面板
 
     def _delete_selected(self):
         item = self._list.currentItem()
@@ -287,8 +291,13 @@ class BookmarksPanel(QDialog, _PanelMixin):
 
 
 def show_bookmarks_panel(owner):
-    """从浏览器卡片打开收藏面板（单例复用 + 主题刷新）"""
+    """从浏览器卡片打开收藏面板（单例复用 + 主题刷新 + 卡片内定位）
+
+    与历史/下载面板同格式：position=True → owner._position_popup 在
+    菜单按钮下方定位，卡片内悬浮显示。
+    """
     show_singleton_panel(
         owner, "_bookmarks_panel",
-        factory=lambda o: BookmarksPanel(o),
+        factory=lambda o: BookmarksPanel(o, o),
+        position=True,
     )

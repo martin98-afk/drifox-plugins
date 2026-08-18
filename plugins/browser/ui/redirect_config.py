@@ -5,15 +5,21 @@
 （与收藏/历史/下载 browser.db 同数据目录，随 profile 一并保留）
 
 配置项（DEFAULT_CONFIG 说明）：
-- enabled              全局总开关：False 时所有拦截全部失效（走原系统逻辑）
-- intercept_system     拦截「打开系统默认浏览器」入口（webbrowser.open /
-                       QDesktopServices.openUrl 的 http/https 外链）→ 内置浏览器
-- intercept_shell      拦截「shell 工具打开 URL」（bash start/explorer <url>）→ 内置浏览器
-- intercept_html       拦截「打开本地 html 文件」（file:// / os.startfile /
-                       磁盘 .html 路径）→ 内置浏览器
+- enabled         全局总开关：False 时所有拦截全部失效（走原系统逻辑）
+- intercept_web   拦截「打开网页」（http/https，覆盖全部入口：
+                  webbrowser.open / QDesktopServices / os.startfile / bash start）
+                  → 内置浏览器
+- intercept_html  拦截「打开本地 html 文件」（file:// / os.startfile /
+                  磁盘 .html 路径）→ 内置浏览器
 
-（原实现只拦 http/https；本模块新增 intercept_html 修复「打开 html 不拦截」问题。
- 拦截行为一律为重定向到内置浏览器新标签打开，不做询问弹窗。）
+（v1.3.2 及之前为 intercept_system / intercept_shell / intercept_html 三开关，
+ 本版按需求收敛为「网页 / HTML」两类语义开关；旧配置文件加载时自动迁移：
+ intercept_web = intercept_system OR intercept_shell，任一开则网页拦截保持开。）
+
+⚠️ 热重载陷阱（v1.3.3 修复「拦截失效」的根因）：external_open 的代理函数
+不再顶层 from .redirect_config import should_intercept —— 顶层 import 会在
+热重载后冻结为旧模块实例，旧模块的 ConfigStore 单例不再从磁盘 reload，
+导致设置弹窗里的开关怎么改都不生效。代理函数改为调用时动态解析当前模块。
 
 线程安全 + 原子写，模式与 ip-switcher/ui/config.py 一致，但存储目录改为
 插件自身数据目录（用户明确选择，不走 user-custom）。
@@ -31,10 +37,14 @@ from loguru import logger
 
 DEFAULT_CONFIG: Dict[str, Any] = {
     "enabled": True,
-    "intercept_system": True,
-    "intercept_shell": True,
+    # 拦截打开网页（http/https，system / shell / startfile 全入口统一开关）
+    "intercept_web": True,
+    # 拦截打开本地 html 文件（file:// / os.startfile / 磁盘 .html 路径）
     "intercept_html": True,
 }
+
+# 旧版（≤v1.3.2）配置键 → 迁移来源；加载时自动折算进 intercept_web
+_LEGACY_WEB_KEYS = ("intercept_system", "intercept_shell")
 
 # 配置文件的固定相对路径（运行时按用户目录解析）
 _CONFIG_REL = Path(".drifox") / "plugins" / "browser" / "data" / "browser-redirect.json"
@@ -55,7 +65,12 @@ class ConfigStore:
         self.load()
 
     def load(self) -> None:
-        """从磁盘加载，与默认值合并（缺字段补默认）"""
+        """从磁盘加载，与默认值合并（缺字段补默认）+ 旧配置键迁移
+
+        旧键迁移（≤v1.3.2）：intercept_system / intercept_shell 任一为 True
+        → intercept_web=True（保持网页拦截开启，宁可多拦不可漏拦）。
+        迁移结果落盘（下次加载即为新格式）。
+        """
         try:
             if self.path.exists():
                 with self.path.open("r", encoding="utf-8") as f:
@@ -65,8 +80,16 @@ class ConfigStore:
                     merged.update(
                         {k: v for k, v in saved.items() if k in DEFAULT_CONFIG}
                     )
+                    # 旧配置键迁移（仅当新键未显式保存过）
+                    if "intercept_web" not in saved:
+                        legacy_on = any(
+                            bool(saved.get(k, True)) for k in _LEGACY_WEB_KEYS
+                        )
+                        merged["intercept_web"] = legacy_on
                     with self._lock:
                         self._data = merged
+                    if any(k in saved for k in _LEGACY_WEB_KEYS) and "intercept_web" not in saved:
+                        self.save()  # 迁移结果落盘
                     return
         except (OSError, ValueError) as e:
             logger.warning(f"[browser-redirect] 配置加载失败，使用默认值: {e}")
@@ -241,17 +264,17 @@ def to_browser_url(url: Any) -> str:
         return u
 
 
-def should_intercept(url: Any, entry: str) -> bool:
-    """按配置判断某入口是否应拦截该 URL
+def should_intercept(url: Any, entry: str = "") -> bool:
+    """按配置判断是否应拦截该 URL
 
-    entry:
-    - "system"   webbrowser.open / QDesktopServices.openUrl
-    - "shell"    bash start/explorer 命令
-    - "startfile" os.startfile 拦截入口，本地文件专属
+    entry（保留参数，便于调用方日志溯源，不再参与分支）：
+    - "system"    webbrowser.open / QDesktopServices.openUrl
+    - "shell"     bash start/explorer 命令
+    - "startfile" os.startfile 入口
 
-    规则（全局 enabled 关闭一律不拦）：
-    - http/https：system -> intercept_system，shell -> intercept_shell
-    - 本地 html：统一受 intercept_html 控制（三入口均适用）
+    规则（两类语义开关，全局 enabled 关闭一律不拦）：
+    - 本地 html 文件 → intercept_html
+    - http/https 网页 → intercept_web（全入口统一，不再区分 system/shell）
     - 其余（file 非 html / mailto / 本地可执行文件等）→ 不拦
 
     接受 str / PathLike / QUrl 输入（非字符串输入也能拦截）。
@@ -265,23 +288,20 @@ def should_intercept(url: Any, entry: str) -> bool:
     if _is_local_html(u):
         return bool(cfg.get("intercept_html", True))
     if _is_http(u):
-        key = "intercept_system" if entry == "system" else "intercept_shell"
-        return bool(cfg.get(key, True))
+        return bool(cfg.get("intercept_web", True))
     return False
 
 
 def config_summary() -> str:
     """返回当前配置的简短文字描述（用于状态栏显示拦截状态）
 
-    例：拦截:开 [系统·开 Shell·开 HTML·开]
+    例：拦截:开 [网页·开 HTML·开]
         拦截:关
     """
     cfg = get_config()
     if not cfg.get("enabled", True):
         return "拦截:关"
     parts = []
-    for k in ("intercept_system", "intercept_shell", "intercept_html"):
-        if cfg.get(k, True):
-            label = {"intercept_system": "系统", "intercept_shell": "Shell", "intercept_html": "HTML"}[k]
-            parts.append(f"{label}·开")
-    return "拦截:开 [" + " ".join(parts) + "]" if parts else "拦截:开"
+    for k, label in (("intercept_web", "网页"), ("intercept_html", "HTML")):
+        parts.append(f"{label}·{'开' if cfg.get(k, True) else '关'}")
+    return "拦截:开 [" + " ".join(parts) + "]"
