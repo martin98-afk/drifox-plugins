@@ -725,6 +725,41 @@
             }
         },
         {
+            "name": "fe-fw",
+            "description": "纹章圣焰主题 — 火焰纹章 万缕千丝 灵感深色主题，火焰橙红主调、皇室暖金点缀。",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "theme"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/fe-fw",
+                "ref": "main"
+            },
+            "components": {
+                "themes": true
+            },
+            "keywords": [
+                "theme",
+                "fire-emblem",
+                "fortunes-weave",
+                "fe-fw",
+                "dark",
+                "主题"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/martin98-afk/drifox-plugins",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon_dark.png"
+            }
+        },
+        {
             "name": "feature-dev",
             "description": "功能开发工作流 — 理解代码库、澄清需求、设计架构、实现与审查的完整流程，内置 code-explorer/code-architect/code-reviewer 三个专业智能体。",
             "version": "1.0.0",

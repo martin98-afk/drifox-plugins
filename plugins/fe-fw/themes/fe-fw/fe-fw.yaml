@@ -1,0 +1,137 @@
+name: "纹章圣焰"
+id: "fe-fw"
+mode: dark
+
+window:
+  gradient_start: "rgba(20, 8, 6, 255)"
+  gradient_end: "rgba(8, 4, 4, 255)"
+
+background:
+  chat_list:
+    image: fe-fw_bg.png
+    opacity: 0.14
+    enabled: true
+
+colors:
+  # ── 1. 基础色（火焰橙红主导） ──
+  accent: "#E04A2C"
+  accent_warm: "#F0B848"
+  border: "#3E1A14"
+  border_accent: "#F47A52"
+  text_primary: "#F5EBD8"
+  text_secondary: "rgba(245, 235, 216, 0.70)"
+  text_muted: "#8A6E58"
+  card_bg: "rgba(36, 14, 12, 232)"
+  card_bg_solid: "rgba(36, 14, 12, 250)"
+  content_bg: "#22100C"
+  hover_bg: "rgba(224, 74, 44, 0.12)"
+  selected_bg: "rgba(224, 74, 44, 0.32)"
+  capsule_bg: "rgba(224, 74, 44, 180)"
+  capsule_border: "rgba(224, 74, 44, 200)"
+
+  # ── 2. 全局 UI 基底 ──
+  toolbar_bg: "rgba(255, 255, 255, 0.05)"
+  divider_color: "rgba(255, 255, 255, 0.06)"
+  hover_bg_strong: "rgba(255, 255, 255, 0.10)"
+  scrollbar_handle_bg: "rgba(255, 255, 255, 0.20)"
+  scrollbar_handle_hover_bg: "rgba(255, 255, 255, 0.30)"
+  card_placeholder_text: "#8FA4C2"
+
+  # ── 3. 卡片级语义色 ──
+  button_text_on_accent: "#1A0E0C"
+  status_info: "#7FDBFF"
+  status_danger_bg: "rgba(255, 80, 80, 0.8)"
+  status_archive_bg: "rgba(139, 92, 246, 0.8)"
+  card_bg_dim: "rgba(255, 255, 255, 0.04)"
+  archived_card_bg: "rgba(240, 184, 72, 0.08)"
+  archived_card_border: "rgba(240, 184, 72, 0.22)"
+
+  # ── 4. 语法高亮色 ──
+  syntax_step: "#4EC9B0"
+  syntax_tool: "#DCDCAA"
+  syntax_success: "#6A9955"
+  syntax_error: "#F14C4C"
+  syntax_result: "#CE9178"
+
+  # ── 5. 标签色 ──
+  tag_accent: "#F47A52"
+  tag_accent_text: "#FFD8C2"
+  tag_purple: "#B388FF"
+  tag_purple_text: "#D1B3FF"
+  tag_orange: "#FFB366"
+  tag_orange_text: "#FFC999"
+
+  # ── 6. 用户 / AI 卡片色（冷vs暖对比） ──
+  user_card_bg: "rgba(38, 50, 72, 150)"
+  user_card_accent: "#5B8DEF"
+  user_card_text: "#F0F4FA"
+  user_card_muted: "rgba(240, 244, 250, 0.60)"
+
+  assistant_card_bg: "rgba(80, 44, 24, 150)"
+  assistant_card_accent: "#F0B848"
+  assistant_card_text: "#F8EFDC"
+  assistant_card_muted: "rgba(248, 239, 220, 0.60)"
+
+  # ── 7. 智能体按钮 ──
+  agent_btn_text: "#A09088"
+  agent_btn_text_active: "#F0B848"
+  agent_btn_bg_active: "rgba(240, 184, 72, 0.20)"
+  agent_btn_separator: "rgba(62, 26, 20, 150)"
+
+  # ── 8. 输入框 ──
+  input_bg_start: "rgba(20, 10, 8, 150)"
+  input_bg_end: "rgba(14, 6, 4, 150)"
+  input_focus_bg_start: "rgba(36, 14, 12, 220)"
+  input_focus_bg_end: "rgba(26, 10, 8, 220)"
+  input_text: "#E8DDD0"
+  input_focus_text: "#F5EBD8"
+  input_border: "#3E1A14"
+  input_focus_border: "#E04A2C"
+  input_placeholder: "rgba(200, 180, 160, 0.35)"
+  input_glow_preset: "ember"
+
+  # ── 8b. 底部工具栏条 ──
+  toolbar_strip_bg: "rgba(36, 14, 12, 150)"
+  toolbar_strip_border: "#3E1A14"
+
+  # ── 9. 实时交互卡片 ──
+  realtime_border: "#E04A2C"
+  realtime_accent: "#F47A52"
+  realtime_accent_warm: "#F0B848"
+  realtime_success: "#34D399"
+  realtime_error: "#F87171"
+  realtime_bg: "rgba(36, 14, 12, 242)"
+  realtime_text: "#F5EBD8"
+  realtime_text_secondary: "rgba(245, 235, 216, 0.70)"
+  realtime_tag_bg: "rgba(244, 122, 82, 0.15)"
+  realtime_tag_border: "rgba(244, 122, 82, 0.30)"
+
+  # ── 10. 系统卡片 ──
+  system_border: "#3E1A14"
+  system_accent: "#E04A2C"
+
+  # ── 11. 发送按钮渐变 ──
+  send_btn_start: "#E04A2C"
+  send_btn_end: "#A8311A"
+  send_btn_hover_start: "#F47A52"
+  send_btn_hover_end: "#E04A2C"
+  send_btn_radius: 8
+
+  # ── 12. 时间线 ──
+  timeline_node: "#5A3A30"
+  timeline_node_hover: "#F0B848"
+  timeline_node_visible: "#34A853"
+  timeline_node_selected: "#FFA500"
+  timeline_line: "#3E1A14"
+  timeline_line_progress: "#34A853"
+
+  # ── 13. 上下文圆环 ──
+  ring_normal: "#E04A2C"
+  ring_warning: "#F6C453"
+  ring_danger: "#FF6B6B"
+  ring_compacted: "#9B59B6"
+
+  # ── 14. 分支标签 ──
+  branch_label_bg: "rgba(224, 74, 44, 0.15)"
+  branch_label_border: "rgba(224, 74, 44, 0.30)"
+  window_bg: "rgba(224, 74, 44, 0.04)"
