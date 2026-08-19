@@ -1,0 +1,7 @@
+{
+  "name": "ssh-toolkit",
+  "description": "SSH 远程工具包：连接管理、命令执行、文件传输(SFTP)、端口转发、目录浏览，基于 paramiko 实现，AI 自动调用。",
+  "version": "0.1.0",
+  "author": "马丁",
+  "components": { "tools": true }
+}
