@@ -1,5 +1,6 @@
 import sys, os
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "tools"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "deps"))
 import _store as store  # noqa: E402
 import _pool as pool  # noqa: E402
 import _auth as auth  # noqa: E402

@@ -1,4 +1,4 @@
-# Python
+ï»¿# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -64,5 +64,10 @@ $RECYCLE.BIN/
 .project
 .pycpath
 
-# ±¾µØÔËÐÐÊ±ÅäÖÃ
+# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½
 .drifox/
+
+
+# ssh-toolkit vendored deps: keep Windows compiled extensions (.pyd) tracked
+!plugins/ssh-toolkit/deps/*.pyd
+!plugins/ssh-toolkit/deps/**/*.pyd
