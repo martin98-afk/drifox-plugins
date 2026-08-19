@@ -1,7 +1,10 @@
 {
     "name": "anthropic",
     "description": "Anthropic (Claude) 服务商插件 — 提供 Claude 系列模型接入，数据全部由本插件声明。",
-    "icon": "providers/icons/Anthropic.svg",
+    "icon": {
+        "light": "providers/icons_light/Anthropic.svg",
+        "dark": "providers/icons/Anthropic.svg"
+    },
     "version": "1.0.0",
     "author": {
         "name": "DriFox Contributors"

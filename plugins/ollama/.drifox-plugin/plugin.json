@@ -1,7 +1,10 @@
 {
     "name": "ollama",
     "description": "Ollama 服务商插件 — 提供本地推理模型接入（llama3 / qwen2.5 / mistral 等）。",
-    "icon": "providers/icons/Ollama.svg",
+    "icon": {
+        "light": "providers/icons_light/Ollama.svg",
+        "dark": "providers/icons/Ollama.svg"
+    },
     "version": "1.0.0",
     "author": {
         "name": "DriFox Contributors"

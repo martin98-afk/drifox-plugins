@@ -1,7 +1,10 @@
 {
     "name": "openai",
     "description": "OpenAI 服务商插件 — 提供 GPT / ChatGPT 系列模型接入，含 API 用量查询。",
-    "icon": "providers/icons/大模型.svg",
+    "icon": {
+        "light": "providers/icons_light/大模型.svg",
+        "dark": "providers/icons/大模型.svg"
+    },
     "version": "1.0.0",
     "author": {
         "name": "DriFox Contributors"
