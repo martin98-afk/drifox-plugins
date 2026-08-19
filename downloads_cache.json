@@ -1,11 +1,11 @@
 {
   "schema": 1,
-  "fetched_at": 1787136742.9042327,
+  "fetched_at": 1787138218.4938543,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
     "algorithmic-art": 1,
-    "anthropic": 0,
+    "anthropic": 1,
     "beautiful-article-skills": 3,
     "breakout": 3,
     "browser": 23,
@@ -78,6 +78,7 @@
     "web-artifacts-builder": 1,
     "web-design-skills": 1,
     "webapp-testing": 1,
+    "win-powershell": 0,
     "workbuddy": 5
   }
 }
