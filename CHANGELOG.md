@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.8.2 (2026-08-19)
+### 🔧 修复 workbuddy 插件 plan 模式与 UI 产物面板（v1.0.1）
+- **plan 阻断失效（大小写根因）**：`ToolExecutor` 注入 hook context 的 `tool_name` 是 Claude Code 风格（PascalCase `Edit`/`Write`/`MultiEdit`/`BgStart`），而 hook 用小写匹配 → 永匹配不上，进入 plan 后仍可编辑；改为归一化（去下划线+小写）后比较阻断清单，单测通过（MultiEdit/BgStart→block，Read/无标记→放行）
+- **`wb_plan` 报 `setdefault` 不存在**：`_state.py` 补 `plan_set/plan_get/plan_clear`（模块属性持久化），替换误用 setdefault
+- **UI 产物面板未加载（导入崩溃被吞）**：`artifact_panel.py` 顶层 `_TYPE_ICON` 用到 `FluentIcon.PRESENTATION`/`SHEET`（qfluentwidgets 无此枚举）→ 导入抛 AttributeError 被 `register_ui` 吞掉 → 静默未注册；改用 `PROJECTOR`/`ZIP_FOLDER`，注册验证通过
+
 ## 2.8.1 (2026-08-18)
 ### 🔧 修复 browser 插件弹窗与拦截五项问题（v1.4.0）
 - **历史弹窗透明**：`panel_base.apply_panel_theme` 修复 —— `dialog_style` 只给 `QDialog` 设背景，卡片内嵌 QFrame 面板无背景变透明；现按 objectName 追加 `QFrame#xxx` 容器背景（surface + border + 圆角），并统一 QLineEdit 样式（历史搜索框）

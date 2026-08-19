@@ -82,6 +82,7 @@ python tools/validate_plugins.py plugins/workbuddy
 
 ## 版本
 
+1.0.1 — 修复：plan 模式阻断时效（tool_name PascalCase 归一化）+ UI 产物面板加载（FluentIcon 非法枚举）+ _state plan 辅助函数。
 1.0.0 — 初版：BuildSystemPrompt 注入 + present_files 工具。
 
 ## 许可证
