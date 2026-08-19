@@ -27,7 +27,18 @@ if _PLUGIN_ROOT not in sys.path:
 
 from app.tools.registry import make_summarize_from_preview  # noqa: E402
 from app.tools.result import ToolResult  # noqa: E402
-import _state  # noqa: E402
+# 通过绝对文件路径显式加载 _state，避免与 sys.modules 中已缓存的同名模块
+# （如 app 包注册的 _state）冲突——裸名 `import _state` 会解析到错误的模块，
+# 缺少 plan_set/plan_clear，导致 wb_plan enter/exit 报 AttributeError。
+import importlib.util as _ilu
+
+_state_spec = _ilu.spec_from_file_location(
+    "workbuddy._state",
+    str(Path(__file__).resolve().parent.parent / "_state.py"),
+)
+assert _state_spec is not None and _state_spec.loader is not None, "workbuddy._state 加载失败"
+_state = _ilu.module_from_spec(_state_spec)
+_state_spec.loader.exec_module(_state)
 
 GROUP = "工作流控制"
 PLAN_DIR_PARTS = (".drifox", "workbuddy-mem")
