@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
-"""workbuddy 进程内共享状态：tools 与 ui 之间传递 artifacts
+"""workbuddy 进程内共享状态：tools 与 ui 之间传递 artifacts + plan mode 标记
 
 简单按 workdir 索引的列表存储。工具 wb_present 调用时追加，UI 面板读取并渲染。
 热重载与多窗口场景下：使用 RLock 保护读写；模块级单例在 sys.modules 缓存下共享。
 
 通知机制：tools 写入后调用 notify(workdir, entry)，所有 register_listener 注册的
 回调会被同步触发（同一线程，RLock 嵌套安全）。回调异常被吞掉，避免污染工具执行。
+
+Plan mode 状态：wb_plan 写入，hook 读取。用模块属性持久化（避免 setdefault API 误解）。
 """
+import sys
 from threading import RLock
 from typing import Callable
 
@@ -80,3 +83,32 @@ def notify(workdir: str, entry: dict) -> None:
         except Exception:
             import logging
             logging.getLogger("workbuddy").exception("state notify listener failed")
+
+
+# ────────────────────────────────────────────────────────────
+# Plan mode 状态（wb_plan 写入，hook 读取）
+# 用模块属性而非 setdefault：避免模型误用 setdefault 的 setdefault 错误
+# ────────────────────────────────────────────────────────────
+
+def _plan_state() -> dict:
+    """惰性初始化 plan state 字典（存在模块属性 _plan_state 中）"""
+    state = getattr(sys.modules[__name__], "_plan_state", None)
+    if state is None:
+        state = {}
+        setattr(sys.modules[__name__], "_plan_state", state)
+    return state
+
+
+def plan_get(workdir: str) -> dict | None:
+    """获取指定 workdir 的 plan 状态（None 表示未进入 plan mode）"""
+    return _plan_state().get(workdir)
+
+
+def plan_set(workdir: str, entry: dict) -> None:
+    """设置指定 workdir 的 plan 状态"""
+    _plan_state()[workdir] = entry
+
+
+def plan_clear(workdir: str) -> None:
+    """清除指定 workdir 的 plan 状态"""
+    _plan_state().pop(workdir, None)

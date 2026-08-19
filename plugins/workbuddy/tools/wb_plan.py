@@ -2,8 +2,8 @@
 """workbuddy wb_plan — 计划模式工具（enter/exit/status）
 
 行为：
-- mode=enter：写入 plan 文档到 `<workdir>/.drifox/workbuddy-plan-mode.md`，置位
-  标记文件 `<workdir>/.drifox/.wb_plan_active`，更新共享 _state。
+- mode=enter：写入 plan 文档到 `<workdir>/.drifox/workbuddy-mem/plan.md`，置位
+  标记文件 `<workdir>/.drifox/workbuddy-mem/.wb_plan_active`，更新共享 _state。
   标记生效期间，PreToolUse hook 会硬阻断 editing 类工具
   （write/edit/multi_edit/bash/bg_start/automation_update/EnterPlanMode）
 - mode=exit：清除标记 + 删除 plan 文档 + 清理 state
@@ -30,13 +30,13 @@ from app.tools.result import ToolResult  # noqa: E402
 import _state  # noqa: E402
 
 GROUP = "工作流控制"
-PLAN_DIR_PARTS = (".drifox", "workbuddy-mem")  # 与记忆系统共用目录
-PLAN_FILE_NAME = "plan.md"  # 计划文档名
-PLAN_FLAG_NAME = ".wb_plan_active"  # 激活标记文件
-PLAN_KEY = "workbuddy_plan"
+PLAN_DIR_PARTS = (".drifox", "workbuddy-mem")
+PLAN_FILE_NAME = "plan.md"
+PLAN_FLAG_NAME = ".wb_plan_active"
 
 
 def _resolve_dir(workdir_raw) -> Path | None:
+    """tool_ctx.workdir → <root>/.drifox/workbuddy-mem"""
     if not workdir_raw:
         return None
     return Path(str(workdir_raw)).resolve() / ".drifox" / "workbuddy-mem"
@@ -53,15 +53,19 @@ def _enter(workdir: Path, content: str) -> ToolResult:
     ts = time.time()
     header = f"<!-- workbuddy plan-mode | entered at {ts:.0f} -->\n\n"
     plan_path.write_text(header + plan_text + "\n", encoding="utf-8")
-    flag_path.write_text(json.dumps({"entered_at": ts, "plan_file": str(plan_path)}, ensure_ascii=False), encoding="utf-8")
-    _state.setdefault(PLAN_KEY, {})[str(workdir)] = {"entered_at": ts, "plan_file": str(plan_path)}
+    flag_path.write_text(
+        json.dumps({"entered_at": ts, "plan_file": str(plan_path)}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    _state.plan_set(str(workdir), {"entered_at": ts, "plan_file": str(plan_path)})
 
-    blocked = ("write / edit / multi_edit / bash / bg_start / automation_update / EnterPlanMode")
+    blocked = "write / edit / multi_edit / bash / bg_start / automation_update / EnterPlanMode"
     return ToolResult(
         True,
         content=(
             f"## 计划模式已激活\n\n"
             f"- 计划文件：`{plan_path}`\n"
+            f"- 标记文件：`{flag_path}`\n"
             f"- 阻断工具：**{blocked}**\n"
             f"- 允许工具：wb_plan（自身，可退出）、read/list/grep/glob/webfetch/websearch/question/skill/\n"
             f"  subagent_*/team_*/todowrite/todoread/list_skills/mcp_list_servers/\n"
@@ -80,8 +84,7 @@ def _exit(workdir: Path) -> ToolResult:
         flag_path.unlink()
     if plan_path.exists():
         plan_path.unlink()
-    state_dict = _state.setdefault(PLAN_KEY, {})
-    state_dict.pop(str(workdir), None)
+    _state.plan_clear(str(workdir))
     return ToolResult(
         True,
         content=(
