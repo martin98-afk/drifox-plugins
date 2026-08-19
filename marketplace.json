@@ -2077,6 +2077,10 @@
             },
             "components": {
                 "tools": true
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
