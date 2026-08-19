@@ -15,10 +15,7 @@
         "min_version": "0.5.0"
     },
     "keywords": [
-        "groq",
-        "provider",
-        "llm",
-        "llama"
+        "服务商"
     ],
     "components": {
         "providers": true

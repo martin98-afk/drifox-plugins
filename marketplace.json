@@ -119,10 +119,7 @@
                 "providers": true
             },
             "keywords": [
-                "anthropic",
-                "claude",
-                "provider",
-                "llm"
+                "服务商"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1098,10 +1095,7 @@
                 "providers": true
             },
             "keywords": [
-                "groq",
-                "provider",
-                "llm",
-                "llama"
+                "服务商"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1622,10 +1616,7 @@
                 "providers": true
             },
             "keywords": [
-                "ollama",
-                "provider",
-                "llm",
-                "local"
+                "服务商"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -1688,10 +1679,7 @@
                 "providers": true
             },
             "keywords": [
-                "openai",
-                "gpt",
-                "provider",
-                "llm"
+                "服务商"
             ],
             "drifox": {
                 "min_version": "0.5.0"
