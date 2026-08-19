@@ -140,6 +140,10 @@ ui 组件由 DriFox 启动时通过 `UIPluginRegistry.load_plugin` 加载，调�
 │   └── *.py                 # widget / renderer / factory 实现
 ├── tools/                   # 可选：当 components.tools=true
 │   └── <tool>.py            # 必须含 register(registry) 顶层函数（如 codegraph.py）
+├── providers/               # 可选：当 components.providers=true
+│   ├── <provider>.py        # 必须含 register(registry) 顶层函数
+│   ├── icons/               # 服务商图标（深色）
+│   └── icons_light/         # 服务商图标（浅色，可选）
 ├── README.md                # 必需：插件说明
 └── __init__.py              # 必需：标记为 Python 包
 ```
@@ -163,7 +167,8 @@ ui 组件由 DriFox 启动时通过 `UIPluginRegistry.load_plugin` 加载，调�
     "hooks": true,
     "mcp": false,
     "lsp": false,
-    "ui": false
+    "ui": false,
+    "providers": false
   }
 }
 ```

@@ -153,7 +153,7 @@ def basic_manifest_check(manifest: dict) -> list[str]:
             )
 
         comps = manifest.get("components", {})
-        valid_comps = {"commands", "agents", "skills", "themes", "hooks", "mcp", "lsp", "ui", "tools"}
+        valid_comps = {"commands", "agents", "skills", "themes", "hooks", "mcp", "lsp", "ui", "tools", "providers"}
         extra = set(comps) - valid_comps
         if extra:
             errors.append(f"components 包含未知键: {sorted(extra)}")
@@ -853,6 +853,49 @@ def check_tools_dir(
             )
 
 
+def check_providers_dir(
+    plugin_dir: Path, manifest: dict, errors: list[str], warnings: list[str]
+) -> None:
+    """校验 components.providers=true 时，providers/ 目录与 register(registry) 入口合规。
+
+    约束：
+    - 必须存在 providers/ 目录，且含至少一个 *.py 文件
+    - 每个 providers/*.py 必须能 ast.parse 通过
+    - 每个 providers/*.py 必须定义 register(registry) 函数（顶层 def）
+    """
+    if not manifest.get("components", {}).get("providers"):
+        return
+
+    providers_dir = plugin_dir / "providers"
+    if not providers_dir.exists():
+        errors.append("components.providers=true 但 providers/ 目录不存在")
+        return
+
+    py_files = sorted(
+        p for p in providers_dir.glob("*.py") if not p.name.startswith("_")
+    )
+    if not py_files:
+        errors.append("components.providers=true 但 providers/ 下没有 .py 文件")
+        return
+
+    for py in py_files:
+        try:
+            tree = ast.parse(py.read_text(encoding="utf-8"))
+        except SyntaxError as e:
+            errors.append(f"providers/{py.name} 语法错误: {e}")
+            continue
+
+        has_register = any(
+            isinstance(node, ast.FunctionDef) and node.name == "register"
+            for node in tree.body
+        )
+        if not has_register:
+            errors.append(
+                f"providers/{py.name} 必须定义 register(registry) 顶层函数，"
+                "由 DriFox ProviderWatcher 调用"
+            )
+
+
 def check_consistency(
     plugin_dir: Path, manifest: dict, errors: list[str], warnings: list[str]
 ) -> None:
@@ -946,7 +989,7 @@ def check_marketplace_consistency(
         # components 一致性
         mp_comps = mp_entry.get("components", {})
         pj_comps = manifest.get("components", {})
-        for comp in ("commands", "agents", "skills", "themes", "hooks", "mcp", "lsp", "ui", "tools"):
+        for comp in ("commands", "agents", "skills", "themes", "hooks", "mcp", "lsp", "ui", "tools", "providers"):
             if comp in pj_comps and comp in mp_comps:
                 if pj_comps[comp] != mp_comps[comp]:
                     errors.append(
@@ -999,6 +1042,7 @@ def validate_one(plugin_dir: Path) -> CheckResult:
     check_lsp_file(plugin_dir, manifest, result.errors, result.warnings)
     check_ui_dir(plugin_dir, manifest, result.errors, result.warnings)
     check_tools_dir(plugin_dir, manifest, result.errors, result.warnings)
+    check_providers_dir(plugin_dir, manifest, result.errors, result.warnings)
 
     if result.errors:
         result.ok = False

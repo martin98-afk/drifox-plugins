@@ -101,6 +101,35 @@
             }
         },
         {
+            "name": "anthropic",
+            "description": "Anthropic (Claude) 服务商插件 — 提供 Claude 系列模型接入，数据全部由本插件声明。",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "provider"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/anthropic",
+                "ref": "main"
+            },
+            "components": {
+                "providers": true
+            },
+            "keywords": [
+                "anthropic",
+                "claude",
+                "provider",
+                "llm"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "icon": "providers/icons/Anthropic.svg"
+        },
+        {
             "name": "beautiful-article-skills",
             "description": "精美文章技能——将任意素材（URL/PDF/DOCX/Markdown/文本/截图）编辑设计成美丽的单文件 HTML 网页文章。",
             "version": "1.0.0",
@@ -1048,6 +1077,35 @@
             }
         },
         {
+            "name": "groq",
+            "description": "Groq 服务商插件 — 提供 Groq 高速推理模型接入。",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "provider"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/groq",
+                "ref": "main"
+            },
+            "components": {
+                "providers": true
+            },
+            "keywords": [
+                "groq",
+                "provider",
+                "llm",
+                "llama"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "icon": "providers/icons/groq.svg"
+        },
+        {
             "name": "guizang-ppt-skill",
             "description": "生成横向翻页网页 PPT（单 HTML 文件），含 WebGL 背景、章节幕封、数据大字报、图片网格等模板 + MiniMax TTS 逐页语音配音。两种风格可选：① 电子杂志 × 电子墨水 ② 瑞士国际主义。当用户需要制作分享/演讲/发布会风格的网页 PPT 时使用。",
             "version": "2.0.0",
@@ -1540,6 +1598,35 @@
             }
         },
         {
+            "name": "ollama",
+            "description": "Ollama 服务商插件 — 提供本地推理模型接入（llama3 / qwen2.5 / mistral 等）。",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "provider"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/ollama",
+                "ref": "main"
+            },
+            "components": {
+                "providers": true
+            },
+            "keywords": [
+                "ollama",
+                "provider",
+                "llm",
+                "local"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "icon": "providers/icons/Ollama.svg"
+        },
+        {
             "name": "omml-docx",
             "description": "OMML 公式 docx 生成——用 Python 脚本生成规范 Word 数学公式并嵌入 .docx，附辅助函数库与结构验证，纯标准库零依赖。当用户需要在 Word 文档（专利交底书/论文/报告）插入数学公式或询问如何用 Python 写 Word 公式时使用。",
             "version": "1.0.0",
@@ -1572,6 +1659,35 @@
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
             }
+        },
+        {
+            "name": "openai",
+            "description": "OpenAI 服务商插件 — 提供 GPT / ChatGPT 系列模型接入，含 API 用量查询。",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "provider"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/openai",
+                "ref": "main"
+            },
+            "components": {
+                "providers": true
+            },
+            "keywords": [
+                "openai",
+                "gpt",
+                "provider",
+                "llm"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "icon": "providers/icons/大模型.svg"
         },
         {
             "name": "playground",
