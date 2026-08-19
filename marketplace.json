@@ -2061,6 +2061,25 @@
             }
         },
         {
+            "name": "ssh-toolkit",
+            "description": "SSH 远程工具包：连接管理、命令执行、文件传输(SFTP)、端口转发、目录浏览，基于 paramiko 实现，AI 自动调用。",
+            "version": "0.1.0",
+            "author": "马丁",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/ssh-toolkit",
+                "ref": "main"
+            },
+            "components": {
+                "tools": true
+            }
+        },
+        {
             "name": "superclaude",
             "description": "AI 增强开发框架 — 30 个命令、20 个智能体、7 种模式、置信度检查、并行执行与反思式学习（SuperClaude_Framework 适配 DriFox）。",
             "version": "4.3.0",
