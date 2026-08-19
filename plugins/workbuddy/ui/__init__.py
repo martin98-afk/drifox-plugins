@@ -21,14 +21,47 @@ if _PLUGIN_ROOT not in sys.path:
     sys.path.insert(0, _PLUGIN_ROOT)
 
 from loguru import logger
+from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, Qt  # noqa: E402
 
 # 模块级 state 监听者句柄（热重载时调用 unregister_listener 清理）
 _UNREGISTER_LISTENER = None
+# 模块级主线程桥接器（后台线程的 state listener 经它触发卡片显示）
+_POPUP_BRIDGE = None
+
+
+class _PopupBridge(QObject):
+    """主线程桥接器：后台线程的 state listener 经它安全地触发卡片显示。"""
+
+    _requested = pyqtSignal()
+
+    def __init__(self, registry):
+        super().__init__()
+        self._registry = registry
+        self._requested.connect(self._do_popup, Qt.QueuedConnection)
+
+    @pyqtSlot()
+    def _do_popup(self):
+        from .artifact_panel import ArtifactPanelCard
+
+        card = ArtifactPanelCard._instance
+        if card is not None and card.isVisible():
+            card.refresh()
+            card.raise_()
+            return
+        # 未显示 → 主线程创建/显示（toggle 在隐藏态=显示，不会误隐藏已显示卡片）
+        try:
+            self._registry.toggle_floating_card("artifacts")
+        except Exception:
+            logger.exception("[workbuddy] 弹出产物卡片失败")
+        card = ArtifactPanelCard._instance
+        if card is not None:
+            card.refresh()
+            card.raise_()
 
 
 def register_ui(registry):
     """注册 workbuddy 插件的 UI 组件（浮动卡片 + function 命令）"""
-    global _UNREGISTER_LISTENER
+    global _UNREGISTER_LISTENER, _POPUP_BRIDGE
 
     # 1) 清理旧子模块缓存，避免热重载后 Python 复用旧 .pyc
     prefix = "ui_plugin_workbuddy."
@@ -66,13 +99,16 @@ def register_ui(registry):
         logger.exception("[workbuddy] 浮动卡片注册失败")
         return
 
+    # 创建主线程桥接器，供 state listener 跨线程安全地弹出卡片
+    _POPUP_BRIDGE = _PopupBridge(registry)
+
     # 4) 注册 state 监听者：新 artifact 写入时刷新并弹出已实例化的面板
     def _on_state_change(workdir: str, _entry: dict) -> None:
         card = ArtifactPanelCard._instance
         if card is None:
-            return  # 用户尚未手动打开过面板，跳过弹窗
-        # 仅刷新当前 workdir 匹配的面板
-        if card._workdir and card._workdir != workdir:
+            # 卡片懒加载尚未实例化 → 经主线程桥接器创建并显示
+            if _POPUP_BRIDGE is not None:
+                _POPUP_BRIDGE._requested.emit()
             return
         # 跨线程安全：仅 emit 信号，真正的 UI 操作由 _do_auto_popup 槽
         # 经 Qt.QueuedConnection 投递到主线程执行，避免后台线程
@@ -103,7 +139,8 @@ def _handle_artifacts_command(args: str = "", owner=None):
 
 def unload_ui(registry):
     """插件卸载/热重载回调（释放模块级状态）"""
-    global _UNREGISTER_LISTENER
+    global _UNREGISTER_LISTENER, _POPUP_BRIDGE
+    _POPUP_BRIDGE = None
     if _UNREGISTER_LISTENER is not None:
         try:
             _UNREGISTER_LISTENER()

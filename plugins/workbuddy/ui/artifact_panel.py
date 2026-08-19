@@ -19,6 +19,14 @@ if _PLUGIN_ROOT not in sys.path:
     sys.path.insert(0, _PLUGIN_ROOT)
 
 from PyQt5.QtCore import QUrl, Qt, pyqtSignal, pyqtSlot  # noqa: E402
+from .theme import (  # noqa: E402
+    theme_colors,
+    make_style,
+    panel_style,
+    list_style,
+    viewer_style,
+    btn_style,
+)
 from PyQt5.QtGui import QDesktopServices  # noqa: E402
 from PyQt5.QtWidgets import (  # noqa: E402
     QFrame,
@@ -92,6 +100,9 @@ class ArtifactPanelCard(QFrame):
         super().__init__(parent)
         self._owner = owner
         self._workdir = _get_workdir(owner)
+        # registry 拉模型注入的上下文 provider（卡片实例化后才注入）
+        self._card_context_provider = None
+        self._card_context = {}
         self._build_ui()
         self.refresh()
         # 设置类级引用，供 listener 找到当前实例
@@ -108,9 +119,8 @@ class ArtifactPanelCard(QFrame):
 
         # 头部
         header = QHBoxLayout()
-        title = QLabel("产物", self)
-        title.setStyleSheet("font-weight:600; font-size:13px;")
-        header.addWidget(title)
+        self._title = QLabel("产物", self)
+        header.addWidget(self._title)
         header.addStretch(1)
         self._refresh_btn = QPushButton("刷新", self)
         self._refresh_btn.clicked.connect(self.refresh)
@@ -147,18 +157,21 @@ class ArtifactPanelCard(QFrame):
 
         # 底部摘要
         self._summary = QLabel("", self)
-        self._summary.setStyleSheet("color:#888; font-size:11px;")
         self._summary.setWordWrap(True)
         root.addWidget(self._summary)
 
         self._entries: list[dict] = []
         self._all_items: list[dict] = []
+        # 应用主题（初始用 fallback；refresh 时按真实上下文刷新）
+        self._apply_theme()
 
     # ── 数据加载 ─────────────────────────────────────────────
 
     def refresh(self):
+        self._apply_theme()
+        wd = self._resolve_workdir()
         self._list.clear()
-        self._entries = _state.get_all(self._workdir)
+        self._entries = _state.get_all(wd)
         all_items: list[dict] = []
         for entry in self._entries:
             all_items.extend(entry.get("items", []))
@@ -172,8 +185,10 @@ class ArtifactPanelCard(QFrame):
             self._md_viewer.clear()
             if self._web_viewer:
                 self._web_viewer.setUrl(QUrl("about:blank"))
-            self._meta_viewer.setPlainText("（暂无产物 — 在 DriFox 中调用 present_files 工具后会显示在此）")
-        msg = _state.last_message(self._workdir)
+            self._meta_viewer.setPlainText(
+                "暂无产物\n\n在对话中调用 present_files 工具呈现成果文件后，会显示在这里。"
+            )
+        msg = _state.last_message(wd)
         total = len(all_items)
         self._summary.setText(f"{total} 个产物 · {msg}" if msg else f"{total} 个产物")
 
@@ -198,8 +213,73 @@ class ArtifactPanelCard(QFrame):
             ArtifactPanelCard._instance = None
         super().closeEvent(event)
 
+    # ── 上下文 / 主题 ──────────────────────────────────────────
+
+    def set_context_provider(self, provider) -> None:
+        """registry 拉模型注入：保存 provider 以便动态获取 workdir 与主题色。"""
+        self._card_context_provider = provider
+        try:
+            self._card_context = provider() or {}
+        except Exception:
+            self._card_context = {}
+
+    def _resolve_workdir(self) -> str:
+        """从 registry 注入的 UI 上下文动态解析 workdir（修复卡片空白根因）。
+
+        present_files 按真实项目 workdir 写入 _state；卡片实例化时 owner 为
+        None（registry 只传 parent），故不能用 __init__ 时固定的 _workdir，必须
+        每次从 context provider 的 project_root 取。
+        """
+        ctx = {}
+        if self._card_context_provider is not None:
+            try:
+                ctx = self._card_context_provider() or {}
+            except Exception:
+                ctx = {}
+        if not ctx and isinstance(self._card_context, dict):
+            ctx = self._card_context
+        wd = ctx.get("project_root") or ctx.get("workdir") or self._workdir
+        if wd:
+            try:
+                return str(Path(wd).resolve())
+            except Exception:
+                return str(wd)
+        return str(Path(self._workdir).resolve()) if self._workdir else ""
+
+    def _current_theme(self) -> dict:
+        """从当前 UI 上下文取主题色（含字体 / 深浅）。"""
+        ctx = {}
+        if self._card_context_provider is not None:
+            try:
+                ctx = self._card_context_provider() or {}
+            except Exception:
+                ctx = {}
+        if not ctx and isinstance(self._card_context, dict):
+            ctx = self._card_context
+        return theme_colors(ctx)
+
+    def _apply_theme(self) -> None:
+        """按当前 UI 上下文（深浅 / 字体 / 主题色）刷新所有控件的 QSS。"""
+        c = self._current_theme()
+        ff, fs = c["ff"], c["fs"]
+        self.setStyleSheet(panel_style(c))
+        self._title.setStyleSheet(
+            make_style(c["text"], ff, max(fs - 1, 12)) + "font-weight:600;"
+        )
+        self._summary.setStyleSheet(make_style(c["secondary"], ff, 11))
+        self._list.setStyleSheet(list_style(c, ff, fs))
+        self._md_viewer.setStyleSheet(viewer_style(c, ff, fs))
+        self._meta_viewer.setStyleSheet(viewer_style(c, ff, fs))
+        if self._web_viewer is not None:
+            self._web_viewer.setStyleSheet(
+                f"QWebEngineView {{ background: {c['raised']};"
+                f" border: 1px solid {c['border']}; border-radius: 8px; }}"
+            )
+        self._refresh_btn.setStyleSheet(btn_style(c, ff, fs))
+        self._clear_btn.setStyleSheet(btn_style(c, ff, fs))
+
     def _on_clear(self):
-        _state.clear(self._workdir)
+        _state.clear(self._resolve_workdir())
         self.refresh()
 
     def _on_select(self, row: int):
