@@ -2486,6 +2486,38 @@
             }
         },
         {
+            "name": "win-powershell",
+            "description": "专用 Windows PowerShell 执行工具——强制走 PowerShell 原生入口运行 PS 脚本/命令（cmdlet、管道对象、ConvertTo-Json），自动处理 UTF-8 编码与超时，区别于通用 bash 工具。",
+            "version": "1.0.0",
+            "author": "马丁",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/win-powershell",
+                "ref": "main"
+            },
+            "components": {
+                "tools": true
+            },
+            "keywords": [
+                "powershell",
+                "windows",
+                "shell",
+                "terminal"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "workbuddy",
             "description": "把 WorkBuddy「专家全能模式」的问答体验完整搬进 DriFox：通过 BuildSystemPrompt 钩子注入 WorkBuddy 风格的系统提示词（内容策略、文件安全、agent loop、结果呈现、最终回答规范），并附带语义等价的 present_files 成果呈现工具。安装即进入与 WorkBuddy 一致的问答模式。",
             "version": "1.0.1",
