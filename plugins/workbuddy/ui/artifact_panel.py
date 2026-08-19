@@ -18,7 +18,7 @@ _PLUGIN_ROOT = str(Path(__file__).resolve().parent.parent)
 if _PLUGIN_ROOT not in sys.path:
     sys.path.insert(0, _PLUGIN_ROOT)
 
-from PyQt5.QtCore import QUrl, Qt  # noqa: E402
+from PyQt5.QtCore import QUrl, Qt, pyqtSignal, pyqtSlot  # noqa: E402
 from PyQt5.QtGui import QDesktopServices  # noqa: E402
 from PyQt5.QtWidgets import (  # noqa: E402
     QFrame,
@@ -81,6 +81,10 @@ def _get_workdir(owner) -> str:
 class ArtifactPanelCard(QFrame):
     """workbuddy 浮动卡片：左侧 artifact 列表，右侧 viewer 切换。"""
 
+    # 自动弹出信号：由 _state 监听者（可能运行在后台线程）emit，
+    # 经 QueuedConnection 投递到主线程执行 UI 操作，避免跨线程 Qt 崩溃
+    _auto_popup = pyqtSignal()
+
     # 类级单例（最近实例化的卡片，供 state listener 与 /artifacts 命令共享）
     _instance: "ArtifactPanelCard | None" = None
 
@@ -92,6 +96,8 @@ class ArtifactPanelCard(QFrame):
         self.refresh()
         # 设置类级引用，供 listener 找到当前实例
         ArtifactPanelCard._instance = self
+        # 跨线程安全：QueuedConnection 保证槽函数在卡片所属（主）线程执行
+        self._auto_popup.connect(self._do_auto_popup, Qt.QueuedConnection)
 
     # ── UI 构建 ──────────────────────────────────────────────
 
@@ -170,6 +176,27 @@ class ArtifactPanelCard(QFrame):
         msg = _state.last_message(self._workdir)
         total = len(all_items)
         self._summary.setText(f"{total} 个产物 · {msg}" if msg else f"{total} 个产物")
+
+    @pyqtSlot()
+    def _do_auto_popup(self):
+        """主线程槽：由 _auto_popup 信号（QueuedConnection）触发，安全执行 UI 操作。
+
+        所有 Qt UI 操作集中在此，确保只在主线程执行，避免后台线程
+        （ChatWorker / SubAgentWorker）直接操作 widget 导致 C++ 崩溃。
+        """
+        try:
+            self.refresh()
+            self.show()
+            self.raise_()
+        except Exception:
+            from loguru import logger
+            logger.exception("[workbuddy] 自动弹窗失败")
+
+    def closeEvent(self, event):
+        """关闭时清理类级单例，避免后续访问已析构的 C++ 对象（僵尸 _instance）。"""
+        if ArtifactPanelCard._instance is self:
+            ArtifactPanelCard._instance = None
+        super().closeEvent(event)
 
     def _on_clear(self):
         _state.clear(self._workdir)

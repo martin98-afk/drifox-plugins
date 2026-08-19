@@ -74,12 +74,10 @@ def register_ui(registry):
         # 仅刷新当前 workdir 匹配的面板
         if card._workdir and card._workdir != workdir:
             return
-        card.refresh()
-        try:
-            card.show()
-            card.raise_()
-        except Exception:
-            logger.exception("[workbuddy] 自动弹窗失败")
+        # 跨线程安全：仅 emit 信号，真正的 UI 操作由 _do_auto_popup 槽
+        # 经 Qt.QueuedConnection 投递到主线程执行，避免后台线程
+        # （ChatWorker / SubAgentWorker）直接操作 Qt 对象导致 C++ 崩溃
+        card._auto_popup.emit()
 
     _UNREGISTER_LISTENER = _state.register_listener(_on_state_change)
 
