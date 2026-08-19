@@ -53,8 +53,8 @@ _TYPE_ICON = {
     "text": FluentIcon.DOCUMENT,
     "image": FluentIcon.PHOTO,
     "pdf": FluentIcon.DOCUMENT,
-    "ppt": FluentIcon.PRESENTATION,
-    "sheet": FluentIcon.SHEET,
+    "ppt": FluentIcon.PROJECTOR,
+    "sheet": FluentIcon.ZIP_FOLDER,
     "doc": FluentIcon.DOCUMENT,
     "file": FluentIcon.FOLDER,
 }

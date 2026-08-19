@@ -38,10 +38,21 @@ WORKSPACE_DAILY_LIMIT = 1000  # 每个日志文件最多 1000 字符
 WORKSPACE_DAILY_DAYS = 7      # 最近 7 天
 
 # Plan mode 期间被硬阻断的工具（DriFox 工具集：write/edit/multi_edit/bash/bg_start/automation_update/EnterPlanMode）
-PLAN_MODE_BLOCKED_TOOLS = frozenset({
-    "write", "edit", "multi_edit", "bash", "bg_start", "automation_update", "EnterPlanMode",
-})
+# 注意：ToolExecutor 注入 context 的 tool_name 是 Claude Code 风格（PascalCase，
+# 如 Edit/Write/MultiEdit/BgStart/AutomationUpdate/EnterPlanMode），故用"去下划线+小写"
+# 归一化后比较，避免大小写/下划线差异导致匹配失败（会导致阻断失效）。
+_PLAN_BLOCKED_RAW = {
+    "write", "edit", "multi_edit", "bash", "bg_start", "automation_update", "enterplanmode",
+}
+_PLAN_MODE_BLOCKED_TOOLS = frozenset(
+    p.replace("_", "").lower() for p in _PLAN_BLOCKED_RAW
+)
 PLAN_FLAG_FILENAME = ".wb_plan_active"
+
+
+def _normalize_tool_name(name: str) -> str:
+    """归一化工具名：去下划线 + 转小写，用于跨 PascalCase/小写/下划线匹配"""
+    return (name or "").replace("_", "").lower()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger(PLUGIN_NAME)
@@ -225,7 +236,9 @@ def handle_pre_tool_use(context: dict) -> dict | None:
     if not flag.exists():
         return None
     tool_name = (context.get("tool_name") or "").strip()
-    if not tool_name or tool_name not in PLAN_MODE_BLOCKED_TOOLS:
+    # tool_name 由 ToolExecutor 规范化为 PascalCase（如 Edit/MultiEdit/BgStart），
+    # 需归一化（去下划线+小写）后与阻断清单比较
+    if not tool_name or _normalize_tool_name(tool_name) not in _PLAN_MODE_BLOCKED_TOOLS:
         return None
     msg = (
         f"plan mode 激活中：工具 `{tool_name}` 已被阻断。"
