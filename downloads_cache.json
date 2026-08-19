@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787109776.9743903,
+  "fetched_at": 1787112328.4546223,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -73,6 +73,7 @@
     "voice-reply": 6,
     "web-artifacts-builder": 1,
     "web-design-skills": 1,
-    "webapp-testing": 1
+    "webapp-testing": 1,
+    "workbuddy": 1
   }
 }
