@@ -1,0 +1,31 @@
+{
+  "description": "workbuddy Hook — BuildSystemPrompt 注入专家提示词 + PreToolUse 拦截 plan mode 期间的危险工具",
+  "hooks": {
+    "BuildSystemPrompt": [
+      {
+        "hooks": [
+          {
+            "type": "python",
+            "function": ".workbuddy_hook:hook_build_system_prompt",
+            "timeout": 15,
+            "enabled": true,
+            "id": "3b3a7d2e-7c1a-4f5b-9a8d-2e1f6c4b5a01"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "python",
+            "function": ".workbuddy_hook:hook_pre_tool_use",
+            "timeout": 5,
+            "enabled": true,
+            "id": "3b3a7d2e-7c1a-4f5b-9a8d-2e1f6c4b5a02"
+          }
+        ]
+      }
+    ]
+  }
+}
