@@ -1,13 +1,13 @@
 {
   "schema": 1,
-  "fetched_at": 1787117515.7479177,
+  "fetched_at": 1787120773.0691516,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
     "algorithmic-art": 1,
     "beautiful-article-skills": 3,
     "breakout": 3,
-    "browser": 22,
+    "browser": 23,
     "calendar": 12,
     "canvas-design": 1,
     "claude-api": 1,
@@ -74,6 +74,6 @@
     "web-artifacts-builder": 1,
     "web-design-skills": 1,
     "webapp-testing": 1,
-    "workbuddy": 2
+    "workbuddy": 3
   }
 }
