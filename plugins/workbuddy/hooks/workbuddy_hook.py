@@ -152,12 +152,16 @@ def load_workspace_memory(project_root: str) -> str:
 
 
 def render_prompt(template: str, context: dict) -> str:
-    """替换模板里的 <PROJECT_ROOT>，并追加两层记忆。"""
+    """替换模板里的 <PROJECT_ROOT>（= 真正的项目根目录），并追加两层记忆。
+
+    注意：<PROJECT_ROOT> 必须替换为项目根目录（如 D:/work/foo），模板自身已
+    拼好 .drifox/workbuddy-artifacts 与 .drifox/workbuddy-mem 后缀。旧实现误将其
+    替换为 artifact 目录，导致工作区记忆路径被错误嵌套为
+    <.drifox/workbuddy-artifacts>/.drifox/workbuddy-mem/。
+    """
     root = resolve_project_root(context)
-    artifact_dir = (
-        f"{root}/.drifox/workbuddy-artifacts" if root else ".drifox/workbuddy-artifacts"
-    )
-    rendered = template.replace(PROJECT_ROOT_TOKEN, artifact_dir)
+    root_value = root if root else "."
+    rendered = template.replace(PROJECT_ROOT_TOKEN, root_value)
 
     # 注入记忆（追加到末尾）
     mem_chunks: list[str] = []
