@@ -2372,7 +2372,7 @@
         {
             "name": "workbuddy",
             "description": "把 WorkBuddy「专家全能模式」的问答体验完整搬进 DriFox：通过 BuildSystemPrompt 钩子注入 WorkBuddy 风格的系统提示词（内容策略、文件安全、agent loop、结果呈现、最终回答规范），并附带语义等价的 present_files 成果呈现工具。安装即进入与 WorkBuddy 一致的问答模式。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
