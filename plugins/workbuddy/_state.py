@@ -9,7 +9,6 @@
 
 Plan mode 状态：wb_plan 写入，hook 读取。用模块属性持久化（避免 setdefault API 误解）。
 """
-import sys
 from threading import RLock
 from typing import Callable
 
@@ -87,28 +86,22 @@ def notify(workdir: str, entry: dict) -> None:
 
 # ────────────────────────────────────────────────────────────
 # Plan mode 状态（wb_plan 写入，hook 读取）
-# 用模块属性而非 setdefault：避免模型误用 setdefault 的 setdefault 错误
+# 用模块级 dict，避免与同名函数冲突导致的 TypeError，也不依赖 sys.modules 自引用
 # ────────────────────────────────────────────────────────────
 
-def _plan_state() -> dict:
-    """惰性初始化 plan state 字典（存在模块属性 _plan_state 中）"""
-    state = getattr(sys.modules[__name__], "_plan_state", None)
-    if state is None:
-        state = {}
-        setattr(sys.modules[__name__], "_plan_state", state)
-    return state
+_PLAN_STATE: dict[str, dict] = {}  # workdir -> plan entry
 
 
 def plan_get(workdir: str) -> dict | None:
     """获取指定 workdir 的 plan 状态（None 表示未进入 plan mode）"""
-    return _plan_state().get(workdir)
+    return _PLAN_STATE.get(workdir)
 
 
 def plan_set(workdir: str, entry: dict) -> None:
     """设置指定 workdir 的 plan 状态"""
-    _plan_state()[workdir] = entry
+    _PLAN_STATE[workdir] = entry
 
 
 def plan_clear(workdir: str) -> None:
     """清除指定 workdir 的 plan 状态"""
-    _plan_state().pop(workdir, None)
+    _PLAN_STATE.pop(workdir, None)
