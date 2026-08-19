@@ -127,7 +127,7 @@ def _ensure_browser():
         return card, view
     # 浏览器未打开或已隐藏 → 尝试重新显示浮动卡片
     try:
-        from app.core.ui_plugin_registry import UIPluginRegistry
+        from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
         from app.widgets.cards.card_manager import CardManager
 
         registry = UIPluginRegistry.get_instance()

@@ -980,7 +980,7 @@ class BrowserWindowCard(QWidget):
     @staticmethod
     def handle_browser_command(args: str):
         """/browser [url] — 打开/聚焦浏览器，可选导航到 URL"""
-        from app.core.ui_plugin_registry import UIPluginRegistry
+        from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
 
         registry = UIPluginRegistry.get_instance()
         registry.toggle_floating_card("browser")
@@ -998,7 +998,7 @@ class BrowserWindowCard(QWidget):
     @staticmethod
     def handle_browser_new(args: str):
         """/browser-new — 新建标签页"""
-        from app.core.ui_plugin_registry import UIPluginRegistry
+        from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
 
         UIPluginRegistry.get_instance().toggle_floating_card("browser")
         card = _get_current_card()
@@ -1008,7 +1008,7 @@ class BrowserWindowCard(QWidget):
     @staticmethod
     def handle_browser_devtools(args: str):
         """/browser-devtools — 打开 DevTools"""
-        from app.core.ui_plugin_registry import UIPluginRegistry
+        from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
 
         UIPluginRegistry.get_instance().toggle_floating_card("browser")
         card = _get_current_card()
@@ -1018,7 +1018,7 @@ class BrowserWindowCard(QWidget):
     @staticmethod
     def handle_browser_incognito(args: str):
         """/browser-incognito — 打开隐身窗口"""
-        from app.core.ui_plugin_registry import UIPluginRegistry
+        from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
 
         UIPluginRegistry.get_instance().toggle_floating_card("browser")
         card = _get_current_card()
