@@ -38,6 +38,9 @@ _state_spec = _ilu.spec_from_file_location(
 )
 assert _state_spec is not None and _state_spec.loader is not None, "workbuddy._state 加载失败"
 _state = _ilu.module_from_spec(_state_spec)
+# 必须先把模块注册进 sys.modules，否则 _state.py 内 _plan_state() 用
+# sys.modules[__name__] 访问自身时会抛 KeyError: 'workbuddy._state'（enter/exit 报 Execution error）
+sys.modules["workbuddy._state"] = _state
 _state_spec.loader.exec_module(_state)
 
 GROUP = "工作流控制"
