@@ -190,7 +190,7 @@
         {
             "name": "browser",
             "description": "内置浏览器 — Chrome 体验多标签浏览 + 外部链接接管 + AI 智能体浏览控制（MCP）。",
-            "version": "1.4.0",
+            "version": "1.4.1",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -1762,7 +1762,7 @@
         {
             "name": "project-dashboard",
             "description": "项目信息看板 — 生成 commit 趋势/语言分布/贡献者/文件统计图表，欢迎卡片展示",
-            "version": "0.2.2",
+            "version": "0.2.3",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
