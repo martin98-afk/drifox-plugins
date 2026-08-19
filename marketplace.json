@@ -127,7 +127,10 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "icon": "providers/icons/Anthropic.svg"
+            "icon": {
+                "light": "providers/icons_light/Anthropic.svg",
+                "dark": "providers/icons/Anthropic.svg"
+            }
         },
         {
             "name": "beautiful-article-skills",
@@ -1103,7 +1106,10 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "icon": "providers/icons/groq.svg"
+            "icon": {
+                "light": "providers/icons_light/groq.svg",
+                "dark": "providers/icons/groq.svg"
+            }
         },
         {
             "name": "guizang-ppt-skill",
@@ -1624,7 +1630,10 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "icon": "providers/icons/Ollama.svg"
+            "icon": {
+                "light": "providers/icons_light/Ollama.svg",
+                "dark": "providers/icons/Ollama.svg"
+            }
         },
         {
             "name": "omml-docx",
@@ -1687,7 +1696,10 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
-            "icon": "providers/icons/大模型.svg"
+            "icon": {
+                "light": "providers/icons_light/大模型.svg",
+                "dark": "providers/icons/大模型.svg"
+            }
         },
         {
             "name": "playground",
