@@ -208,7 +208,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 24,
+            "downloads": 25,
             "keywords": [
                 "browser",
                 "web",
@@ -2507,6 +2507,7 @@
             "components": {
                 "tools": true
             },
+            "downloads": 1,
             "keywords": [
                 "powershell",
                 "windows",

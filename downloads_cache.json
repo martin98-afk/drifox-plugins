@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787140057.6390204,
+  "fetched_at": 1787142263.6641304,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -8,7 +8,7 @@
     "anthropic": 2,
     "beautiful-article-skills": 3,
     "breakout": 3,
-    "browser": 24,
+    "browser": 25,
     "calendar": 12,
     "canvas-design": 1,
     "claude-api": 1,
@@ -78,7 +78,7 @@
     "web-artifacts-builder": 1,
     "web-design-skills": 1,
     "webapp-testing": 1,
-    "win-powershell": 0,
+    "win-powershell": 1,
     "workbuddy": 5
   }
 }
