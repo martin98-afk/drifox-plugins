@@ -118,7 +118,7 @@
             "components": {
                 "providers": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "服务商"
             ],
@@ -208,7 +208,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 25,
+            "downloads": 27,
             "keywords": [
                 "browser",
                 "web",
@@ -240,7 +240,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 12,
+            "downloads": 13,
             "keywords": [
                 "calendar",
                 "date",
@@ -409,7 +409,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -435,7 +435,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 12,
+            "downloads": 13,
             "keywords": [
                 "welcome",
                 "stats",
@@ -940,7 +940,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 7,
+            "downloads": 8,
             "keywords": [
                 "git",
                 "dashboard",
@@ -971,7 +971,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 23,
+            "downloads": 24,
             "keywords": [
                 "git",
                 "source-control",
@@ -1062,7 +1062,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "image-generation",
                 "prompt-engineering",
@@ -1095,7 +1095,7 @@
             "components": {
                 "providers": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "服务商"
             ],
@@ -1125,7 +1125,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "ppt",
                 "presentation",
@@ -1548,7 +1548,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 7,
+            "downloads": 8,
             "keywords": [
                 "skill",
                 "agents",
@@ -1617,7 +1617,7 @@
             "components": {
                 "providers": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "服务商"
             ],
@@ -1647,7 +1647,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "docx",
                 "word",
@@ -1779,7 +1779,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 14,
+            "downloads": 15,
             "keywords": [
                 "dashboard",
                 "stats",
@@ -2078,6 +2078,7 @@
             "components": {
                 "tools": true
             },
+            "downloads": 1,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
