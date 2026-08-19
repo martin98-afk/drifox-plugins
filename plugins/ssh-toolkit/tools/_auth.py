@@ -3,17 +3,12 @@
 """按 auth_type 建立 paramiko SSH 连接。"""
 import os
 
-try:
-    import paramiko
-except ImportError:
-    paramiko = None
+import paramiko
 
 SUPPORTED = {"publickey", "password", "keyboard-interactive", "agent"}
 
 
 def _client():
-    if paramiko is None:
-        raise RuntimeError("缺少依赖 paramiko，请运行：pip install paramiko")
     c = paramiko.SSHClient()
     c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     return c

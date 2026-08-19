@@ -15,7 +15,7 @@ SSH 远程工具包插件（纯 AI 工具，无 UI）。基于 paramiko，提供
 - `ssh_disconnect` 关闭连接/转发
 
 ## 依赖
-运行时需要 paramiko：`pip install paramiko`
+paramiko 及其依赖已 vendoring 于 `deps/`，运行时由插件加载器自动加入 `sys.path`，无需额外安装。
 
 ## 安全警告
 连接配置（含密码/私钥口令）**明文**存于 `~/.drifox/cache/ssh/connections.json`，文件权限 600。
