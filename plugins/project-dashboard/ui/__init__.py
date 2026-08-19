@@ -30,7 +30,7 @@ def _get_project_root() -> str:
     """
     candidates: list = []
     try:
-        from app.core.ui_plugin_registry import UIPluginRegistry
+        from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
 
         reg = UIPluginRegistry.get_instance()
         # 1. 活跃窗口

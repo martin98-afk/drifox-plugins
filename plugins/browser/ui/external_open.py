@@ -136,7 +136,7 @@ def _open_in_browser(url: Any) -> bool:
 
     url = _normalize_to_str(url) if url else url
     try:
-        from app.core.ui_plugin_registry import UIPluginRegistry
+        from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
         from app.widgets.cards.card_manager import CardManager
         from .browser_window import _get_current_card
         from .url_bar import normalize_url

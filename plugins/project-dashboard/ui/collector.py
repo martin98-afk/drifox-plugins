@@ -114,7 +114,7 @@ class _Collector:
 def _refresh_welcome_cards():
     """触发所有窗口欢迎卡片重渲染（当前显示 project-dashboard tab 的立即刷新）"""
     try:
-        from app.core.ui_plugin_registry import UIPluginRegistry
+        from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
 
         reg = UIPluginRegistry.get_instance()
         for mw in list(reg._window_main_widgets.values()):
