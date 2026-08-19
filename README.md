@@ -158,7 +158,7 @@ python tools/validate_plugins.py
 校验脚本会检查：
 
 - 每个 `plugins/*/.drifox-plugin/plugin.json` 符合 [JSON Schema](schemas/plugin.schema.json)
-- 启用的组件（tools/commands/agents/skills/themes/hooks/mcp/lsp/ui）对应资源存在
+- 启用的组件（tools/commands/agents/skills/themes/hooks/mcp/lsp/ui/providers）对应资源存在
 - 钩子 Python 文件能通过 `ast.parse` 语法检查
 - 钩子 `.mcp.json` / `.lsp.json` 是合法 JSON
 - 主题 yaml 文件可读
