@@ -1014,7 +1014,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
