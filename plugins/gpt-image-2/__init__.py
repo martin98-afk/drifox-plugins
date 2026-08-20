@@ -1,1 +1,0 @@
-# gpt-image-2 plugin

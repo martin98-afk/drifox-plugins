@@ -90,7 +90,7 @@
 
 ## 完整示例
 
-参考 [`evolver` 的 plugin.json](../plugins/evolver/.drifox-plugin/plugin.json)：
+参考 [example-plugin 的 plugin.json](../plugins/example-plugin/.drifox-plugin/plugin.json)：
 
 ```json
 {

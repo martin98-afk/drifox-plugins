@@ -55,3 +55,10 @@ cp -r plugins/example-plugin plugins/your-plugin
 - 不要在命令文件里嵌入可执行 Python 代码（命令是 prompt，不是脚本）
 - 不要让钩子做阻塞主流程的 IO 操作（必须 < timeout）
 - 不要在 skill 的 description 里堆砌无关关键词
+
+## 真实开发技巧（速查）
+
+- frontmatter 仅 `name` + `description` 必填；`name` 强制 kebab-case（`^[a-z0-9-]+$`，无 `--`、不以 `-` 头尾）。
+- `description` 决定何时被 LLM 自动匹配。提升命中率四维：场景动词 + 用户原话、中英文双触发、显式 `NOT` 触发条件、关键词正则埋点。
+- 重型参考（100+ 行）/ 可复用脚本 / 子智能体拆到 `references/`、`scripts/`、`agents/`；原则与 <50 行代码模式保持内联。
+- 进阶实战（触发四维、复杂结构、TDD 造技能法）见 `docs/community-cookbook.md` §3。

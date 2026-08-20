@@ -43,7 +43,7 @@ cp -r plugins/example-plugin plugins/your-plugin
 - [themes.md](themes.md)
 - [mcp.md](mcp.md)
 - [lsp.md](lsp.md)
-- ui 组件：见 [architecture.md](architecture.md#ui-组件) 与 [`plugins/git-panel/`](../plugins/git-panel/) 示例
+- ui 组件：见 [architecture.md](architecture.md#ui-组件) 与 [`plugins/example-plugin/ui/`](../plugins/example-plugin/ui/) 示例；生产级模式见 `docs/community-cookbook.md` §6
 
 ## 4. 本地测试
 

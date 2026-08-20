@@ -16,7 +16,7 @@ DriFox 的插件系统是一套「manifest + 组件目录」约定。任何遵�
 > - lsp: `plugins/system/.lsp.json`
 > - ui: `plugins/system/ui/`（DriFox 启动时由 `UIPluginRegistry` 加载）
 >
-> 本仓库中的 [`plugins/example-plugin/`](../plugins/example-plugin/) 给出最小化的可工作版本；`plugins/evolver/` 给出真实生产插件；`plugins/git-panel/` 给出 ui 组件的真实示例。所有约定以 system 插件为准。
+> 本仓库中的 [`plugins/example-plugin/`](../plugins/example-plugin/) 给出最小化的可工作版本；真实生产插件的跨组件模式精炼见 [`docs/community-cookbook.md`](community-cookbook.md)。所有约定以 system 插件为准。
 
 ## 设计目标
 
@@ -91,7 +91,7 @@ tools 组件由 DriFox 启动时通过 `PluginToolLoader` 加载，扫描 `plugi
 
 参考实现：
 
-- [`plugins/codegraph-tools/`](../plugins/codegraph-tools/) — 语义级代码智能（user 插件，工具插件化范例）
+- [`plugins/example-plugin/tools/`](../plugins/example-plugin/tools/) — 工具组件最小示例（user 插件，工具插件化）；生产级模式见 `docs/community-cookbook.md` §5
 - DriFox 运行时内置的 `plugins/system/tools/`（file/web/automation/codegraph/terminal/diagnostics 等）
 
 ### ui 组件
@@ -106,8 +106,7 @@ ui 组件由 DriFox 启动时通过 `UIPluginRegistry.load_plugin` 加载，调�
 
 参考实现：
 
-- [`plugins/git-panel/`](../plugins/git-panel/) — 浮动卡片（user 插件，Git 控制面板）
-- [`plugins/git-dashboard/`](../plugins/git-dashboard/) — 浮动卡片（user 插件，Git 仪表盘）
+- [`plugins/example-plugin/ui/`](../plugins/example-plugin/ui/) — UI 组件最小骨架（浮动卡片扩展点）；生产级模式见 `docs/community-cookbook.md` §6
 - DriFox 运行时内置的 `plugin-marketplace` / `plugin-manager` / `context-usage-stats` 等（随 DriFox 分发，不在本仓库市场）
 
 ## 目录约定（强制）

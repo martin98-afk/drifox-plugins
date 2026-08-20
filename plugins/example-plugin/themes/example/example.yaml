@@ -35,3 +35,9 @@ colors:
   toolbar_bg: rgba(255, 255, 255, 0.05)
   divider_color: rgba(0, 0, 0, 0.06)
   hover_bg_strong: rgba(0, 0, 0, 0.08)
+
+# 真实开发技巧（速查）：
+# - input_glow_preset 是关键差异化开关（subtle / platinum / ...），新主题必选并匹配主调色
+# - 同色系主题至少让 accent_warm / hover_bg / selected_bg / input_focus_border 中一项明显不同
+# - 最快路径：复制一个真实主题整目录，改 name / id / 颜色 token / 背景图
+# - 进阶实战与校验见 docs/community-cookbook.md §7
