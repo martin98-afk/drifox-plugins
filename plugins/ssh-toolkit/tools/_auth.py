@@ -2,8 +2,20 @@
 # -*- coding: utf-8 -*-
 """按 auth_type 建立 paramiko SSH 连接。"""
 import os
+import sys
 
-import paramiko
+# 注入 tools/ 目录到 sys.path（PluginToolLoader 用 importlib 加载时未自动注入，
+# 同目录的 _store/_pool/_auth 相互 import 会报 No module named）。
+_TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
+if _TOOLS_DIR not in sys.path:
+    sys.path.insert(0, _TOOLS_DIR)
+
+# 注入插件自包含的 deps/ 目录（paramiko 不在主程序环境，依赖本插件自带）
+_PLUGIN_DEPS = os.path.abspath(os.path.join(_TOOLS_DIR, "..", "deps"))
+if _PLUGIN_DEPS not in sys.path:
+    sys.path.insert(0, _PLUGIN_DEPS)
+
+import paramiko  # noqa: E402
 
 SUPPORTED = {"publickey", "password", "keyboard-interactive", "agent"}
 

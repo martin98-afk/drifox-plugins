@@ -1,9 +1,17 @@
 # ssh-toolkit/tools/exec_tool.py
 # -*- coding: utf-8 -*-
 """SSH 连接 / 命令执行 / 断开（dangerous 除断开外）。"""
-from app.tools.result import ToolResult
+import sys
+from pathlib import Path
 
-import _store as store, _auth as auth, _pool as pool
+# PluginToolLoader 用 importlib 加载本模块，注入 tools/ 目录到 sys.path 以便绝对导入
+_TOOLS_DIR = str(Path(__file__).resolve().parent)
+if _TOOLS_DIR not in sys.path:
+    sys.path.insert(0, _TOOLS_DIR)
+
+from app.tools.result import ToolResult  # noqa: E402
+
+import _store as store, _auth as auth, _pool as pool  # noqa: E402
 
 
 def _connect_impl(tool_ctx, **kwargs):
