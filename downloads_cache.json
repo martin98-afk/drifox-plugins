@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787196153.847526,
+  "fetched_at": 1787198706.9660366,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -32,7 +32,7 @@
     "game2048": 2,
     "gateway-dingtalk": 0,
     "gateway-discord": 0,
-    "gateway-feishu": 0,
+    "gateway-feishu": 1,
     "gateway-slack": 0,
     "gateway-telegram": 0,
     "gateway-wecom": 0,
@@ -79,7 +79,7 @@
     "test-scaffold": 0,
     "tetris": 2,
     "theme-factory": 0,
-    "tool-locator": 2,
+    "tool-locator": 3,
     "ui-motion-skills": 2,
     "voice-clone": 1,
     "voice-reply": 6,
