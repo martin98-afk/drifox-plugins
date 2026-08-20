@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787186399.0975645,
+  "fetched_at": 1787191963.5350976,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -14,10 +14,10 @@
     "claude-api": 1,
     "code-reviewer": 1,
     "code-simplifier": 1,
-    "codegraph-tools": 5,
+    "codegraph-tools": 6,
     "context-stats": 13,
     "context7": 3,
-    "desktop-automation": 6,
+    "desktop-automation": 7,
     "doc-coauthoring": 1,
     "dsh-router": 0,
     "dsh-super-injector": 0,
@@ -65,7 +65,7 @@
     "skill-creator": 1,
     "slack-gif-creator": 1,
     "snake": 2,
-    "ssh-toolkit": 1,
+    "ssh-toolkit": 2,
     "superclaude": 2,
     "superpowers": 2,
     "tailwind-pro": 0,
@@ -73,13 +73,14 @@
     "test-scaffold": 0,
     "tetris": 2,
     "theme-factory": 0,
+    "tool-locator": 1,
     "ui-motion-skills": 2,
     "voice-clone": 1,
     "voice-reply": 6,
     "web-artifacts-builder": 1,
     "web-design-skills": 1,
     "webapp-testing": 1,
-    "win-powershell": 1,
+    "win-powershell": 4,
     "workbuddy": 5
   }
 }
