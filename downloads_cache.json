@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787245184.8097105,
+  "fetched_at": 1787247026.9889736,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -64,7 +64,7 @@
     "playground": 2,
     "ponytail": 9,
     "project-dashboard": 17,
-    "prompt-enhancer": 4,
+    "prompt-enhancer": 6,
     "python-pro": 1,
     "rdr2": 4,
     "react-pro": 1,
@@ -82,6 +82,7 @@
     "tetris": 2,
     "theme-factory": 0,
     "tool-locator": 5,
+    "twin-chat": 3,
     "ui-motion-skills": 2,
     "voice-clone": 1,
     "voice-reply": 6,
