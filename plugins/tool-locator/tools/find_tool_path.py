@@ -136,5 +136,5 @@ def register(registry):
         "find_tool_path", _SCHEMA, impl=_impl,
         danger="safe", icon="magnifier", cn_name="查工具路径",
         group="开发工具", description="查找工具插件的实现文件路径（可热重载）",
-        render_mode="expand",  # 无折叠展开：路径与提示直接可见
+        render_mode="",  # 默认折叠卡：与 powershell 等工具一致
     )
