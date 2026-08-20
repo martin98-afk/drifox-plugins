@@ -208,7 +208,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 27,
+            "downloads": 28,
             "keywords": [
                 "browser",
                 "web",
@@ -1946,7 +1946,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 15,
+            "downloads": 16,
             "keywords": [
                 "dashboard",
                 "stats",
