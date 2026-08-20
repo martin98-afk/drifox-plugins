@@ -208,7 +208,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 28,
+            "downloads": 29,
             "keywords": [
                 "browser",
                 "web",
@@ -304,7 +304,7 @@
                 "skills": true,
                 "agents": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "productivity",
                 "communication",
@@ -545,7 +545,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 8,
+            "downloads": 9,
             "keywords": [
                 "desktop",
                 "automation",
@@ -1946,7 +1946,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 16,
+            "downloads": 17,
             "keywords": [
                 "dashboard",
                 "stats",
@@ -2245,7 +2245,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2731,7 +2731,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 11,
+            "downloads": 12,
             "keywords": [
                 "powershell",
                 "windows",
