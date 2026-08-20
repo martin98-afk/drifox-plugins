@@ -4,11 +4,12 @@
 输入框按钮「优化提示词」：点击后用 LLM（复用主程序当前会话模型配置）把
 输入框原文优化为更清晰、结构化、高信息密度的提示词，并注回输入框。
 
-体验完善（v0.2.0）：
+体验完善（v0.2.1）：
 - 系统配置开放增强指令：注册「提示词增强」设置卡（多行编辑 + 即时保存 + 恢复默认），
   覆盖主程序 E1 自动卡（单行 LineEdit），长指令编辑不再痛苦；
 - 防任务积压：同一窗口同时只允许一个优化任务，运行中重复点击给出提示并忽略；
-- 进度可感知：运行中常驻 InfoBar「正在优化提示词…」，完成/失败后关闭并给出结果提示。
+- 进度可感知：优化中按钮图标转为旋转圆环动画（QPainter 自绘，浅色/深色主题自适应），
+  并常驻 InfoBar「正在优化提示词…」，完成/失败后恢复并给出结果提示。
 
 实现要点：
 - 通过 UI 扩展点 context["main_widget"] 读取输入框（input_area）与当前模型配置；
@@ -20,10 +21,12 @@
 """
 
 import os
+import re
 from typing import Any, Dict, Optional
 
 from loguru import logger
-from PyQt5.QtCore import QObject, QRunnable, QThreadPool, pyqtSignal
+from PyQt5.QtCore import QObject, QRectF, QRunnable, QThreadPool, QTimer, Qt, pyqtSignal
+from PyQt5.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
 from PyQt5.QtWidgets import QPlainTextEdit
 
 from app.plugins.managers.plugin_config_store import PluginConfigStore
@@ -40,13 +43,19 @@ DEFAULT_ENHANCE_PROMPT = (
     "你是一个提示词优化专家。请把用户输入的粗略想法改写成清晰、结构化、高信息密度的提示词："
     "明确角色与任务目标，补充必要上下文与约束、规定输出格式，将复杂要求拆解为有序步骤，"
     "消除歧义并保留用户原意，使用简洁专业的表达。"
-    "只输出优化后的提示词本身，不要解释、不要用 Markdown 代码块包裹。"
+    "只输出优化后的提示词本身，不要解释、不要用 Markdown 代码块包裹，"
+    "不要输出 <think> 等思考过程内容。"
 )
 
 # 同一窗口运行中的优化任务（window_id -> True），防重复点击积压
 _busy_windows: Dict[str, bool] = {}
 # 当前常驻进度 InfoBar（window_id -> InfoBar 实例），完成/失败时关闭
 _progress_bars: Dict[str, Any] = {}
+# 按钮转圈动画（window_id -> _RotatingButtonIcon），完成/失败时停止
+_button_spinners: Dict[str, Any] = {}
+
+# 输入按钮 tooltip（与 register_input_button 保持一致，用于回查按钮控件）
+_BUTTON_TOOLTIP = "优化提示词（LLM 一键增强）"
 
 
 def _plugin_root() -> str:
@@ -60,10 +69,16 @@ def register_ui(registry: "UIPluginRegistry") -> None:
         PLUGIN_NAME,
         "enhance",
         icon_path=icon_path if os.path.exists(icon_path) else "",
-        tooltip="优化提示词（LLM 一键增强）",
+        tooltip=_BUTTON_TOOLTIP,
         on_click=_on_enhance_clicked,
     )
     _register_config_card(registry)
+
+
+def unload_ui(registry: "UIPluginRegistry") -> None:
+    """卸载时停止所有残留转圈动画（任务若仍在跑，按钮恢复原图标）。"""
+    for window_id in list(_button_spinners.keys()):
+        _stop_button_spinner(window_id)
 
 
 def _register_config_card(registry: "UIPluginRegistry") -> None:
@@ -86,6 +101,110 @@ def _register_config_card(registry: "UIPluginRegistry") -> None:
 
 
 _ConfigCardBase = ExpandSettingCard if ExpandSettingCard is not None else object  # type: ignore
+
+
+class _RotatingButtonIcon(QObject):
+    """按钮图标转圈动画：QPainter 自绘圆环，QTimer 驱动旋转。
+
+    样式对齐主程序「执行中」图标：开口圆环 + 圆头笔帽，缺口随角度旋转。
+    纯自绘不依赖任何资源文件，主题适配：浅色主题深灰圆环，深色主题浅灰圆环，
+    tick 时检测主题切换自动变色。start() 后按钮图标持续旋转，stop() 恢复原图标。
+    """
+
+    def __init__(self, button, size: int = 18, parent=None):
+        super().__init__(parent)
+        self._button = button
+        self._size = size
+        self._angle = 0
+        self._orig_icon = button.icon() if hasattr(button, "icon") else QIcon()
+        self._pixmap = QPixmap(size, size)
+        self._pixmap.fill(Qt.transparent)
+        self._timer = QTimer(self)
+        self._timer.setInterval(30)  # 与子智能体一致：30ms/帧
+        self._timer.timeout.connect(self._tick)
+
+    @staticmethod
+    def _ring_color(light: bool) -> str:
+        """圆环颜色：浅色主题深灰（#555555），深色主题浅灰（#e6e6e6）。"""
+        return "#555555" if light else "#e6e6e6"
+
+    def start(self):
+        self._angle = 0
+        self._timer.start()
+        self._tick()  # 立即画首帧，避免等待首个 timeout
+
+    def stop(self):
+        self._timer.stop()
+        # 恢复原始图标
+        try:
+            self._button.setIcon(self._orig_icon)
+        except RuntimeError:
+            pass  # 按钮已销毁
+
+    def _tick(self):
+        self._angle = (self._angle + 12) % 360
+        light = _is_light_theme()
+        self._pixmap.fill(Qt.transparent)
+        p = QPainter(self._pixmap)
+        try:
+            p.setRenderHint(QPainter.Antialiasing)
+            pen = QPen(QColor(self._ring_color(light)), 2.0)
+            pen.setCapStyle(Qt.RoundCap)
+            p.setPen(pen)
+            # 开口圆环：缺口 60°，随角度旋转
+            margin = 3.0
+            rect = QRectF(margin, margin, self._size - 2 * margin, self._size - 2 * margin)
+            p.drawArc(rect, -self._angle * 16, 300 * 16)
+        finally:
+            p.end()
+        try:
+            self._button.setIcon(QIcon(self._pixmap))
+        except RuntimeError:
+            self._timer.stop()  # 按钮已销毁，停止动画
+
+
+def _is_light_theme() -> bool:
+    """当前是否浅色主题（失败默认深色，对齐主程序 _is_current_theme_light）。"""
+    try:
+        from app.utils.utils import _is_current_theme_light
+
+        return _is_current_theme_light()
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _find_button(main_widget):
+    """按 tooltip 回查输入区插件按钮控件（主程序私有结构 _plugin_input_buttons）。"""
+    try:
+        for w in getattr(main_widget, "_plugin_input_buttons", []) or []:
+            if getattr(w, "toolTip", lambda: "")() == _BUTTON_TOOLTIP:
+                return w
+    except Exception:  # noqa: BLE001
+        return None
+    return None
+
+
+def _start_button_spinner(main_widget, window_id: str):
+    """任务开始：把按钮图标切换为旋转圆环动画。"""
+    try:
+        button = _find_button(main_widget)
+        if button is None:
+            return
+        spinner = _RotatingButtonIcon(button, size=18)
+        _button_spinners[window_id] = spinner
+        spinner.start()
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"[PromptEnhancer] 按钮转圈启动失败: {e}")
+
+
+def _stop_button_spinner(window_id: str):
+    """任务结束：停止动画并恢复按钮原图标。"""
+    spinner = _button_spinners.pop(window_id, None)
+    if spinner is not None:
+        try:
+            spinner.stop()
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"[PromptEnhancer] 按钮转圈停止失败: {e}")
 
 
 class _EnhanceConfigCard(_ConfigCardBase):
@@ -174,6 +293,7 @@ def _on_enhance_clicked(context: Dict[str, Any]) -> None:
 
     _busy_windows[window_id] = True
     _show_progress(main_widget, window_id, "正在优化提示词…")
+    _start_button_spinner(main_widget, window_id)
 
     signals = _EnhanceSignals()
     signals.done.connect(lambda result: _on_done(main_widget, input_area, result, window_id))
@@ -221,14 +341,24 @@ class _EnhanceTask(QRunnable):
                 max_tokens=2000,
             )
             result = resp.choices[0].message.content.strip()
+            result = _strip_thinking(result)
             self.signals.done.emit(result)
         except Exception as e:
             logger.exception(f"[PromptEnhancer] 增强失败: {e}")
             self.signals.error.emit(str(e))
 
 
+def _strip_thinking(text: str) -> str:
+    """移除模型输出中的 <think>…</think> 思考内容（对齐主程序 history_compactor）。"""
+    if not text:
+        return text
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL)
+    return text.strip()
+
+
 def _on_done(main_widget, input_area, result, window_id):
     _close_progress(window_id)
+    _stop_button_spinner(window_id)
     _busy_windows.pop(window_id, None)
     if result:
         input_area.setPlainText(result)
@@ -239,6 +369,7 @@ def _on_done(main_widget, input_area, result, window_id):
 
 def _on_error(main_widget, err, window_id):
     _close_progress(window_id)
+    _stop_button_spinner(window_id)
     _busy_windows.pop(window_id, None)
     _notify(main_widget, "提示词增强", f"增强失败：{err}", "error")
 
