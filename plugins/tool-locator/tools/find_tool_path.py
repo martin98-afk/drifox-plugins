@@ -30,7 +30,8 @@ def _scan_tools():
     for py in glob.glob(os.path.join(PLUGINS_ROOT, "*", "tools", "*.py")):
         plugin_name = os.path.basename(os.path.dirname(os.path.dirname(py)))
         try:
-            tree = ast.parse(open(py, encoding="utf-8").read())
+            with open(py, encoding="utf-8") as f:
+                tree = ast.parse(f.read())
         except (OSError, SyntaxError):
             continue
         for node in ast.walk(tree):
@@ -53,48 +54,51 @@ def _scan_tools():
 
 
 def _impl(tool_ctx, **kwargs):
-    tool_name = (kwargs.get("tool_name") or "").strip()
-    list_all = bool(kwargs.get("list_all"))
-    mapping = _scan_tools()
+    try:
+        tool_name = (kwargs.get("tool_name") or "").strip()
+        list_all = bool(kwargs.get("list_all"))
+        mapping = _scan_tools()
 
-    if list_all:
-        if not mapping:
+        if list_all:
+            if not mapping:
+                return ToolResult(
+                    False,
+                    error="未在 ~/.drifox/plugins 下扫描到任何已注册的工具（无 tools/*.py）。",
+                )
+            lines = ["已发现的工具插件（工具名 → 所属插件 → 实现路径）：", ""]
+            for name in sorted(mapping):
+                plugin_name, path = mapping[name]
+                lines.append(f"• {name}  [{plugin_name}]\n  {path}")
+            lines.append("")
+            lines.append("提示：直接用 read/edit/write 修改对应文件，DriFox 热重载自动生效；")
+            lines.append("若现有工具不足，可加载 plugin-creator 技能开发新工具。")
+            return ToolResult(True, content="\n".join(lines))
+
+        if not tool_name:
             return ToolResult(
                 False,
-                content="未在 ~/.drifox/plugins 下扫描到任何已注册的工具（无 tools/*.py）。",
+                error="请提供 tool_name 参数，或将 list_all 设为 true 列出全部工具。",
             )
-        lines = ["已发现的工具插件（工具名 → 所属插件 → 实现路径）：", ""]
-        for name in sorted(mapping):
-            plugin_name, path = mapping[name]
-            lines.append(f"• {name}  [{plugin_name}]\n  {path}")
-        lines.append("")
-        lines.append("提示：直接用 read/edit/write 修改对应文件，DriFox 热重载自动生效；")
-        lines.append("若现有工具不足，可加载 plugin-creator 技能开发新工具。")
-        return ToolResult(True, content="\n".join(lines))
 
-    if not tool_name:
-        return ToolResult(
-            False,
-            content="请提供 tool_name 参数，或将 list_all 设为 true 列出全部工具。",
+        if tool_name not in mapping:
+            known = sorted(mapping)
+            hint = "已知工具：" + (", ".join(known) if known else "（无）")
+            return ToolResult(
+                False,
+                error=f"未找到工具「{tool_name}」。{hint}\n可用 list_all=true 查看全部。",
+            )
+
+        plugin_name, path = mapping[tool_name]
+        content = (
+            f"工具「{tool_name}」实现文件：\n"
+            f"{path}\n\n"
+            f"所属插件：{plugin_name}（位于 ~/.drifox/plugins/{plugin_name}/）\n\n"
+            f"💡 可直接用 read/edit/write 修改此文件，保存后 DriFox 热重载自动生效，无需重启。\n"
+            f"💡 若现有工具不足以满足需求，可加载 plugin-creator 技能自行开发新工具。"
         )
-
-    if tool_name not in mapping:
-        known = sorted(mapping)
-        hint = "已知工具：" + (", ".join(known) if known else "（无）")
-        return ToolResult(
-            False,
-            content=f"未找到工具「{tool_name}」。{hint}\n可用 list_all=true 查看全部。",
-        )
-
-    plugin_name, path = mapping[tool_name]
-    content = (
-        f"工具「{tool_name}」实现文件：\n"
-        f"{path}\n\n"
-        f"所属插件：{plugin_name}（位于 ~/.drifox/plugins/{plugin_name}/）\n\n"
-        f"💡 可直接用 read/edit/write 修改此文件，保存后 DriFox 热重载自动生效，无需重启。\n"
-        f"💡 若现有工具不足以满足需求，可加载 plugin-creator 技能自行开发新工具。"
-    )
-    return ToolResult(True, content=content)
+        return ToolResult(True, content=content)
+    except Exception as e:  # noqa: BLE001
+        return ToolResult(False, error=f"find_tool_path 内部异常：{type(e).__name__}: {e}")
 
 
 _SCHEMA = {
