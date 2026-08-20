@@ -519,44 +519,59 @@ class FeishuAdapter(BasePlatformAdapter):
 
 
 def _build_config() -> "PlatformConfig":
-    """读主程序 Settings 构造飞书配置（存量用户配置零迁移）"""
+    """读 PluginConfigStore 构造飞书配置（E1 契约：插件自包含存储）"""
     from app.gateway.base import Platform, PlatformConfig
-    from app.utils.config import Settings
+    from app.plugins.managers.plugin_config_store import PluginConfigStore
 
-    cfg = Settings.get_instance()
+    store = PluginConfigStore()
     return PlatformConfig(
-        enabled=cfg.gateway_feishu_enabled.value,
+        enabled=bool(store.get("gateway-feishu", "enabled")),
         platform=Platform.FEISHU,
         extra={
-            "app_id": cfg.gateway_feishu_app_id.value,
-            "app_secret": cfg.gateway_feishu_app_secret.value,
+            "app_id": store.get("gateway-feishu", "app_id") or "",
+            "app_secret": store.get("gateway-feishu", "app_secret") or "",
         },
     )
 
 
 def _write_config(config: "PlatformConfig") -> None:
-    from app.utils.config import Settings
+    from app.plugins.managers.plugin_config_store import PluginConfigStore
 
-    cfg = Settings.get_instance()
-    cfg.set(cfg.gateway_feishu_enabled, config.enabled, save=True)
-    if config.extra:
-        if config.extra.get("app_id") is not None:
-            cfg.set(cfg.gateway_feishu_app_id, config.extra["app_id"], save=True)
-        if config.extra.get("app_secret") is not None:
-            cfg.set(cfg.gateway_feishu_app_secret, config.extra["app_secret"], save=True)
+    PluginConfigStore().set_values(
+        "gateway-feishu",
+        {
+            "enabled": config.enabled,
+            "app_id": (config.extra or {}).get("app_id") or "",
+            "app_secret": (config.extra or {}).get("app_secret") or "",
+        },
+    )
 
 
 def _build_config_values(values: dict, old_config) -> "PlatformConfig":
-    """设置卡保存回调：表单值 → PlatformConfig（对齐旧 _on_save FEISHU 分支）"""
+    """设置卡保存回调：表单值 → PluginConfigStore → PlatformConfig。"""
     from app.gateway.base import Platform, PlatformConfig
+    from app.plugins.managers.plugin_config_store import PluginConfigStore
 
+    store = PluginConfigStore()
+    plugin = "gateway-feishu"
+    enabled = values.get("enabled", store.get(plugin, "enabled"))
+    app_id = values.get("app_id", "")
+    app_secret = values.get("app_secret", "")
+    store.set_values(
+        plugin,
+        {
+            "enabled": bool(enabled),
+            "app_id": app_id,
+            "app_secret": app_secret,
+        },
+    )
     extra = dict(old_config.extra) if old_config and old_config.extra else {}
-    if "app_id" in values:
-        extra["app_id"] = values.get("app_id") or ""
-    if "app_secret" in values:
-        extra["app_secret"] = values.get("app_secret") or ""
+    if app_id:
+        extra["app_id"] = app_id
+    if app_secret:
+        extra["app_secret"] = app_secret
     return PlatformConfig(
-        enabled=bool(values.get("enabled", False)),
+        enabled=bool(enabled),
         platform=Platform.FEISHU,
         extra=extra,
     )

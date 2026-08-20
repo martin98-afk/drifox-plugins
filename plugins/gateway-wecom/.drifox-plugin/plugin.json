@@ -14,5 +14,37 @@
     "type": "user",
     "components": {
         "gateways": true
+    },
+    "config_schema": {
+        "title": "企业微信机器人配置",
+        "fields": [
+            {
+                "key": "enabled",
+                "label": "启用企业微信网关",
+                "type": "bool",
+                "default": false
+            },
+            {
+                "key": "bot_id",
+                "label": "Bot ID",
+                "type": "text",
+                "default": "",
+                "placeholder": "企业微信机器人 BotID"
+            },
+            {
+                "key": "secret",
+                "label": "Secret",
+                "type": "password",
+                "default": "",
+                "placeholder": "机器人密钥 Secret"
+            },
+            {
+                "key": "websocket_url",
+                "label": "WebSocket",
+                "type": "text",
+                "default": "wss://openws.work.weixin.qq.com",
+                "placeholder": "wss://openws.work.weixin.qq.com"
+            }
+        ]
     }
 }

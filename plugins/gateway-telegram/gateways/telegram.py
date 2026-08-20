@@ -420,47 +420,81 @@ class TelegramAdapter(BasePlatformAdapter):
 
 
 def _build_config() -> "PlatformConfig":
-    """读主程序 Settings 构造 Telegram 配置（存量用户配置零迁移）"""
-    from app.gateway.base import Platform, PlatformConfig
-    from app.utils.config import Settings
+    """读 PluginConfigStore 构造 Telegram 配置（E1 契约：插件自包含存储）。
 
-    cfg = Settings.get_instance()
+    字段键：enabled / token / require_mention（plugin.json config_schema 声明）。
+    require_mention 在 extra dict 中保持原样（适配器 ``config.extra.get(...)``
+    已做 bool 兜底）。"""
+    from app.gateway.base import Platform, PlatformConfig
+    from app.plugins.managers.plugin_config_store import PluginConfigStore
+
+    store = PluginConfigStore()
     return PlatformConfig(
-        enabled=cfg.gateway_telegram_enabled.value,
+        enabled=bool(store.get("gateway-telegram", "enabled")),
         platform=Platform.TELEGRAM,
-        token=cfg.gateway_telegram_token.value,
-        extra={"require_mention": cfg.gateway_telegram_require_mention.value},
+        token=store.get("gateway-telegram", "token") or "",
+        extra={"require_mention": bool(store.get("gateway-telegram", "require_mention"))},
     )
 
 
 def _write_config(config: "PlatformConfig") -> None:
-    from app.utils.config import Settings
+    from app.plugins.managers.plugin_config_store import PluginConfigStore
 
-    cfg = Settings.get_instance()
-    cfg.set(cfg.gateway_telegram_enabled, config.enabled, save=True)
-    if config.token is not None:
-        cfg.set(cfg.gateway_telegram_token, config.token, save=True)
-    if config.extra:
-        cfg.set(
-            cfg.gateway_telegram_require_mention,
-            config.extra.get("require_mention", True),
-            save=True,
-        )
+    PluginConfigStore().set_values(
+        "gateway-telegram",
+        {
+            "enabled": config.enabled,
+            "token": config.token or "",
+            "require_mention": (
+                bool(config.extra.get("require_mention", True))
+                if config.extra
+                else True
+            ),
+        },
+    )
 
 
 def _build_config_values(values: dict, old_config) -> "PlatformConfig":
-    """设置卡保存回调：表单值 → PlatformConfig（对齐旧 _on_save TELEGRAM 分支）"""
-    from app.gateway.base import Platform, PlatformConfig
+    """设置卡保存回调：表单值 → PluginConfigStore → PlatformConfig。
 
+    enabled / require_mention 在主仓表单无对应输入控件（启用开关在状态行，
+    require_mention 仅插件自管 UI 才用），由 PluginConfigStore 兜底当前值：
+    values 缺则读 store 现有值（无则 schema 默认）。
+    """
+    from app.gateway.base import Platform, PlatformConfig
+    from app.plugins.managers.plugin_config_store import PluginConfigStore
+
+    store = PluginConfigStore()
+    plugin = "gateway-telegram"
+    enabled = values.get("enabled", store.get(plugin, "enabled"))
+    require_mention = values.get(
+        "require_mention", store.get(plugin, "require_mention")
+    )
+    token = values.get("token", "")
+    # 先落盘（让后续 store.get 即时可见新值；空串被 store 视为清除）
+    store.set_values(
+        plugin,
+        {
+            "enabled": bool(enabled),
+            "token": token,
+            "require_mention": _truthy(require_mention),
+        },
+    )
     extra = dict(old_config.extra) if old_config and old_config.extra else {}
-    if "require_mention" in values:
-        extra["require_mention"] = bool(values["require_mention"])
+    extra["require_mention"] = _truthy(require_mention)
     return PlatformConfig(
-        enabled=bool(values.get("enabled", False)),
+        enabled=bool(enabled),
         platform=Platform.TELEGRAM,
-        token=values.get("token") or "",
+        token=token,
         extra=extra,
     )
+
+
+def _truthy(v) -> bool:
+    """表单 truthy 判定（QLineEdit 文本 'true'/'false' → bool）。"""
+    if isinstance(v, bool):
+        return v
+    return str(v).strip().lower() in ("1", "true", "yes", "on")
 
 
 def register(registry) -> None:

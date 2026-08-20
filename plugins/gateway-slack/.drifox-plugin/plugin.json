@@ -14,5 +14,30 @@
     "type": "user",
     "components": {
         "gateways": true
+    },
+    "config_schema": {
+        "title": "Slack 机器人配置",
+        "fields": [
+            {
+                "key": "enabled",
+                "label": "启用 Slack 网关",
+                "type": "bool",
+                "default": false
+            },
+            {
+                "key": "bot_token",
+                "label": "Bot Token",
+                "type": "password",
+                "default": "",
+                "placeholder": "Slack App Bot Token (xoxb-)"
+            },
+            {
+                "key": "app_token",
+                "label": "App Token",
+                "type": "password",
+                "default": "",
+                "placeholder": "Slack App Token (xapp-)"
+            }
+        ]
     }
 }
