@@ -49,7 +49,12 @@ class TwinChatCard(QWidget):
         self._context_provider = provider
 
     def show_card(self):
-        """卡片显示时回调（registry 调用）"""
+        """卡片显示时回调（registry 调用）
+
+        CardManager 对带 show_card 方法的卡片不做 setVisible(True)，
+        由卡片自己负责显示（与 browser/breakout/git-panel 等卡片同约定）。
+        """
+        self.setVisible(True)
         if self._chat_window is not None:
             self._chat_window.show()
 
