@@ -1,0 +1,18 @@
+{
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "name": "gateway-dingtalk",
+    "description": "钉钉 (DingTalk) Stream 模式适配器（社区插件，万物即插件 Phase E）：实时消息收发，支持群/单聊/媒体；基于 dingtalk-stream SDK。",
+    "version": "1.0.0",
+    "author": {
+        "name": "DriFoxx Team"
+    },
+    "homepage": "https://github.com/martin98-afk/drifox-plugins2",
+    "license": "MIT",
+    "type": "user",
+    "components": {
+        "gateways": true
+    }
+}
