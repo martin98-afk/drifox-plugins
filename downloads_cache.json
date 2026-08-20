@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787202096.2550325,
+  "fetched_at": 1787205194.179529,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -11,6 +11,7 @@
     "browser": 27,
     "calendar": 13,
     "canvas-design": 1,
+    "caveman": 1,
     "claude-api": 1,
     "code-reviewer": 1,
     "code-simplifier": 1,
@@ -32,7 +33,7 @@
     "game2048": 2,
     "gateway-dingtalk": 0,
     "gateway-discord": 0,
-    "gateway-feishu": 2,
+    "gateway-feishu": 4,
     "gateway-slack": 0,
     "gateway-telegram": 0,
     "gateway-wecom": 0,

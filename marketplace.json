@@ -304,6 +304,7 @@
                 "skills": true,
                 "agents": true
             },
+            "downloads": 1,
             "keywords": [
                 "productivity",
                 "communication",
@@ -1013,7 +1014,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 2,
+            "downloads": 4,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
