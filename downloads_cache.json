@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787216594.1696646,
+  "fetched_at": 1787219844.0226827,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -33,7 +33,7 @@
     "game2048": 2,
     "gateway-dingtalk": 0,
     "gateway-discord": 0,
-    "gateway-feishu": 6,
+    "gateway-feishu": 7,
     "gateway-slack": 0,
     "gateway-telegram": 0,
     "gateway-wecom": 0,
@@ -72,7 +72,7 @@
     "skill-creator": 1,
     "slack-gif-creator": 1,
     "snake": 2,
-    "ssh-toolkit": 3,
+    "ssh-toolkit": 4,
     "superclaude": 2,
     "superpowers": 2,
     "tailwind-pro": 0,
@@ -87,7 +87,7 @@
     "web-artifacts-builder": 1,
     "web-design-skills": 1,
     "webapp-testing": 1,
-    "win-powershell": 6,
+    "win-powershell": 9,
     "workbuddy": 5
   }
 }
