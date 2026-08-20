@@ -1967,8 +1967,8 @@
         },
         {
             "name": "prompt-enhancer",
-            "description": "输入框按钮：一键用 LLM 优化当前输入框的提示词，增强指令可在系统配置中多行编辑。复用主程序模型配置，闭包实现（不修改主程序）。",
-            "version": "0.2.0",
+            "description": "输入框一键 LLM 优化提示词 — 增强指令可在系统配置多行编辑，优化中按钮圆环转圈动画，防任务积压，复用主程序模型配置。",
+            "version": "0.2.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
