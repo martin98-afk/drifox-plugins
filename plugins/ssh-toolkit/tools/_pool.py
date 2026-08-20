@@ -22,6 +22,31 @@ def get_client(ref):
     return None
 
 
+def ensure_client(ref):
+    """解析活跃连接；无活跃连接但 ref 命中已保存配置时自动建连入池。
+
+    返回 (client, error_msg)：成功时 error_msg 为 None，失败时 client 为 None。
+    """
+    client = get_client(ref)
+    if client is not None:
+        return client, None
+    # 懒连接：ref 作为已保存连接名时，按配置自动建立连接
+    try:
+        from _store import get_connection
+        from _auth import connect
+    except Exception:
+        return None, f"未找到活跃连接：{ref}（先 ssh_connect）"
+    conn = get_connection(ref)
+    if conn is None:
+        return None, f"未找到活跃连接：{ref}（先 ssh_connect）"
+    try:
+        client = connect(conn)
+    except Exception as e:
+        return None, f"自动连接失败：{e}"
+    put_connection(ref, client)
+    return client, None
+
+
 def remove_connection_handle(handle):
     if handle in POOL:
         POOL.pop(handle, None)

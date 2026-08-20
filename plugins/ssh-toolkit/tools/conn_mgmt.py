@@ -30,7 +30,7 @@ def _add_impl(tool_ctx, **kwargs):
     try:
         store.add_connection(conn)
     except ValueError as e:
-        return ToolResult(False, content=str(e))
+        return ToolResult(False, error=str(e))
     return ToolResult(True, content=f"已保存连接：{conn['name']} ({conn['user']}@{conn['host']}:{conn['port']})")
 
 
@@ -48,7 +48,7 @@ def _remove_impl(tool_ctx, **kwargs):
     ok = store.remove_connection(name)
     if ok:
         return ToolResult(True, content=f"已删除连接：{name}")
-    return ToolResult(False, content=f"未找到连接：{name}")
+    return ToolResult(False, error=f"未找到连接：{name}")
 
 
 def register(registry):

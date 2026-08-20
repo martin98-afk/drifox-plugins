@@ -101,6 +101,16 @@ ssh-toolkit/
 - `ssh_disconnect` 关闭 client 并从池移除。
 - 进程退出时由 atexit 兜底关闭全部。
 
+### 6.1 懒连接（Lazy Connect）
+
+`pool.ensure_client(ref)` 统一解析客户端：
+
+- 若 `ref` 命中**活跃连接**（handle 或 name），直接返回复用。
+- 若未命中活跃连接，但 `ref` 是**已保存连接名**（`store.get_connection` 命中），则自动按配置 `auth.connect` 建连并入池后返回——**无需先调用 `ssh_connect`**。
+- 若两者皆未命中，返回 `(None, "未找到活跃连接：{ref}（先 ssh_connect）")`。
+
+> `ssh_list_dir` / `ssh_exec` / `ssh_upload` / `ssh_download` / `ssh_forward` 均经 `ensure_client` 解析；`ssh_connect` 仍是显式建连入口（返回 handle 供复用）。错误信息走 `ToolResult.error`（非 `content`），否则 UI 显示 `[Error] None`。
+
 ## 7. 认证处理（auth.py）
 
 `connect(conn) -> paramiko.SSHClient`，按 `auth_type` 分支：
@@ -130,6 +140,8 @@ ssh-toolkit/
 | 10 | `ssh_disconnect` | handle/name（或 forward_id） | 关闭提示 | safe |
 
 ### impl 行为要点
+
+> 解析客户端统一经 `pool.ensure_client(ref)`（见 §6.1）：未建连时按已保存配置自动建连，无需先 `ssh_connect`。
 
 - **ssh_exec**：`client.exec_command(command, timeout=timeout)` → 读 stdout/stderr → `recv_exit_status()`。返回 `ToolResult(True, content=f"$ {command}\n{out}{err}\nexit={code}")`。
 - **ssh_upload/download**：`client.open_sftp().put/get`。路径做归一化与越界检查（remote_path 不以 `/` 开头时相对 home）。

@@ -16,10 +16,10 @@ import _pool as pool  # noqa: E402
 
 
 def _client(ref):
-    c = pool.get_client(ref) if ref else None
-    if c is None:
-        raise RuntimeError(f"未找到活跃连接：{ref}（先 ssh_connect）")
-    return c
+    client, err = pool.ensure_client(ref) if ref else (None, None)
+    if client is None:
+        raise RuntimeError(err or f"未找到活跃连接：{ref}（先 ssh_connect）")
+    return client
 
 
 def _norm_remote(path, home):
@@ -41,7 +41,7 @@ def _upload_impl(tool_ctx, **kwargs):
     local = kwargs.get("local_path")
     remote = kwargs.get("remote_path")
     if not local or not remote:
-        return ToolResult(False, content="需要 local_path 与 remote_path")
+        return ToolResult(False, error="需要 local_path 与 remote_path")
     try:
         client = _client(ref)
         remote = _norm_remote(remote, _home(client))
@@ -49,7 +49,7 @@ def _upload_impl(tool_ctx, **kwargs):
         sftp.put(local, remote)
         sftp.close()
     except Exception as e:
-        return ToolResult(False, content=f"上传失败：{e}")
+        return ToolResult(False, error=f"上传失败：{e}")
     return ToolResult(True, content=f"已上传 {local} → {remote} @ {ref}")
 
 
@@ -58,7 +58,7 @@ def _download_impl(tool_ctx, **kwargs):
     remote = kwargs.get("remote_path")
     local = kwargs.get("local_path")
     if not local or not remote:
-        return ToolResult(False, content="需要 remote_path 与 local_path")
+        return ToolResult(False, error="需要 remote_path 与 local_path")
     try:
         client = _client(ref)
         remote = _norm_remote(remote, _home(client))
@@ -67,7 +67,7 @@ def _download_impl(tool_ctx, **kwargs):
         sftp.get(remote, local)
         sftp.close()
     except Exception as e:
-        return ToolResult(False, content=f"下载失败：{e}")
+        return ToolResult(False, error=f"下载失败：{e}")
     return ToolResult(True, content=f"已下载 {remote} → {local} @ {ref}")
 
 
@@ -85,7 +85,7 @@ def _list_dir_impl(tool_ctx, **kwargs):
             lines.append(f"{kind} {a.st_size:>10} {a.st_mtime:.0f}  {a.filename}")
         sftp.close()
     except Exception as e:
-        return ToolResult(False, content=f"浏览失败：{e}")
+        return ToolResult(False, error=f"浏览失败：{e}")
     return ToolResult(True, content="\n".join(lines) or "（空目录）")
 
 
