@@ -1966,6 +1966,42 @@
             }
         },
         {
+            "name": "prompt-enhancer",
+            "description": "输入框一键 LLM 优化提示词 — 增强指令可在系统配置多行编辑，防任务积压、进度可感知，复用主程序模型配置。",
+            "version": "0.2.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/prompt-enhancer",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true
+            },
+            "downloads": 0,
+            "keywords": [
+                "prompt",
+                "enhance",
+                "llm",
+                "input",
+                "提示词",
+                "优化"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/martin98-afk/DriFox",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "python-pro",
             "description": "Python 开发增强 — 注入 PEP 8 / 类型标注 / 异步最佳实践，PostToolUse 自动 lint 检查，让 Python 代码质量持续达标。",
             "version": "1.0.1",
