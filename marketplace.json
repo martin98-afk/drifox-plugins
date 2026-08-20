@@ -2317,6 +2317,38 @@
             }
         },
         {
+            "name": "tool-locator",
+            "description": "开发期工具：查找可热重载工具插件的实现文件路径（tools/*.py），方便直接修改并热重载生效；工具不足时可加载 plugin-creator 技能自行开发新工具。",
+            "version": "0.1.0",
+            "author": "martin",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/tool-locator",
+                "ref": "main"
+            },
+            "components": {
+                "tools": true
+            },
+            "keywords": [
+                "tool",
+                "locator",
+                "hot-reload",
+                "development"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "ui-motion-skills",
             "description": "UI 动效设计技能集——源自 emilkowalski/skills（Emil Kowalski，前 Vercel/Linear），覆盖动画从零构建、严格评审、全库审计、动画词汇、Apple 设计原则、UI 库选型、原型对比与 Sonner 指南，让 AI 的动效品味达到一线水准。",
             "version": "1.0.0",
