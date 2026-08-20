@@ -38,7 +38,10 @@ def ensure_client(ref):
         name = getattr(e, "name", "") or "paramiko/cryptography"
         return None, (
             f"自动连接失败：依赖 {name} 加载失败（{e}）。"
-            "请在 DriFox 所在 Python 环境执行：pip install --upgrade paramiko cryptography"
+            "deps 自带的 cryptography/_rust.pyd 需要新版 vcruntime140_1.dll 中的导出符号，"
+            "conda 自带的版本太旧。请安装 Microsoft VC++ Redistributable for VS 2015-2022 (x64)："
+            "https://aka.ms/vs/17/release/vc_redist.x64.exe "
+            "（装完后重新加载插件即可，deps 自包含无需 pip install 任何东西）"
         )
     except Exception:
         return None, f"未找到活跃连接：{ref}（先 ssh_connect）"
