@@ -806,7 +806,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "theme",
                 "fire-emblem",
@@ -1014,7 +1014,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -2245,7 +2245,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2731,7 +2731,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "powershell",
                 "windows",
