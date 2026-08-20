@@ -1983,7 +1983,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 4,
+            "downloads": 6,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -2567,6 +2567,7 @@
             "components": {
                 "ui": true
             },
+            "downloads": 3,
             "keywords": [
                 "twin",
                 "dual",
