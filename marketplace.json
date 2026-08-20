@@ -2466,7 +2466,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "tool",
                 "locator",
@@ -2696,7 +2696,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "powershell",
                 "windows",
