@@ -34,6 +34,12 @@ def ensure_client(ref):
     try:
         from _store import get_connection
         from _auth import connect
+    except ImportError as e:
+        name = getattr(e, "name", "") or "paramiko/cryptography"
+        return None, (
+            f"自动连接失败：依赖 {name} 加载失败（{e}）。"
+            "请在 DriFox 所在 Python 环境执行：pip install --upgrade paramiko cryptography"
+        )
     except Exception:
         return None, f"未找到活跃连接：{ref}（先 ssh_connect）"
     conn = get_connection(ref)
