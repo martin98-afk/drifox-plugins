@@ -39,23 +39,48 @@ def _detect_powershell() -> str:
     return "powershell"  # 兜底（Windows 上几乎一定存在）
 
 
-# 强制 UTF-8 输出，避免控制台 OEM 编码（如中文 Windows 的 GBK）截断
+# 强制 UTF-8 输出，覆盖 PS 5.1 / PS 7 在 PIPE 场景的编码差异
+# 关键：$OutputEncoding 是 PowerShell 重定向输出时使用的编码,
+#       对 subprocess.PIPE 捕获的 stdout 是唯一可靠的开关(PS 5.1 仍部分依赖此开关)
+#       [Console]::OutputEncoding 影响 .NET Console API
 _PS_ENCODING_PROLOGUE = (
     "$ErrorActionPreference='Stop';"
     "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;"
-    "$OutputEncoding=[System.Text.Encoding]::UTF8"
+    "$OutputEncoding=[System.Text.Encoding]::UTF8;"
+    "[Console]::InputEncoding=[System.Text.Encoding]::UTF8"
 )
 
 
 def _decode_output(raw: bytes) -> str:
-    """智能解码 PowerShell 输出：优先 UTF-8，兜底 GBK（cp936）、latin-1。"""
+    """智能解码 PowerShell 输出:先 BOM 嗅探,再严格 UTF-8,再 GBK,最后 UTF-8 replace。
+
+    设计要点:
+    1. BOM 优先:UTF-8/UTF-16 BOM 携带明确编码信息,跳过猜测。
+    2. 严格 UTF-8:失败才认为不是 UTF-8,避免 GBK 字节被错误识别为合法 UTF-8。
+    3. GBK 兜底:中文 Windows 外部 exe(git/findstr/xcopy 等)输出仍可能是 GBK。
+    4. 不再用 latin-1 兜底:0x80+ 字节会产生"看似字符串但全是怪字符"的乱码,
+       改用 UTF-8 errors='replace',保证任何字节流都能安全降级。
+    """
     if not raw:
         return ""
-    for enc in ("utf-8", "gbk", "latin-1"):
-        try:
-            return raw.decode(enc)
-        except UnicodeDecodeError:
-            continue
+    # 1. BOM 嗅探(明确无歧义,跳过猜测)
+    if raw.startswith(b"\xef\xbb\xbf"):
+        return raw[3:].decode("utf-8", errors="replace")
+    if raw.startswith(b"\xff\xfe"):
+        return raw[2:].decode("utf-16-le", errors="replace")
+    if raw.startswith(b"\xfe\xff"):
+        return raw[2:].decode("utf-16-be", errors="replace")
+    # 2. 严格 UTF-8
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError:
+        pass
+    # 3. GBK 兜底
+    try:
+        return raw.decode("gbk")
+    except UnicodeDecodeError:
+        pass
+    # 4. 终极兜底:UTF-8 replace(不再用 latin-1,避免怪字符)
     return raw.decode("utf-8", errors="replace")
 
 
@@ -106,18 +131,25 @@ def _powershell_impl(tool_ctx, **kwargs):
     except Exception as e:  # noqa: BLE001
         return ToolResult(False, error=f"执行失败：{e}")
 
-    stdout = _decode_output(proc.stdout or b"")
-    stderr = _decode_output(proc.stderr or b"")
-    combined = "\n".join(filter(None, [stdout.strip(), stderr.strip()]))
+    # 关键修复:合并 stdout/stderr 字节流后统一解码。
+    # 原实现分别解码再拼接,会在 PS 5.1 下产生"半 GBK 半 UTF-8"编码错位,
+    # 触发条件是 stderr(GBK)与 stdout(可能 UTF-8)同时存在时——典型"部分乱码"场景。
+    stdout_raw = proc.stdout or b""
+    stderr_raw = proc.stderr or b""
+    merged_raw = stdout_raw
+    if stderr_raw:
+        if merged_raw and not merged_raw.endswith(b"\n"):
+            merged_raw += b"\n"
+        merged_raw += stderr_raw
+    decoded = _decode_output(merged_raw)
 
     if proc.returncode != 0:
-        detail = combined if combined else "(无输出)"
         return ToolResult(
             False,
-            error=f"PowerShell 退出码 {proc.returncode}:\n{detail}",
+            error=f"PowerShell 退出码 {proc.returncode}:\n{decoded or '(无输出)'}",
         )
     return ToolResult(
-        True, content=combined if combined else "(命令执行成功，无输出)"
+        True, content=decoded or "(命令执行成功，无输出)"
     )
 
 

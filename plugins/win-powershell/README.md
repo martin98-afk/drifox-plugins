@@ -16,7 +16,9 @@ DriFox 内置的 `bash` 工具在 Windows 下底层也调 PowerShell，但它执
 ## 编码方案（关键）
 
 - 用 `-EncodedCommand`（UTF-16LE base64）传脚本，彻底规避 Windows 命令行非 ASCII 字符被破坏的问题（直接 `-Command "中文"` 会乱码）。
-- 脚本开头强制 `[Console]::OutputEncoding = UTF-8`，使 stdout 可靠为 UTF-8；解码时再兜底 GBK / latin-1（兼容外部 exe 的 GBK 输出）。
+- 脚本开头三层 UTF-8：`$OutputEncoding`（影响 PS 重定向输出，对 PIPE 场景最关键）+ `[Console]::OutputEncoding`（.NET Console 层）+ `[Console]::InputEncoding`，覆盖 PS 5.1 / PS 7 的编码差异。
+- 解码端 BOM 嗅探（UTF-8/UTF-16 LE/BE）→ 严格 UTF-8 → GBK 兜底（兼容外部 exe）→ UTF-8 `errors='replace'` 终极降级（不用 latin-1，避免 0x80+ 字节产生怪字符）。
+- stdout/stderr **先合并字节流再统一解码**，避免 PS 5.1 下两者编码错位（stderr 走 OEM/GBK、stdout 走 UTF-8 时分别解码再拼接会出现"半乱码"）。
 - 解释器自动检测：优先 `pwsh`（PowerShell 7，UTF-8 更好），回退 `powershell`（Windows PowerShell 5.1，系统自带）。
 
 ## 工具：`powershell`
