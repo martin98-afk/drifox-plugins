@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787238144.118395,
+  "fetched_at": 1787241385.5867684,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -18,7 +18,7 @@
     "codegraph-tools": 7,
     "context-stats": 13,
     "context7": 3,
-    "desktop-automation": 9,
+    "desktop-automation": 10,
     "doc-coauthoring": 1,
     "dsh-router": 0,
     "dsh-super-injector": 0,
@@ -31,9 +31,9 @@
     "frontend-design": 1,
     "frontend-pro": 1,
     "game2048": 2,
-    "gateway-dingtalk": 0,
+    "gateway-dingtalk": 1,
     "gateway-discord": 0,
-    "gateway-feishu": 10,
+    "gateway-feishu": 11,
     "gateway-slack": 0,
     "gateway-telegram": 0,
     "gateway-wecom": 0,
