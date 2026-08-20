@@ -41,3 +41,10 @@ permission:
 # Example
 
 > 派生新智能体时复制本文件，修改 `description` / `mode` / `steps` / `permission` 即可。
+
+## 真实开发技巧（速查）
+
+- 生态两种风格并存：本例是 **DriFox 五段式**（中文触发词 + 细粒度权限）；Claude 原生风格用 `You are ...` 开头 + 英文能力描述 + `tools` 精确枚举。loader 都支持。
+- `permission` 默认 deny-all 再逐项放行（只读智能体禁 `write`/`edit`/`multi_edit`），防子智能体越权写文件。
+- `description` 里写 `触发词：xxx、yyy` 覆盖口语化表达；`steps` 约束推理长度（计划类 30 / 执行类 20）；`temperature` 计划 0.3、执行 0.5 分级。
+- 进阶实战（权限分级、置信度阈值、输出格式硬约束）见 `docs/community-cookbook.md` §2。

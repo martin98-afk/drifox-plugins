@@ -70,7 +70,7 @@ do_thing(...)
 > 这是 evolver 技能。（太短，AI 无法判断何时用）
 > Evolver 工具的完整手册，涵盖安装、配置、API、所有边界情况……（太长，包含非触发信息）
 
-完整示例见 [`plugins/evolver/skills/evolver/SKILL.md`](../plugins/evolver/skills/evolver/SKILL.md)。
+完整示例见 [`plugins/example-plugin/skills/example-plugin/SKILL.md`](../plugins/example-plugin/skills/example-plugin/SKILL.md)；生产级模式见 `docs/community-cookbook.md` §3。
 
 ## 多 skill 场景
 

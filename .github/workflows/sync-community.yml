@@ -1,0 +1,62 @@
+name: Sync Community Plugins
+
+# 定期（每周一 04:23 UTC）采集所有 fork 本仓库的社区插件「来源」，
+# 只更新 marketplace.json（不复制代码），生成 PR 由人工审核合并。
+# 约定见 docs/community-cookbook.md §10 与 tools/sync_community.py。
+on:
+  schedule:
+    - cron: "23 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-community
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    name: 采集 fork 社区插件来源并生成 PR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 安装依赖
+        run: pip install jsonschema
+
+      - name: 生成官方 marketplace 基础（仅 example-plugin）
+        run: python tools/generate_marketplace.py
+
+      - name: 采集社区插件来源并写入 marketplace.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python tools/sync_community.py
+
+      - name: 开 PR（人工审核合并）
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore(marketplace): sync community plugin sources [skip ci]"
+          title: "chore(marketplace): 同步社区插件来源"
+          body: |
+            🤖 由 sync-community 定时任务自动生成。
+
+            本 PR **只更新 marketplace.json**，把各 fork 中的社区插件「来源」记录进来（不复制代码）。
+            用户在 plugin-marketplace 看到来源后，去对应 fork 下载安装。
+
+            采集逻辑见 tools/sync_community.py；约定见 docs/community-cookbook.md §10。
+            请人工审核合并。
+          branch: sync-community
+          delete-branch: true
+          add-paths: |
+            marketplace.json

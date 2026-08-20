@@ -1,7 +1,0 @@
-{
-  "name": "web-artifacts-builder",
-  "description": "复杂交互式 HTML 页面构建 — React + Tailwind + shadcn/ui，含状态管理/路由。",
-  "author": {
-    "name": "Anthropic"
-  }
-}

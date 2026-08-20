@@ -73,3 +73,10 @@ hidden: false
 
 > 这是 `type: prompt` 风格的命令，整个 markdown 作为系统提示注入给 AI。
 > 详细规范见 `docs/commands.md`。
+
+## 真实开发技巧（速查）
+
+- `type` 真实只有 `prompt` 一种取值——整段 markdown 作为系统提示注入 LLM（`function`/`agent` 在源码中不存在）。
+- 命令正文可用的模板变量只有 `$ARGUMENTS` 与 `$PLUGIN_NAME`；`$PLUGIN_DIR` / `$PROJECT_ROOT` 在命令里**不会**被替换，需要项目路径请让 LLM 自行探测。
+- 复杂参数用 `parameters`（value/flag/positional）+ `mutex_groups` + `prompt_sections` 组织，正文用 `<!-- section:id -->`...`<!-- end -->` 包裹可选段。
+- 进阶实战模式（参数组织三式、互斥分组、枚举值）见 `docs/community-cookbook.md` §1。

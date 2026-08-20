@@ -12,6 +12,13 @@
 1. 插件 icon 自包含 — tools/icons/（深色）+ tools/icons_light/（浅色）
 2. render / preview / summarize 渲染三闭包 + render_mode
 3. make_summarize_from_preview 工具函数（preview → summarize 复用）
+
+真实插件常用技巧（进阶见 docs/community-cookbook.md §5）：
+- 自包含 impl 用标准库 + deps/（sys.path.insert(0, _deps) 注入）；平台能力走 tool_ctx["services"]
+- 兄弟模块不能相对导入，需 sys.path.insert(0, _TOOLS_DIR) 后 `from xxx import ...`
+- workdir 兜底：raw = tool_ctx.get("workdir"); workdir = Path(str(raw)).resolve() if raw else Path.cwd()
+- metadata={"permission_arg": "path"} 声明权限弹窗要展示的参数
+- danger 必填（safe|dangerous），未声明 registry 拒绝注册
 """
 from html import escape
 

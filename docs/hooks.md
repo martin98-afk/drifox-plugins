@@ -176,4 +176,4 @@ stdin 传 JSON context，支持 `${CLAUDE_PLUGIN_ROOT}` 变量替换与
 - **写日志到 memory/**：避免污染用户项目
 - **错误隔离**：单个钩子异常不能影响其它钩子或主流程
 
-完整示例见 [`plugins/evolver/hooks/evolver_hook.py`](../plugins/evolver/hooks/evolver_hook.py)。
+完整示例见 [`plugins/example-plugin/hooks/example-plugin_hook.py`](../plugins/example-plugin/hooks/example-plugin_hook.py)；生产级模式见 `docs/community-cookbook.md` §4。
