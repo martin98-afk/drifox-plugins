@@ -1,0 +1,31 @@
+{
+    "name": "twin-chat",
+    "description": "并发对话 — 浮动卡片内嵌第二对话窗口实例（复制当前项目/模型配置、独立会话），与主对话并行生成互不阻塞",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "0.1.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "homepage": "https://github.com/martin98-afk/DriFox",
+    "license": "MIT",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.4.15"
+    },
+    "keywords": [
+        "twin",
+        "dual",
+        "parallel",
+        "concurrent",
+        "chat",
+        "并发",
+        "双开",
+        "对话"
+    ],
+    "components": {
+        "ui": true
+    }
+}
