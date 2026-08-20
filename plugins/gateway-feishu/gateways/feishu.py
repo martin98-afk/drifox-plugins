@@ -12,10 +12,11 @@ from __future__ import annotations
 
 
 # ── 插件自包含依赖注入：优先加载本插件 deps/ 目录 ────────────────
-# 平台 SDK（lark-oapi 及传递依赖）已 vendor 到 plugins/system/deps/，
-# 主程序打包时已排除；顶层只注入路径，SDK 本体仍在函数内延迟导入
+# 平台 SDK（lark-oapi 及传递依赖）vendor 到插件根 deps/（即 gateways/ 的上一级）：
+# 本插件为社区插件，依赖自包含于 <plugin>/deps/；顶层只注入路径，SDK 本体仍在
+# 函数内延迟导入。注意：__file__ 在 gateways/ 内，需 .. 回退到插件根再进 deps。
 import os as _os, sys as _sys
-_deps = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), '.', 'deps'))
+_deps = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), '..', 'deps'))
 if _deps not in _sys.path:
     _sys.path.insert(0, _deps)
 import asyncio
