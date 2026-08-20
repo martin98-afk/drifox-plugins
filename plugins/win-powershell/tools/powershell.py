@@ -18,6 +18,7 @@
 自包含：纯标准库实现（subprocess/base64），不依赖主程序 services。
 """
 import base64
+import re
 import shutil
 import subprocess
 from html import escape
@@ -43,12 +44,28 @@ def _detect_powershell() -> str:
 # 关键：$OutputEncoding 是 PowerShell 重定向输出时使用的编码,
 #       对 subprocess.PIPE 捕获的 stdout 是唯一可靠的开关(PS 5.1 仍部分依赖此开关)
 #       [Console]::OutputEncoding 影响 .NET Console API
+# $ProgressPreference 抑制进度活动:非交互 PIPE 主机可能把 Progress 流序列化为
+# CLIXML 混入 stdout。注:CLIXML 主要由 Write-Host(Information 流)触发,而
+# InformationPreference 在非交互主机下对 Write-Host 无效,故真正的去噪在 Python 侧
+# _strip_clixml 兜底剥离(保留 Write-Host 文本,只剔 XML 元数据)。
 _PS_ENCODING_PROLOGUE = (
     "$ErrorActionPreference='Stop';"
     "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;"
     "$OutputEncoding=[System.Text.Encoding]::UTF8;"
-    "[Console]::InputEncoding=[System.Text.Encoding]::UTF8"
+    "[Console]::InputEncoding=[System.Text.Encoding]::UTF8;"
+    "$ProgressPreference='SilentlyContinue'"
 )
+
+# CLIXML 兜底：非交互主机序列化块的固定形态为 `#< CLIXML\n<Objs ...>...</Objs>`。
+# 即使 prologue 已抑制两流,仍可能因子进程/特殊 cmdlet 残留,统一在此剥离。
+_CLIXML_RE = re.compile(r"#< CLIXML[\s\S]*?</Objs>\s*", re.DOTALL)
+
+
+def _strip_clixml(text: str) -> str:
+    """剔除 PowerShell 非交互主机混入 stdout 的 CLIXML 元数据块(进度/信息流噪音)。"""
+    if "#< CLIXML" not in text:
+        return text
+    return _CLIXML_RE.sub("", text).strip()
 
 
 def _decode_output(raw: bytes) -> str:
@@ -141,7 +158,7 @@ def _powershell_impl(tool_ctx, **kwargs):
         if merged_raw and not merged_raw.endswith(b"\n"):
             merged_raw += b"\n"
         merged_raw += stderr_raw
-    decoded = _decode_output(merged_raw)
+    decoded = _strip_clixml(_decode_output(merged_raw))
 
     if proc.returncode != 0:
         return ToolResult(
