@@ -14,5 +14,30 @@
     "type": "user",
     "components": {
         "gateways": true
+    },
+    "config_schema": {
+        "title": "Telegram 机器人配置",
+        "fields": [
+            {
+                "key": "enabled",
+                "label": "启用 Telegram 网关",
+                "type": "bool",
+                "default": false
+            },
+            {
+                "key": "token",
+                "label": "Bot Token",
+                "type": "password",
+                "default": "",
+                "placeholder": "BotFather 获取的 Token"
+            },
+            {
+                "key": "require_mention",
+                "label": "群聊 @校验",
+                "type": "bool",
+                "default": true,
+                "description": "群聊中需要 @机器人 才回复"
+            }
+        ]
     }
 }

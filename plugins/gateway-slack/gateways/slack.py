@@ -259,44 +259,59 @@ class SlackAdapter(BasePlatformAdapter):
 
 
 def _build_config() -> "PlatformConfig":
-    """读主程序 Settings 构造 Slack 配置（存量用户配置零迁移）"""
+    """读 PluginConfigStore 构造 Slack 配置（E1 契约：插件自包含存储）"""
     from app.gateway.base import Platform, PlatformConfig
-    from app.utils.config import Settings
+    from app.plugins.managers.plugin_config_store import PluginConfigStore
 
-    cfg = Settings.get_instance()
+    store = PluginConfigStore()
     return PlatformConfig(
-        enabled=cfg.gateway_slack_enabled.value,
+        enabled=bool(store.get("gateway-slack", "enabled")),
         platform=Platform.SLACK,
         extra={
-            "bot_token": cfg.gateway_slack_bot_token.value,
-            "app_token": cfg.gateway_slack_app_token.value,
+            "bot_token": store.get("gateway-slack", "bot_token") or "",
+            "app_token": store.get("gateway-slack", "app_token") or "",
         },
     )
 
 
 def _write_config(config: "PlatformConfig") -> None:
-    from app.utils.config import Settings
+    from app.plugins.managers.plugin_config_store import PluginConfigStore
 
-    cfg = Settings.get_instance()
-    cfg.set(cfg.gateway_slack_enabled, config.enabled, save=True)
-    if config.extra:
-        if config.extra.get("bot_token") is not None:
-            cfg.set(cfg.gateway_slack_bot_token, config.extra["bot_token"], save=True)
-        if config.extra.get("app_token") is not None:
-            cfg.set(cfg.gateway_slack_app_token, config.extra["app_token"], save=True)
+    PluginConfigStore().set_values(
+        "gateway-slack",
+        {
+            "enabled": config.enabled,
+            "bot_token": (config.extra or {}).get("bot_token") or "",
+            "app_token": (config.extra or {}).get("app_token") or "",
+        },
+    )
 
 
 def _build_config_values(values: dict, old_config) -> "PlatformConfig":
-    """设置卡保存回调：表单值 → PlatformConfig（对齐旧 _on_save SLACK 分支）"""
+    """设置卡保存回调：表单值 → PluginConfigStore → PlatformConfig。"""
     from app.gateway.base import Platform, PlatformConfig
+    from app.plugins.managers.plugin_config_store import PluginConfigStore
 
+    store = PluginConfigStore()
+    plugin = "gateway-slack"
+    enabled = values.get("enabled", store.get(plugin, "enabled"))
+    bot_token = values.get("bot_token", "")
+    app_token = values.get("app_token", "")
+    store.set_values(
+        plugin,
+        {
+            "enabled": bool(enabled),
+            "bot_token": bot_token,
+            "app_token": app_token,
+        },
+    )
     extra = dict(old_config.extra) if old_config and old_config.extra else {}
-    if "bot_token" in values:
-        extra["bot_token"] = values.get("bot_token") or ""
-    if "app_token" in values:
-        extra["app_token"] = values.get("app_token") or ""
+    if bot_token:
+        extra["bot_token"] = bot_token
+    if app_token:
+        extra["app_token"] = app_token
     return PlatformConfig(
-        enabled=bool(values.get("enabled", False)),
+        enabled=bool(enabled),
         platform=Platform.SLACK,
         extra=extra,
     )

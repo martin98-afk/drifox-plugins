@@ -14,5 +14,30 @@
     "type": "user",
     "components": {
         "gateways": true
+    },
+    "config_schema": {
+        "title": "飞书机器人配置",
+        "fields": [
+            {
+                "key": "enabled",
+                "label": "启用飞书网关",
+                "type": "bool",
+                "default": false
+            },
+            {
+                "key": "app_id",
+                "label": "App ID",
+                "type": "text",
+                "default": "",
+                "placeholder": "飞书开放平台 App ID"
+            },
+            {
+                "key": "app_secret",
+                "label": "App Secret",
+                "type": "password",
+                "default": "",
+                "placeholder": "飞书开放平台 App Secret"
+            }
+        ]
     }
 }

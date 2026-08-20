@@ -14,5 +14,30 @@
     "type": "user",
     "components": {
         "gateways": true
+    },
+    "config_schema": {
+        "title": "钉钉机器人配置",
+        "fields": [
+            {
+                "key": "enabled",
+                "label": "启用钉钉网关",
+                "type": "bool",
+                "default": false
+            },
+            {
+                "key": "client_id",
+                "label": "AppKey",
+                "type": "text",
+                "default": "",
+                "placeholder": "钉钉应用 AppKey"
+            },
+            {
+                "key": "client_secret",
+                "label": "AppSecret",
+                "type": "password",
+                "default": "",
+                "placeholder": "钉钉应用 AppSecret"
+            }
+        ]
     }
 }

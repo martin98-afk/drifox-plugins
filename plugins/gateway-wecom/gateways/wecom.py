@@ -648,43 +648,65 @@ def check_wecom_requirements() -> bool:
 
 
 def _build_config() -> "PlatformConfig":
-    """读主程序 Settings 构造企业微信配置（存量用户配置零迁移）"""
+    """读 PluginConfigStore 构造企业微信配置（E1 契约：插件自包含存储）"""
     from app.gateway.base import Platform, PlatformConfig
-    from app.utils.config import Settings
+    from app.plugins.managers.plugin_config_store import PluginConfigStore
 
-    cfg = Settings.get_instance()
+    store = PluginConfigStore()
     return PlatformConfig(
-        enabled=cfg.gateway_wecom_enabled.value,
+        enabled=bool(store.get("gateway-wecom", "enabled")),
         platform=Platform.WECOM,
-        bot_id=cfg.gateway_wecom_bot_id.value,
-        secret=cfg.gateway_wecom_secret.value,
-        websocket_url=cfg.gateway_wecom_websocket_url.value,
+        bot_id=store.get("gateway-wecom", "bot_id") or "",
+        secret=store.get("gateway-wecom", "secret") or "",
+        websocket_url=(
+            store.get("gateway-wecom", "websocket_url")
+            or "wss://openws.work.weixin.qq.com"
+        ),
     )
 
 
 def _write_config(config: "PlatformConfig") -> None:
-    from app.utils.config import Settings
+    from app.plugins.managers.plugin_config_store import PluginConfigStore
 
-    cfg = Settings.get_instance()
-    cfg.set(cfg.gateway_wecom_enabled, config.enabled, save=True)
-    if config.bot_id is not None:
-        cfg.set(cfg.gateway_wecom_bot_id, config.bot_id, save=True)
-    if config.secret is not None:
-        cfg.set(cfg.gateway_wecom_secret, config.secret, save=True)
-    if config.websocket_url is not None:
-        cfg.set(cfg.gateway_wecom_websocket_url, config.websocket_url, save=True)
+    PluginConfigStore().set_values(
+        "gateway-wecom",
+        {
+            "enabled": config.enabled,
+            "bot_id": config.bot_id or "",
+            "secret": config.secret or "",
+            "websocket_url": (
+                config.websocket_url or "wss://openws.work.weixin.qq.com"
+            ),
+        },
+    )
 
 
 def _build_config_values(values: dict, old_config) -> "PlatformConfig":
-    """设置卡保存回调：表单值 → PlatformConfig（对齐旧 _on_save WECOM 分支）"""
+    """设置卡保存回调：表单值 → PluginConfigStore → PlatformConfig。"""
     from app.gateway.base import Platform, PlatformConfig
+    from app.plugins.managers.plugin_config_store import PluginConfigStore
 
+    store = PluginConfigStore()
+    plugin = "gateway-wecom"
+    enabled = values.get("enabled", store.get(plugin, "enabled"))
+    bot_id = values.get("bot_id", "")
+    secret = values.get("secret", "")
+    websocket_url = values.get("websocket_url", "")
+    store.set_values(
+        plugin,
+        {
+            "enabled": bool(enabled),
+            "bot_id": bot_id,
+            "secret": secret,
+            "websocket_url": websocket_url,
+        },
+    )
     return PlatformConfig(
-        enabled=bool(values.get("enabled", False)),
+        enabled=bool(enabled),
         platform=Platform.WECOM,
-        bot_id=values.get("bot_id") or "",
-        secret=values.get("secret") or "",
-        websocket_url=values.get("websocket_url") or "wss://openws.work.weixin.qq.com",
+        bot_id=bot_id,
+        secret=secret,
+        websocket_url=websocket_url or "wss://openws.work.weixin.qq.com",
     )
 
 

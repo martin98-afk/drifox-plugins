@@ -672,39 +672,55 @@ def check_dingtalk_requirements() -> bool:
 
 
 def _build_config() -> "PlatformConfig":
-    """读主程序 Settings 构造钉钉配置（存量用户配置零迁移）"""
+    """读 PluginConfigStore 构造钉钉配置（E1 契约：插件自包含存储）"""
     from app.gateway.base import Platform, PlatformConfig
-    from app.utils.config import Settings
+    from app.plugins.managers.plugin_config_store import PluginConfigStore
 
-    cfg = Settings.get_instance()
+    store = PluginConfigStore()
     return PlatformConfig(
-        enabled=cfg.gateway_dingtalk_enabled.value,
+        enabled=bool(store.get("gateway-dingtalk", "enabled")),
         platform=Platform.DINGTALK,
-        client_id=cfg.gateway_dingtalk_client_id.value,
-        client_secret=cfg.gateway_dingtalk_client_secret.value,
+        client_id=store.get("gateway-dingtalk", "client_id") or "",
+        client_secret=store.get("gateway-dingtalk", "client_secret") or "",
     )
 
 
 def _write_config(config: "PlatformConfig") -> None:
-    from app.utils.config import Settings
+    from app.plugins.managers.plugin_config_store import PluginConfigStore
 
-    cfg = Settings.get_instance()
-    cfg.set(cfg.gateway_dingtalk_enabled, config.enabled, save=True)
-    if config.client_id is not None:
-        cfg.set(cfg.gateway_dingtalk_client_id, config.client_id, save=True)
-    if config.client_secret is not None:
-        cfg.set(cfg.gateway_dingtalk_client_secret, config.client_secret, save=True)
+    PluginConfigStore().set_values(
+        "gateway-dingtalk",
+        {
+            "enabled": config.enabled,
+            "client_id": config.client_id or "",
+            "client_secret": config.client_secret or "",
+        },
+    )
 
 
 def _build_config_values(values: dict, old_config) -> "PlatformConfig":
-    """设置卡保存回调：表单值 → PlatformConfig（对齐旧 _on_save DINGTALK 分支）"""
+    """设置卡保存回调：表单值 → PluginConfigStore → PlatformConfig。"""
     from app.gateway.base import Platform, PlatformConfig
+    from app.plugins.managers.plugin_config_store import PluginConfigStore
 
+    store = PluginConfigStore()
+    plugin = "gateway-dingtalk"
+    enabled = values.get("enabled", store.get(plugin, "enabled"))
+    client_id = values.get("client_id", "")
+    client_secret = values.get("client_secret", "")
+    store.set_values(
+        plugin,
+        {
+            "enabled": bool(enabled),
+            "client_id": client_id,
+            "client_secret": client_secret,
+        },
+    )
     return PlatformConfig(
-        enabled=bool(values.get("enabled", False)),
+        enabled=bool(enabled),
         platform=Platform.DINGTALK,
-        client_id=values.get("client_id") or "",
-        client_secret=values.get("client_secret") or "",
+        client_id=client_id,
+        client_secret=client_secret,
     )
 
 
