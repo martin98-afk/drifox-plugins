@@ -286,6 +286,39 @@
             }
         },
         {
+            "name": "caveman",
+            "description": "Ultra-compressed communication mode for AI agents. Cuts output tokens ~65% (measured) while keeping full technical accuracy. 含 caveman-compress 记忆文件压缩工具与 cavecrew 子智能体预设。",
+            "version": "1.0.0",
+            "author": "Julius Brussee",
+            "license": "MIT",
+            "categories": [
+                "agent"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/caveman",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true,
+                "agents": true
+            },
+            "keywords": [
+                "productivity",
+                "communication",
+                "brevity",
+                "writing",
+                "tokens",
+                "compression"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/JuliusBrussee/caveman",
+            "icon": "icon.png"
+        },
+        {
             "name": "claude-api",
             "description": "Claude API 最佳实践 — SDK 用法、prompt caching、streaming、tool use、batch API、prompt 工程、token 优化。",
             "version": "1.0.0",
