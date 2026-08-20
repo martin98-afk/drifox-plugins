@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787191963.5350976,
+  "fetched_at": 1787196153.847526,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -30,6 +30,12 @@
     "frontend-design": 1,
     "frontend-pro": 1,
     "game2048": 2,
+    "gateway-dingtalk": 0,
+    "gateway-discord": 0,
+    "gateway-feishu": 0,
+    "gateway-slack": 0,
+    "gateway-telegram": 0,
+    "gateway-wecom": 0,
     "git-dashboard": 8,
     "git-panel": 24,
     "git-status": 2,
@@ -73,14 +79,14 @@
     "test-scaffold": 0,
     "tetris": 2,
     "theme-factory": 0,
-    "tool-locator": 1,
+    "tool-locator": 2,
     "ui-motion-skills": 2,
     "voice-clone": 1,
     "voice-reply": 6,
     "web-artifacts-builder": 1,
     "web-design-skills": 1,
     "webapp-testing": 1,
-    "win-powershell": 4,
+    "win-powershell": 5,
     "workbuddy": 5
   }
 }
