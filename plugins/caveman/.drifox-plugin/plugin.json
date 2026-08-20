@@ -1,0 +1,29 @@
+{
+    "name": "caveman",
+    "description": "Ultra-compressed communication mode for AI agents. Cuts output tokens ~65% (measured) while keeping full technical accuracy. 含 caveman-compress 记忆文件压缩工具与 cavecrew 子智能体预设。",
+    "version": "1.0.0",
+    "author": {
+        "name": "Julius Brussee",
+        "url": "https://github.com/JuliusBrussee"
+    },
+    "homepage": "https://github.com/JuliusBrussee/caveman",
+    "repository": "https://github.com/JuliusBrussee/caveman",
+    "license": "MIT",
+    "type": "user",
+    "keywords": [
+        "productivity",
+        "communication",
+        "brevity",
+        "writing",
+        "tokens",
+        "compression"
+    ],
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "components": {
+        "skills": true,
+        "agents": true
+    },
+    "icon": "icon.png"
+}
