@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787210590.3502736,
+  "fetched_at": 1787212987.543595,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -15,10 +15,10 @@
     "claude-api": 1,
     "code-reviewer": 1,
     "code-simplifier": 1,
-    "codegraph-tools": 6,
+    "codegraph-tools": 7,
     "context-stats": 13,
     "context7": 3,
-    "desktop-automation": 7,
+    "desktop-automation": 8,
     "doc-coauthoring": 1,
     "dsh-router": 0,
     "dsh-super-injector": 0,
