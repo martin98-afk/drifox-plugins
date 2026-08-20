@@ -2245,7 +2245,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
