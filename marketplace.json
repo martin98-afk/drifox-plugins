@@ -2245,7 +2245,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2501,7 +2501,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "tool",
                 "locator",

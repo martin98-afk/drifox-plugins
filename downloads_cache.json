@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787221552.8855524,
+  "fetched_at": 1787223330.249723,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -72,7 +72,7 @@
     "skill-creator": 1,
     "slack-gif-creator": 1,
     "snake": 2,
-    "ssh-toolkit": 5,
+    "ssh-toolkit": 6,
     "superclaude": 2,
     "superpowers": 2,
     "tailwind-pro": 0,
@@ -80,7 +80,7 @@
     "test-scaffold": 0,
     "tetris": 2,
     "theme-factory": 0,
-    "tool-locator": 3,
+    "tool-locator": 4,
     "ui-motion-skills": 2,
     "voice-clone": 1,
     "voice-reply": 6,
