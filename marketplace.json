@@ -980,7 +980,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
