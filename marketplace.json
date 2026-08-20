@@ -1967,7 +1967,7 @@
         },
         {
             "name": "prompt-enhancer",
-            "description": "输入框一键 LLM 优化提示词 — 增强指令可在系统配置多行编辑，防任务积压、进度可感知，复用主程序模型配置。",
+            "description": "输入框按钮：一键用 LLM 优化当前输入框的提示词，增强指令可在系统配置中多行编辑。复用主程序模型配置，闭包实现（不修改主程序）。",
             "version": "0.2.0",
             "author": "DriFox Contributors",
             "license": "MIT",
@@ -1983,7 +1983,6 @@
             "components": {
                 "ui": true
             },
-            "downloads": 0,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -1992,10 +1991,6 @@
                 "提示词",
                 "优化"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
-            "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
