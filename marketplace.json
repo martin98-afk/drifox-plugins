@@ -304,7 +304,7 @@
                 "skills": true,
                 "agents": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "productivity",
                 "communication",
@@ -338,7 +338,7 @@
                 "commands": true,
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "sdk",
                 "prompt-engineering",
@@ -1014,7 +1014,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 9,
+            "downloads": 10,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -2501,7 +2501,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "tool",
                 "locator",
