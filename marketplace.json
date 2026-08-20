@@ -1015,7 +1015,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 11,
+            "downloads": 12,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -1983,7 +1983,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 1,
+            "downloads": 4,
             "keywords": [
                 "prompt",
                 "enhance",

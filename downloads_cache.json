@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787243136.5440652,
+  "fetched_at": 1787245184.8097105,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -33,7 +33,7 @@
     "game2048": 2,
     "gateway-dingtalk": 1,
     "gateway-discord": 0,
-    "gateway-feishu": 11,
+    "gateway-feishu": 12,
     "gateway-slack": 0,
     "gateway-telegram": 0,
     "gateway-wecom": 0,
@@ -64,7 +64,7 @@
     "playground": 2,
     "ponytail": 9,
     "project-dashboard": 17,
-    "prompt-enhancer": 1,
+    "prompt-enhancer": 4,
     "python-pro": 1,
     "rdr2": 4,
     "react-pro": 1,
