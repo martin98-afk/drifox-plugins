@@ -21,20 +21,20 @@ def _connect_impl(tool_ctx, **kwargs):
         # 允许运行时直接传连接参数
         conn = {k: kwargs.get(k) for k in ("name", "host", "port", "user", "auth_type", "key_path", "password", "key_passphrase", "timeout")}
         if not conn.get("host") or not conn.get("user"):
-            return ToolResult(False, content=f"未找到连接 {name}，且未提供 host/user")
+            return ToolResult(False, error=f"未找到连接 {name}，且未提供 host/user")
     try:
         client = auth.connect(conn)
     except Exception as e:
-        return ToolResult(False, content=f"连接失败：{e}")
+        return ToolResult(False, error=f"连接失败：{e}")
     handle = pool.put_connection(name, client)
     return ToolResult(True, content=f"已连接 {name or conn.get('host')}，handle={handle}")
 
 
 def _exec_impl(tool_ctx, **kwargs):
     ref = kwargs.get("handle") or kwargs.get("name")
-    client = pool.get_client(ref) if ref else None
+    client, err = pool.ensure_client(ref) if ref else (None, None)
     if client is None:
-        return ToolResult(False, content=f"未找到活跃连接：{ref}（先 ssh_connect）")
+        return ToolResult(False, error=err or f"未找到活跃连接：{ref}（先 ssh_connect）")
     command = kwargs.get("command", "")
     timeout = int(kwargs.get("timeout", 30))
     try:
@@ -43,7 +43,7 @@ def _exec_impl(tool_ctx, **kwargs):
         err = stderr.read().decode("utf-8", "replace")
         code = stdout.channel.recv_exit_status()
     except Exception as e:
-        return ToolResult(False, content=f"执行失败：{e}")
+        return ToolResult(False, error=f"执行失败：{e}")
     body = f"$ {command}\n{out}{err}\nexit={code}"
     return ToolResult(True, content=body)
 

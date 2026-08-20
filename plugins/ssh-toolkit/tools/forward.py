@@ -65,9 +65,9 @@ def _forward_impl(tool_ctx, **kwargs):
     bind_port = int(kwargs.get("bind_port", 0))
     remote_addr = kwargs.get("remote_addr", "127.0.0.1")
     remote_port = int(kwargs.get("remote_port", 0))
-    client = pool.get_client(ref) if ref else None
+    client, err = pool.ensure_client(ref) if ref else (None, None)
     if client is None:
-        return ToolResult(False, content=f"未找到活跃连接：{ref}")
+        return ToolResult(False, error=err or f"未找到活跃连接：{ref}")
     fid = f"fw:{ref}:{bind_port}"
     stop = threading.Event()
     t = threading.Thread(target=_forward_loop, args=(fid, client, bind_addr, bind_port, remote_addr, remote_port, stop), daemon=True)
