@@ -1,11 +1,19 @@
 # ssh-toolkit/tools/forward.py
 # -*- coding: utf-8 -*-
 """SSH 端口转发（local -L），后台线程运行。"""
+import sys
 import socket
 import threading
-from app.tools.result import ToolResult
+from pathlib import Path
 
-import _pool as pool
+# PluginToolLoader 用 importlib 加载本模块，注入 tools/ 目录到 sys.path 以便绝对导入
+_TOOLS_DIR = str(Path(__file__).resolve().parent)
+if _TOOLS_DIR not in sys.path:
+    sys.path.insert(0, _TOOLS_DIR)
+
+from app.tools.result import ToolResult  # noqa: E402
+
+import _pool as pool  # noqa: E402
 
 FORWARDS = {}  # forward_id -> {"thread", "stop"}
 
