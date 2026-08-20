@@ -2486,7 +2486,7 @@
         {
             "name": "tool-locator",
             "description": "开发期工具：查找可热重载工具插件的实现文件路径（tools/*.py），方便直接修改并热重载生效；工具不足时可加载 plugin-creator 技能自行开发新工具。",
-            "version": "0.1.1",
+            "version": "0.2.0",
             "author": "martin",
             "license": "GPL-3.0-or-later",
             "categories": [
