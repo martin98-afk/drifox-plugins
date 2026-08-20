@@ -377,15 +377,39 @@ class FeishuAdapter(BasePlatformAdapter):
             except Exception as e:
                 logger.debug("[Feishu] Disconnect note: %s", e)
 
-        # 3+4. cancel 全部任务并停止 loop，等待 ws 线程退出
+        # 3+4. 两阶段优雅关闭 ws loop，等待 ws 线程退出。
+        # lark SDK 的 ws 线程阻塞在 run_until_complete(<驱动协程>)（常驻为
+        # _select；重连窗口为 _reconnect），驱动协程被 cancel 时其完成回调
+        # 会立即 stop loop。若一次回调里 cancel 全部任务再 stop：业务任务
+        # （ping/receive）停在 cancelling 态到不了终态 → loop.close() 后 GC
+        # 报 "Task was destroyed but it is pending"。
+        # 两阶段：①cancel 业务任务（排除驱动），0.15s 内全部到达终态；
+        # ②再 cancel 驱动任务 → run_until_complete 以 CancelledError 返回 →
+        # _run_feishu_client except CancelledError 静默退出 → finally close，
+        # 此时无 pending 任务，零警告。
         if ws_loop is not None and ws_loop.is_running():
-            def _shutdown_loop(loop: asyncio.AbstractEventLoop) -> None:
+
+            def _cancel_and_stop(loop: asyncio.AbstractEventLoop) -> None:
+                # run_until_complete 正在驱动的协程名（lark ws client.py）
+                _DRIVERS = {"_select", "_reconnect"}
+                driver = None
                 for task in asyncio.all_tasks(loop):
+                    coro_name = getattr(task.get_coro(), "__name__", "")
+                    if coro_name in _DRIVERS and not task.done():
+                        driver = task
+                        continue
                     task.cancel()
-                loop.stop()
+
+                def _stop_driver() -> None:
+                    if driver is not None and not driver.done():
+                        driver.cancel()
+                    else:
+                        loop.stop()
+
+                loop.call_later(0.15, _stop_driver)
 
             try:
-                ws_loop.call_soon_threadsafe(_shutdown_loop, ws_loop)
+                ws_loop.call_soon_threadsafe(_cancel_and_stop, ws_loop)
             except Exception as e:
                 logger.debug("[Feishu] Stop ws loop note: %s", e)
 
