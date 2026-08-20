@@ -83,6 +83,9 @@ class FeishuAdapter(BasePlatformAdapter):
         self._feishu_thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
 
+        # ws 线程内运行 lark SDK 的事件循环引用（disconnect 需经它调度断连/停止）
+        self._ws_loop: Optional[asyncio.AbstractEventLoop] = None
+
         # 独立的事件循环，用于执行消息处理（不与 WS client 的循环冲突）
         self._handler_loop: Optional[asyncio.AbstractEventLoop] = None
         self._handler_loop_thread: Optional[threading.Thread] = None
@@ -100,6 +103,12 @@ class FeishuAdapter(BasePlatformAdapter):
 
     async def connect(self) -> bool:
         """连接到飞书 WebSocket"""
+        # 重入防御：上一轮 ws 线程仍存活（stop 未完成/异常路径残留）时先彻底断开，
+        # 否则会叠出第二个 ws 线程 + 第二条长连接（历史 bug：连接泄漏越启越多）
+        if self._feishu_thread is not None and self._feishu_thread.is_alive():
+            logger.warning("[Feishu] Previous WS thread still alive, disconnecting before reconnect")
+            await self.disconnect()
+
         if not check_feishu_requirements():
             logger.error("[Feishu] Dependencies not available. Run: pip install lark-oapi")
             self._last_error = "依赖不可用"
@@ -202,6 +211,7 @@ class FeishuAdapter(BasePlatformAdapter):
 
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
+            self._ws_loop = loop
 
             # 关键！设置 ws 模块的全局 loop，否则 WS client 内部会使用
             # 模块导入时的原始事件循环（可能是主线程的），导致事件循环冲突
@@ -210,6 +220,9 @@ class FeishuAdapter(BasePlatformAdapter):
             # 运行客户端
             try:
                 self._ws_client.start()
+            except asyncio.CancelledError:
+                # disconnect() 停止 loop 时会 cancel 所有任务，属正常退出路径
+                logger.debug("[Feishu] WS client cancelled (expected on stop)")
             except Exception as e:
                 msg = str(e).lower()
                 if "event loop" not in msg and "running" not in msg:
@@ -217,6 +230,7 @@ class FeishuAdapter(BasePlatformAdapter):
                 else:
                     logger.debug("[Feishu] Client stopped (expected): %s", e)
             finally:
+                self._ws_loop = None
                 loop.close()
 
         except Exception as e:
@@ -324,35 +338,72 @@ class FeishuAdapter(BasePlatformAdapter):
             traceback.print_exc()
 
     async def disconnect(self) -> None:
-        """断开连接"""
+        """断开连接（幂等）：真正关闭 ws 连接、停止线程与事件循环
+
+        lark_oapi ws Client 没有任何公开停止机制（无 stop()/close()/_running，
+        start() 永久阻塞在 run_until_complete(_select())，ping/receive 均为
+        while True，auto_reconnect 默认无限重连）。历史 bug：旧实现靠
+        hasattr 探测 stop/close/_running 三个分支全部落空 → 连接/线程/loop
+        永生，每次 stop/热重载/开关泄漏一条长连接。
+
+        正确关闭序列：
+        1. 禁用 SDK 自动重连（否则断连后 SDK 会无限重连回来）
+        2. 经 ws 线程自己的 loop 调度 client._disconnect() 真正关闭连接
+        3. cancel loop 上全部任务并停 loop（run_until_complete 返回，线程退出）
+        4. join ws 线程（带超时，防卡死）
+        5. 停 handler loop 并 join 线程
+        """
         self._running = False
         self._connected = False
         self._stop_event.set()
 
-        if self._ws_client:
+        # 先取走引用再清理（防并发重入 connect 双写状态）
+        client = self._ws_client
+        ws_loop = self._ws_loop
+        ws_thread = self._feishu_thread
+        self._ws_client = None
+        self._ws_loop = None
+        self._feishu_thread = None
+
+        # 1+2. 禁自动重连 + 在 ws loop 上真正关闭连接
+        if client is not None and ws_loop is not None and ws_loop.is_running():
             try:
-                # 飞书 SDK 的 Client 可能使用不同方法停止
-                # 方法1: stop() 方法
-                if hasattr(self._ws_client, "stop"):
-                    self._ws_client.stop()
-                # 方法2: close() 方法
-                elif hasattr(self._ws_client, "close"):
-                    self._ws_client.close()
-                # 方法3: 直接设置运行标志
-                elif hasattr(self._ws_client, "_running"):
-                    self._ws_client._running = False
-            except AttributeError:
-                # Client 对象可能没有这些属性，忽略
+                client._auto_reconnect = False
+            except Exception:
                 pass
+            try:
+                fut = asyncio.run_coroutine_threadsafe(client._disconnect(), ws_loop)
+                fut.result(timeout=3)
             except Exception as e:
                 logger.debug("[Feishu] Disconnect note: %s", e)
 
-        # 停止 handler loop
-        if self._handler_loop is not None and self._handler_loop.is_running():
+        # 3+4. cancel 全部任务并停止 loop，等待 ws 线程退出
+        if ws_loop is not None and ws_loop.is_running():
+            def _shutdown_loop(loop: asyncio.AbstractEventLoop) -> None:
+                for task in asyncio.all_tasks(loop):
+                    task.cancel()
+                loop.stop()
+
             try:
-                self._handler_loop.call_soon_threadsafe(self._handler_loop.stop)
+                ws_loop.call_soon_threadsafe(_shutdown_loop, ws_loop)
+            except Exception as e:
+                logger.debug("[Feishu] Stop ws loop note: %s", e)
+
+        if ws_thread is not None and ws_thread.is_alive():
+            ws_thread.join(timeout=3)
+            if ws_thread.is_alive():
+                logger.warning("[Feishu] WS client thread did not exit in 3s (may leak)")
+
+        # 5. 停止 handler loop（join 后再清引用，消除"Handler loop not running"竞态窗口）
+        handler_loop = self._handler_loop
+        handler_thread = self._handler_loop_thread
+        if handler_loop is not None and handler_loop.is_running():
+            try:
+                handler_loop.call_soon_threadsafe(handler_loop.stop)
             except Exception:
                 pass
+        if handler_thread is not None and handler_thread.is_alive():
+            handler_thread.join(timeout=2)
         self._handler_loop = None
         self._handler_loop_thread = None
 
