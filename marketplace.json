@@ -545,7 +545,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 9,
+            "downloads": 10,
             "keywords": [
                 "desktop",
                 "automation",
@@ -970,6 +970,7 @@
             "components": {
                 "gateways": true
             },
+            "downloads": 1,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -1014,7 +1015,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 10,
+            "downloads": 11,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
