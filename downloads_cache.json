@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787207293.9739463,
+  "fetched_at": 1787210590.3502736,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -26,14 +26,14 @@
     "evolver": 1,
     "example-plugin": 1,
     "excalidraw-diagram": 1,
-    "fe-fw": 4,
+    "fe-fw": 5,
     "feature-dev": 1,
     "frontend-design": 1,
     "frontend-pro": 1,
     "game2048": 2,
     "gateway-dingtalk": 0,
     "gateway-discord": 0,
-    "gateway-feishu": 4,
+    "gateway-feishu": 5,
     "gateway-slack": 0,
     "gateway-telegram": 0,
     "gateway-wecom": 0,
@@ -72,7 +72,7 @@
     "skill-creator": 1,
     "slack-gif-creator": 1,
     "snake": 2,
-    "ssh-toolkit": 2,
+    "ssh-toolkit": 3,
     "superclaude": 2,
     "superpowers": 2,
     "tailwind-pro": 0,
@@ -87,7 +87,7 @@
     "web-artifacts-builder": 1,
     "web-design-skills": 1,
     "webapp-testing": 1,
-    "win-powershell": 5,
+    "win-powershell": 6,
     "workbuddy": 5
   }
 }
