@@ -1,6 +1,6 @@
 ﻿# Python
 __pycache__/
-*.py[cod]
+*.py[co]
 *$py.class
 *.so
 .Python
@@ -49,7 +49,6 @@ memory/
 # Python 生态
 *.pyc
 *.pyo
-*.pyd
 *.egg
 build/
 dist/
