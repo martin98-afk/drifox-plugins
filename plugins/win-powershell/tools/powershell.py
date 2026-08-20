@@ -21,6 +21,7 @@ import base64
 import re
 import shutil
 import subprocess
+import sys
 from html import escape
 
 from app.tools.registry import make_summarize_from_preview
@@ -142,6 +143,18 @@ def _powershell_impl(tool_ctx, **kwargs):
         encoded,
     ]
 
+    # 静默执行:Windows 上 powershell.exe 是控制台程序,父进程无控制台时,
+    # 系统会为其分配一个可见的黑框窗口。用 STARTUPINFO(wShowWindow=SW_HIDE)
+    # 隐藏窗口,再用 CREATE_NO_WINDOW 创建无窗口子进程彻底消除黑框。
+    # 二者都不影响 stdout/stderr 的 PIPE 捕获、退出码与超时逻辑。
+    startupinfo = None
+    creationflags = 0
+    if sys.platform == "win32":
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = subprocess.SW_HIDE
+        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
     try:
         proc = subprocess.run(
             cmd,
@@ -150,6 +163,8 @@ def _powershell_impl(tool_ctx, **kwargs):
             stderr=subprocess.PIPE,
             timeout=timeout,
             check=False,
+            startupinfo=startupinfo,
+            creationflags=creationflags,
         )
     except subprocess.TimeoutExpired:
         return ToolResult(False, error=f"PowerShell 执行超时（>{timeout}s 已终止）")
