@@ -48,8 +48,18 @@ def _detect_powershell() -> str:
 # CLIXML 混入 stdout。注:CLIXML 主要由 Write-Host(Information 流)触发,而
 # InformationPreference 在非交互主机下对 Write-Host 无效,故真正的去噪在 Python 侧
 # _strip_clixml 兜底剥离(保留 Write-Host 文本,只剔 XML 元数据)。
+#
+# 错误处理策略(避免 native exe stderr 误判):
+# - PS 7+ 调用 native exe 时,stderr 会被自动包装为 NativeCommandError 写入 error
+#   流。原 Stop 偏好会把这种"仅仅是 stderr 输出"提升为 terminating error,导致
+#   命令实际成功(exit 0)但脚本被终止、pwsh 进程退出码非零,被工具误判为失败。
+# - 改用 Continue:cmdlet/native 错误仍写入 error 流(可见),但不终止脚本。
+# - 加 $PSNativeCommandUseErrorActionPreference=$false(PS 7.4+):native 命令错误
+#   记录不再触发 ErrorActionPreference,更精确地隔离"stderr 日志"与"真错误"。
+#   PS 5.1 不支持此开关(静默忽略),不影响 5.1 行为。
 _PS_ENCODING_PROLOGUE = (
-    "$ErrorActionPreference='Stop';"
+    "$ErrorActionPreference='Continue';"
+    "$PSNativeCommandUseErrorActionPreference=$false;"
     "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;"
     "$OutputEncoding=[System.Text.Encoding]::UTF8;"
     "[Console]::InputEncoding=[System.Text.Encoding]::UTF8;"
