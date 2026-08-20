@@ -70,3 +70,11 @@ $RECYCLE.BIN/
 # ssh-toolkit vendored deps: keep Windows compiled extensions (.pyd) tracked
 !plugins/ssh-toolkit/deps/*.pyd
 !plugins/ssh-toolkit/deps/**/*.pyd
+
+# 网关插件 vendor 的 certifi CA 包：被上方 `*.pem` 误伤，必须随插件分发（公共证书，非密钥）。
+# 否则分发后 deps/certifi/ 缺 cacert.pem → certifi.where() 返回不存在路径 →
+# ssl.create_default_context(cafile=...) 抛 FileNotFoundError，且因 sys.path.insert(0, deps)
+# 全局抢占主程序 certifi，导致所有 OpenAI/HTTPS 调用崩溃。
+!plugins/gateway-dingtalk/deps/certifi/cacert.pem
+!plugins/gateway-feishu/deps/certifi/cacert.pem
+!plugins/gateway-telegram/deps/certifi/cacert.pem
