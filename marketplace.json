@@ -921,6 +921,138 @@
             }
         },
         {
+            "name": "gateway-dingtalk",
+            "description": "钉钉 (DingTalk) Stream 模式适配器（社区插件，万物即插件 Phase E）：实时消息收发，支持群/单聊/媒体；基于 dingtalk-stream SDK。",
+            "version": "1.0.0",
+            "author": "DriFoxx Team",
+            "license": "MIT",
+            "categories": [],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/gateway-dingtalk",
+                "ref": "main"
+            },
+            "components": {
+                "gateways": true
+            },
+            "homepage": "https://github.com/martin98-afk/drifox-plugins2",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "gateway-discord",
+            "description": "Discord 机器人平台适配器（社区插件，万物即插件 Phase E）：频道/私聊/线程/Slash Command/媒体，基于 discord.py。",
+            "version": "1.0.0",
+            "author": "DriFoxx Team",
+            "license": "MIT",
+            "categories": [],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/gateway-discord",
+                "ref": "main"
+            },
+            "components": {
+                "gateways": true
+            },
+            "homepage": "https://github.com/martin98-afk/drifox-plugins2",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "gateway-feishu",
+            "description": "飞书 (Feishu/Lark) WebSocket 模式适配器（社区插件，万物即插件 Phase E）：实时消息收发，基于 lark-oapi SDK。",
+            "version": "1.0.0",
+            "author": "DriFoxx Team",
+            "license": "MIT",
+            "categories": [],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/gateway-feishu",
+                "ref": "main"
+            },
+            "components": {
+                "gateways": true
+            },
+            "homepage": "https://github.com/martin98-afk/drifox-plugins2",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "gateway-slack",
+            "description": "Slack 平台适配器（社区插件，万物即插件 Phase E）：使用 Slack Web API 收发消息，支持 Block Kit 格式、长消息分片；基于 slack-sdk。",
+            "version": "1.0.0",
+            "author": "DriFoxx Team",
+            "license": "MIT",
+            "categories": [],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/gateway-slack",
+                "ref": "main"
+            },
+            "components": {
+                "gateways": true
+            },
+            "homepage": "https://github.com/martin98-afk/drifox-plugins2",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "gateway-telegram",
+            "description": "Telegram 机器人平台适配器（社区插件，万物即插件 Phase E）：私聊/群组/论坛主题/媒体/命令，基于 python-telegram-bot 长轮询。",
+            "version": "1.0.0",
+            "author": "DriFoxx Team",
+            "license": "MIT",
+            "categories": [],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/gateway-telegram",
+                "ref": "main"
+            },
+            "components": {
+                "gateways": true
+            },
+            "homepage": "https://github.com/martin98-afk/drifox-plugins2",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "gateway-wecom",
+            "description": "企业微信 (WeCom) AI Bot 适配器（社区插件，万物即插件 Phase E）：通过 WebSocket 长连接与 AI Bot Gateway 通信；不依赖第三方 SDK，复用宿主 aiohttp/httpx。",
+            "version": "1.0.0",
+            "author": "DriFoxx Team",
+            "license": "MIT",
+            "categories": [],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/gateway-wecom",
+                "ref": "main"
+            },
+            "components": {
+                "gateways": true
+            },
+            "homepage": "https://github.com/martin98-afk/drifox-plugins2",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "git-dashboard",
             "description": "Git 仪表盘 — 提交日历热力图、最近提交、分支图可视化",
             "version": "0.1.2",
