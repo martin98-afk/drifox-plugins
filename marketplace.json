@@ -2550,6 +2550,43 @@
             }
         },
         {
+            "name": "twin-chat",
+            "description": "并发对话 — 浮动卡片内嵌第二对话窗口实例（复制当前项目/模型配置、独立会话），与主对话并行生成互不阻塞",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/twin-chat",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true
+            },
+            "keywords": [
+                "twin",
+                "dual",
+                "parallel",
+                "concurrent",
+                "chat",
+                "并发",
+                "双开",
+                "对话"
+            ],
+            "drifox": {
+                "min_version": "0.4.15"
+            },
+            "homepage": "https://github.com/martin98-afk/DriFox",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "ui-motion-skills",
             "description": "UI 动效设计技能集——源自 emilkowalski/skills（Emil Kowalski，前 Vercel/Linear），覆盖动画从零构建、严格评审、全库审计、动画词汇、Apple 设计原则、UI 库选型、原型对比与 Sonner 指南，让 AI 的动效品味达到一线水准。",
             "version": "1.0.0",
