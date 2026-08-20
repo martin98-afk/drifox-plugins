@@ -409,7 +409,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -511,7 +511,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "desktop",
                 "automation",
@@ -2078,7 +2078,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2334,6 +2334,7 @@
             "components": {
                 "tools": true
             },
+            "downloads": 1,
             "keywords": [
                 "tool",
                 "locator",
@@ -2563,7 +2564,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 1,
+            "downloads": 4,
             "keywords": [
                 "powershell",
                 "windows",
