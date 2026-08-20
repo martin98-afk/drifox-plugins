@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787205194.179529,
+  "fetched_at": 1787207293.9739463,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -8,7 +8,7 @@
     "anthropic": 3,
     "beautiful-article-skills": 3,
     "breakout": 3,
-    "browser": 27,
+    "browser": 28,
     "calendar": 13,
     "canvas-design": 1,
     "caveman": 1,
@@ -63,7 +63,7 @@
     "openai": 1,
     "playground": 2,
     "ponytail": 9,
-    "project-dashboard": 15,
+    "project-dashboard": 16,
     "python-pro": 1,
     "rdr2": 4,
     "react-pro": 1,
