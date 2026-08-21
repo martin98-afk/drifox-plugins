@@ -2370,7 +2370,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 7,
+            "downloads": 8,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2930,7 +2930,7 @@
                 "hooks": true,
                 "ui": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "workbuddy",
                 "问答模式",
