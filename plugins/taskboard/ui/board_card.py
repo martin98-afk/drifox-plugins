@@ -139,6 +139,73 @@ class ReportDialog(QDialog):
 
 
 # ============================================================
+#  任务详情对话框
+# ============================================================
+
+
+class TaskDetailDialog(QDialog):
+    """任务详情 — 描述 / 上下文链 / 流转历史 / 错误 / 报告"""
+
+    def __init__(self, task, report: str, processing: bool, preview: str, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(f"任务详情 — {task.title}")
+        self.setModal(True)
+        self.resize(600, 520)
+
+        layout = QVBoxLayout(self)
+        self.view = QTextEdit(self)
+        self.view.setReadOnly(True)
+        self.view.setPlainText(self._render(task, report, processing, preview))
+        layout.addWidget(self.view)
+
+        close_btn = PrimaryPushButton("关闭", self)
+        close_btn.clicked.connect(self.accept)
+        row = QHBoxLayout()
+        row.addStretch(1)
+        row.addWidget(close_btn)
+        layout.addLayout(row)
+
+        Colors.refresh()
+        self.setStyleSheet(f"""
+            QDialog {{ background: {Colors.CONTENT_BG}; }}
+            QTextEdit {{ background: {Colors.CARD_BG_SOLID}; color: {Colors.TEXT_PRIMARY};
+                         border: 1px solid {Colors.BORDER}; border-radius: 8px;
+                         padding: 10px; {FONT_CSS} font-size: {scale_font_size(12)}px; }}
+        """)
+
+    @staticmethod
+    def _render(task, report: str, processing: bool, preview: str) -> str:
+        from taskboard_core.config import COLUMN_META
+
+        parts = [f"# {task.title}", ""]
+        parts += [f"状态：{COLUMN_META.get(task.status, {}).get('title', task.status)}"
+                  f"　|　创建：{task.created_at}　|　更新：{task.updated_at}", ""]
+        if processing:
+            parts += ["## 处理中（实时预览）", preview or "正在思考…", ""]
+        if task.detail:
+            parts += ["## 任务描述", task.detail, ""]
+        if task.context_log:
+            parts += ["## 处理链（各列智能体结论）"]
+            for rec in task.context_log:
+                col = COLUMN_META.get(rec.get("column", ""), {}).get("title", rec.get("column", ""))
+                parts.append(f"- [{col} / @{rec.get('agent', '')}]（{rec.get('at', '')}）")
+                parts.append(f"  {rec.get('summary', '')}")
+            parts.append("")
+        if task.history:
+            parts += ["## 流转历史"]
+            for h in task.history:
+                src = COLUMN_META.get(h.get("from", ""), {}).get("title", h.get("from") or "—")
+                dst = COLUMN_META.get(h.get("to", ""), {}).get("title", h.get("to", ""))
+                parts.append(f"- {src} → {dst}（{h.get('at', '')}，by {h.get('by', '')}）")
+            parts.append("")
+        if task.error:
+            parts += ["## 错误", task.error, ""]
+        if report:
+            parts += ["## 归档报告", report]
+        return "\n".join(parts)
+
+
+# ============================================================
 #  看板列
 # ============================================================
 
@@ -432,6 +499,20 @@ class TaskBoardCard(QFrame):
         report = self._controller.get_report(task_id)
         ReportDialog(task.title, report, self.window()).exec_()
 
+    def _show_detail(self, task_id: str):
+        """打开任务详情（双击卡片；done 卡报告按钮仍直连报告）"""
+        task = self._controller.get_task(task_id)
+        if task is None:
+            return
+        report = self._controller.get_report(task_id) if task.status == "done" else ""
+        TaskDetailDialog(
+            task,
+            report,
+            processing=self._controller.is_processing(task_id),
+            preview=getattr(task, "_stream_preview", ""),
+            parent=self.window(),
+        ).exec_()
+
     # ================================================================
     #  渲染
     # ================================================================
@@ -456,6 +537,7 @@ class TaskBoardCard(QFrame):
             card.removeRequested.connect(self._controller.remove_task)
             card.moveRequested.connect(self._on_move_request)
             card.reportRequested.connect(self._show_report)
+            card.detailRequested.connect(self._show_detail)
             self._columns[status].add_card(card)
             self._cards[task.id] = card
             counts[status] += 1

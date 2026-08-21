@@ -34,6 +34,7 @@ class TaskCardWidget(QFrame):
     removeRequested = pyqtSignal(str)
     moveRequested = pyqtSignal(str, str)  # (task_id, 目标列)
     reportRequested = pyqtSignal(str)
+    detailRequested = pyqtSignal(str)
 
     def __init__(self, task_id: str, parent=None):
         super().__init__(parent)
@@ -192,6 +193,11 @@ class TaskCardWidget(QFrame):
         if event.button() == Qt.LeftButton:
             self._drag_start = event.pos()
         super().mousePressEvent(event)
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.detailRequested.emit(self._task_id)
+        super().mouseDoubleClickEvent(event)
 
     def mouseMoveEvent(self, event):
         if self._drag_start and not self._processing:
