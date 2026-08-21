@@ -241,9 +241,15 @@ class TaskCardWidget(QFrame):
         accent = self._accent
         if self._processing:
             border = f"1.5px solid {accent}"
+        elif hover:
+            border = f"1px solid {accent}"
         else:
             border = f"1px solid {Colors.BORDER}"
-        bg = Colors.CARD_BG_SOLID if not hover else "rgba(60, 60, 68, 250)"
+        # hover 用主题半透明叠加（不再硬编码深色，浅色主题下不再变黑）
+        if hover:
+            bg = Colors.HOVER_BG
+        else:
+            bg = Colors.CARD_BG_SOLID
         self.setStyleSheet(f"""
             #taskboardTaskCard {{
                 background: {bg};

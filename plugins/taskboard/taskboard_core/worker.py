@@ -48,11 +48,37 @@ def strip_signal(response: str) -> str:
     return _SIGNAL_RE.sub("", response or "").strip()
 
 
+_THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
+_META_LINE_RE = re.compile(r"^\s*(---|\*\*\*|###?#?\s*$)\s*$")
+
+
+def _strip_thinking(text: str) -> str:
+    """去除响应中的 <think>...</think> 思考块（含未闭合块），返回正文"""
+    if not text:
+        return ""
+    # 已配对的思考块
+    cleaned = _THINK_RE.sub("", text)
+    # 未闭合的思考块（响应在 <think> 中截断）：从 <think> 起全切
+    open_idx = cleaned.find("<think>")
+    if open_idx != -1:
+        cleaned = cleaned[:open_idx]
+    return cleaned
+
+
 def build_summary(response: str) -> str:
-    """从响应正文提取单行摘要（任务卡片显示用）"""
+    """从响应正文提取单行摘要（任务卡片显示用）
+
+    净化顺序：去信号 → 去思考块 → 跳过 `---` / `***` 分隔与空标题行 →
+    取首个真实内容段（多行段压平换行）。
+    """
     body = strip_signal(response)
-    # 取第一个非空段落，压平换行
-    lines = [ln.strip() for ln in body.splitlines() if ln.strip()]
+    body = _strip_thinking(body)
+    # 跳过日志写入的分隔符 / 装饰线 / 空标题
+    lines = [
+        ln.strip()
+        for ln in body.splitlines()
+        if ln.strip() and not _META_LINE_RE.match(ln)
+    ]
     if not lines:
         return ""
     summary = " ".join(lines)

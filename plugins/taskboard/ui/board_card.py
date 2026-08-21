@@ -99,6 +99,20 @@ class TaskDialog(QDialog):
             QDialog {{ background: {Colors.CONTENT_BG}; {FONT_CSS} }}
             BodyLabel {{ color: {Colors.TEXT_SECONDARY}; {FONT_CSS}
                          font-size: {scale_font_size(12)}px; }}
+            PushButton {{
+                background: {Colors.CARD_BG_SOLID}; color: {Colors.TEXT_PRIMARY};
+                border: 1px solid {Colors.BORDER}; border-radius: 6px;
+                padding: 6px 16px; {FONT_CSS} font-size: {scale_font_size(12)}px;
+            }}
+            PushButton:hover {{ background: {Colors.HOVER_BG}; border-color: {Colors.BORDER_ACCENT}; }}
+            PushButton:pressed {{ background: {Colors.CARD_BG}; }}
+            PrimaryPushButton {{
+                background: {Colors.SEND_BTN_START}; color: {Colors.BUTTON_TEXT_ON_ACCENT};
+                border: none; border-radius: 6px; padding: 6px 16px;
+                {FONT_CSS} font-size: {scale_font_size(12)}px; font-weight: bold;
+            }}
+            PrimaryPushButton:hover {{ background: {Colors.SEND_BTN_HOVER_START}; }}
+            PrimaryPushButton:pressed {{ background: {Colors.SEND_BTN_HOVER_END}; }}
         """)
 
 
