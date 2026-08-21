@@ -61,7 +61,7 @@ class AutoLoopController:
         # 窗口关闭 / 插件卸载：卡片销毁时清理该窗口会话
         try:
             card.destroyed.connect(lambda _=None, wid=window_id: self._on_card_destroyed(wid))
-        except TypeError, RuntimeError:
+        except (TypeError, RuntimeError):
             pass
 
     def _hide_card_via_host(self, card_id: str, ctx: Dict[str, Any]):
@@ -69,12 +69,7 @@ class AutoLoopController:
         from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
 
         ui_registry = UIPluginRegistry.get_instance()
-        host = ui_registry._resolve_global_host() or ctx.get("main_widget")
-        card_manager = getattr(host, "_card_manager", None)
-        host_wid = getattr(host, "_window_id", None)
-        if card_manager is not None and host_wid:
-            card_manager.hide_card(card_id, host_wid)
-        else:
+        if not ui_registry.hide_floating_card_globally(card_id):
             services = ctx.get("services") or {}
             services.get("hide_card", lambda _c: None)(card_id)
 
@@ -82,22 +77,12 @@ class AutoLoopController:
         """运行卡收尾隐藏：host 作用域同步 CardManager + widget 兜底 hide"""
         from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
 
-        hidden = False
-        try:
-            ui_registry = UIPluginRegistry.get_instance()
-            host = ui_registry._resolve_global_host()
-            card_manager = getattr(host, "_card_manager", None)
-            host_wid = getattr(host, "_window_id", None)
-            if card_manager is not None and host_wid:
-                card_manager.hide_card("running", host_wid)
-                hidden = True
-        except Exception:
-            pass
+        hidden = UIPluginRegistry.get_instance().hide_floating_card_globally("running")
         if not hidden:
             services.get("hide_card", lambda _c: None)("running")
         try:
             card.hide()
-        except RuntimeError, AttributeError:
+        except (RuntimeError, AttributeError):
             pass
 
     def _on_card_destroyed(self, window_id: str):
@@ -354,7 +339,7 @@ class AutoLoopController:
         if card:
             try:
                 card.stop_animation()
-            except RuntimeError, AttributeError:
+            except (RuntimeError, AttributeError):
                 pass
             # 经 host 卡片管理器同步隐藏（Tab 模式 full 卡挂全局作用域，
             # 直接 card.hide() 会致 CardManager 状态失步、下轮 toggle 翻转错）
