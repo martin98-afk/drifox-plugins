@@ -100,6 +100,7 @@ class TaskCardWidget(QFrame):
 
         self._start_btn = _mkbtn(FIF.PLAY_SOLID, "开始处理（当前列智能体）")
         self._stop_btn = _mkbtn(FIF.PAUSE_BOLD, "停止处理")
+        # _prev_btn 在 inprogress/review 列是「打回上一列（重做）」，其他列是「移到上一列」
         self._prev_btn = _mkbtn(FIF.RETURN, "移到上一列")
         self._next_btn = _mkbtn(FIF.RIGHT_ARROW, "移到下一列")
         self._report_btn = _mkbtn(FIF.DOCUMENT, "查看任务报告")
@@ -145,12 +146,15 @@ class TaskCardWidget(QFrame):
             self._summary_label.setText(preview[-200:] if preview else "正在思考…")
             rounds = task.tool_rounds
             elapsed = int(time.time() - (task.started_at or time.time()))
-            meta = (f"@{COLUMN_META[self._status]['agent']} · {rounds} 轮工具 · "
+            mode = COLUMN_META.get(self._status, {}).get("mode", "处理")
+            rounds_txt = f"{rounds} 轮工具" if rounds else "评估中"
+            meta = (f"@{COLUMN_META[self._status]['agent']} · {mode} · {rounds_txt} · "
                     f"{elapsed // 60}:{elapsed % 60:02d}")
         else:
             self._summary_label.setText(task.last_summary or task.detail or "等待处理")
             chain = len(task.context_log)
-            meta = f"@{COLUMN_META[self._status]['agent']} · 链 {chain}"
+            mode = COLUMN_META.get(self._status, {}).get("mode", "")
+            meta = f"@{COLUMN_META[self._status]['agent']} · {mode} · 链 {chain}"
         self._meta_label.setText(meta)
 
         if task.error:
@@ -162,7 +166,9 @@ class TaskCardWidget(QFrame):
         # 按钮可见性
         self._start_btn.setVisible(not self._processing)
         self._stop_btn.setVisible(self._processing)
-        self._prev_btn.setEnabled(not self._processing and self._status != COLUMNS[0])
+        # inprogress/review 列的「上一列」是真正的"打回重做"，仅这两列显示 prev 按钮
+        self._prev_btn.setVisible(self._status in ("inprogress", "review") and not self._processing)
+        self._prev_btn.setToolTip("打回上一列（重做）")
         self._next_btn.setEnabled(not self._processing and self._status != COLUMNS[-1])
         has_report = self._status == "done" and bool(task.last_summary)
         self._report_btn.setVisible(has_report)

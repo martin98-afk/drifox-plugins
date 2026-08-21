@@ -51,6 +51,10 @@ def strip_signal(response: str) -> str:
 _THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
 _META_LINE_RE = re.compile(r"^\s*(---|\*\*\*|###?#?\s*$)\s*$")
 _LOG_HEADING_RE = re.compile(r"^\s*##\s*\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\b")
+# "## 任务简报" 起始（容许括号/同义词：简报/总结报告）
+_BRIEF_HEAD_RE = re.compile(r"^\s*##\s*任务(简报|总结报告)")
+# 下一个 ## 段开始（用于切分简报段范围）
+_NEXT_SECTION_RE = re.compile(r"^\s*##\s")
 
 
 def _strip_thinking(text: str) -> str:
@@ -66,15 +70,47 @@ def _strip_thinking(text: str) -> str:
     return cleaned
 
 
+def _extract_brief(body: str) -> str:
+    """从正文中抽取「## 任务简报」段内容（到下一个 ## 段或文末）"""
+    lines = body.splitlines()
+    start = -1
+    for i, ln in enumerate(lines):
+        if _BRIEF_HEAD_RE.match(ln):
+            start = i + 1
+            break
+    if start < 0:
+        return ""
+    brief_lines = []
+    for ln in lines[start:]:
+        if _NEXT_SECTION_RE.match(ln):
+            break
+        brief_lines.append(ln)
+    return "\n".join(brief_lines).strip()
+
+
 def build_summary(response: str) -> str:
     """从响应正文提取单行摘要（任务卡片显示用）
 
-    净化顺序：去信号 → 去思考块 → 跳过 `---` / `***` 分隔与空标题行 →
-    取首个真实内容段（多行段压平换行）。
+    优先级：①「## 任务简报」段（结构化简报） → ②首个非装饰真实内容段（兜底）。
+    净化：去信号 → 去思考块 → 跳过 `---` / `***` / 日志元标题。
     """
     body = strip_signal(response)
     body = _strip_thinking(body)
-    # 跳过日志写入的分隔符 / 装饰线 / 空标题
+
+    # 1) 优先取结构化简报段
+    brief = _extract_brief(body)
+    if brief:
+        # 简报段内多行压平为单行（去 - 列表符与多余空白）
+        flat = " ".join(
+            ln.strip().lstrip("-").strip()
+            for ln in brief.splitlines()
+            if ln.strip()
+        )
+        if len(flat) > SUMMARY_MAX_CHARS:
+            flat = flat[:SUMMARY_MAX_CHARS] + "…"
+        return flat
+
+    # 2) 兜底：取首个非装饰非空行（多行段压平）
     lines = [
         ln.strip()
         for ln in body.splitlines()
@@ -403,11 +439,20 @@ class TaskWorker(QThread):
         lines += [
             "",
             "## 输出要求",
-            "完成本列职责后，在响应**末尾单独一行**输出你的去留决定（三选一）：",
+            "完成本列职责后，**必须**在响应中输出以下结构化段（卡片摘要与下一列接手都依赖它）：",
+            "",
+            "```",
+            "## 任务简报（给下一列智能体）",
+            "- 范围：<本次处理覆盖的任务范围>",
+            "- 改动：<本次产生的具体改动 / 决定 / 验证结果>",
+            "- 验收：<下一列接手时需重点确认的要点>",
+            "- 遗留：<未完成 / 卡点 / 风险，留给下一列或用户>",
+            "```",
+            "正文部分（含「任务简报」段）将显示在任务卡片上，并写入 context_log 供下一列接手。",
+            "在响应**末尾单独一行**输出去留信号（三选一）：",
             f"- `{SIGNAL_ADVANCE}` — 本列职责已完成，推进到下一列",
             f"- `{SIGNAL_HOLD}` — 保留在当前列，等待用户再次触发处理",
             f"- `{SIGNAL_DROP}` — 该任务无价值或无法完成，删除它",
-            "正文部分给出简明处理结论（将显示在任务卡片上）。",
         ]
         if self._column == "done":
             lines[-1] = "正文部分输出完整的任务总结报告（Markdown 格式，含成果、改动、验证结论）。"
