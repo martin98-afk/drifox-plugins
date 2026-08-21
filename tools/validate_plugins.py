@@ -153,7 +153,11 @@ def basic_manifest_check(manifest: dict) -> list[str]:
             )
 
         comps = manifest.get("components", {})
-        valid_comps = {"commands", "agents", "skills", "themes", "hooks", "mcp", "lsp", "ui", "tools", "providers"}
+        valid_comps = {
+            "commands", "agents", "skills", "themes", "hooks", "mcp", "lsp",
+            "ui", "tools", "providers", "storages", "serializers", "engines",
+            "gateways", "loop_policies", "model_adapters", "team_templates",
+        }
         extra = set(comps) - valid_comps
         if extra:
             errors.append(f"components 包含未知键: {sorted(extra)}")

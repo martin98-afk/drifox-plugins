@@ -99,7 +99,14 @@
         { "required": ["lsp"] },
         { "required": ["ui"] },
         { "required": ["tools"] },
-        { "required": ["providers"] }
+        { "required": ["providers"] },
+        { "required": ["storages"] },
+        { "required": ["serializers"] },
+        { "required": ["engines"] },
+        { "required": ["gateways"] },
+        { "required": ["loop_policies"] },
+        { "required": ["model_adapters"] },
+        { "required": ["team_templates"] }
       ],
       "properties": {
         "tools": {
@@ -141,6 +148,34 @@
         "providers": {
           "type": "boolean",
           "description": "启用 providers/*.py 服务商定义（每个文件暴露 register(registry)，注册 AI 服务商）"
+        },
+        "storages": {
+          "type": "boolean",
+          "description": "启用 storages/*.py 存储引擎（register 暴露存储后端）"
+        },
+        "serializers": {
+          "type": "boolean",
+          "description": "启用 serializers/*.py 序列化器"
+        },
+        "engines": {
+          "type": "boolean",
+          "description": "启用 engines/*.py 引擎"
+        },
+        "gateways": {
+          "type": "boolean",
+          "description": "启用 gateways/*.py 消息网关适配器"
+        },
+        "loop_policies": {
+          "type": "boolean",
+          "description": "启用 loop_policies/*.py 循环策略"
+        },
+        "model_adapters": {
+          "type": "boolean",
+          "description": "启用 model_adapters/*.py 模型适配器"
+        },
+        "team_templates": {
+          "type": "boolean",
+          "description": "启用 team_templates/*.md 团队模板"
         }
       }
     },
@@ -174,6 +209,52 @@
             ]
           },
           "uniqueItems": true
+        }
+      }
+    },
+    "config_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fields"],
+      "description": "插件配置表单 Schema，供 UI 渲染配置项",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "配置面板标题"
+        },
+        "description": {
+          "type": "string",
+          "description": "配置说明"
+        },
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["key", "label", "type"],
+            "properties": {
+              "key": { "type": "string", "minLength": 1 },
+              "label": { "type": "string", "minLength": 1 },
+              "type": { "type": "string" },
+              "default": {},
+              "placeholder": { "type": "string" },
+              "description": { "type": "string" },
+              "rows": {},
+              "options": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "required": ["label", "value"],
+                  "properties": {
+                    "label": { "type": "string" },
+                    "value": {}
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },
