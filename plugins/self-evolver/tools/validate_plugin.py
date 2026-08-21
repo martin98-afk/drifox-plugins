@@ -29,6 +29,7 @@ _SEMVER_RE = re.compile(
 _VALID_COMPS = (
     "commands", "agents", "skills", "themes", "hooks", "mcp", "lsp",
     "ui", "tools", "providers", "team_templates",
+    "model_adapters", "loop_policies", "storages", "serializers", "gateways", "engines",
 )
 _CMD_RE = re.compile(r"^[a-z][a-z0-9-]*\.md$")
 
@@ -259,6 +260,27 @@ def _check_plugin_dir(base: Path, manifest: dict, name: str) -> tuple[list, list
         yamls = sorted(d.glob("*.yaml")) if d.is_dir() else []
         if not yamls:
             errors.append("components.team_templates=true 但 team_templates/ 无 .yaml")
+        else:
+            import re as _re
+            for y in yamls:
+                text = y.read_text(encoding="utf-8")
+                if "schema_version:" not in text or "template_name:" not in text:
+                    errors.append(f"team_templates/{y.name} 缺 schema_version/template_name")
+                if "agents:" not in text:
+                    errors.append(f"team_templates/{y.name} 缺 agents 列表")
+
+    # 运行时组件（与 tools/providers 对称：目录 + *.py + register 入口）
+    for kind in ("model_adapters", "loop_policies", "storages", "serializers", "gateways", "engines"):
+        if comps.get(kind):
+            d = base / kind
+            if not d.is_dir():
+                errors.append(f"components.{kind}=true 但 {kind}/ 不存在")
+            else:
+                pys = [p for p in sorted(d.glob("*.py")) if not p.name.startswith("_")]
+                if not pys:
+                    errors.append(f"components.{kind}=true 但 {kind}/ 无 .py 文件")
+                for py in pys:
+                    _check_register_entry(py, f"{kind}/{py.name}", "register", errors)
 
     return errors, warnings
 

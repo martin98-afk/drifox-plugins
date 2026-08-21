@@ -16,6 +16,10 @@
 
 修复闭环：`evolution_inspect`（找到目标插件）→ read/edit 修改 → `evolution_validate` 复验 → 热重载生效。
 
+scaffold 支持 DriFox 全部 **17 类组件**（对齐主程序 `kernel.KNOWN_COMPONENTS`）：
+tools / commands / agents / skills / hooks / mcp / lsp / themes / ui / providers /
+team_templates / model_adapters / loop_policies / storages / serializers / gateways / engines。
+
 MCP 闭环：`evolution_mcp` 读写任意插件的 `.mcp.json`，为 DriFox 连接新 MCP 服务器。
 
 ## 工具清单（5 个）
