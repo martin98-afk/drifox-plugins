@@ -56,6 +56,9 @@ DEFAULT_ENHANCE_PROMPT = (
 DEFAULT_ENHANCE_MODEL_LABEL = "当前模型"
 DEFAULT_ENHANCE_MODEL_VALUE = ""
 
+# 预设下拉最多直接展示的项数（超出滚动查看，对齐主程序子智能体模板下拉）
+MAX_MODEL_VISIBLE_ITEMS = 8
+
 # 同一窗口运行中的优化任务（window_id -> True），防重复点击积压
 _busy_windows: Dict[str, bool] = {}
 # 当前常驻进度 InfoBar（window_id -> InfoBar 实例），完成/失败时关闭
@@ -371,9 +374,13 @@ class _EnhanceConfigCard(_ConfigCardBase):
             self._model_combo.setMinimumWidth(220)
             # 阻断 currentTextChanged 循环（占位）
             self._model_combo.blockSignals(True)
-            self._model_combo.addItem(DEFAULT_ENHANCE_MODEL_LABEL, DEFAULT_ENHANCE_MODEL_VALUE)
+            # qfluentwidgets.ComboBox.addItem 签名为 (text, icon=None, userData=None)，
+            # 第二参数是 icon 不是 userData；用关键字参数确保 userData 真正写入，
+            # 否则 currentData() 永远返回 None → set_values 视为空串删除键 → 配置不固化
+            self._model_combo.addItem(DEFAULT_ENHANCE_MODEL_LABEL, userData=DEFAULT_ENHANCE_MODEL_VALUE)
             for display, value in _parse_provider_options():
-                self._model_combo.addItem(display, value)
+                self._model_combo.addItem(display, userData=value)
+            self._model_combo.setMaxVisibleItems(MAX_MODEL_VISIBLE_ITEMS)
             self._model_combo.setToolTip(
                 "用于执行提示词优化的 LLM。留空（当前模型）= 沿用调用方当前 provider/model；"
                 "其余选项格式「服务商:模型名」，与系统「标题生成」「子智能体」模型选择器一致。"
