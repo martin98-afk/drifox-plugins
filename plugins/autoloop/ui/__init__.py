@@ -66,3 +66,23 @@ def _on_input_button_clicked(context):
     from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
 
     UIPluginRegistry.get_instance().toggle_floating_card("config", main_widget=context.get("main_widget"))
+
+
+def unload_ui(registry):
+    """卸载回调（热重载/卸载时由 UIPluginRegistry.unload_plugin 调用，先于注册清理）
+
+    根治热重载单例分裂：sys.modules 清理会让下一次 import 生成新的
+    AutoLoopController 类，旧实例孤儿化（停止按钮失效）。此处停掉旧实例
+    的全部循环并归零单例——热重载期间运行中的循环会被安全终止。
+    """
+    from loguru import logger
+
+    try:
+        from .controller import AutoLoopController
+
+        ctrl = AutoLoopController.get_instance()
+        ctrl.shutdown_all()
+        AutoLoopController._instance = None
+        logger.info("[autoloop] unload_ui: controller 单例已归零，全部循环已停止")
+    except Exception as e:
+        logger.warning(f"[autoloop] unload_ui 清理失败: {e}")
