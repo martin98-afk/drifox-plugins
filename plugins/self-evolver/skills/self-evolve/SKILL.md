@@ -54,13 +54,21 @@ DriFox 的工具/插件全部可热重载（user 根 `~/.drifox/plugins/` 保存
 4. evolution_journal operation=log action=mcp plugin_name=<name> summary=...
 ```
 
-### ⑤ 发布到市场
+### ⑤ 发布到市场（三模式）
 
 ```
-1. 确认 manifest 已 bump version（未 bump 会警告）
-2. evolution_publish plugin_name=<name>            # 本地 commit（默认）
-3. evolution_publish plugin_name=<name> push=true  # 确认后推送远端
-   自动：同步仓库 → generate_marketplace → validate → commit → rebase+push
+自己用：无需发布 — 插件在 ~/.drifox/plugins 热加载即生效
+
+分享给社区（标准流程）：
+1. GitHub 上 Fork 官方仓库（github.com/martin98-afk/drifox-plugins 右上角 Fork）
+2. evolution_publish plugin_name=<name> mode=fork \
+     fork_remote=https://github.com/<你的账号>/drifox-plugins.git
+   自动：同步仓库 → generate_marketplace → validate → feat/<name> 分支 → 推 fork → 给出 PR 链接
+3. 打开 PR 链接提交审核 → maintainer 合并 → 上架
+
+有官方仓库写权限（collaborator）：
+   evolution_publish plugin_name=<name>              # 本地 commit（默认）
+   evolution_publish plugin_name=<name> mode=direct  # 直推 origin/main
 4. evolution_journal operation=log action=note plugin_name=<name> summary=...
 ```
 

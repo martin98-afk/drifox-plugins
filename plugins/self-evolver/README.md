@@ -31,7 +31,7 @@ MCP 闭环：`evolution_mcp` 读写任意插件的 `.mcp.json`，为 DriFox 连�
 | `evolution_inspect` | 扫描已装插件，返回结构摘要与文件清单 | safe |
 | `evolution_mcp` | 增/删/列/读 MCP 服务器配置（.mcp.json） | safe |
 | `evolution_journal` | 记录/查询进化审计日志（append-only） | safe |
-| `evolution_publish` | 发布插件到市场仓库（同步+marketplace+校验+commit，push 可选） | dangerous |
+| `evolution_publish` | 发布到市场仓库：local（本地 commit）/ direct（直推，需官方权限）/ fork（推 fork+PR 链接，社区标准流程） | dangerous |
 
 写入操作（scaffold/mcp 写入）默认落在 **user 根**（`~/.drifox/plugins/`），热重载即时生效。
 
