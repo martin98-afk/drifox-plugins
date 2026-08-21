@@ -534,6 +534,30 @@
             }
         },
         {
+            "name": "context-usage-stats",
+            "description": "对话上下文用量统计 — 展示最近对话的 token 用量、消息数量趋势、会话活跃度图表",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/context-usage-stats",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true
+            },
+            "homepage": "https://github.com/martin98-afk/DriFox",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "context7",
             "description": "Context7 — 实时拉取任意库的最新 API 文档与代码示例，省去贴文档链接。",
             "version": "1.0.0",
@@ -2001,6 +2025,30 @@
             ],
             "drifox": {
                 "min_version": "0.4.15"
+            },
+            "homepage": "https://github.com/martin98-afk/DriFox",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "project-side-rail",
+            "description": "项目竖向 icon 列表 — 停靠在侧边栏右侧，用于快速切换项目",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/project-side-rail",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true
             },
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
