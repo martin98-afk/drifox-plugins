@@ -2245,6 +2245,7 @@
                 "tools": true,
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "self-evolve",
                 "plugin",
