@@ -2503,6 +2503,7 @@
                 "ui": true,
                 "agents": true
             },
+            "downloads": 1,
             "keywords": [
                 "taskboard",
                 "kanban",
