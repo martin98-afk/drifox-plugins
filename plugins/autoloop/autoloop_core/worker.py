@@ -188,7 +188,30 @@ class AutoLoopWorker(QThread):
     # ================================================================
 
     def run(self):
-        """主循环 — 三阶段：规划 → 执行 → 归档"""
+        """主循环 — 三阶段：规划 → 执行 → 归档
+
+        顶层异常屏障：任何未捕获异常转为 loop_error + loop_stopped 信号后退出。
+        没有屏障时 QThread 静默死亡，运行卡永远停在运行态、独占锁不释放（P0）。
+        """
+        try:
+            self._run_inner()
+        except Exception as e:
+            logger.exception("[AutoLoop] run() 未捕获异常，触发安全收尾")
+            try:
+                self.loop_error.emit(f"循环异常终止: {e}")
+            except Exception:
+                pass
+            try:
+                if self._engine is not None:
+                    from autoloop_core.engine import LoopState
+
+                    self._engine.state = LoopState.ERROR
+                self.loop_stopped.emit()
+            except Exception:
+                pass
+
+    def _run_inner(self):
+        """原 run() 主体（规划 → 执行 → 归档三阶段循环）"""
         if not self._config or not self._config.task_prompt:
             self.loop_error.emit("未设置任务描述")
             return
