@@ -10,14 +10,14 @@ DriFox 的工具/插件全部可热重载（user 根 `~/.drifox/plugins/` 保存
 
 ## 工具速查
 
-| 工具 | 用途 |
-|------|------|
-| `evolution_scaffold` | 需求 → 插件骨架（17 类组件模板） |
-| `evolution_validate` | 插件结构校验（准入门槛） |
-| `evolution_inspect` | 扫描已装插件/深查结构/TODO 定位 |
-| `evolution_mcp` | 读写 .mcp.json 管理 MCP 服务器 |
-| `evolution_journal` | 进化审计日志（每次动作必记） |
-| `evolution_publish` | 发布到市场仓库（同步+marketplace+校验+commit，push 可选） |
+| 工具 | 用途 | 关键参数 |
+|------|------|----------|
+| `evolution_scaffold` | 需求 → 插件骨架（17 类组件模板） | `name`(kebab-case 必填) `description` `components=[...]` `force`(覆盖) `author` |
+| `evolution_validate` | 插件结构校验（准入门槛） | `plugin_name` |
+| `evolution_inspect` | 扫描已装插件/深查结构/TODO 定位 | `plugin_name` 或 `list_all=true` |
+| `evolution_mcp` | 读写 .mcp.json 管理 MCP 服务器 | `operation`(add/remove/enable/disable/list) `plugin_name` `server_name` `command`/`url` `args` `env`/`headers` |
+| `evolution_journal` | 进化审计日志（每次动作必记） | `operation`(log/list/stats) `action`(create/optimize/fix/rollback/mcp/note) `plugin_name` `summary` `status`(ok/failed/pending) |
+| `evolution_publish` | 发布到市场仓库 | `plugin_name` `mode`(local/direct/fork) `fork_remote` `push`(bool) `commit_type` `message` |
 
 ## 标准工作流
 
@@ -102,3 +102,14 @@ scaffold 的 force 覆盖会把旧版备份为 `<name>.bak.<ts>`。
 - 新插件从 0.1.0 起
 - 优化/修复后 bump：修 bug → patch；加功能 → minor
 - scaffold 覆盖前强制用户确认（force 参数就是确认开关）
+
+## 按需加载 references（沉淀经验）
+
+复杂组件开发时按需读 references 目录的实战笔记，**不要每次都从零踩坑**：
+
+| 参考文件 | 何时读 |
+|----------|--------|
+| `references/runtime_components.md` | scaffold 选了 `storages/serializers/gateways/model_adapters/loop_policies/engines`，或用户提到"系统配置卡片/注册一个 X 引擎" |
+| `references/storage_engine.md` | 用户要做"存储替换插件/会话换格式/xlsx/jsonl/csv 存会话"等；接口对齐 `system/storages/sqlite.py` |
+
+> 经验沉淀原则：每完成一个 runtime 组件或踩到一个反复出现的坑，把"症状+根因+正确写法"补到对应 reference，并 journal 记录"优化自进化系统"。
