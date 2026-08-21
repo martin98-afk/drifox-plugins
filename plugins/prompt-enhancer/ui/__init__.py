@@ -37,10 +37,11 @@ from app.plugins.managers.plugin_config_store import PluginConfigStore
 from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
 
 try:  # 模块级导入设置卡基类；失败则跳过自定义设置卡注册
-    from qfluentwidgets import ComboBox, ExpandSettingCard
+    from qfluentwidgets import ComboBox, ExpandSettingCard, TextEdit
 except Exception:  # noqa: BLE001
     ExpandSettingCard = None  # type: ignore
     ComboBox = None  # type: ignore
+    TextEdit = None  # type: ignore
 
 PLUGIN_NAME = "prompt-enhancer"
 
@@ -223,7 +224,7 @@ def _register_config_card(registry: "UIPluginRegistry") -> None:
     """注册多行编辑设置卡，覆盖主程序 E1 自动卡（同 card_id、更高 priority）。
 
     主程序 PluginConfigCard 将 text 字段渲染为单行 LineEdit，增强指令很长不便编辑；
-    插件自带多行 QPlainTextEdit + 即时保存 + 恢复默认，体验更佳。
+    插件自带多行 TextEdit + 即时保存 + 恢复默认，体验更佳。
     注册失败（旧版主程序无此扩展点）时降级为 E1 自动卡，不影响按钮功能。
     """
     try:
@@ -361,7 +362,7 @@ class _EnhanceConfigCard(_ConfigCardBase):
         self.viewLayout.setContentsMargins(48, 8, 48, 8)
         self.viewLayout.setSpacing(8)
 
-        self._edit = QPlainTextEdit(self.view)
+        self._edit = TextEdit(self.view) if TextEdit is not None else QPlainTextEdit(self.view)
         self._edit.setPlaceholderText("用于优化用户输入的 system 指令，留空回默认")
         self._edit.setMinimumHeight(140)
         self.viewLayout.addWidget(self._edit)
