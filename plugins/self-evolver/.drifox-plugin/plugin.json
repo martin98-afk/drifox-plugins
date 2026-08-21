@@ -1,0 +1,29 @@
+{
+    "name": "self-evolver",
+    "description": "DriFox 自进化工具集 — AI 可调用的 5 个工具：生成插件骨架、校验插件结构、扫描分析插件、管理 MCP 服务器配置、记录进化审计日志，配合技能引导实现自我开发/优化/修复插件。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "0.2.0",
+    "author": {
+        "name": "black"
+    },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "self-evolve",
+        "plugin",
+        "scaffold",
+        "validate",
+        "mcp",
+        "development"
+    ],
+    "components": {
+        "tools": true,
+        "skills": true
+    }
+}

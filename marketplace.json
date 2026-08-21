@@ -2227,6 +2227,41 @@
             }
         },
         {
+            "name": "self-evolver",
+            "description": "DriFox 自进化工具集 — AI 可调用的 5 个工具：生成插件骨架、校验插件结构、扫描分析插件、管理 MCP 服务器配置、记录进化审计日志，配合技能引导实现自我开发/优化/修复插件。",
+            "version": "0.2.0",
+            "author": "black",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/self-evolver",
+                "ref": "main"
+            },
+            "components": {
+                "tools": true,
+                "skills": true
+            },
+            "keywords": [
+                "self-evolve",
+                "plugin",
+                "scaffold",
+                "validate",
+                "mcp",
+                "development"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "seo-audit",
             "description": "SEO 审计 + 落地页文案 — 五优先级 SEO 审查框架与高转化文案撰写方法论，覆盖主页/落地页/定价页。",
             "version": "1.1.0",
@@ -2807,6 +2842,44 @@
                 "hooks": true
             },
             "downloads": 6,
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "weather-query",
+            "description": "天气查询工具 — 输入城市名返回实时天气与未来预报（wttr.in 免费接口，无需 API key）",
+            "version": "0.1.0",
+            "author": "black",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/weather-query",
+                "ref": "main"
+            },
+            "components": {
+                "tools": true,
+                "commands": false,
+                "agents": false,
+                "skills": false,
+                "hooks": false,
+                "mcp": false,
+                "lsp": false,
+                "themes": false
+            },
+            "keywords": [
+                "weather",
+                "wttr",
+                "query"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
