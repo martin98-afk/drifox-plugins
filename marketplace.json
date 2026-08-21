@@ -2050,7 +2050,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -2075,7 +2075,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 13,
+            "downloads": 14,
             "keywords": [
                 "prompt",
                 "enhance",
