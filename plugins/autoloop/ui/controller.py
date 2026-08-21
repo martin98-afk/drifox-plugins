@@ -300,11 +300,21 @@ class AutoLoopController:
         self._finish(window_id, message)
 
     def _on_error(self, window_id: str, message: str):
+        """错误展示（不收尾）
+
+        闪退修复（2026-08-21）：loop_error 可能是单轮可重试错误（如 ChatWorker
+        C++ 对象已删的 RuntimeError），此时 AutoLoopWorker 线程仍在运行下一轮。
+        若在此调 _finish → wait 超时后 deleteLater 运行中 QThread →
+        QtFatal "QThread: Destroyed while thread is still running" → 进程 abort。
+        收尾统一由 loop_completed / loop_stopped（含 P0 屏障保证）驱动。
+        """
         card = self._card(window_id)
         if card:
             card.show_error(message)
             card.append_log(f"❌ {message[:50]}")
-        self._finish(window_id, f"❌ {message}")
+        session = self._sessions.get(window_id)
+        if session and session.services:
+            session.services.get("notify", lambda *_: None)("AutoLoop 错误", message[:80])
 
     def _on_stopped(self, window_id: str):
         self._finish(window_id, "⏹ 已停止")
@@ -360,17 +370,39 @@ class AutoLoopController:
             except Exception as e:
                 logger.warning(f"[AutoLoop] Failed to save messages to session: {e}")
 
-        # 清理 worker
+        # 清理 worker（闪退修复：运行中线程绝不 deleteLater）
         if worker is not None:
             try:
                 worker.quit()
-                worker.wait(1000)
+                stopped = worker.wait(1000)
             except Exception:
-                pass
-            try:
-                worker.deleteLater()
-            except RuntimeError:
-                pass
+                stopped = False
+            if stopped:
+                # 线程已退出：安全销毁
+                try:
+                    worker.deleteLater()
+                except RuntimeError:
+                    pass
+            elif getattr(worker, "isRunning", lambda: False)():
+                # 线程仍在跑：先取消 + 中断，退出后经 finished 信号延迟销毁。
+                # 直接 deleteLater 会触发 QtFatal "Destroyed while running"（闪退）。
+                try:
+                    worker.cancel()
+                except Exception:
+                    pass
+                try:
+                    worker.requestInterruption()
+                except Exception:
+                    pass
+                try:
+                    worker.finished.connect(worker.deleteLater)
+                except (RuntimeError, TypeError):
+                    pass
+            else:
+                try:
+                    worker.deleteLater()
+                except RuntimeError:
+                    pass
         session.worker = None
 
         # 解锁 UI
