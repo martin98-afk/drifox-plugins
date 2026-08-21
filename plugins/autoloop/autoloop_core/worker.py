@@ -590,7 +590,20 @@ class AutoLoopWorker(QThread):
             # → 5 秒兜底清理时触发 "QThread: Destroyed while thread is still running"。
             if not worker:
                 worker = getattr(self._conversation_executor, "_finalize_worker", None)
-            if worker:
+
+            def _worker_alive(w) -> bool:
+                """C++ wrapper 存活检查：executor 统一收尾可能已 deleteLater 该对象
+                （线程结束 → _on_worker_finished → _finalize_worker_cleanup 排队销毁，
+                同一事件循环内本兜底段再访问 isRunning 即 RuntimeError）。"""
+                if w is None:
+                    return False
+                try:
+                    w.isRunning()
+                    return True
+                except RuntimeError:
+                    return False
+
+            if _worker_alive(worker):
                 # 阶段 1：QEventLoop 等待 worker 完成（同时处理实时日志信号）
                 loop = QEventLoop()
                 worker.finished.connect(loop.quit)
@@ -601,20 +614,27 @@ class AutoLoopWorker(QThread):
                 loop.exec_()
                 timeout_timer.stop()
                 # 阶段 2：兜底等 worker 彻底结束 + 持续处理信号
-                while worker.isRunning() and not self._is_cancelled:
+                # 兜底等待：executor 可能在 processEvents 间隙 deleteLater worker
+                # （线程结束 → 统一收尾），每轮检查 wrapper 存活性避免访问已删 C++ 对象
+                while _worker_alive(worker) and worker.isRunning() and not self._is_cancelled:
                     worker.wait(1000)
                     QCoreApplication.processEvents()
-                if self._is_cancelled and worker.isRunning():
+                if self._is_cancelled and _worker_alive(worker) and worker.isRunning():
                     logger.info("[AutoLoop] 用户取消，中断 worker")
                     worker.cancel()
                     worker.requestInterruption()
                     worker.wait(3000)
-                # 强制重置 _is_streaming（防御信号处理顺序导致 _on_worker_finished 未被调用）
-                self._conversation_executor._on_worker_finished(worker)
+                # 强制重置 _is_streaming（防御信号处理顺序导致 _on_worker_finished 未被调用）；
+                # worker 已被 executor 销毁时跳过（其 _is_streaming 已随 finished 重置）
+                if _worker_alive(worker):
+                    self._conversation_executor._on_worker_finished(worker)
                 QCoreApplication.processEvents()
-                logger.info(
-                    f"[AutoLoop] after wait: worker.isRunning()={worker.isRunning() if worker else 'N/A'}, _is_streaming={self._conversation_executor._is_streaming}"
-                )
+                if _worker_alive(worker):
+                    logger.info(
+                        f"[AutoLoop] after wait: worker.isRunning()={worker.isRunning()}, _is_streaming={self._conversation_executor._is_streaming}"
+                    )
+                else:
+                    logger.info("[AutoLoop] after wait: worker 已由 executor 销毁（正常收尾路径）")
             else:
                 self._adapter.wait_for_completion(timeout=300)
 
@@ -669,7 +689,17 @@ class AutoLoopWorker(QThread):
                 callbacks=self._make_autoloop_callbacks(),
             )
             worker = self._conversation_executor.get_current_worker()
-            if worker:
+
+            def _alive(w) -> bool:
+                if w is None:
+                    return False
+                try:
+                    w.isRunning()
+                    return True
+                except RuntimeError:
+                    return False
+
+            if _alive(worker):
                 loop = QEventLoop()
                 worker.finished.connect(loop.quit)
                 timeout_timer = QTimer()
@@ -678,14 +708,15 @@ class AutoLoopWorker(QThread):
                 timeout_timer.start(60000)
                 loop.exec_()
                 timeout_timer.stop()
-                while worker.isRunning() and not self._is_cancelled:
+                while _alive(worker) and worker.isRunning() and not self._is_cancelled:
                     worker.wait(1000)
                     QCoreApplication.processEvents()
-                if self._is_cancelled and worker.isRunning():
+                if self._is_cancelled and _alive(worker) and worker.isRunning():
                     worker.cancel()
                     worker.requestInterruption()
                     worker.wait(3000)
-                self._conversation_executor._on_worker_finished(worker)
+                if _alive(worker):
+                    self._conversation_executor._on_worker_finished(worker)
                 QCoreApplication.processEvents()
         except Exception as e:
             self.log_signal.emit(f"⚠️ 强制更新失败: {e}")
