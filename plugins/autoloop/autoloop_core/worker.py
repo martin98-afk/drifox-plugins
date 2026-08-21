@@ -629,10 +629,13 @@ class AutoLoopWorker(QThread):
 
         except Exception as e:
             logger.error(f"[AutoLoop] Worker error: {e}")
+            # 闪退修复：单轮失败仅展示（controller 不再据此收尾——线程仍在运行）；
+            # 连续 3 次才置取消标志，由主循环自然退出走 loop_stopped 正常收尾。
             self.loop_error.emit(f"出错: {str(e)}")
             self._engine.increment_consecutive_failures()
             if self._engine.consecutive_failures >= 3:
-                self.loop_error.emit("连续失败 3 次，已停止")
+                self.log_signal.emit("⚠️ 连续失败 3 次，取消循环")
+                self._is_cancelled = True
                 return None
             self._emit_progress()
             return None
