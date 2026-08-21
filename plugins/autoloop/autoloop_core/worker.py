@@ -23,9 +23,7 @@ from typing import Any, Callable, Dict, List, Optional
 from loguru import logger
 from PyQt5.QtCore import QCoreApplication, QEventLoop, QThread, QTimer, pyqtSignal
 
-from app.core.conversation import ConversationExecutor
 from app.core.conversation.config import ConversationConfig, PermissionStrategy, filter_interactive_tools
-from app.core.conversation.core import ConversationCore
 from autoloop_core.adapter import AutoLoopConversationAdapter
 from autoloop_core.config import AutoLoopConfig
 from autoloop_core.engine import AutoLoopEngine, LoopState
@@ -120,8 +118,13 @@ class AutoLoopWorker(QThread):
         tools_schema: List[Dict],
         agent_system_prompt_getter: Callable[[str], str],
         agent_manager: Any = None,
+        conversation_stack: Any = None,
     ):
-        """配置 worker（应在 start() 前调用）"""
+        """配置 worker（应在 start() 前调用）
+
+        conversation_stack：services["conversation_stack"]() 产出的执行栈工厂
+        （ConversationStackFactory 契约）；None 时回退 deep import（向后兼容）。
+        """
         self._config = config
         self._model_config_getter = model_config_getter
         self._tool_executor = tool_executor
@@ -129,8 +132,33 @@ class AutoLoopWorker(QThread):
         self._all_tools_schema = tools_schema  # 保存完整工具集
         self._agent_system_prompt_getter = agent_system_prompt_getter
 
-        # ===== ConversationCore + AutoLoopConversationAdapter（统一执行基础设施）=====
-        self._conversation_core = ConversationCore.create(
+        # ===== ConversationCore + Executor（经注入的执行栈工厂，EP2）=====
+        stack = conversation_stack
+        if stack is None:
+            # 回退：直接 import（旧路径，保持无注入场景可用）
+            from app.core.conversation.core import ConversationCore
+
+            class _FallbackStack:
+                @staticmethod
+                def create_core(get_model_config, agent_manager=None, backend=None, session_manager=None):
+                    return ConversationCore.create(
+                        get_model_config=get_model_config,
+                        agent_manager=agent_manager,
+                        backend=backend,
+                        session_manager=session_manager,
+                    )
+
+                @staticmethod
+                def create_executor(core, config=None, tool_executor=None, agent_manager=None):
+                    from app.core.conversation.executor import ConversationExecutor
+
+                    return ConversationExecutor(
+                        core=core, config=config, tool_executor=tool_executor, agent_manager=agent_manager
+                    )
+
+            stack = _FallbackStack()
+
+        self._conversation_core = stack.create_core(
             get_model_config=model_config_getter,
             agent_manager=agent_manager,
             backend=None,
@@ -138,7 +166,7 @@ class AutoLoopWorker(QThread):
         conv_config = ConversationConfig(
             permission_strategy=PermissionStrategy.AUTO_ALLOW,
         )
-        self._conversation_executor = ConversationExecutor(
+        self._conversation_executor = stack.create_executor(
             core=self._conversation_core,
             config=conv_config,
             tool_executor=tool_executor,

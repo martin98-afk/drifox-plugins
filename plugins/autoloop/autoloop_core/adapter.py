@@ -1,21 +1,26 @@
 # app/core/conversation/adapters/auto_loop.py
+"""AutoLoop 对话适配器 — 线程同步（类型仅注解用，字符串形式避免模块级 deep import）"""
+
 import threading
-from typing import Callable, Dict, Optional
+from typing import TYPE_CHECKING, Callable, Dict, Optional
 
-from app.core.conversation.adapters.base import BaseConversationAdapter
-from app.core.conversation.core import ConversationCore
-from app.core.conversation.executor import ConversationExecutor
+if TYPE_CHECKING:
+    from app.core.conversation.adapters.base import BaseConversationAdapter  # noqa: F401  # 用于基类条件注解
+    from app.core.conversation.core import ConversationCore
+    from app.core.conversation.executor import ConversationExecutor
 
 
-class AutoLoopConversationAdapter(BaseConversationAdapter):
+class AutoLoopConversationAdapter("BaseConversationAdapter" if TYPE_CHECKING else object):
     """AutoLoop 对话适配器 — 线程同步
 
     AutoLoop 工作在线程中，需要通过 threading.Event 等待 Worker 完成。
     不通过 Qt 信号中转（避免跨线程信号问题），直接等待。
     """
 
-    def __init__(self, core: ConversationCore, executor: ConversationExecutor):
-        super().__init__(core, executor)
+    def __init__(self, core: "ConversationCore", executor: "ConversationExecutor"):
+        # 基类为 object 时无需 super(core, executor)；core/executor 仅作实例属性保存。
+        self._core = core  # type: ignore[assignment]
+        self._executor = executor  # type: ignore[assignment]
         self._worker_done_event = threading.Event()
         self._response: str = ""
         self._error: Optional[str] = None

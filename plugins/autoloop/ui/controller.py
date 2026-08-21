@@ -176,6 +176,7 @@ class AutoLoopController:
             tools_schema=services.get("get_tools_schema", lambda _n: [])("auto_loop"),
             agent_system_prompt_getter=services.get("get_agent_prompt", lambda _n: ""),
             agent_manager=services.get("get_agent_manager")(),
+            conversation_stack=services.get("conversation_stack", lambda: None)(),
         )
         session.worker = worker
 
