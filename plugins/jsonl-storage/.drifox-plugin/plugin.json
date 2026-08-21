@@ -1,0 +1,72 @@
+{
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "name": "jsonl-storage",
+    "description": "JSONL 存储引擎 — 会话以 jsonl 格式持久化（per-session 文件 + 辅助索引文件），行为对齐 system 的 sqlite 引擎，可作为并存可选引擎注册。",
+    "version": "0.2.0",
+    "author": {
+        "name": "self-evolver"
+    },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "jsonl",
+        "evolved"
+    ],
+    "components": {
+        "tools": false,
+        "commands": false,
+        "agents": false,
+        "skills": false,
+        "hooks": false,
+        "mcp": false,
+        "lsp": false,
+        "themes": false,
+        "ui": false,
+        "providers": false,
+        "team_templates": false,
+        "model_adapters": false,
+        "loop_policies": false,
+        "storages": true,
+        "serializers": false,
+        "gateways": false,
+        "engines": false
+    },
+    "config_schema": {
+        "title": "JSONL 存储引擎",
+        "description": "将会话以 jsonl 格式持久化到本地文件系统。打开「启用」开关后，由 DriFox 主程序决定是否用它替代默认 sqlite 引擎；数据目录可自定义。",
+        "fields": [
+            {
+                "key": "enabled",
+                "label": "启用 jsonl 引擎",
+                "type": "bool",
+                "default": false,
+                "description": "打开后 jsonl 引擎可被 DriFox 选中作为存储后端；具体生效取决于主程序的引擎选取策略"
+            },
+            {
+                "key": "db_dir",
+                "label": "数据目录",
+                "type": "text",
+                "default": "",
+                "placeholder": "留空使用默认 ~/.drifox/data/sessions/",
+                "description": "jsonl 文件的根目录；留空时使用 DriFox 数据目录默认路径"
+            },
+            {
+                "key": "on_corrupt",
+                "label": "损坏行处理",
+                "type": "select",
+                "default": "skip",
+                "options": [
+                    {"label": "跳过（推荐）", "value": "skip"},
+                    {"label": "整文件回退为空", "value": "empty"}
+                ],
+                "description": "读取 jsonl 遇到损坏 JSON 行时的处理方式"
+            }
+        ]
+    }
+}
