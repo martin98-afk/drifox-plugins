@@ -6,6 +6,7 @@
 
 | 插件 | 描述 | 组件 | 版本 |
 |------|------|------|------|
+| [`autoloop`](autoloop/) | AutoLoop 自动循环模式 — 规划→执行→归档 三阶段长任务自动执行（对话引擎插件化首例） | ui + agents | 1.0.0 |
 | [`code-reviewer`](code-reviewer/) | 自动化代码审查 — checklist 审查、质量评分、报告生成 | commands + agents + skills | 1.0.0 |
 | [`codegraph-tools`](codegraph-tools/) | CodeGraph 语义级代码智能 — 搜索/调用链/影响分析/索引管理（codegraph_explore） | tools | 1.0.0 |
 | [`dsh-router`](dsh-router/) | 任务感知路由 — build/fix 行为带划分、persona 选择、引导注入（源自 dsh-router-standard） | commands + agents + skills | 1.0.0 |
@@ -49,6 +50,7 @@
 
 | 插件 | 描述 | 组件 | 版本 | 来源 |
 |------|------|------|------|------|
+| [`autoloop`](autoloop/) | AutoLoop 自动循环模式 — 规划→执行→归档 三阶段长任务自动执行（从主程序对话引擎整体迁移，对话引擎插件化首例） | ui + agents | 1.0.0 | DriFox 原生 |
 | [`calendar`](calendar/) | 日历 tab — 欢迎卡片内嵌月视图，上/下月切换 + 今天高亮 | ui | 1.0.0 | DriFox 原生 |
 | [`project-dashboard`](project-dashboard/) | 项目信息看板 — commit 趋势/语言分布/贡献者/文件统计图表 | ui | 0.1.0 | DriFox 原生 |
 
@@ -73,6 +75,7 @@
 
 | | commands | agents | skills | themes | hooks | mcp | lsp | ui | tools |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| autoloop | — | ✅ | — | — | — | — | — | ✅ | — |
 | code-reviewer | ✅ | ✅ | ✅ | — | — | — | — | — | — |
 | codegraph-tools | — | — | — | — | — | — | — | — | ✅ |
 | dsh-router | ✅ | ✅ | ✅ | — | — | — | — | — | — |
