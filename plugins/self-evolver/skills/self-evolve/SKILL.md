@@ -50,7 +50,7 @@ DriFox 的工具/插件全部可热重载（user 根 `~/.drifox/plugins/` 保存
    command=<stdio命令> args=[...] env={...}     # 本地型
    或 url=<https://...> headers={...}           # 远程型
 2. evolution_mcp operation=list → 确认配置
-3. 提醒用户重启 DriFox（MCP 连接不热重载）
+3. 配置已自动写入，DriFox 监听并重连（如未生效再重启）
 4. evolution_journal operation=log action=mcp plugin_name=<name> summary=...
 ```
 
@@ -85,7 +85,7 @@ scaffold 的 force 覆盖会把旧版备份为 `<name>.bak.<ts>`。
 - impl 签名：`impl(tool_ctx, **kwargs) -> ToolResult`
 - 每次进化动作结束**必须**记 journal（可追溯性是自进化的底线）
 - 修改 `plugins/system/` 禁止——那是主程序内置
-- hooks/mcp/lsp 变更不热重载，需重启 DriFox
+- hooks/mcp/lsp 变更通常自动热重载；如未生效再重启 DriFox
 
 ## 何时用哪个工具（决策表）
 

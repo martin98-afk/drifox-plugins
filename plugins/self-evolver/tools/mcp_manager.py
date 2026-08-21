@@ -9,7 +9,7 @@ evolution_mcp — 自进化工具 4：管理 DriFox 插件的 MCP 服务器配�
 - enable/disable 切换启用状态
 
 格式对齐官方：{ "mcpServers": { <name>: { type/command/args/env/enabled/url/headers } } }
-注意：MCP 配置变更后通常需重启 DriFox 才会重连。
+注意：MCP 配置变更后主程序通常自动监听并重连；极个别情况（新增 stdio 服务器首次启动等）需重启 DriFox。
 """
 import json
 from pathlib import Path
@@ -154,7 +154,7 @@ def _add_server(plugin_name: str, server_name: str, kwargs: dict):
             pass
 
     return f"已添加 MCP 服务器「{server_name}」到插件 {plugin_name} 的 {f.name}\n" \
-           f"端点：{command or url}\n⚠ 重启 DriFox 后生效（MCP 连接不热重载）。", None
+           f"端点：{command or url}\n配置已写入；DriFox 会自动启动连接，如未生效再重启。", None
 
 
 def _remove_server(plugin_name: str, server_name: str):
@@ -167,7 +167,7 @@ def _remove_server(plugin_name: str, server_name: str):
         return None, f"插件 {plugin_name} 无名为「{server_name}」的 MCP 服务器；现有：{sorted(servers)}"
     del servers[server_name]
     f.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
-    return f"已删除 MCP 服务器「{server_name}」（{f}）\n⚠ 重启 DriFox 后生效。", None
+    return f"已删除 MCP 服务器「{server_name}」（{f}）\n配置已写入；DriFox 会自动断开连接，如未生效再重启。", None
 
 
 def _toggle_server(plugin_name: str, server_name: str, enabled: bool):
@@ -181,7 +181,7 @@ def _toggle_server(plugin_name: str, server_name: str, enabled: bool):
     s["enabled"] = enabled
     f.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
     state = "启用" if enabled else "停用"
-    return f"MCP 服务器「{server_name}」已{state}。\n⚠ 重启 DriFox 后生效。", None
+    return f"MCP 服务器「{server_name}」已{state}。\n配置已写入；DriFox 会自动应用（已实测 disable 热加载即时生效），如未生效再重启。", None
 
 
 def _impl(tool_ctx, **kwargs):
@@ -233,7 +233,7 @@ _SCHEMA = {
             "自进化：管理 MCP 服务器配置（读写插件 .mcp.json）。"
             "operation=list 列出配置；add/remove/enable/disable 增删启停。"
             "stdio 型用 command+args，远程型用 url+headers。"
-            "可自动补齐 manifest 的 components.mcp 标记。变更需重启 DriFox 生效。"
+            "可自动补齐 manifest 的 components.mcp 标记。配置变更后 DriFox 自动监听重连；如未生效再重启。"
         ),
         "parameters": {
             "type": "object",

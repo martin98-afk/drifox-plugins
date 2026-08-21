@@ -326,7 +326,7 @@ def _impl(tool_ctx, **kwargs):
             lines.append("无错误无警告。")
         if not errors:
             lines.append("")
-            lines.append("提示：修改后 watchfiles 热重载自动生效（hooks/mcp/lsp 可能需重启 DriFox）。")
+            lines.append("提示：修改后 watchfiles 热重载自动生效（hooks/mcp/lsp 通常自动重连；如未生效再重启 DriFox）。")
         return ToolResult(
             not errors,
             content="\n".join(lines),

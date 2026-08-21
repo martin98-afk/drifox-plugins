@@ -15,7 +15,6 @@ evolution_publish — 自进化工具 6：发布插件到官方市场仓库（dr
 import json
 import shutil
 import subprocess
-import sys
 from pathlib import Path
 
 from app.tools.result import ToolResult
@@ -36,6 +35,29 @@ def _user_root(tool_ctx) -> Path:
         if root.is_dir():
             return root
     return Path.home() / ".drifox" / "plugins"
+
+
+def _python_exe() -> list[str]:
+    """定位系统 Python 解释器（返回参数列表前段）。
+
+    DriFox 是 PyInstaller 打包，主进程内 sys.executable == Drifox.exe，
+    直接 [sys.executable, ...] 会启动主程序新实例（spawn Drifox.exe 子进程）。
+    必须用系统 Python。
+    """
+    # 1) 直接可执行的 python.exe（跳过 WindowsApps 商店跳转占位）
+    for cand in ("python.exe", "python", "python3.exe", "python3"):
+        p = shutil.which(cand)
+        if p and "WindowsApps" not in p:
+            return [p]
+    # 2) Windows Python Launcher（py.exe），调用时加 -3
+    py = shutil.which("py.exe") or shutil.which("py")
+    if py:
+        return [py, "-3"]
+    raise RuntimeError(
+        "找不到系统 Python 解释器（python.exe 或 py.exe）。"
+        "publish 需要调用系统 Python 运行 generate_marketplace.py / validate_plugins.py，"
+        "请安装 Python 3 并加入 PATH，或设置 PYTHON 环境变量指向 python.exe 路径。"
+    )
 
 
 def _find_repo(repo_path: str | None) -> Path | None:
@@ -115,7 +137,7 @@ def _publish_fork(repo, src, plugin_name, new_ver, old_ver, version_note,
         steps.append(f"✓ 同步 {plugin_name} → fork plugins/")
 
         code, out = _run(
-            [sys.executable, "tools/validate_plugins.py", f"plugins/{plugin_name}"], repo
+            _python_exe() + ["tools/validate_plugins.py", f"plugins/{plugin_name}"], repo
         )
         if code != 0 or f"OK   {plugin_name}" not in out:
             detail = "\n".join(l for l in out.splitlines() if plugin_name in l or "err" in l)
@@ -210,13 +232,13 @@ def _impl(tool_ctx, **kwargs):
         steps.append(f"✓ 同步 {plugin_name} → {dst}")
 
         # ④ generate marketplace
-        code, out = _run([sys.executable, "tools/generate_marketplace.py"], repo)
+        code, out = _run(_python_exe() + ["tools/generate_marketplace.py"], repo)
         if code != 0:
             return ToolResult(False, error=f"generate_marketplace 失败：\n{out}\n（已同步文件，未提交）")
         steps.append("✓ marketplace.json 已更新")
 
         # ⑤ validate（只看目标插件结果）
-        code, out = _run([sys.executable, "tools/validate_plugins.py", f"plugins/{plugin_name}"], repo)
+        code, out = _run(_python_exe() + ["tools/validate_plugins.py", f"plugins/{plugin_name}"], repo)
         if code != 0 or f"OK   {plugin_name}" not in out:
             detail = "\n".join(l for l in out.splitlines() if plugin_name in l or "err" in l)
             return ToolResult(
