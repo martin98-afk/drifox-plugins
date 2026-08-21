@@ -302,7 +302,19 @@ class TaskBoardCard(QFrame):
         toolbar.addWidget(self._clear_btn)
         root.addLayout(toolbar)
 
-        hint = QLabel("拖拽或用 ←→ 按钮移动任务；▶ 触发当前列智能体处理；智能体结论决定任务去留")
+        # ── 环境信息栏（模型 · 工作路径）──
+        env_row = QHBoxLayout()
+        env_row.setSpacing(8)
+        self._model_label = QLabel("")
+        self._model_label.setToolTip("任务处理使用的模型（跟随当前窗口模型选择）")
+        self._workdir_label = QLabel("")
+        self._workdir_label.setToolTip("看板数据目录（board.json / reports / logs 所在工作目录）")
+        env_row.addWidget(self._model_label)
+        env_row.addStretch(1)
+        env_row.addWidget(self._workdir_label)
+        root.addLayout(env_row)
+
+        hint = QLabel("拖拽或 ←→ 移动任务 · ▶ 触发处理 · 智能体结论决定去留")
         hint.setWordWrap(True)
         self._hint_label = hint
         root.addWidget(hint)
@@ -353,6 +365,7 @@ class TaskBoardCard(QFrame):
         self._controller.bind(self._last_ctx)
         self._sync_auto_switch()
         self._rebuild_all()
+        self._refresh_env()
 
     def refresh_font_size(self):
         self._refresh_style()
@@ -398,6 +411,20 @@ class TaskBoardCard(QFrame):
             except Exception:
                 pass
 
+    def _refresh_env(self):
+        """刷新头部环境信息栏（模型 / 工作路径）"""
+        env = self._controller.get_env_info()
+        Colors.refresh()
+        self._model_label.setStyleSheet(
+            f"color: {Colors.TEXT_SECONDARY}; {FONT_CSS} font-size: {scale_font_size(11)}px;"
+        )
+        self._workdir_label.setStyleSheet(
+            f"color: {Colors.TEXT_MUTED}; {FONT_CSS} font-size: {scale_font_size(10)}px;"
+        )
+        self._model_label.setText(env["model"])
+        wd = env["workdir"]
+        self._workdir_label.setText(f"{wd}" if wd and len(wd) < 48 else (f"…{wd[-45:]}" if wd else ""))
+
     def _show_report(self, task_id: str):
         task = self._controller.get_task(task_id)
         if task is None:
@@ -411,6 +438,7 @@ class TaskBoardCard(QFrame):
 
     def _rebuild_all(self):
         """全量重建四列任务卡"""
+        self._refresh_env()
         for col in self._columns.values():
             col.clear_cards()
         self._cards.clear()
