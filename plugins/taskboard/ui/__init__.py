@@ -3,7 +3,6 @@
 
 - 注册浮动卡片「任务看板」（container="right"：与浏览器卡同容器互斥，
   打开看板即替换浏览器插槽，关闭后浏览器可重新切回）
-- 注册输入区按钮（快速唤起看板）
 """
 
 import sys
@@ -42,29 +41,7 @@ def register_ui(registry):
         title="任务看板",
         default_visible=False,
     )
-    # 输入区按钮（快速唤起看板）
-    # icon_path = 深色主题图标（浅色笔迹 board_light.svg）
-    # icon_light_path = 浅色主题图标（深色笔迹 board.svg）
-    _icon_dark = _PLUGIN_ROOT / "icons" / "board_light.svg"
-    _icon_light = _PLUGIN_ROOT / "icons" / "board.svg"
-    registry.register_input_button(
-        plugin_name="taskboard",
-        button_id="taskboard",
-        icon_path=str(_icon_dark) if _icon_dark.exists() else "",
-        icon_light_path=str(_icon_light) if _icon_light.exists() else "",
-        tooltip="任务看板（todo/进行/审查/完成 多智能体流水线）",
-        on_click=_on_input_button_clicked,
-    )
     logger.info("[taskboard] UI components registered")
-
-
-def _on_input_button_clicked(context):
-    """输入区按钮点击 — 切换看板卡显示"""
-    from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
-
-    UIPluginRegistry.get_instance().toggle_floating_card(
-        "taskboard", main_widget=context.get("main_widget")
-    )
 
 
 def unload_ui(registry):
