@@ -3,7 +3,10 @@
 evolution_scaffold — 自进化工具 1：按需求生成 DriFox 插件骨架。
 
 写入目标默认 user 根（~/.drifox/plugins/<name>/），保存即热重载。
-支持组件：tools / commands / agents / skills / hooks / mcp / lsp / themes。
+支持 DriFox 全部 **17 类组件**（对齐主程序 kernel.KNOWN_COMPONENTS）：
+tools / commands / agents / skills / hooks / mcp / lsp / themes /
+ui / providers / team_templates /
+model_adapters / loop_policies / storages / serializers / gateways / engines。
 
 安全约束：
 - 插件名必须 ^[a-z][a-z0-9-]{1,63}$（kebab-case）
@@ -18,7 +21,11 @@ from pathlib import Path
 
 from app.tools.result import ToolResult
 
-VALID_COMPONENTS = ("tools", "commands", "agents", "skills", "hooks", "mcp", "lsp", "themes")
+VALID_COMPONENTS = (
+    "tools", "commands", "agents", "skills", "hooks", "mcp", "lsp", "themes",
+    "ui", "providers", "team_templates",
+    "model_adapters", "loop_policies", "storages", "serializers", "gateways", "engines",
+)
 
 _NAME_RE = re.compile(r"^[a-z][a-z0-9-]{1,63}$")
 
@@ -130,36 +137,122 @@ _HOOK_PY = '''# -*- coding: utf-8 -*-
 
 
 def handle(payload: dict) -> dict:
-    # TODO: 实现钩子逻辑；返回 {} 或附加数据
-    return {}
+    # TODO: 实现钩子逻辑；返回 {{}} 或附加数据
+    return {{}}
 '''
 
-_MCP_JSON = '''{{
-  "mcpServers": {{
-    "example-server": {{
+_MCP_JSON = '''{
+  "mcpServers": {
+    "example-server": {
       "type": "stdio",
       "command": "TODO-command",
       "args": [],
-      "env": {{}},
+      "env": {},
       "enabled": false,
       "url": "",
-      "headers": {{}}
-    }}
-  }}
-}}
+      "headers": {}
+    }
+  }
+}
 '''
 
-_LSP_JSON = '''{{
-  "TODO-language": {{
+_LSP_JSON = '''{
+  "TODO-language": {
     "command": "TODO-lsp-command",
     "args": []
-  }}
-}}
+  }
+}
 '''
+
+# ---------- UI / Providers / TeamTemplates / 运行时组件模板 ----------
+
+_UI_INIT = '''# -*- coding: utf-8 -*-
+"""{plugin} UI 组件骨架 — DriFox 启动时 UIPluginRegistry.load_plugin 调用"""
+
+
+def register_ui(registry):
+    """UI 注册入口（必须此函数名）
+
+    三类扩展点（按需选用）：
+    - registry.register_floating_card(...)   独立浮动卡片（自动注册 /<card_id> 命令）
+    - registry.register_content_renderer(...) 消息流自定义内容块渲染器
+    - registry.register_message_factory(...)  特定消息结构 → 自定义 QWidget
+
+    TODO: 参考主程序 plugins/context-usage-stats/（浮动卡片真实案例）实现
+    """
+    pass
+'''
+
+_PROVIDER_PY = '''# -*- coding: utf-8 -*-
+"""{provider} 服务商骨架 — 被 ProviderWatcher 扫描调用。
+
+写法参考 app.plugins.registries.provider_registry.ProviderDef 字段定义。
+"""
+from app.plugins.registries.provider_registry import ProviderDef
+
+
+def register(registry):
+    registry.register(
+        ProviderDef(
+            name="{provider}",           # 服务商唯一名
+            icon="{provider}",            # 图标 key（icons/ 文件名，可省略回退 qrc）
+            api_url="https://TODO.api.endpoint",
+            auth_type="bearer",           # bearer / bce / none / anthropic
+            default_model="TODO-model",
+            register_url="https://TODO.get.key",
+            # models=["model-a"], family="xxx", capabilities={{...}},
+            # balance_fetcher=..., coding_plan_fetcher=...,  可选
+        )
+    )
+'''
+
+_TEAM_YAML = '''# 用法：/team --load={plugin}
+schema_version: 1
+template_name: {plugin}
+description: {description}（TODO 替换描述）
+agents:
+  - agent_name: build
+    description: 构建智能体，负责读写代码与验证
+  # agent_name 必须引用已存在的 @角色（plugins/system/agents/），加载时校验
+'''
+
+_RUNTIME_PY = '''# -*- coding: utf-8 -*-
+"""{kind} 组件骨架 — 被 runtime_component_loader.scan_roots 调用。
+
+{kind_note}
+"""
+# TODO: 按目标 contracts 协议实现类，参考 plugins/system/{sys_dir}/ 同类实现
+
+
+class {cls_name}:
+    """TODO: 实现组件协议（id 属性 + 协议方法）"""
+
+    id = "{plugin}"
+
+
+def register(registry):
+    """注册入口 — 与 tools/providers 插件约定一致（source 由 loader 强制注入）"""
+    registry.register({cls_name}())
+'''
+
+_KIND_NOTES = {
+    "model_adapters": ("model_adapters", "模型适配器：统一不同厂商 API 差异（参考 system/model_adapters/openai_family.py）"),
+    "loop_policies": ("loop_policies", "循环策略：决定 agent loop 继续/停止（参考 system/loop_policies/default.py，协议在 app.plugins.contracts.loop_policy）"),
+    "storages": ("storages", "存储引擎：会话/数据持久化（参考 system/storages/sqlite.py）"),
+    "serializers": ("serializers", "序列化器：消息格式转换（参考 system/serializers/openai.py）"),
+    "gateways": ("gateways", "网关：外部消息平台接入（参考 gateway-feishu/gateways/feishu.py，协议在 app.plugins.contracts.gateway_platform）"),
+    "engines": ("engines", "对话引擎：可替换的对话处理核心（参考 system/ 下 engines 实现）"),
+}
 
 
 def _manifest(name: str, description: str, comps: list, author: str = "self-evolver") -> str:
-    components = {c: (c in comps) for c in VALID_COMPONENTS}
+    # components 覆盖 kernel.KNOWN_COMPONENTS 全集 17 类（缺省 false）
+    all_comps = [
+        "tools", "commands", "agents", "skills", "hooks", "mcp", "lsp", "themes",
+        "ui", "providers", "team_templates",
+        "model_adapters", "loop_policies", "storages", "serializers", "gateways", "engines",
+    ]
+    components = {c: (c in comps) for c in all_comps}
     manifest = {
         "name": name,
         "description": description[:200],
@@ -243,6 +336,45 @@ def _write_components(base: Path, name: str, description: str, comps: list) -> l
         (base / ".lsp.json").write_text(_LSP_JSON, encoding="utf-8")
         written.append(".lsp.json")
 
+    if "ui" in comps:
+        d = base / "ui"
+        d.mkdir(exist_ok=True)
+        (d / "__init__.py").write_text(_UI_INIT.format(plugin=name), encoding="utf-8")
+        written.append("ui/__init__.py")
+
+    if "providers" in comps:
+        d = base / "providers"
+        d.mkdir(exist_ok=True)
+        provider = name.replace("-", "_")
+        (d / f"{provider}.py").write_text(
+            _PROVIDER_PY.format(provider=provider), encoding="utf-8"
+        )
+        written.append(f"providers/{provider}.py")
+
+    if "team_templates" in comps:
+        d = base / "team_templates"
+        d.mkdir(exist_ok=True)
+        (d / f"{name}.yaml").write_text(
+            _TEAM_YAML.format(plugin=name, description=description[:40]),
+            encoding="utf-8",
+        )
+        written.append(f"team_templates/{name}.yaml")
+
+    for kind in ("model_adapters", "loop_policies", "storages", "serializers", "gateways", "engines"):
+        if kind in comps:
+            sys_dir, note = _KIND_NOTES[kind]
+            d = base / kind
+            d.mkdir(exist_ok=True)
+            mod = name.replace("-", "_")
+            cls = mod.title().replace("_", "")
+            (d / f"{mod}.py").write_text(
+                _RUNTIME_PY.format(
+                    kind=kind, kind_note=note, sys_dir=sys_dir, plugin=name, cls_name=cls,
+                ),
+                encoding="utf-8",
+            )
+            written.append(f"{kind}/{mod}.py")
+
     return written
 
 
@@ -272,6 +404,7 @@ def _impl(tool_ctx, **kwargs):
 
         root = _user_root(tool_ctx)
         base = root / name
+        bak = None
 
         if base.exists():
             if not force:
@@ -310,7 +443,7 @@ def _impl(tool_ctx, **kwargs):
         )
         written += ["__init__.py", "README.md"]
 
-        backup_note = f"\n旧版本已备份：{bak.name}" if force else ""
+        backup_note = f"\n旧版本已备份：{bak.name}" if bak else ""
         content = (
             f"插件骨架 {name} 已生成 ✅\n\n"
             f"路径：{base}\n"
@@ -352,7 +485,11 @@ _SCHEMA = {
                         "type": "string",
                         "enum": list(VALID_COMPONENTS),
                     },
-                    "description": "要启用的组件列表，默认 ['tools']",
+                    "description": (
+                        "要启用的组件列表，默认 ['tools']。支持全部 17 类："
+                        "tools/commands/agents/skills/hooks/mcp/lsp/themes/ui/providers/"
+                        "team_templates/model_adapters/loop_policies/storages/serializers/gateways/engines"
+                    ),
                 },
                 "force": {
                     "type": "boolean",
