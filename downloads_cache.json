@@ -1,12 +1,12 @@
 {
   "schema": 1,
-  "fetched_at": 1787291712.6161034,
+  "fetched_at": 1787293726.7366784,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
     "algorithmic-art": 1,
     "anthropic": 3,
-    "autoloop": 2,
+    "autoloop": 3,
     "beautiful-article-skills": 3,
     "breakout": 3,
     "browser": 29,
