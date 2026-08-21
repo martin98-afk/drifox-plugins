@@ -50,6 +50,7 @@ def strip_signal(response: str) -> str:
 
 _THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
 _META_LINE_RE = re.compile(r"^\s*(---|\*\*\*|###?#?\s*$)\s*$")
+_LOG_HEADING_RE = re.compile(r"^\s*##\s*\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}\b")
 
 
 def _strip_thinking(text: str) -> str:
@@ -77,7 +78,7 @@ def build_summary(response: str) -> str:
     lines = [
         ln.strip()
         for ln in body.splitlines()
-        if ln.strip() and not _META_LINE_RE.match(ln)
+        if ln.strip() and not _META_LINE_RE.match(ln) and not _LOG_HEADING_RE.match(ln)
     ]
     if not lines:
         return ""
