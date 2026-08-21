@@ -2484,6 +2484,44 @@
             }
         },
         {
+            "name": "taskboard",
+            "description": "任务看板对话引擎 — todo/inprogress/review/done 四列流水线，每列绑定专属智能体并行处理任务，智能体自主决定任务去留",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui",
+                "agent"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/taskboard",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true,
+                "agents": true
+            },
+            "keywords": [
+                "taskboard",
+                "kanban",
+                "看板",
+                "任务管理",
+                "多智能体",
+                "并行任务",
+                "对话引擎"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/martin98-afk/drifox-plugins",
+            "icon": {
+                "light": "icons/board.svg",
+                "dark": "icons/board_light.svg"
+            }
+        },
+        {
             "name": "teach",
             "description": "AI 私人教师技能——基于学习目标进行多轮交互式教学，跟踪学习进度，持续教会你任何知识。",
             "version": "1.0.0",
