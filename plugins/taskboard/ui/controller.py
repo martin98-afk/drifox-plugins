@@ -204,6 +204,9 @@ class TaskBoardController(QObject):
             worker.configure(task=task, column=column, services=self._services, log_file=log_file)
         except Exception as e:
             logger.exception(f"[taskboard] worker 配置失败 task={task_id}")
+            task.error = f"启动失败: {e}"
+            self._persist()
+            self.task_changed.emit(task_id)
             self._notify("启动失败", str(e))
             return False
 
