@@ -45,7 +45,6 @@ DEFAULT_LICENSE = "GPL-3.0-or-later"
 # 这些插件随 DriFox 分发，无需从市场安装，出现在市场中会让用户困惑，
 # 因此生成 marketplace.json 时一律跳过。
 DRIFOX_BUILTIN_PLUGINS = {
-    "context-usage-stats",
     "file-tree",
     "plugin-manager",
     "plugin-marketplace",
