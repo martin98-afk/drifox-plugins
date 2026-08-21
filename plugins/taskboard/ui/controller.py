@@ -262,9 +262,17 @@ class TaskBoardController(QObject):
         return True
 
     def stop_task(self, task_id: str) -> None:
-        """停止运行中的处理（任务保留当前列）"""
+        """停止运行中的处理（任务保留当前列；不污染 context_log）
+
+        取消时显式断开 worker.task_finished 信号，避免 worker.run() 取消后仍
+        emit 收尾信号触发 _on_worker_finished 写出"已手动停止"到上下文链 / 误推进。
+        """
         worker = self._workers.get(task_id)
         if worker and worker.isRunning():
+            try:
+                worker.task_finished.disconnect()
+            except (TypeError, RuntimeError, AttributeError):
+                pass  # 未连接或已断开
             worker.cancel()
             task = self._tasks.get(task_id)
             if task:
@@ -272,7 +280,9 @@ class TaskBoardController(QObject):
                 task.stream_preview = ""
                 task.tool_rounds = 0
                 task.started_at = 0.0
+                task.error = task.error or "已手动停止"
                 self.task_changed.emit(task_id)
+                self._notify("已停止", f"「{task.title}」处理已终止（保留在当前列）")
 
     def stop_all(self) -> None:
         for tid in list(self._workers.keys()):

@@ -4,27 +4,31 @@
 # 看板列（有序：todo → inprogress → review → done）
 COLUMNS = ["todo", "inprogress", "review", "done"]
 
-# 列元数据：标题 / 绑定智能体 / 强调色（列头圆点与卡片描边）
+# 列元数据：标题 / 绑定智能体 / 强调色（列头圆点与卡片描边）/ 处理模式标签
 COLUMN_META = {
     "todo": {
         "title": "待办",
         "agent": "tb_todo",
         "accent": "#8A8F98",
+        "mode": "评估",
     },
     "inprogress": {
         "title": "进行中",
         "agent": "tb_build",
         "accent": "#3B82F6",
+        "mode": "执行",
     },
     "review": {
         "title": "审查",
         "agent": "tb_review",
         "accent": "#F59E0B",
+        "mode": "审查",
     },
     "done": {
         "title": "完成",
         "agent": "tb_done",
         "accent": "#22C55E",
+        "mode": "归档",
     },
 }
 
