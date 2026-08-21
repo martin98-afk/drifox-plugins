@@ -12,11 +12,12 @@ DriFox 的工具/插件全部可热重载（user 根 `~/.drifox/plugins/` 保存
 
 | 工具 | 用途 |
 |------|------|
-| `evolution_scaffold` | 需求 → 插件骨架（manifest+组件模板） |
+| `evolution_scaffold` | 需求 → 插件骨架（17 类组件模板） |
 | `evolution_validate` | 插件结构校验（准入门槛） |
 | `evolution_inspect` | 扫描已装插件/深查结构/TODO 定位 |
 | `evolution_mcp` | 读写 .mcp.json 管理 MCP 服务器 |
 | `evolution_journal` | 进化审计日志（每次动作必记） |
+| `evolution_publish` | 发布到市场仓库（同步+marketplace+校验+commit，push 可选） |
 
 ## 标准工作流
 
@@ -53,11 +54,20 @@ DriFox 的工具/插件全部可热重载（user 根 `~/.drifox/plugins/` 保存
 4. evolution_journal operation=log action=mcp plugin_name=<name> summary=...
 ```
 
-### ④ 回滚
+### ⑤ 发布到市场
+
+```
+1. 确认 manifest 已 bump version（未 bump 会警告）
+2. evolution_publish plugin_name=<name>            # 本地 commit（默认）
+3. evolution_publish plugin_name=<name> push=true  # 确认后推送远端
+   自动：同步仓库 → generate_marketplace → validate → commit → rebase+push
+4. evolution_journal operation=log action=note plugin_name=<name> summary=...
+```
+
+### ⑥ 回滚
 
 scaffold 的 force 覆盖会把旧版备份为 `<name>.bak.<ts>`。
 回滚 = 把备份目录内容移回原位，然后 journal 记 `action=rollback`。
-
 ## 硬约束
 
 - 插件名 kebab-case：`^[a-z][a-z0-9-]{1,63}$`
