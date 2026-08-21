@@ -310,13 +310,15 @@ class BoardColumn(QFrame):
             #{self.objectName()} {{
                 background: {Colors.CARD_BG_DIM};
                 border: 1px solid {Colors.BORDER};
+                border-top: 3px solid {self._accent};
                 border-radius: 10px;
             }}
             QScrollArea {{ background: transparent; border: none; }}
             QWidget#taskboardColumnHost {{ background: transparent; }}
         """)
         self._title_label.setStyleSheet(
-            f"color: {Colors.TEXT_PRIMARY}; border: none; {FONT_CSS} font-size: {scale_font_size(12)}px;"
+            f"color: {self._accent}; border: none; {FONT_CSS}"
+            f"font-size: {scale_font_size(12)}px; font-weight: bold;"
         )
 
 
