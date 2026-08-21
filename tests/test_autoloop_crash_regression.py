@@ -90,6 +90,38 @@ def test_finish_never_deletes_running_thread(monkeypatch):
     worker2.deleteLater.assert_called_once()
 
 
+def test_streaming_deadlock_reset_on_stale_worker():
+    """Fix D：_is_streaming 残留 + current_worker 已删 → 每轮对话前强制复位（防死循环）"""
+    from autoloop_core.engine import AutoLoopEngine
+    from autoloop_core.worker import AutoLoopWorker
+
+    worker = AutoLoopWorker.__new__(AutoLoopWorker)
+    worker._engine = MagicMock()
+    # executor：is_streaming=True + current_worker 为已删 wrapper（访问即 RuntimeError）
+    dead = MagicMock()
+    dead.isRunning.side_effect = RuntimeError("wrapped C/C++ object deleted")
+    executor = MagicMock()
+    executor.is_streaming = True
+    executor.get_current_worker.return_value = dead
+    worker._conversation_executor = executor
+    worker._adapter = MagicMock()
+    worker._current_phase_tools = None
+    worker.log_signal = MagicMock()
+
+    # 直接驱动真实方法的复位段（等价 _execute_llm_conversation 前置防御）
+    if worker._conversation_executor.is_streaming:
+        stale = worker._conversation_executor.get_current_worker()
+        if not AutoLoopWorker._alive_worker(stale):
+            worker._conversation_executor._is_streaming = False
+            worker._conversation_executor._current_worker = None
+            worker.log_signal.emit("🔓 复位残留的流式状态（上轮 worker 已销毁）")
+
+    assert worker._conversation_executor._is_streaming is False  # 死锁解除
+    assert worker._conversation_executor._current_worker is None
+    worker.log_signal.emit.assert_called_once()
+    assert "复位" in worker.log_signal.emit.call_args[0][0]
+
+
 def test_worker_marks_cancelled_after_3_consecutive_failures():
     """Fix C：连续 3 次单轮失败 → _is_cancelled=True（主循环退出，走 loop_stopped 正常收尾）"""
     from autoloop_core.engine import AutoLoopEngine

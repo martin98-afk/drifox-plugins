@@ -559,6 +559,18 @@ class AutoLoopWorker(QThread):
         try:
             self._adapter.reset()
 
+            # 【死锁解锁】上一轮竞态可能残留 _is_streaming=True 且 current_worker
+            # 已被 executor 统一收尾 deleteLater（C++ 已删）——此后每轮 execute()
+            # 都被 "Already streaming" 拒绝，get_current_worker 拿回已删 wrapper
+            # 反复 RuntimeError：表现为循环卡在规划阶段 + round 日志全不写。
+            # 检测到此状态时强制复位（worker 已死，流式状态不可能还有效）。
+            if self._conversation_executor.is_streaming:
+                _stale = self._conversation_executor.get_current_worker()
+                if not self._alive_worker(_stale):
+                    self._conversation_executor._is_streaming = False
+                    self._conversation_executor._current_worker = None
+                    self.log_signal.emit("🔓 复位残留的流式状态（上轮 worker 已销毁）")
+
             # 保存当前阶段 tools，供回调中的 token 计数使用
             self._current_phase_tools = current_tools
 
@@ -592,16 +604,7 @@ class AutoLoopWorker(QThread):
                 worker = getattr(self._conversation_executor, "_finalize_worker", None)
 
             def _worker_alive(w) -> bool:
-                """C++ wrapper 存活检查：executor 统一收尾可能已 deleteLater 该对象
-                （线程结束 → _on_worker_finished → _finalize_worker_cleanup 排队销毁，
-                同一事件循环内本兜底段再访问 isRunning 即 RuntimeError）。"""
-                if w is None:
-                    return False
-                try:
-                    w.isRunning()
-                    return True
-                except RuntimeError:
-                    return False
+                return self._alive_worker(w)
 
             if _worker_alive(worker):
                 # 阶段 1：QEventLoop 等待 worker 完成（同时处理实时日志信号）
@@ -691,13 +694,7 @@ class AutoLoopWorker(QThread):
             worker = self._conversation_executor.get_current_worker()
 
             def _alive(w) -> bool:
-                if w is None:
-                    return False
-                try:
-                    w.isRunning()
-                    return True
-                except RuntimeError:
-                    return False
+                return self._alive_worker(w)
 
             if _alive(worker):
                 loop = QEventLoop()
@@ -957,6 +954,18 @@ class AutoLoopWorker(QThread):
         messages = [{"role": "system", "content": system_prompt}]
         messages.append({"role": "user", "content": task_prompt})
         return messages
+
+    @staticmethod
+    def _alive_worker(w) -> bool:
+        """C++ wrapper 存活性检查：executor 统一收尾 deleteLater 后
+        Python wrapper 仍在但 C++ 对象已删，访问即 RuntimeError。"""
+        if w is None:
+            return False
+        try:
+            w.isRunning()
+            return True
+        except RuntimeError:
+            return False
 
     def _make_autoloop_callbacks(self) -> Dict[str, Callable]:
         """构建 AutoLoop 的回调包装（日志转发 + 预算检查 + token 追踪）"""
