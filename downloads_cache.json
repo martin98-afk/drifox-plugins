@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787303203.4542105,
+  "fetched_at": 1787306307.0333374,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -12,7 +12,7 @@
     "browser": 29,
     "calendar": 13,
     "canvas-design": 1,
-    "caveman": 3,
+    "caveman": 4,
     "claude-api": 2,
     "code-reviewer": 1,
     "code-simplifier": 1,
@@ -66,7 +66,7 @@
     "playground": 3,
     "ponytail": 9,
     "project-dashboard": 17,
-    "project-side-rail": 0,
+    "project-side-rail": 1,
     "prompt-enhancer": 13,
     "python-pro": 1,
     "rdr2": 4,
