@@ -99,7 +99,7 @@ Worker 内部通过 `ConversationCore.create()` 自建执行栈，**不依赖主
 | loguru | 日志 |
 | watchfiles | 热重载 |
 
-源码 `worker.py` 与 `cards.py` 中会 `from app.core.conversation import ConversationExecutor` 等主程序私有模块引用 —— 这些 import 在独立运行时不会触发（仅在 `register_ui` 进入后由主程序进程执行）。
+执行栈构建经主程序 services `conversation_stack()` 入口注入（EP2 契约：`app/plugins/contracts/conversation_stack.py`），`worker.py` 不再模块级 deep import `ConversationCore`/`ConversationExecutor`（仅 config 家族与 fallback 兼容路径保留少量延迟 import）。主程序需 ≥ 0.5.0 且提供该服务键。
 
 ## 热重载
 
