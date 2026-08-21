@@ -59,6 +59,20 @@ def _run(cmd: list, cwd: Path) -> tuple[int, str]:
     return r.returncode, out.strip()
 
 
+def _upstream_owner(repo: Path) -> str:
+    """从 origin remote URL 提取官方仓库 owner（fork 模式拼 PR 链接用）"""
+    code, out = _run(["git", "remote", "get-url", "origin"], repo)
+    if code != 0:
+        return "martin98-afk"
+    url = out.strip()
+    # https://github.com/<owner>/<repo>.git 或 git@github.com:<owner>/<repo>.git
+    if url.startswith("git@github.com:"):
+        return url.split(":")[1].split("/")[0]
+    if "github.com" in url:
+        return url.rstrip("/").split("/")[-2]
+    return "martin98-afk"
+
+
 def _marketplace_version(repo: Path, plugin_name: str) -> str | None:
     try:
         m = json.loads((repo / "marketplace.json").read_text(encoding="utf-8"))
@@ -75,7 +89,19 @@ def _impl(tool_ctx, **kwargs):
         plugin_name = (kwargs.get("plugin_name") or "").strip()
         if not plugin_name:
             return ToolResult(False, error="必须提供 plugin_name")
-        push = bool(kwargs.get("push"))
+        mode = (kwargs.get("mode") or "local").strip()
+        if mode not in ("local", "direct", "fork"):
+            return ToolResult(False, error="mode 需为 local（仅本地 commit）/ direct（直推 origin）/ fork（推 fork+PR）")
+        if kwargs.get("push") and mode == "local":
+            mode = "direct"  # 向后兼容 push=true
+        fork_remote = (kwargs.get("fork_remote") or "").strip()
+        if mode == "fork" and not fork_remote:
+            return ToolResult(
+                False,
+                error="fork 模式需提供 fork_remote（你 fork 的仓库地址，"
+                      "如 https://github.com/<你的账号>/drifox-plugins.git）。"
+                      "fork：github.com/martin98-afk/drifox-plugins 右上角 Fork。",
+            )
         commit_type = (kwargs.get("commit_type") or "feat").strip()
         if commit_type not in _COMMIT_TYPES:
             return ToolResult(False, error=f"commit_type 需为 {list(_COMMIT_TYPES)}")
@@ -140,25 +166,46 @@ def _impl(tool_ctx, **kwargs):
         else:
             steps.append(f"✓ commit：{message}")
 
-        # ⑦ 可选 push（先 rebase 拉齐远端 CI 提交）
-        if push:
+        # ⑦ 推送（按模式）
+        pr_url = ""
+        if mode == "direct":
             code, out = _run(["git", "pull", "--rebase", "origin", "main"], repo)
             if code != 0:
                 return ToolResult(False, error=f"git pull --rebase 失败（本地 commit 已保留）：\n{out}")
             code, out = _run(["git", "push", "origin", "main"], repo)
             if code != 0:
                 return ToolResult(False, error=f"git push 失败（本地 commit 已保留）：\n{out}")
-            steps.append("✓ 已推送到 origin/main")
+            steps.append("✓ 已直推 origin/main（需官方仓库写权限）")
+        elif mode == "fork":
+            branch = f"feat/{plugin_name}"
+            _run(["git", "checkout", "-B", branch], repo)
+            code, out = _run(
+                ["git", "push", fork_remote, f"{branch}:{branch}"], repo
+            )
+            if code != 0:
+                _run(["git", "checkout", "main"], repo)
+                return ToolResult(False, error=f"推送到 fork 失败（本地分支已保留）：\n{out}")
+            steps.append(f"✓ 已推送到 fork 分支 {branch}")
+            owner = _upstream_owner(repo)
+            fork_owner = fork_remote.rstrip("/").rstrip(".git").split("/")[-2] \
+                if "/" in fork_remote else "<你的账号>"
+            pr_url = (
+                f"https://github.com/{owner}/drifox-plugins/compare"
+                f"/main...{fork_owner}:drifox-plugins:{branch}?expand=1"
+            )
+            steps.append(f"下一步：打开 PR 页面提交审核：\n  {pr_url}")
+            _run(["git", "checkout", "main"], repo)  # 切回 main
 
+        mode_label = {"local": "（本地）", "direct": "完成（已直推）", "fork": "到 fork（待提 PR）"}[mode]
         content = (
-            f"插件 {plugin_name} 发布{'（本地）' if not push else '完成'}\n"
+            f"插件 {plugin_name} 发布{mode_label}\n"
             f"仓库：{repo}\n"
             f"版本：{old_ver or '（新收录）'} → {new_ver}\n"
             f"{version_note}"
             + "\n".join(steps)
         )
-        if not push:
-            content += "\n\n下一步：确认无误后重跑并加 push=true 推送远端"
+        if mode == "local":
+            content += "\n\n下一步：确认无误后 mode=direct（有官方仓库权限）或 mode=fork + fork_remote=<你的fork>（社区贡献）"
         return ToolResult(True, content=content)
     except Exception as e:  # noqa: BLE001
         return ToolResult(False, error=f"evolution_publish 内部异常：{type(e).__name__}: {e}")
@@ -185,9 +232,22 @@ _SCHEMA = {
                     "type": "string",
                     "description": "市场仓库路径（含 tools/generate_marketplace.py）；不填自动探测常见路径",
                 },
+                "mode": {
+                    "type": "string",
+                    "enum": ["local", "direct", "fork"],
+                    "description": (
+                        "发布模式：local=仅本地 commit（默认）；direct=直推 origin/main"
+                        "（需官方仓库写权限）；fork=推到你的 fork 并生成 PR 链接（社区贡献标准流程）"
+                    ),
+                    "default": "local",
+                },
+                "fork_remote": {
+                    "type": "string",
+                    "description": "fork 模式必填：你 fork 的仓库地址（github.com/martin98-afk/drifox-plugins 右上角 Fork 后得到）",
+                },
                 "push": {
                     "type": "boolean",
-                    "description": "true 时执行 git push（先 rebase）；默认 false 仅本地 commit",
+                    "description": "向后兼容：true 等价 mode=direct，默认 false",
                     "default": False,
                 },
                 "commit_type": {
