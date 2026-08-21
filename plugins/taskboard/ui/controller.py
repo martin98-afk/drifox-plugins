@@ -96,7 +96,8 @@ class TaskBoardController(QObject):
         """当前看板运行环境：模型显示名 + 工作目录（头部信息栏用）"""
         model_display = ""
         try:
-            mc = (self._services.get("get_model_config")() or {}) if self._services else {}
+            fn = (self._services or {}).get("get_model_config")
+            mc = fn() if callable(fn) else {}
             provider = mc.get("服务商名", "")
             model = mc.get("模型名称", "")
             model_display = f"{provider} · {model}" if provider and model else (provider or model)
@@ -231,9 +232,9 @@ class TaskBoardController(QObject):
         task.error = ""
         import time as _t
 
-        task._started_at = _t.time()
-        task._tool_rounds = 0
-        task._stream_preview = ""
+        task.started_at = _t.time()
+        task.tool_rounds = 0
+        task.stream_preview = ""
         self.task_changed.emit(task_id)
         self._notify(
             "开始处理",
@@ -268,9 +269,9 @@ class TaskBoardController(QObject):
             task = self._tasks.get(task_id)
             if task:
                 task.processing = False
-                task._stream_preview = ""
-                task._tool_rounds = 0
-                task._started_at = 0.0
+                task.stream_preview = ""
+                task.tool_rounds = 0
+                task.started_at = 0.0
                 self.task_changed.emit(task_id)
 
     def stop_all(self) -> None:
@@ -289,7 +290,7 @@ class TaskBoardController(QObject):
     def _on_worker_update(self, task_id: str, preview: str) -> None:
         task = self._tasks.get(task_id)
         if task is not None:
-            task._stream_preview = preview  # 运行时态，卡片处理中显示
+            task.stream_preview = preview  # 运行时态，卡片处理中显示
             self.task_changed.emit(task_id)
 
     def _on_worker_error(self, task_id: str, error: str) -> None:
@@ -301,7 +302,7 @@ class TaskBoardController(QObject):
     def _on_worker_progress(self, task_id: str, rounds: int) -> None:
         task = self._tasks.get(task_id)
         if task is not None:
-            task._tool_rounds = rounds
+            task.tool_rounds = rounds
             self.task_changed.emit(task_id)
 
     def _on_worker_finished(self, task_id: str, signal: str, summary: str, report: str) -> None:
@@ -310,9 +311,9 @@ class TaskBoardController(QObject):
         if task is None:
             return
         task.processing = False
-        task._stream_preview = ""
-        task._tool_rounds = 0
-        task._started_at = 0.0
+        task.stream_preview = ""
+        task.tool_rounds = 0
+        task.started_at = 0.0
         column = task.status
         agent = COLUMN_META.get(column, {}).get("agent", "")
         task.append_context(column, agent, summary or "处理完成")

@@ -52,9 +52,9 @@ class Task:
 
     # ── 运行时态（不持久化）──
     processing: bool = field(default=False, compare=False)
-    _stream_preview: str = field(default="", compare=False)   # 处理中流式预览
-    _tool_rounds: int = field(default=0, compare=False)        # 本次处理工具调用轮次
-    _started_at: float = field(default=0.0, compare=False)     # 本次处理开始时间戳
+    stream_preview: str = field(default="", compare=False)   # 处理中流式预览
+    tool_rounds: int = field(default=0, compare=False)        # 本次处理工具调用轮次
+    started_at: float = field(default=0.0, compare=False)     # 本次处理开始时间戳
 
     @staticmethod
     def create(title: str, detail: str = "", status: str = "todo") -> "Task":
