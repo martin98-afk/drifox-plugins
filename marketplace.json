@@ -346,7 +346,7 @@
                 "skills": true,
                 "agents": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "productivity",
                 "communication",
@@ -2050,6 +2050,7 @@
             "components": {
                 "ui": true
             },
+            "downloads": 1,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
