@@ -59,16 +59,17 @@ DriFox 的工具/插件全部可热重载（user 根 `~/.drifox/plugins/` 保存
 ```
 自己用：无需发布 — 插件在 ~/.drifox/plugins 热加载即生效
 
-分享给社区（标准流程）：
+分享给社区（普通用户标准流程，无需官方权限/无需提 PR）：
 1. GitHub 上 Fork 官方仓库（github.com/martin98-afk/drifox-plugins 右上角 Fork）
 2. evolution_publish plugin_name=<name> mode=fork \
      fork_remote=https://github.com/<你的账号>/drifox-plugins.git
-   自动：同步仓库 → generate_marketplace → validate → feat/<name> 分支 → 推 fork → 给出 PR 链接
-3. 打开 PR 链接提交审核 → maintainer 合并 → 上架
+   自动：基于你的 fork main 建分支 → 同步插件 → validate → commit → 推回 fork main → 还原本地
+3. 官方 CI（sync-community，每周）扫描你的 fork → 自动收录来源进 community 市场 → 开 PR → 合并即上架
+   代码留在你的 fork，作者拥有仓库
 
 有官方仓库写权限（collaborator）：
    evolution_publish plugin_name=<name>              # 本地 commit（默认）
-   evolution_publish plugin_name=<name> mode=direct  # 直推 origin/main
+   evolution_publish plugin_name=<name> mode=direct  # 直推官方 main
 4. evolution_journal operation=log action=note plugin_name=<name> summary=...
 ```
 

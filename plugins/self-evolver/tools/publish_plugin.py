@@ -84,6 +84,72 @@ def _marketplace_version(repo: Path, plugin_name: str) -> str | None:
     return None
 
 
+def _publish_fork(repo, src, plugin_name, new_ver, old_ver, version_note,
+                  commit_type, message, fork_remote):
+    """社区汇聚模式：插件推到用户 fork 的默认分支（main），
+    官方 CI（sync-community.yml，周更）扫描所有 fork 自动收录来源并开 PR——无需手动提 PR。"""
+    steps = []
+    work_branch = "fork-publish-tmp"
+
+    def _cleanup():
+        _run(["git", "checkout", "main"], repo)
+        _run(["git", "branch", "-D", work_branch], repo)
+        _run(["git", "remote", "remove", "fork"], repo)
+
+    code, out = _run(["git", "remote", "add", "fork", fork_remote], repo)
+    if code != 0:  # 已存在则更新地址
+        _run(["git", "remote", "set-url", "fork", fork_remote], repo)
+    code, out = _run(["git", "fetch", "fork", "main"], repo)
+    if code != 0:
+        _run(["git", "remote", "remove", "fork"], repo)
+        return ToolResult(False, error=f"fetch fork main 失败（地址/凭据问题）：\n{out}")
+    code, out = _run(["git", "checkout", "-B", work_branch, "fork/main"], repo)
+    if code != 0:
+        _run(["git", "remote", "remove", "fork"], repo)
+        return ToolResult(False, error=f"切换工作分支失败：\n{out}")
+    try:
+        dst = repo / "plugins" / plugin_name
+        if dst.exists():
+            shutil.rmtree(dst)
+        shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+        steps.append(f"✓ 同步 {plugin_name} → fork plugins/")
+
+        code, out = _run(
+            [sys.executable, "tools/validate_plugins.py", f"plugins/{plugin_name}"], repo
+        )
+        if code != 0 or f"OK   {plugin_name}" not in out:
+            detail = "\n".join(l for l in out.splitlines() if plugin_name in l or "err" in l)
+            return ToolResult(False, error=f"validate 未通过（已还原工作树，未推送）：\n{detail or out}")
+        steps.append(f"✓ validate 通过：{plugin_name}")
+
+        _run(["git", "add", f"plugins/{plugin_name}"], repo)
+        if not message:
+            message = f"{commit_type}({plugin_name}): 发布 v{new_ver}（evolution_publish）"
+        code, out = _run(["git", "commit", "-m", message], repo)
+        if code != 0 and "nothing to commit" not in out:
+            return ToolResult(False, error=f"git commit 失败：\n{out}")
+        code, out = _run(["git", "push", "fork", f"{work_branch}:main"], repo)
+        if code != 0:
+            return ToolResult(False, error=f"推送到 fork main 失败：\n{out}")
+        steps.append("✓ 已推送到你的 fork main")
+    finally:
+        _cleanup()
+    steps.append(
+        "✓ 完成。官方 CI（sync-community，每周）扫描你的 fork 默认分支，\n"
+        "  自动把插件来源收录进 community 分支 marketplace 并开 PR，维护者合并后全网可见。\n"
+        "  无需手动提 PR。"
+    )
+    content = (
+        f"插件 {plugin_name} 发布到你的 fork（CI 周扫自动收录）\n"
+        f"仓库：{repo}\n"
+        f"fork：{fork_remote}\n"
+        f"版本：{old_ver or '（新收录）'} → {new_ver}\n"
+        f"{version_note}"
+        + "\n".join(steps)
+    )
+    return ToolResult(True, content=content)
+
+
 def _impl(tool_ctx, **kwargs):
     try:
         plugin_name = (kwargs.get("plugin_name") or "").strip()
@@ -91,7 +157,7 @@ def _impl(tool_ctx, **kwargs):
             return ToolResult(False, error="必须提供 plugin_name")
         mode = (kwargs.get("mode") or "local").strip()
         if mode not in ("local", "direct", "fork"):
-            return ToolResult(False, error="mode 需为 local（仅本地 commit）/ direct（直推 origin）/ fork（推 fork+PR）")
+            return ToolResult(False, error="mode 需为 local（仅本地 commit）/ direct（直推 origin）/ fork（社区汇聚：推你的 fork 默认分支，CI 周扫自动收录）")
         if kwargs.get("push") and mode == "local":
             mode = "direct"  # 向后兼容 push=true
         fork_remote = (kwargs.get("fork_remote") or "").strip()
@@ -100,7 +166,7 @@ def _impl(tool_ctx, **kwargs):
                 False,
                 error="fork 模式需提供 fork_remote（你 fork 的仓库地址，"
                       "如 https://github.com/<你的账号>/drifox-plugins.git）。"
-                      "fork：github.com/martin98-afk/drifox-plugins 右上角 Fork。",
+                      "fork：github.com/martin98-afk/drifox-plugins 右上角 Fork（默认分支即可）。",
             )
         commit_type = (kwargs.get("commit_type") or "feat").strip()
         if commit_type not in _COMMIT_TYPES:
@@ -129,6 +195,12 @@ def _impl(tool_ctx, **kwargs):
         version_note = ""
         if old_ver == new_ver:
             version_note = f"⚠ 版本未变（{new_ver}），建议 bump 后再发布\n"
+
+        # fork 模式独立流程：官方工作树不动，直接进 fork 分支段（⑦ 内含同步/校验/commit/push）
+        if mode == "fork":
+            steps = []
+            return _publish_fork(repo, src, plugin_name, new_ver, old_ver, version_note,
+                                 commit_type, message, fork_remote)
 
         # ③ 同步到仓库（删旧 + copytree 排除 pycache）
         dst = repo / "plugins" / plugin_name
@@ -166,8 +238,7 @@ def _impl(tool_ctx, **kwargs):
         else:
             steps.append(f"✓ commit：{message}")
 
-        # ⑦ 推送（按模式）
-        pr_url = ""
+        # ⑦ 推送（direct 模式）
         if mode == "direct":
             code, out = _run(["git", "pull", "--rebase", "origin", "main"], repo)
             if code != 0:
@@ -176,27 +247,8 @@ def _impl(tool_ctx, **kwargs):
             if code != 0:
                 return ToolResult(False, error=f"git push 失败（本地 commit 已保留）：\n{out}")
             steps.append("✓ 已直推 origin/main（需官方仓库写权限）")
-        elif mode == "fork":
-            branch = f"feat/{plugin_name}"
-            _run(["git", "checkout", "-B", branch], repo)
-            code, out = _run(
-                ["git", "push", fork_remote, f"{branch}:{branch}"], repo
-            )
-            if code != 0:
-                _run(["git", "checkout", "main"], repo)
-                return ToolResult(False, error=f"推送到 fork 失败（本地分支已保留）：\n{out}")
-            steps.append(f"✓ 已推送到 fork 分支 {branch}")
-            owner = _upstream_owner(repo)
-            fork_owner = fork_remote.rstrip("/").rstrip(".git").split("/")[-2] \
-                if "/" in fork_remote else "<你的账号>"
-            pr_url = (
-                f"https://github.com/{owner}/drifox-plugins/compare"
-                f"/main...{fork_owner}:drifox-plugins:{branch}?expand=1"
-            )
-            steps.append(f"下一步：打开 PR 页面提交审核：\n  {pr_url}")
-            _run(["git", "checkout", "main"], repo)  # 切回 main
 
-        mode_label = {"local": "（本地）", "direct": "完成（已直推）", "fork": "到 fork（待提 PR）"}[mode]
+        mode_label = {"local": "（本地）", "direct": "完成（已直推）"}[mode]
         content = (
             f"插件 {plugin_name} 发布{mode_label}\n"
             f"仓库：{repo}\n"
@@ -236,8 +288,9 @@ _SCHEMA = {
                     "type": "string",
                     "enum": ["local", "direct", "fork"],
                     "description": (
-                        "发布模式：local=仅本地 commit（默认）；direct=直推 origin/main"
-                        "（需官方仓库写权限）；fork=推到你的 fork 并生成 PR 链接（社区贡献标准流程）"
+                        "发布模式：local=仅本地 commit（默认）；direct=直推官方 main"
+                        "（需 collaborator 权限）；fork=社区汇聚（推荐普通用户）——"
+                        "插件推到你的 fork 默认分支，官方 CI 每周自动扫描收录进 community 市场并开 PR，无需手动提 PR"
                     ),
                     "default": "local",
                 },
