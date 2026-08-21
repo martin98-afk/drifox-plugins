@@ -22,15 +22,16 @@ team_templates / model_adapters / loop_policies / storages / serializers / gatew
 
 MCP 闭环：`evolution_mcp` 读写任意插件的 `.mcp.json`，为 DriFox 连接新 MCP 服务器。
 
-## 工具清单（5 个）
+## 工具清单（6 个）
 
 | 工具 | 功能 | danger |
 |------|------|--------|
-| `evolution_scaffold` | 按需求生成插件骨架（manifest/组件模板/README） | safe |
+| `evolution_scaffold` | 按需求生成插件骨架（17 类组件模板，manifest/README） | safe |
 | `evolution_validate` | 校验插件结构合规（manifest/组件/py_compile/frontmatter） | safe |
 | `evolution_inspect` | 扫描已装插件，返回结构摘要与文件清单 | safe |
 | `evolution_mcp` | 增/删/列/读 MCP 服务器配置（.mcp.json） | safe |
 | `evolution_journal` | 记录/查询进化审计日志（append-only） | safe |
+| `evolution_publish` | 发布插件到市场仓库（同步+marketplace+校验+commit，push 可选） | dangerous |
 
 写入操作（scaffold/mcp 写入）默认落在 **user 根**（`~/.drifox/plugins/`），热重载即时生效。
 
