@@ -150,6 +150,7 @@
                 "ui": true,
                 "agents": true
             },
+            "downloads": 2,
             "keywords": [
                 "autoloop",
                 "loop",
@@ -2025,7 +2026,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 9,
+            "downloads": 10,
             "keywords": [
                 "prompt",
                 "enhance",
