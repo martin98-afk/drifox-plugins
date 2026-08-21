@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787315169.4938538,
+  "fetched_at": 1787318714.8097413,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -80,7 +80,7 @@
     "superclaude": 2,
     "superpowers": 3,
     "tailwind-pro": 0,
-    "taskboard": 0,
+    "taskboard": 1,
     "teach": 1,
     "test-scaffold": 0,
     "tetris": 2,
