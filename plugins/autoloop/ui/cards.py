@@ -163,8 +163,27 @@ class AutoLoopConfigCard(QFrame):
         self._refresh_component_styles()
 
     def _build_ui(self):
-        # 从配置读取默认值，避免硬编码不一致
+        # 从 PluginConfigStore 读取默认值（E1 配置持久化），缺失时回退到 AutoLoopConfig 默认
         _default_config = AutoLoopConfig()
+        try:
+            from app.plugins.managers.plugin_config_store import PluginConfigStore
+
+            _store = PluginConfigStore()
+            _default_config.max_iterations = int(
+                _store.get("autoloop", "max_iterations", _default_config.max_iterations)
+            )
+            _default_config.max_tokens = int(
+                _store.get("autoloop", "max_tokens", _default_config.max_tokens)
+            )
+            _default_config.max_duration_minutes = int(
+                _store.get("autoloop", "max_duration_minutes", _default_config.max_duration_minutes)
+            )
+            _default_config.completion_threshold = int(
+                _store.get("autoloop", "completion_threshold", _default_config.completion_threshold)
+            )
+        except Exception:
+            # 缺 store / 未连接主程序 / 字段未声明 → 用 AutoLoopConfig 默认值
+            pass
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(6, 5, 6, 5)
