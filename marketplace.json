@@ -511,7 +511,7 @@
                 "skills": true,
                 "mcp": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "docs",
                 "api",
@@ -545,7 +545,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 10,
+            "downloads": 11,
             "keywords": [
                 "desktop",
                 "automation",
@@ -614,6 +614,7 @@
                 "skills": true,
                 "hooks": true
             },
+            "downloads": 1,
             "drifox": {
                 "min_version": "0.5.0"
             }
@@ -844,7 +845,7 @@
                 "commands": true,
                 "agents": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "development",
                 "architecture",
@@ -1139,7 +1140,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 24,
+            "downloads": 25,
             "keywords": [
                 "git",
                 "source-control",
@@ -1196,7 +1197,7 @@
                 "hooks": true,
                 "skills": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "git",
                 "workflow",
@@ -1327,7 +1328,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "file",
                 "edit",
@@ -1496,7 +1497,7 @@
                 "hooks": true,
                 "skills": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "prompt",
                 "optimizer",
@@ -1563,7 +1564,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "theme",
                 "laputa",
@@ -1849,7 +1850,7 @@
             "components": {
                 "providers": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "服务商"
             ],
@@ -1879,7 +1880,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "html",
                 "interactive",
@@ -1983,7 +1984,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 6,
+            "downloads": 8,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -2187,7 +2188,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "skill",
                 "agents",
@@ -2339,7 +2340,7 @@
                 "skills": true,
                 "hooks": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "skills",
                 "tdd",
@@ -2534,7 +2535,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 5,
+            "downloads": 7,
             "keywords": [
                 "tool",
                 "locator",
@@ -2567,7 +2568,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "twin",
                 "dual",
@@ -2605,7 +2606,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "animation",
                 "motion",
@@ -2699,7 +2700,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "react",
                 "tailwind",
@@ -2733,7 +2734,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "frontend",
                 "html",
@@ -2768,7 +2769,7 @@
                 "commands": true,
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "e2e",
                 "browser",
@@ -2802,7 +2803,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 12,
+            "downloads": 13,
             "keywords": [
                 "powershell",
                 "windows",
