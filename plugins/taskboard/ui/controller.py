@@ -229,6 +229,11 @@ class TaskBoardController(QObject):
             self._workers[task_id] = worker
         task.processing = True
         task.error = ""
+        import time as _t
+
+        task._started_at = _t.time()
+        task._tool_rounds = 0
+        task._stream_preview = ""
         self.task_changed.emit(task_id)
         self._notify(
             "开始处理",
@@ -243,6 +248,9 @@ class TaskBoardController(QObject):
         )
         worker.task_error.connect(
             lambda tid, err: self._on_worker_error(tid, err), Qt.QueuedConnection
+        )
+        worker.task_progress.connect(
+            lambda tid, rounds: self._on_worker_progress(tid, rounds), Qt.QueuedConnection
         )
         worker.task_finished.connect(
             lambda tid, sig, summary, report, w=worker: self._on_worker_finished(tid, sig, summary, report),
@@ -288,6 +296,12 @@ class TaskBoardController(QObject):
         task = self._tasks.get(task_id)
         if task is not None:
             task.error = error
+            self.task_changed.emit(task_id)
+
+    def _on_worker_progress(self, task_id: str, rounds: int) -> None:
+        task = self._tasks.get(task_id)
+        if task is not None:
+            task._tool_rounds = rounds
             self.task_changed.emit(task_id)
 
     def _on_worker_finished(self, task_id: str, signal: str, summary: str, report: str) -> None:

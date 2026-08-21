@@ -72,6 +72,8 @@ class TaskWorker(QThread):
     task_finished = pyqtSignal(str, str, str, str)
     # (task_id, error)
     task_error = pyqtSignal(str, str)
+    # (task_id, tool_rounds)：工具调用轮次累计
+    task_progress = pyqtSignal(str, int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -409,6 +411,15 @@ class TaskWorker(QThread):
                 self.task_update.emit(self.task_id, preview)
 
         callbacks["content_received"] = _on_content
+
+        _rounds = [0]
+
+        def _on_tool_start(call_id, name, args, round_no):
+            _rounds[0] = max(_rounds[0], int(round_no or 0))
+            self.task_progress.emit(self.task_id, _rounds[0])
+            self._diag(f"TOOL #{round_no} {name}", emit=True)
+
+        callbacks["tool_call_started"] = _on_tool_start
 
         _orig_finished = callbacks.get("finished")
         _orig_error = callbacks.get("error")
