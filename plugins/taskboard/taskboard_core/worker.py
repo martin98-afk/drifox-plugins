@@ -90,6 +90,7 @@ class TaskWorker(QThread):
         self._conversation_executor: Optional[Any] = None
         self._adapter: Optional[TaskConversationAdapter] = None
         self._is_cancelled = False
+        self._task_error_buf: str = ""  # 最近一次错误文本（诊断与收尾显示用）
 
     # ================================================================
     #  配置（start 前调用）
@@ -167,6 +168,24 @@ class TaskWorker(QThread):
     def task_id(self) -> str:
         return self._task.id if self._task else ""
 
+    def _diag(self, text: str, emit: bool = False):
+        """诊断日志：loguru 记录 + 追加落盘；emit=True 时同时广播到卡片日志
+
+        保证：任何一次 start_task 成功后，logs/<task_id>.md 必然产生文件。
+        """
+        logger.info(f"[taskboard] task={self.task_id} {text}")
+        if emit:
+            self._emit_log(text)
+        if self._log_file:
+            try:
+                from datetime import datetime
+
+                self._log_file.parent.mkdir(parents=True, exist_ok=True)
+                with open(self._log_file, "a", encoding="utf-8") as f:
+                    f.write(f"\n[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {text}\n")
+            except Exception as e:
+                logger.debug(f"[taskboard] 诊断日志落盘失败: {e}")
+
     def cancel(self):
         """取消处理（非阻塞）：置标志 + 取消当前对话"""
         self._is_cancelled = True
@@ -182,30 +201,54 @@ class TaskWorker(QThread):
 
     def run(self):
         if not self._task or not self._conversation_executor:
+            logger.warning(f"[taskboard] worker 未配置即启动 task={getattr(self._task, 'id', None)}")
             return
         tid = self._task.id
         try:
+            model_name = ""
+            try:
+                if self._model_config_getter:
+                    mc = self._model_config_getter() or {}
+                    model_name = f"{mc.get('服务商名', '')}/{mc.get('模型名称', '')}"
+            except Exception:
+                pass
+            self._diag(
+                f"START column={self._column} agent=@{self._agent_name} model={model_name or '?'}",
+                emit=True,
+            )
+
             response = self._execute_conversation()
+            self._diag(f"conversation done, cancelled={self._is_cancelled}, "
+                       f"response_len={len(response) if response else 0}")
+
             if self._is_cancelled:
+                self._diag("CANCELLED by user", emit=True)
                 self.task_finished.emit(tid, "", "已手动停止", "")
                 return
             if response is None:
-                # 执行失败（错误已 emit），按 HOLD 保留当前列
-                self.task_finished.emit(tid, SIGNAL_HOLD, "处理失败，已保留", "")
+                err = self._task_error_buf or "对话未返回结果"
+                self._diag(f"FAILED: {err}", emit=True)
+                self.task_finished.emit(tid, SIGNAL_HOLD, f"处理失败：{err}", "")
                 return
 
             signal = parse_signal(response)
             summary = build_summary(response)
-            # done 列：响应全文即报告；无信号默认 HOLD（留在 done）
             report = response.strip() if self._column == "done" else ""
             if self._column == "done":
                 signal = SIGNAL_HOLD
                 summary = summary or "已完成总结归档"
+            elif not summary:
+                # 假完成修复：空响应绝不能静默"处理完成"
+                summary = "⚠ 模型返回空响应（未产出结论），请检查模型配置或重试"
+                self._diag("EMPTY RESPONSE — no usable content", emit=True)
+            self._diag(f"RESULT signal={signal} summary_len={len(summary)}")
+            self._append_log(response)
             self.task_finished.emit(tid, signal or SIGNAL_HOLD, summary, report)
         except Exception as e:
             logger.exception(f"[taskboard] worker 异常 task={tid}")
+            self._diag(f"EXCEPTION: {e}", emit=True)
             self.task_error.emit(tid, str(e))
-            self.task_finished.emit(tid, SIGNAL_HOLD, f"处理异常: {e}", "")
+            self.task_finished.emit(tid, SIGNAL_HOLD, f"处理异常：{e}", "")
         finally:
             self._append_log(None)
 
@@ -236,8 +279,9 @@ class TaskWorker(QThread):
             callbacks=self._make_callbacks(),
         )
         if not success:
-            self._emit_log("⚠️ Worker 启动失败")
-            self.task_error.emit(tid, "Worker 启动失败")
+            self._diag("executor.execute returned False（可能已有对话在流式中）", emit=True)
+            self._task_error_buf = "Worker 启动失败（可能已有对话流式中）"
+            self.task_error.emit(tid, self._task_error_buf)
             return None
 
         response = self._wait_worker_finish()
@@ -245,9 +289,13 @@ class TaskWorker(QThread):
             return None
         if response is None:
             err = (self._adapter.get_error() or "") if self._adapter else ""
-            self.task_error.emit(tid, err or "对话未返回结果")
+            self._task_error_buf = err or "对话未返回结果"
+            self.task_error.emit(tid, self._task_error_buf)
             return None
-        return response
+        resp = response
+        if not resp.strip():
+            self._task_error_buf = "模型返回空内容"
+        return resp
 
     def _wait_worker_finish(self) -> Optional[str]:
         """等待 ChatWorker 完成（QEventLoop + 兜底轮询），返回响应文本"""
