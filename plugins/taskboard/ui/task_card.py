@@ -8,11 +8,12 @@
 
 from typing import Optional
 
-from PyQt5.QtCore import QMimeData, QPoint, Qt, QTimer, pyqtSignal
+from PyQt5.QtCore import QMimeData, QPoint, Qt, pyqtSignal
 from PyQt5.QtGui import QDrag, QEnterEvent
 from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout
 
-from qfluentwidgets import StrongBodyLabel, TransparentToolButton
+from qfluentwidgets import FluentIcon as FIF, StrongBodyLabel, TransparentToolButton
+from qfluentwidgets.components.widgets.progress_ring import IndeterminateProgressRing
 
 from app.utils.design_tokens import Colors, scale_font_size
 from app.utils.utils import get_font_family_css
@@ -21,8 +22,6 @@ from taskboard_core.config import COLUMNS, COLUMN_META, next_column, prev_column
 
 FONT_CSS = get_font_family_css()
 MIME_TASK_ID = "application/x-taskboard-task-id"
-
-_SPINNER = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
 
 
 class TaskCardWidget(QFrame):
@@ -39,7 +38,6 @@ class TaskCardWidget(QFrame):
         super().__init__(parent)
         self._task_id = task_id
         self._processing = False
-        self._spinner_idx = 0
         self._drag_start: Optional[QPoint] = None
 
         self.setObjectName("taskboardTaskCard")
@@ -52,11 +50,12 @@ class TaskCardWidget(QFrame):
 
         title_row = QHBoxLayout()
         title_row.setSpacing(6)
-        self._status_icon = QLabel("")
-        self._status_icon.setFixedWidth(16)
+        self._busy_ring = IndeterminateProgressRing()
+        self._busy_ring.setFixedSize(16, 16)
+        self._busy_ring.hide()
         self._title_label = StrongBodyLabel("")
         self._title_label.setWordWrap(True)
-        title_row.addWidget(self._status_icon)
+        title_row.addWidget(self._busy_ring)
         title_row.addWidget(self._title_label, 1)
         root.addLayout(title_row)
 
@@ -71,27 +70,21 @@ class TaskCardWidget(QFrame):
 
         btn_row = QHBoxLayout()
         btn_row.setSpacing(2)
-        self._start_btn = TransparentToolButton()
-        self._start_btn.setToolTip("开始处理（当前列智能体）")
-        self._start_btn.setText("▶")
-        self._stop_btn = TransparentToolButton()
-        self._stop_btn.setToolTip("停止处理")
-        self._stop_btn.setText("⏹")
-        self._prev_btn = TransparentToolButton()
-        self._prev_btn.setToolTip("移到上一列")
-        self._prev_btn.setText("←")
-        self._next_btn = TransparentToolButton()
-        self._next_btn.setToolTip("移到下一列")
-        self._next_btn.setText("→")
-        self._report_btn = TransparentToolButton()
-        self._report_btn.setToolTip("查看任务报告")
-        self._report_btn.setText("📄")
-        self._delete_btn = TransparentToolButton()
-        self._delete_btn.setToolTip("删除任务")
-        self._delete_btn.setText("🗑")
+
+        def _mkbtn(icon, tip: str) -> TransparentToolButton:
+            b = TransparentToolButton(icon)
+            b.setToolTip(tip)
+            b.setFixedSize(28, 28)
+            return b
+
+        self._start_btn = _mkbtn(FIF.PLAY_SOLID, "开始处理（当前列智能体）")
+        self._stop_btn = _mkbtn(FIF.PAUSE_BOLD, "停止处理")
+        self._prev_btn = _mkbtn(FIF.RETURN, "移到上一列")
+        self._next_btn = _mkbtn(FIF.RIGHT_ARROW, "移到下一列")
+        self._report_btn = _mkbtn(FIF.DOCUMENT, "查看任务报告")
+        self._delete_btn = _mkbtn(FIF.DELETE, "删除任务")
         for b in (self._start_btn, self._stop_btn, self._prev_btn, self._next_btn,
                   self._report_btn, self._delete_btn):
-            b.setFixedSize(26, 26)
             btn_row.addWidget(b)
         btn_row.addStretch(1)
         root.addLayout(btn_row)
@@ -103,11 +96,6 @@ class TaskCardWidget(QFrame):
         self._report_btn.clicked.connect(lambda: self.reportRequested.emit(self._task_id))
         self._prev_btn.clicked.connect(lambda: self.moveRequested.emit(self._task_id, prev_column(self._status)))
         self._next_btn.clicked.connect(lambda: self.moveRequested.emit(self._task_id, next_column(self._status)))
-
-        # ── 处理中动画 ──
-        self._spin_timer = QTimer(self)
-        self._spin_timer.setInterval(120)
-        self._spin_timer.timeout.connect(self._tick_spinner)
 
         self._status = "todo"
         self._accent = COLUMN_META["todo"]["accent"]
@@ -149,13 +137,7 @@ class TaskCardWidget(QFrame):
         has_report = self._status == "done" and bool(task.last_summary)
         self._report_btn.setVisible(has_report)
 
-        # 动画启停
-        if self._processing:
-            if not self._spin_timer.isActive():
-                self._spin_timer.start()
-        else:
-            self._spin_timer.stop()
-            self._status_icon.setText("●")
+        self._busy_ring.setVisible(self._processing)
 
         self._refresh_style()
 
@@ -193,10 +175,6 @@ class TaskCardWidget(QFrame):
     #  样式
     # ================================================================
 
-    def _tick_spinner(self):
-        self._spinner_idx = (self._spinner_idx + 1) % len(_SPINNER)
-        self._status_icon.setText(_SPINNER[self._spinner_idx])
-
     def _refresh_style(self, hover: bool = False):
         Colors.refresh()
         accent = self._accent
@@ -220,7 +198,4 @@ class TaskCardWidget(QFrame):
         )
         self._error_label.setStyleSheet(
             f"color: {Colors.ERROR}; {FONT_CSS} font-size: {scale_font_size(11)}px;"
-        )
-        self._status_icon.setStyleSheet(
-            f"color: {accent}; border: none; font-size: {scale_font_size(12)}px;"
         )

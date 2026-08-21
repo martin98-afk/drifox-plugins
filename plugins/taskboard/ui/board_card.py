@@ -23,6 +23,8 @@ from PyQt5.QtWidgets import (
 
 from qfluentwidgets import (
     BodyLabel,
+    FluentIcon as FIF,
+    IconWidget,
     LineEdit,
     PrimaryPushButton,
     PushButton,
@@ -275,7 +277,9 @@ class TaskBoardCard(QFrame):
         # ── 工具栏 ──
         toolbar = QHBoxLayout()
         toolbar.setSpacing(8)
-        title = StrongBodyLabel("📋 任务看板")
+        title_icon = IconWidget(FIF.VIEW)
+        toolbar.addWidget(title_icon)
+        title = StrongBodyLabel("任务看板")
         toolbar.addWidget(title)
 
         self._auto_switch = SwitchButton()
@@ -287,12 +291,12 @@ class TaskBoardCard(QFrame):
         toolbar.addWidget(self._auto_switch)
         toolbar.addStretch(1)
 
-        self._add_btn = PrimaryPushButton("＋ 发布任务")
+        self._add_btn = PrimaryPushButton(FIF.ADD, "发布任务")
         self._add_btn.setToolTip("发布新任务到待办列")
         toolbar.addWidget(self._add_btn)
 
         self._clear_btn = TransparentToolButton()
-        self._clear_btn.setText("🧹")
+        self._clear_btn.setIcon(FIF.BROOM.qicon())
         self._clear_btn.setToolTip("清空完成列")
         self._clear_btn.setFixedSize(30, 30)
         toolbar.addWidget(self._clear_btn)
