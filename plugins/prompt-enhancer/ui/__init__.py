@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """提示词增强 UI 插件（闭包实现，不修改主程序）。
 
-输入框按钮「优化提示词」：点击后用 LLM（默认沿用主程序当前会话模型配置）把
-输入框原文优化为更清晰、结构化、高信息密度的提示词，并注回输入框。
+输入框按钮「优化提示词」：点击后用 LLM（复用主程序当前会话模型配置）把
+输入框原文优化为更清晰、结构化、高信息密度的提示词，并追加到原问题之后（保留原问题，不替换）。
 
 体验完善（v0.2.1）：
 - 系统配置开放增强指令：注册「提示词增强」设置卡（多行编辑 + 即时保存 + 恢复默认），
@@ -13,20 +13,16 @@
 
 实现要点：
 - 通过 UI 扩展点 context["main_widget"] 读取输入框（input_area）与当前模型配置；
-- 通过 PluginConfigStore 读写插件配置（enhance_prompt / enhance_model）；
+- 通过 PluginConfigStore 读写插件配置（enhance_prompt）；
 - 一次性对话范式复用 app.utils.http_client.build_openai_client（参考 topic_summary.py）；
 - 后台 QRunnable + 信号桥接，结果在主线程注回输入框，避免 UI 卡死。
 
 模型配置来自 main_widget._valid_configs（私有状态，非公开 API），用户已确认接受复用。
-「提示词增强模型」配置项为空时沿用调用方当前 provider/model，否则按
-「ProviderName:ModelName」格式从主程序 LLM.SavedProviders 解析（与主程序
-标题生成/子智能体模型选择器同格式）。
 """
 
-import json
 import os
 import re
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional
 
 from loguru import logger
 from PyQt5.QtCore import QObject, QRectF, QRunnable, QThreadPool, QTimer, Qt, pyqtSignal
@@ -37,11 +33,9 @@ from app.plugins.managers.plugin_config_store import PluginConfigStore
 from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
 
 try:  # 模块级导入设置卡基类；失败则跳过自定义设置卡注册
-    from qfluentwidgets import ComboBox, ExpandSettingCard, TextEdit
+    from qfluentwidgets import ExpandSettingCard
 except Exception:  # noqa: BLE001
     ExpandSettingCard = None  # type: ignore
-    ComboBox = None  # type: ignore
-    TextEdit = None  # type: ignore
 
 PLUGIN_NAME = "prompt-enhancer"
 
@@ -52,13 +46,6 @@ DEFAULT_ENHANCE_PROMPT = (
     "只输出优化后的提示词本身，不要解释、不要用 Markdown 代码块包裹，"
     "不要输出 <think> 等思考过程内容。"
 )
-
-# 「提示词增强模型」配置项的空值 = 当前模型（下拉第一项文案）
-DEFAULT_ENHANCE_MODEL_LABEL = "当前模型"
-DEFAULT_ENHANCE_MODEL_VALUE = ""
-
-# 预设下拉最多直接展示的项数（超出滚动查看，对齐主程序子智能体模板下拉）
-MAX_MODEL_VISIBLE_ITEMS = 8
 
 # 同一窗口运行中的优化任务（window_id -> True），防重复点击积压
 _busy_windows: Dict[str, bool] = {}
@@ -74,132 +61,6 @@ _BUTTON_TOOLTIP = "优化提示词（LLM 一键增强）"
 def _plugin_root() -> str:
     # ui/__init__.py -> 插件根目录
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-
-# 主程序 LLM 配置路径（与 ip-switcher/ui/config.py 中 _get_system_config_path 同约定）
-_DEFAULT_SYSTEM_CONFIG_PATHS = (
-    # DriFox 运行时的标准位置
-    os.path.join(os.path.expanduser("~"), ".drifox", "app.config"),
-    # 项目自带调试配置（开发期可能复用）
-    os.path.abspath(os.path.join(_plugin_root(), "..", "..", ".drifox", "app.config")),
-)
-
-
-def _resolve_system_config_path() -> Optional[str]:
-    """定位主程序 app.config（不存在则返回 None，调用方需容忍空列表）。"""
-    for p in _DEFAULT_SYSTEM_CONFIG_PATHS:
-        if p and os.path.exists(p):
-            return p
-    return None
-
-
-def _parse_provider_options() -> List[Tuple[str, str]]:
-    """扫描主程序 LLM.SavedProviders，返回「(显示文本, value)」列表。
-
-    显示文本与 value 均使用「服务商名:模型名」格式（与主程序标题生成/子智能体
-    模型选择器一致），重复条目按 (provider_name, model_name) 去重后排序，
-    空 provider/model 跳过。读取失败 → 返回 []，下拉只显示「当前模型」一项。
-    """
-    data = _load_system_config()
-    if data is None:
-        return []
-
-    saved = (
-        (data.get("LLM") or {})
-        .get("SavedProviders")
-        or {}
-    )
-    seen: set = set()
-    out: List[Tuple[str, str]] = []
-    for _cid, p in saved.items():
-        if not isinstance(p, dict):
-            continue
-        provider_name = (
-            p.get("provider_name") or p.get("name") or ""
-        )
-        # 模型列表：模型列表 数组优先，否则回退到「模型名称」
-        models = list(p.get("模型列表") or [])
-        if not models and p.get("模型名称"):
-            models = [p.get("模型名称")]
-        for m in models:
-            provider = str(provider_name).strip()
-            m = str(m).strip()
-            if not provider or not m:
-                continue
-            display = f"{provider}:{m}"
-            if display in seen:
-                continue
-            seen.add(display)
-            out.append((display, display))
-    out.sort(key=lambda item: item[0].lower())
-    return out
-
-
-def _parse_enhance_model(value: str) -> Optional[Tuple[str, str]]:
-    """解析「enhance_model」配置项 → (provider_name, model_name) 或 None。
-
-    空值 / 格式不合法 / 服务商在主配置中不存在 → None（调用方回退到当前模型）。
-    """
-    if not value:
-        return None
-    if ":" not in value:
-        return None
-    provider, model = value.split(":", 1)
-    provider = provider.strip()
-    model = model.strip()
-    if not provider or not model:
-        return None
-    # 校验：provider/model 必须在主程序 SavedProviders 中存在（防历史脏值）
-    for display, _v in _parse_provider_options():
-        if display == f"{provider}:{model}":
-            return provider, model
-    return None
-
-
-def _get_provider_config_by_name(provider_name: str) -> Optional[Dict[str, Any]]:
-    """按服务商名取 SavedProviders 中的完整配置（API_KEY / API_URL / 模型名称…）。
-
-    若同名前缀冲突（理论上极少），取第一条匹配。
-    """
-    data = _load_system_config()
-    if data is None:
-        return None
-    saved = ((data.get("LLM") or {}).get("SavedProviders") or {})
-    for _cid, p in saved.items():
-        if not isinstance(p, dict):
-            continue
-        if (p.get("provider_name") or p.get("name") or "") == provider_name:
-            return p
-    return None
-
-
-# 模块级 app.config 解析缓存：单次点击触发 3 次读盘，开销忽略但用 mtime 兜底外部修改
-_SYSTEM_CONFIG_CACHE: Dict[str, Any] = {"path": None, "mtime": 0.0, "data": None}
-
-
-def _load_system_config() -> Optional[Dict[str, Any]]:
-    """读取并缓存主程序 app.config（按文件 mtime 失效，避免热重载期间读到陈旧快照）。"""
-    cfg_path = _resolve_system_config_path()
-    if not cfg_path:
-        return None
-    try:
-        mtime = os.path.getmtime(cfg_path)
-    except OSError as e:
-        logger.debug(f"[PromptEnhancer] app.config stat 失败: {e}")
-        return None
-    cache = _SYSTEM_CONFIG_CACHE
-    if cache["path"] == cfg_path and cache["mtime"] == mtime and cache["data"] is not None:
-        return cache["data"]
-    try:
-        with open(cfg_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except (OSError, ValueError) as e:
-        logger.debug(f"[PromptEnhancer] 读取主程序 app.config 失败: {e}")
-        return None
-    cache["path"] = cfg_path
-    cache["mtime"] = mtime
-    cache["data"] = data
-    return data
 
 
 def register_ui(registry: "UIPluginRegistry") -> None:
@@ -224,7 +85,7 @@ def _register_config_card(registry: "UIPluginRegistry") -> None:
     """注册多行编辑设置卡，覆盖主程序 E1 自动卡（同 card_id、更高 priority）。
 
     主程序 PluginConfigCard 将 text 字段渲染为单行 LineEdit，增强指令很长不便编辑；
-    插件自带多行 TextEdit + 即时保存 + 恢复默认，体验更佳。
+    插件自带多行 QPlainTextEdit + 即时保存 + 恢复默认，体验更佳。
     注册失败（旧版主程序无此扩展点）时降级为 E1 自动卡，不影响按钮功能。
     """
     try:
@@ -347,67 +208,32 @@ def _stop_button_spinner(window_id: str):
 
 
 class _EnhanceConfigCard(_ConfigCardBase):
-    """提示词增强配置卡：多行编辑增强指令 + 提示词增强模型下拉 + 恢复默认。
+    """提示词增强配置卡：多行编辑增强指令 + 恢复默认。
 
     构造签名 (parent=None) 满足 register_settings_card 的 widget_class 约定；
     保存语义与 PluginConfigStore 一致：空内容=清除→回默认。
-    下拉选项「当前模型」= 空值（沿用调用方当前 provider/model），
-    其余选项为「ProviderName:ModelName」（与主程序标题生成/子智能体一致）。
     """
 
     def __init__(self, parent=None):
         from qfluentwidgets import FluentIcon, PushButton
 
-        super().__init__(FluentIcon.EDIT, "提示词增强", "增强指令 + 模型选择（即时保存）", parent)
+        super().__init__(FluentIcon.EDIT, "提示词增强", "增强指令（多行编辑，即时保存）", parent)
         self.viewLayout.setContentsMargins(48, 8, 48, 8)
         self.viewLayout.setSpacing(8)
 
-        self._edit = TextEdit(self.view) if TextEdit is not None else QPlainTextEdit(self.view)
+        self._edit = QPlainTextEdit(self.view)
         self._edit.setPlaceholderText("用于优化用户输入的 system 指令，留空回默认")
         self._edit.setMinimumHeight(140)
         self.viewLayout.addWidget(self._edit)
-
-        # ── 提示词增强模型下拉 ──
-        # 选项：当前模型（默认/空值） + 主程序 SavedProviders 中的 ProviderName:ModelName
-        self._model_combo: Optional[ComboBox] = None
-        if ComboBox is not None:
-            self._model_combo = ComboBox(self.view)
-            self._model_combo.setMinimumWidth(220)
-            # 阻断 currentTextChanged 循环（占位）
-            self._model_combo.blockSignals(True)
-            # qfluentwidgets.ComboBox.addItem 签名为 (text, icon=None, userData=None)，
-            # 第二参数是 icon 不是 userData；用关键字参数确保 userData 真正写入，
-            # 否则 currentData() 永远返回 None → set_values 视为空串删除键 → 配置不固化
-            self._model_combo.addItem(DEFAULT_ENHANCE_MODEL_LABEL, userData=DEFAULT_ENHANCE_MODEL_VALUE)
-            for display, value in _parse_provider_options():
-                self._model_combo.addItem(display, userData=value)
-            self._model_combo.setMaxVisibleItems(MAX_MODEL_VISIBLE_ITEMS)
-            self._model_combo.setToolTip(
-                "用于执行提示词优化的 LLM。留空（当前模型）= 沿用调用方当前 provider/model；"
-                "其余选项格式「服务商:模型名」，与系统「标题生成」「子智能体」模型选择器一致。"
-            )
-            self._model_combo.blockSignals(False)
-            self._model_combo.currentIndexChanged.connect(self._on_model_changed)
-            self.viewLayout.addWidget(self._model_combo)
 
         self._reset_btn = PushButton("恢复默认", self.view)
         self._reset_btn.clicked.connect(self._on_reset)
         self.viewLayout.addWidget(self._reset_btn)
 
-        # 修复配置卡展开时 view 下方未被利用的空白：
-        # ExpandSettingCard._adjustViewSize 把 spaceWidget 高度设为 viewLayout.sizeHint().height()，
-        # 与 view 等高的滚动占位空间在内容不足时会显示为下方空白。
-        # 这里把 spaceWidget 高度置 0，使卡片高度紧贴内容；同时维持 _adjustViewSize 行为兼容。
-        try:
-            self.spaceWidget.setFixedHeight(0)
-        except Exception:  # noqa: BLE001
-            pass
-
         self._echo()
 
     def _echo(self) -> None:
-        """回显当前生效值（默认兜底可见）；阻断信号循环。"""
-        # 多行编辑框
+        """回显当前生效值（默认兜底可见）；阻断 textChanged 循环。"""
         while True:
             try:
                 self._edit.textChanged.disconnect()
@@ -418,90 +244,21 @@ class _EnhanceConfigCard(_ConfigCardBase):
         self._edit.setPlainText(text)
         self._edit.textChanged.connect(self._on_changed)
 
-        # 模型下拉
-        if self._model_combo is not None:
-            stored = PluginConfigStore().get(PLUGIN_NAME, "enhance_model") or ""
-            stored_str = str(stored)
-            # value=stored 的项可能因主配置变化而消失；找不到则回退到「当前模型」
-            self._model_combo.blockSignals(True)
-            idx = self._model_combo.findData(stored_str if stored_str else DEFAULT_ENHANCE_MODEL_VALUE)
-            if idx < 0:
-                idx = 0  # 「当前模型」
-                # 配置项历史脏值（非空但当前下拉无对应项）→ 同步清空，避免下次回显再找不到
-                if stored_str:
-                    PluginConfigStore().set_values(PLUGIN_NAME, {"enhance_model": ""})
-            self._model_combo.setCurrentIndex(idx)
-            # idx==0（兜底到「当前模型」）时显式对齐文案，防止显示陈旧脏文本
-            if idx == 0:
-                self._model_combo.setCurrentText(DEFAULT_ENHANCE_MODEL_LABEL)
-            self._model_combo.blockSignals(False)
-
     def _on_changed(self) -> None:
         PluginConfigStore().set_values(PLUGIN_NAME, {"enhance_prompt": self._edit.toPlainText().strip()})
 
-    def _on_model_changed(self, _index: int) -> None:
-        if self._model_combo is None:
-            return
-        value = self._model_combo.currentData() or DEFAULT_ENHANCE_MODEL_VALUE
-        PluginConfigStore().set_values(PLUGIN_NAME, {"enhance_model": str(value)})
-
     def _on_reset(self) -> None:
-        PluginConfigStore().set_values(
-            PLUGIN_NAME,
-            {"enhance_prompt": DEFAULT_ENHANCE_PROMPT, "enhance_model": DEFAULT_ENHANCE_MODEL_VALUE},
-        )
+        PluginConfigStore().set_values(PLUGIN_NAME, {"enhance_prompt": DEFAULT_ENHANCE_PROMPT})
         self._echo()
 
 
-def _get_llm_config(
-    main_widget,
-    override_provider: Optional[str] = None,
-    override_model: Optional[str] = None,
-) -> Optional[Dict[str, Any]]:
-    """取执行本次提示词增强的模型配置（API_KEY / API_URL / 模型名称）。
-
-    override_provider/override_model 均提供时，优先使用主程序 SavedProviders 中
-    对应服务商的配置（API_KEY/API_URL 来自服务商，「模型名称」使用 override_model）；
-    否则沿用主程序当前会话模型配置（私有状态 _valid_configs，非公开 API；用户已确认接受）。
-
-    返回 None 表示无可用配置（需提示用户先配置模型）。
-    """
-    if override_provider and override_model:
-        provider_cfg = _get_provider_config_by_name(override_provider)
-        if provider_cfg:
-            merged = dict(provider_cfg)  # 拷贝避免改主配置
-            merged["模型名称"] = override_model
-            # 若 override_model 在该 provider 的「模型列表」里不存在，保持 override_model（自定义模型名兜底）
-            return merged
-        # 服务商已被用户从主配置删除 → 兜底用调用方当前模型，不报错（_echo 时已清空）
-
+def _get_llm_config(main_widget) -> Optional[Dict[str, Any]]:
+    """复用主程序当前会话模型配置（私有状态，非公开 API；用户已确认接受）。"""
     valid = getattr(main_widget, "_valid_configs", None)
     if not isinstance(valid, dict):
         return None
     name = getattr(main_widget, "_current_provider_name", None) or "系统默认配置"
     return valid.get(name)
-
-
-def _resolve_enhance_model(main_widget) -> Optional[Tuple[str, str]]:
-    """读取 enhance_model 配置，校验有效性 → (provider, model) 或 None。"""
-    raw = PluginConfigStore().get(PLUGIN_NAME, "enhance_model")
-    parsed = _parse_enhance_model(str(raw) if raw else "")
-    if parsed is not None:
-        return parsed
-    # 兜底：用调用方当前 provider + model（即便解析失败也保证能跑）
-    valid = getattr(main_widget, "_valid_configs", None)
-    if isinstance(valid, dict):
-        cur_name = getattr(main_widget, "_current_provider_name", None) or "系统默认配置"
-        cur_cfg = valid.get(cur_name) or {}
-        provider = (
-            cur_cfg.get("provider_name")
-            or cur_cfg.get("name")
-            or cur_name
-        )
-        model = cur_cfg.get("模型名称") or ""
-        if provider and model:
-            return str(provider), str(model)
-    return None
 
 
 def _on_enhance_clicked(context: Dict[str, Any]) -> None:
@@ -529,13 +286,7 @@ def _on_enhance_clicked(context: Dict[str, Any]) -> None:
     if not enhance_prompt:
         enhance_prompt = DEFAULT_ENHANCE_PROMPT
 
-    # 模型选择：enhance_model 配置优先，否则沿用调用方当前模型
-    override = _resolve_enhance_model(main_widget)
-    llm_config = _get_llm_config(
-        main_widget,
-        override_provider=override[0] if override else None,
-        override_model=override[1] if override else None,
-    )
+    llm_config = _get_llm_config(main_widget)
     if not llm_config:
         _notify(main_widget, "提示词增强", "未找到模型配置，请先在设置中配置模型", "warning")
         return
@@ -545,7 +296,9 @@ def _on_enhance_clicked(context: Dict[str, Any]) -> None:
     _start_button_spinner(main_widget, window_id)
 
     signals = _EnhanceSignals()
-    signals.done.connect(lambda result: _on_done(main_widget, input_area, result, window_id))
+    signals.done.connect(
+        lambda result, _t=text: _on_done(main_widget, input_area, result, window_id, original_text=_t)
+    )
     signals.error.connect(lambda err: _on_error(main_widget, err, window_id))
 
     task = _EnhanceTask(
@@ -605,13 +358,15 @@ def _strip_thinking(text: str) -> str:
     return text.strip()
 
 
-def _on_done(main_widget, input_area, result, window_id):
+def _on_done(main_widget, input_area, result, window_id, original_text=""):
     _close_progress(window_id)
     _stop_button_spinner(window_id)
     _busy_windows.pop(window_id, None)
     if result:
-        input_area.setPlainText(result)
-        _notify(main_widget, "提示词增强", "已优化并填入输入框", "success")
+        # 追加增强提示词到原用户问题后面，不替换原问题
+        combined = f"{original_text}\n\n{result}".strip()
+        input_area.setPlainText(combined)
+        _notify(main_widget, "提示词增强", "已优化并追加到输入框（保留原问题）", "success")
     else:
         _notify(main_widget, "提示词增强", "模型返回为空", "warning")
 
