@@ -6,6 +6,7 @@
 - 支持拖拽（按下空白处拖动，QDrag 携带 task_id）
 """
 
+import time
 from typing import Optional
 
 from PyQt5.QtCore import QMimeData, QPoint, Qt, pyqtSignal
@@ -48,21 +49,35 @@ class TaskCardWidget(QFrame):
         root.setContentsMargins(10, 8, 10, 8)
         root.setSpacing(4)
 
+        # 行 1：状态点 + 标题 + 相对时间
         title_row = QHBoxLayout()
         title_row.setSpacing(6)
+        self._dot = QFrame()
+        self._dot.setFixedSize(8, 8)
+        self._dot.setStyleSheet("border-radius: 4px;")
+        self._title_label = StrongBodyLabel("")
+        self._title_label.setWordWrap(True)
+        self._time_label = QLabel("")
         self._busy_ring = IndeterminateProgressRing()
         self._busy_ring.setFixedSize(16, 16)
         self._busy_ring.hide()
-        self._title_label = StrongBodyLabel("")
-        self._title_label.setWordWrap(True)
-        title_row.addWidget(self._busy_ring)
+        title_row.addWidget(self._dot)
         title_row.addWidget(self._title_label, 1)
+        title_row.addWidget(self._busy_ring)
+        title_row.addWidget(self._time_label)
         root.addLayout(title_row)
 
+        # 行 2：摘要 / 流式预览（共用 label，处理中显示预览）
         self._summary_label = QLabel("")
         self._summary_label.setWordWrap(True)
+        self._summary_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         root.addWidget(self._summary_label)
 
+        # 行 3：元信息（@agent · 链N · N轮 · 耗时）
+        self._meta_label = QLabel("")
+        root.addWidget(self._meta_label)
+
+        # 行 4：错误条
         self._error_label = QLabel("")
         self._error_label.setWordWrap(True)
         self._error_label.hide()
@@ -116,15 +131,23 @@ class TaskCardWidget(QFrame):
         self._processing = bool(processing)
 
         self._title_label.setText(task.title)
+        self._time_label.setText(_rel_time(task.updated_at))
+
         if self._processing:
-            stream = getattr(task, "_stream_preview", "") or ""
-            summary = f"⏳ {stream}" if stream else (task.last_summary or "处理中…")
+            preview = getattr(task, "_stream_preview", "") or ""
+            self._summary_label.setText(preview[-200:] if preview else "正在思考…")
+            rounds = getattr(task, "_tool_rounds", 0)
+            elapsed = int(time.time() - (getattr(task, "_started_at", 0) or time.time()))
+            meta = (f"@{COLUMN_META[self._status]['agent']} · {rounds} 轮工具 · "
+                    f"{elapsed // 60}:{elapsed % 60:02d}")
         else:
-            summary = task.last_summary or task.detail or "等待处理"
-        self._summary_label.setText(summary if len(summary) <= 140 else summary[:140] + "…")
+            self._summary_label.setText(task.last_summary or task.detail or "等待处理")
+            chain = len(task.context_log)
+            meta = f"@{COLUMN_META[self._status]['agent']} · 链 {chain}"
+        self._meta_label.setText(meta)
 
         if task.error:
-            self._error_label.setText(f"⚠ {task.error}")
+            self._error_label.setText(task.error)
             self._error_label.show()
         else:
             self._error_label.hide()
@@ -140,6 +163,11 @@ class TaskCardWidget(QFrame):
         self._busy_ring.setVisible(self._processing)
 
         self._refresh_style()
+        # done 列淡化（用颜色而非 opacity）
+        title_color = Colors.TEXT_SECONDARY if self._status == "done" else Colors.TEXT_PRIMARY
+        self._title_label.setStyleSheet(
+            f"color: {title_color}; {FONT_CSS} font-size: {scale_font_size(13)}px;"
+        )
 
     # ================================================================
     #  拖拽（按住卡片空白处拖动 → 列间移动）
@@ -196,6 +224,36 @@ class TaskCardWidget(QFrame):
         self._summary_label.setStyleSheet(
             f"color: {Colors.TEXT_SECONDARY}; {FONT_CSS} font-size: {scale_font_size(11)}px;"
         )
-        self._error_label.setStyleSheet(
-            f"color: {Colors.ERROR}; {FONT_CSS} font-size: {scale_font_size(11)}px;"
+        self._meta_label.setStyleSheet(
+            f"color: {Colors.TEXT_MUTED}; {FONT_CSS} font-size: {scale_font_size(10)}px;"
         )
+        self._error_label.setStyleSheet(
+            f"background: rgba(239, 68, 68, 0.15); color: {Colors.ERROR};"
+            f"border-radius: 4px; padding: 4px 6px; {FONT_CSS}"
+            f"font-size: {scale_font_size(10)}px;"
+        )
+        self._dot.setStyleSheet(
+            f"background: {accent}; border-radius: 4px; border: none;"
+        )
+        self._time_label.setStyleSheet(
+            f"color: {Colors.TEXT_MUTED}; border: none; {FONT_CSS}"
+            f"font-size: {scale_font_size(10)}px;"
+        )
+
+
+def _rel_time(ts: str) -> str:
+    """'2026-08-21 18:31:02' → '3m' / '2h' / '5d'；解析失败返回空"""
+    try:
+        from datetime import datetime
+
+        t = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
+        delta = (datetime.now() - t).total_seconds()
+        if delta < 60:
+            return "now"
+        if delta < 3600:
+            return f"{int(delta // 60)}m"
+        if delta < 86400:
+            return f"{int(delta // 3600)}h"
+        return f"{int(delta // 86400)}d"
+    except Exception:
+        return ""

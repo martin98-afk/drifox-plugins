@@ -246,6 +246,8 @@ class TaskBoardController(QObject):
             if task:
                 task.processing = False
                 task._stream_preview = ""
+                task._tool_rounds = 0
+                task._started_at = 0.0
                 self.task_changed.emit(task_id)
 
     def stop_all(self) -> None:
@@ -280,6 +282,8 @@ class TaskBoardController(QObject):
             return
         task.processing = False
         task._stream_preview = ""
+        task._tool_rounds = 0
+        task._started_at = 0.0
         column = task.status
         agent = COLUMN_META.get(column, {}).get("agent", "")
         task.append_context(column, agent, summary or "处理完成")
