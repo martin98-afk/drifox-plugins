@@ -92,6 +92,21 @@ class TaskBoardController(QObject):
     def auto_mode(self) -> bool:
         return self._auto_mode
 
+    def get_env_info(self) -> Dict[str, str]:
+        """当前看板运行环境：模型显示名 + 工作目录（头部信息栏用）"""
+        model_display = ""
+        try:
+            mc = (self._services.get("get_model_config")() or {}) if self._services else {}
+            provider = mc.get("服务商名", "")
+            model = mc.get("模型名称", "")
+            model_display = f"{provider} · {model}" if provider and model else (provider or model)
+        except Exception:
+            pass
+        workdir = ""
+        if self._store is not None:
+            workdir = str(self._store.board_dir.parent)
+        return {"model": model_display or "未配置模型", "workdir": workdir}
+
     def set_auto_mode(self, on: bool) -> None:
         """切换自动/手动模式（自动模式下状态变化即触发处理）"""
         self._auto_mode = bool(on)
