@@ -2050,7 +2050,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -2969,7 +2969,7 @@
                 "hooks": true,
                 "ui": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "workbuddy",
                 "问答模式",
