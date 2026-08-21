@@ -141,10 +141,10 @@ class TaskCardWidget(QFrame):
         self._time_label.setText(_rel_time(task.updated_at))
 
         if self._processing:
-            preview = getattr(task, "_stream_preview", "") or ""
+            preview = task.stream_preview or ""
             self._summary_label.setText(preview[-200:] if preview else "正在思考…")
-            rounds = getattr(task, "_tool_rounds", 0)
-            elapsed = int(time.time() - (getattr(task, "_started_at", 0) or time.time()))
+            rounds = task.tool_rounds
+            elapsed = int(time.time() - (task.started_at or time.time()))
             meta = (f"@{COLUMN_META[self._status]['agent']} · {rounds} 轮工具 · "
                     f"{elapsed // 60}:{elapsed % 60:02d}")
         else:
@@ -181,9 +181,21 @@ class TaskCardWidget(QFrame):
         )
 
     def _on_tick(self):
-        """处理中每 2s 自刷新耗时/轮次/预览（无需 controller 信号）"""
-        if self._processing and self._last_task is not None:
-            self.refresh(self._last_task, True)
+        """处理中每 2s 自刷新耗时/轮次/预览 — 仅更新元信息行与预览，避免全量 refresh
+
+        controller 已按信号（task_changed）驱动标题/错误等刷新；这里只做耗时累计，
+        消除双路径全量刷新与 _last_task 陈旧引用的整体重绘风险。
+        """
+        if not (self._processing and self._last_task is not None):
+            return
+        task = self._last_task
+        preview = task.stream_preview or ""
+        if preview:
+            self._summary_label.setText(preview[-200:])
+        elapsed = int(time.time() - (task.started_at or time.time()))
+        meta = (f"@{COLUMN_META[self._status]['agent']} · {task.tool_rounds} 轮工具 · "
+                f"{elapsed // 60}:{elapsed % 60:02d}")
+        self._meta_label.setText(meta)
 
     # ================================================================
     #  拖拽（按住卡片空白处拖动 → 列间移动）

@@ -492,7 +492,7 @@ class TaskBoardCard(QFrame):
         )
         self._model_label.setText(env["model"])
         wd = env["workdir"]
-        self._workdir_label.setText(f"{wd}" if wd and len(wd) < 48 else (f"…{wd[-45:]}" if wd else ""))
+        self._workdir_label.setText(wd if (wd and len(wd) <= 45) else (f"…{wd[-44:]}" if wd else ""))
 
     def _show_report(self, task_id: str):
         task = self._controller.get_task(task_id)
@@ -511,7 +511,7 @@ class TaskBoardCard(QFrame):
             task,
             report,
             processing=self._controller.is_processing(task_id),
-            preview=getattr(task, "_stream_preview", ""),
+            preview=task.stream_preview,
             parent=self.window(),
         ).exec_()
 
