@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787308117.4557173,
+  "fetched_at": 1787309891.9976623,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -76,7 +76,7 @@
     "skill-creator": 2,
     "slack-gif-creator": 1,
     "snake": 2,
-    "ssh-toolkit": 7,
+    "ssh-toolkit": 8,
     "superclaude": 2,
     "superpowers": 3,
     "tailwind-pro": 0,
@@ -93,6 +93,6 @@
     "web-design-skills": 2,
     "webapp-testing": 2,
     "win-powershell": 14,
-    "workbuddy": 5
+    "workbuddy": 6
   }
 }
