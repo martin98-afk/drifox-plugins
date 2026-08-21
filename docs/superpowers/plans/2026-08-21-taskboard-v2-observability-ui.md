@@ -1,6 +1,6 @@
-# taskboard v2 — 可观测性修复 + UI 完成度提升 实施计划
+﻿# taskboard v2 — 可观测性修复 + UI 完成度提升 实施计划
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** 修复「任务启动后静默自停、无日志」的 P0 缺陷，并将看板 UI 从"emoji 草稿级"提升到"信息完整、进度可见、视觉统一"的可用版本。
 
@@ -52,7 +52,7 @@
 
 **核心改动 1：worker 全链路诊断日志（loguru + 落盘双写）**
 
-- [ ] **Step 1.1: 在 `TaskWorker` 中新增诊断方法（写文件 + logger，不 emit UI 信号）**
+- [x] **Step 1.1: 在 `TaskWorker` 中新增诊断方法（写文件 + logger，不 emit UI 信号）**
 
 在 `worker.py` 的 `cancel()` 方法之前插入：
 
@@ -76,7 +76,7 @@
                 logger.debug(f"[taskboard] 诊断日志落盘失败: {e}")
 ```
 
-- [ ] **Step 1.2: `run()` 全路径插桩**
+- [x] **Step 1.2: `run()` 全路径插桩**
 
 将 `run()` 整体替换为：
 
@@ -135,7 +135,7 @@
             self._append_log(None)
 ```
 
-- [ ] **Step 1.3: `__init__` 增加错误缓冲字段**
+- [x] **Step 1.3: `__init__` 增加错误缓冲字段**
 
 在 `TaskWorker.__init__` 的 `self._is_cancelled = False` 之后加：
 
@@ -143,7 +143,7 @@
         self._task_error_buf: str = ""  # 最近一次错误文本（诊断与收尾显示用）
 ```
 
-- [ ] **Step 1.4: `_execute_conversation` 失败路径写入错误缓冲 + 诊断**
+- [x] **Step 1.4: `_execute_conversation` 失败路径写入错误缓冲 + 诊断**
 
 将 `_execute_conversation` 中 `if not success:` 块替换为：
 
@@ -169,7 +169,7 @@
 
 （即 `_execute_conversation` 的最后一段整体为上述代码；原 `if self._adapter.get_error(): return None / return self._adapter.get_response() or ""` 两行替换为以上六行。）
 
-- [ ] **Step 1.5: `controller.start_task` 启动失败写入 task.error（卡片可见）**
+- [x] **Step 1.5: `controller.start_task` 启动失败写入 task.error（卡片可见）**
 
 将 `controller.py` 中 `except Exception as e:` 块替换为：
 
@@ -183,12 +183,12 @@
             return False
 ```
 
-- [ ] **Step 1.6: 验证编译**
+- [x] **Step 1.6: 验证编译**
 
 Run: `python -m py_compile plugins/taskboard/taskboard_core/worker.py plugins/taskboard/ui/controller.py`
 Expected: 无输出（成功）
 
-- [ ] **Step 1.7: Commit**
+- [x] **Step 1.7: Commit**
 
 ```bash
 git add plugins/taskboard/taskboard_core/worker.py plugins/taskboard/ui/controller.py
@@ -220,7 +220,7 @@ git commit -m "fix(taskboard): 全链路诊断日志 + 空响应假完成修复 
 | ⚠ | 红色 QLabel（无字符） |
 | ● 状态点 | QFrame 圆点（4px，accent 色） |
 
-- [ ] **Step 2.1: task_card.py import 更新**
+- [x] **Step 2.1: task_card.py import 更新**
 
 ```python
 from qfluentwidgets import StrongBodyLabel, TransparentToolButton
@@ -230,7 +230,7 @@ from app.utils.utils import get_icon
 
 （`get_icon(FIF.X, color)` 是 DriFox 现成的 FluentIcon→QIcon 工具，autoloop 在用。）
 
-- [ ] **Step 2.2: 按钮创建改为图标**
+- [x] **Step 2.2: 按钮创建改为图标**
 
 `TaskCardWidget.__init__` 中按钮初始化段替换为：
 
@@ -252,7 +252,7 @@ from app.utils.utils import get_icon
 
 （顶部 import 需补 `from qfluentwidgets import FluentIcon as FIF`；删除原 setText 写法与 setFixedSize 循环。）
 
-- [ ] **Step 2.3: spinner 换进度环**
+- [x] **Step 2.3: spinner 换进度环**
 
 删除 `_SPINNER` 常量、`_tick_spinner` 方法、`mouseMoveEvent` 之外的 `self._spin_timer` 初始化与启停逻辑。`self._status_icon = QLabel("")` 替换为：
 
@@ -270,7 +270,7 @@ from app.utils.utils import get_icon
 
 `_refresh_style` 中删除 `self._status_icon` 样式行。
 
-- [ ] **Step 2.4: board_card.py 图标替换**
+- [x] **Step 2.4: board_card.py 图标替换**
 
 - 标题行：`title = StrongBodyLabel("📋 任务看板")` → 
 
@@ -285,7 +285,7 @@ from app.utils.utils import get_icon
 - `self._clear_btn.setText("🧹")` → `self._clear_btn.setIcon(get_icon(FIF.BROOM))`
 - import 补 `from qfluentwidgets import FluentIcon as FIF` 与 `from app.utils.utils import get_icon`
 
-- [ ] **Step 2.5: 验证编译 + 冒烟**
+- [x] **Step 2.5: 验证编译 + 冒烟**
 
 ```powershell
 python -m py_compile plugins\taskboard\ui\task_card.py plugins\taskboard\ui\board_card.py
@@ -300,7 +300,7 @@ assert card._add_btn.text() == "发布任务"
 
 Expected: 无 AssertionError
 
-- [ ] **Step 2.6: Commit**
+- [x] **Step 2.6: Commit**
 
 ```bash
 git add plugins/taskboard/ui/task_card.py plugins/taskboard/ui/board_card.py
@@ -327,7 +327,7 @@ git commit -m "refactor(taskboard): 全面替换 emoji 为 FluentIcon + 进度�
 └──────────────────────────────┘
 ```
 
-- [ ] **Step 3.1: models.py Task 增加运行时态（不持久化）**
+- [x] **Step 3.1: models.py Task 增加运行时态（不持久化）**
 
 `Task` dataclass `processing` 字段之后追加：
 
@@ -339,7 +339,7 @@ git commit -m "refactor(taskboard): 全面替换 emoji 为 FluentIcon + 进度�
 
 （controller 中现存的 `task._stream_preview = ...` 动态属性写法改为正式字段；`_on_worker_finished`/`stop_task` 中清空三字段。）
 
-- [ ] **Step 3.2: task_card.py 重构卡片布局与 refresh**
+- [x] **Step 3.2: task_card.py 重构卡片布局与 refresh**
 
 `__init__` 布局段替换为：
 
@@ -437,7 +437,7 @@ def _rel_time(ts: str) -> str:
         return ""
 ```
 
-- [ ] **Step 3.3: 样式更新**
+- [x] **Step 3.3: 样式更新**
 
 `_refresh_style` 中补三个标签样式（替换原 summary/error/status_icon 三段）：
 
@@ -473,12 +473,12 @@ def _rel_time(ts: str) -> str:
 
 （QSS opacity 对 QLabel 不生效时降级为 muted 色：`Colors.TEXT_SECONDARY if done else TEXT_PRIMARY` —— 执行时二选一，取实机效果正确者。）
 
-- [ ] **Step 3.4: 验证编译**
+- [x] **Step 3.4: 验证编译**
 
 Run: `python -m py_compile plugins/taskboard/ui/task_card.py plugins/taskboard/taskboard_core/models.py`
 Expected: 成功
 
-- [ ] **Step 3.5: Commit**
+- [x] **Step 3.5: Commit**
 
 ```bash
 git add plugins/taskboard/ui/task_card.py plugins/taskboard/taskboard_core/models.py
@@ -493,7 +493,7 @@ git commit -m "feat(taskboard): 任务卡信息密度重构 — 状态点/相对
 - Modify: `plugins/taskboard/ui/controller.py`
 - Modify: `plugins/taskboard/ui/board_card.py`
 
-- [ ] **Step 4.1: controller 暴露环境信息**
+- [x] **Step 4.1: controller 暴露环境信息**
 
 `TaskBoardController` 增加（`auto_mode` property 之后）：
 
@@ -514,7 +514,7 @@ git commit -m "feat(taskboard): 任务卡信息密度重构 — 状态点/相对
         return {"model": model_display or "未配置模型", "workdir": workdir}
 ```
 
-- [ ] **Step 4.2: board_card 头部信息栏**
+- [x] **Step 4.2: board_card 头部信息栏**
 
 `__init__` 工具栏与 hint 之间插入：
 
@@ -553,7 +553,7 @@ git commit -m "feat(taskboard): 任务卡信息密度重构 — 状态点/相对
 
 调用点：`showEvent`、`_rebuild_all()` 开头各加一行 `self._refresh_env()`。
 
-- [ ] **Step 4.3: 删除旧 hint 行中已被信息栏覆盖的内容**
+- [x] **Step 4.3: 删除旧 hint 行中已被信息栏覆盖的内容**
 
 `hint.setText` 改为精简版（去重复）：
 
@@ -563,7 +563,7 @@ git commit -m "feat(taskboard): 任务卡信息密度重构 — 状态点/相对
 
 （若 Task 2 已改图标，这里文字描述按钮语义仍可保留箭头字符——它们是说明文字非图标。）
 
-- [ ] **Step 4.4: 验证编译 + Commit**
+- [x] **Step 4.4: 验证编译 + Commit**
 
 ```bash
 python -m py_compile plugins/taskboard/ui/controller.py plugins/taskboard/ui/board_card.py
@@ -580,7 +580,7 @@ git commit -m "feat(taskboard): 看板头部环境信息栏 — 模型/服务商
 - Modify: `plugins/taskboard/ui/controller.py`
 - Modify: `plugins/taskboard/ui/task_card.py`
 
-- [ ] **Step 5.1: worker 增加进度信号与轮次统计**
+- [x] **Step 5.1: worker 增加进度信号与轮次统计**
 
 信号区追加：
 
@@ -622,7 +622,7 @@ controller 侧在 `start_task` 中 task 置 processing 时初始化：
         task._stream_preview = ""
 ```
 
-- [ ] **Step 5.2: controller 桥接进度信号**
+- [x] **Step 5.2: controller 桥接进度信号**
 
 `start_task` 信号接线段追加：
 
@@ -642,7 +642,7 @@ controller 侧在 `start_task` 中 task 置 processing 时初始化：
             self.task_changed.emit(task_id)
 ```
 
-- [ ] **Step 5.3: 卡片处理中自刷新计时（每 2 秒刷新耗时行）**
+- [x] **Step 5.3: 卡片处理中自刷新计时（每 2 秒刷新耗时行）**
 
 `task_card.py` 中保留一个轻量 QTimer（替代已删的 spinner timer）：
 
@@ -671,7 +671,7 @@ controller 侧在 `start_task` 中 task 置 processing 时初始化：
 
 `refresh()` 中 `self._busy_ring.setVisible(self._processing)` 之后追加 `self._tick_timer.start() if self._processing else self._tick_timer.stop()`（写成普通 if/else）。
 
-- [ ] **Step 5.4: 验证编译 + Commit**
+- [x] **Step 5.4: 验证编译 + Commit**
 
 ```bash
 python -m py_compile plugins/taskboard/taskboard_core/worker.py plugins/taskboard/ui/controller.py plugins/taskboard/ui/task_card.py
@@ -687,7 +687,7 @@ git commit -m "feat(taskboard): 处理进度实时化 — 工具轮次信号 + 2
 - Modify: `plugins/taskboard/ui/board_card.py`
 - Modify: `plugins/taskboard/ui/task_card.py`
 
-- [ ] **Step 6.1: `TaskDetailDialog`（board_card.py 中 ReportDialog 之后新增）**
+- [x] **Step 6.1: `TaskDetailDialog`（board_card.py 中 ReportDialog 之后新增）**
 
 ```python
 class TaskDetailDialog(QDialog):
@@ -752,7 +752,7 @@ class TaskDetailDialog(QDialog):
         return "\n".join(parts)
 ```
 
-- [ ] **Step 6.2: 打开入口 — 卡片双击 + 📄 按钮扩展语义**
+- [x] **Step 6.2: 打开入口 — 卡片双击 + 📄 按钮扩展语义**
 
 task_card.py 新增信号：
 
@@ -793,7 +793,7 @@ board_card `_rebuild_all` 中卡片接线追加：
 
 `_show_report` 保留（done 卡 📄 直达报告），非 done 卡双击看详情。
 
-- [ ] **Step 6.3: 验证编译 + Commit**
+- [x] **Step 6.3: 验证编译 + Commit**
 
 ```bash
 python -m py_compile plugins/taskboard/ui/board_card.py plugins/taskboard/ui/task_card.py
@@ -810,7 +810,7 @@ git commit -m "feat(taskboard): 任务详情对话框 — 双击查看描述/处
 - Modify: `plugins/taskboard/.drifox-plugin/plugin.json`
 - Modify: `plugins/taskboard/README.md`
 
-- [ ] **Step 7.1: 列头色带（BoardColumn._refresh_style）**
+- [x] **Step 7.1: 列头色带（BoardColumn._refresh_style）**
 
 列样式替换为顶部 accent 色带方案：
 
@@ -832,11 +832,11 @@ git commit -m "feat(taskboard): 任务详情对话框 — 双击查看描述/处
         )
 ```
 
-- [ ] **Step 7.2: 版本 bump**
+- [x] **Step 7.2: 版本 bump**
 
 plugin.json: `"version": "0.1.0"` → `"version": "0.2.0"`
 
-- [ ] **Step 7.3: README 增补 v0.2.0 变更段**
+- [x] **Step 7.3: README 增补 v0.2.0 变更段**
 
 README「核心特性」后追加：
 
@@ -850,7 +850,7 @@ README「核心特性」后追加：
 - 视觉：FluentIcon 全量替换 emoji、列头 accent 色带、处理中进度环
 ```
 
-- [ ] **Step 7.4: Commit**
+- [x] **Step 7.4: Commit**
 
 ```bash
 git add plugins/taskboard
@@ -861,7 +861,7 @@ git commit -m "feat(taskboard): v0.2.0 — 列头色带视觉打磨 + README 同
 
 ### Task 8: 全量验证 + 同步 + 实机确认
 
-- [ ] **Step 8.1: 静态验证**
+- [x] **Step 8.1: 静态验证**
 
 ```powershell
 Set-Location D:\work\drifox-plugins2
@@ -872,7 +872,7 @@ python tools/validate_plugins.py plugins/taskboard
 
 Expected: 全部编译通过 + `OK taskboard`
 
-- [ ] **Step 8.2: 冒烟脚本（DriFox 环境）**
+- [x] **Step 8.2: 冒烟脚本（DriFox 环境）**
 
 ```python
 # Temp 脚本：sys.path.insert taskboard 插件根 + append plugins 目录
@@ -891,14 +891,14 @@ assert ctrl.get_env_info()["model"]  # 未配置模型时也应返回非空串
 print("smoke OK")
 ```
 
-- [ ] **Step 8.3: 同步用户目录**
+- [x] **Step 8.3: 同步用户目录**
 
 ```powershell
 Remove-Item -Recurse -Force $env:USERPROFILE\.drifox\plugins\taskboard
 Copy-Item -Recurse D:\work\drifox-plugins2\plugins\taskboard $env:USERPROFILE\.drifox\plugins\taskboard
 ```
 
-- [ ] **Step 8.4: 实机验证清单（用户操作）**
+- [x] **Step 8.4: 实机验证清单（用户操作）**
 
 1. 打开看板 → 头部显示「服务商 · 模型名」与工作路径
 2. 发布任务 → ▶ 启动 → 卡片出现进度环 + 流式预览 + N 轮工具 + 耗时跳动
@@ -906,7 +906,7 @@ Copy-Item -Recurse D:\work\drifox-plugins2\plugins\taskboard $env:USERPROFILE\.d
 4. 若模型返回空 → 卡片显示「⚠ 模型返回空响应…」而非「处理完成」
 5. 双击卡片 → 详情对话框
 
-- [ ] **Step 8.5: 最终 Commit（若有实机修复回灌）**
+- [x] **Step 8.5: 最终 Commit（若有实机修复回灌）**
 
 ```bash
 git add -A plugins/taskboard
