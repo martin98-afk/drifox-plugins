@@ -743,6 +743,12 @@ class ProjectSideRailCard(QWidget):
         self._narrow.set_context_provider(provider)
         self._full.set_context_provider(provider)
         self._refresh()
+        # 尽快连接主程序归档信号，覆盖插件挂载后的归档操作（主程序卡片里归档）
+        try:
+            ctx = provider()
+            self._ensure_archive_listener(ctx.get("main_widget"))
+        except Exception:
+            pass
 
     def _dispatch_to_active_main_widget(self, method_name: str, *args):
         """动态调用当前活跃 main_widget 的方法（多 Tab 隔离）
@@ -797,6 +803,9 @@ class ProjectSideRailCard(QWidget):
         method = method_map.get(signal_name)
         if method:
             self._dispatch_to_active_main_widget(method, *args)
+            # 插件宽模式内归档：主程序 _on_archive_project 同步执行完后即时刷新侧栏
+            if signal_name == "archiveProject":
+                QTimer.singleShot(0, self._refresh_immediate)
         sig = getattr(self, signal_name, None)
         if sig is not None:
             try:
@@ -809,11 +818,13 @@ class ProjectSideRailCard(QWidget):
         self._refresh()
 
     def _on_tick(self):
-        """5s 周期同步：当前项目高亮（窄 + 宽）+ 项目列表变化
+        """5s 周期同步（兜底）：当前项目高亮（窄 + 宽）+ 项目列表变化"""
+        self._sync_refresh()
 
-        修复原 bug：
-        - 仅刷新窄模式 → 宽模式 ProjectSelectorCardContent 不会更新当前项目高亮
-        - 项目列表变化时也不会重建宽模式的内容
+    def _sync_refresh(self):
+        """即时同步：当前项目高亮（窄+宽）+ 项目列表变化重建
+
+        供 5s 定时器兜底与归档事件即时刷新复用。
         """
         if self._provider is None:
             return
@@ -824,6 +835,8 @@ class ProjectSideRailCard(QWidget):
         mw = ctx.get("main_widget")
         if mw is None:
             return
+        # 兜底：确保已连接主程序归档信号（覆盖 Tab 切换后的新 main_widget）
+        self._ensure_archive_listener(mw)
         current = getattr(mw, "_current_project", "") or ""
 
         # 窄模式：当前项目变化时刷新（图标重建 + 高亮更新）
@@ -833,6 +846,33 @@ class ProjectSideRailCard(QWidget):
         # 宽模式：当前项目变化 / 项目列表变化时刷新内容
         if self._mode == "full" or self._full._content is not None:
             self._maybe_refresh_full(current, mw)
+
+    def _refresh_immediate(self):
+        """归档等事件后即时刷新（零延迟）"""
+        self._sync_refresh()
+
+    def _ensure_archive_listener(self, mw):
+        """连接主程序项目选择卡片的 archiveProject 信号，实现归档后即时刷新
+
+        主程序 _on_archive_project 只刷新它自己的顶部卡片
+        （_project_selector_card_content），不通知插件实例。这里动态连接该
+        content 已有的 archiveProject 信号，使插件侧栏在「主程序卡片里归档」
+        后零延迟刷新。仅多接一个槽，不改变主程序行为；失败静默（try/except）。
+        """
+        if mw is None:
+            return
+        if getattr(mw, "_project_side_rail_archive_listening", False):
+            return
+        content = getattr(mw, "_project_selector_card_content", None)
+        if content is None or not hasattr(content, "archiveProject"):
+            return
+        try:
+            content.archiveProject.connect(
+                lambda *args: QTimer.singleShot(0, self._refresh_immediate)
+            )
+            mw._project_side_rail_archive_listening = True
+        except Exception as e:
+            logger.debug(f"[project-side-rail] archive listener attach failed: {e}")
 
     def _projects_signature_changed(self, mw) -> bool:
         """项目列表是否变化（用于触发窄模式重建）"""
