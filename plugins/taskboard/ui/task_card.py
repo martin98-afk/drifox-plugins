@@ -9,7 +9,7 @@
 import time
 from typing import Optional
 
-from PyQt5.QtCore import QMimeData, QPoint, Qt, pyqtSignal
+from PyQt5.QtCore import QMimeData, QPoint, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QDrag, QEnterEvent
 from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout
 
@@ -40,6 +40,11 @@ class TaskCardWidget(QFrame):
         self._task_id = task_id
         self._processing = False
         self._drag_start: Optional[QPoint] = None
+        self._last_task = None  # 最近一次 refresh 的任务引用（处理中自刷新用）
+
+        self._tick_timer = QTimer(self)
+        self._tick_timer.setInterval(2000)
+        self._tick_timer.timeout.connect(self._on_tick)
 
         self.setObjectName("taskboardTaskCard")
         self.setFrameShape(QFrame.NoFrame)
@@ -126,6 +131,7 @@ class TaskCardWidget(QFrame):
 
     def refresh(self, task, processing: bool) -> None:
         """按最新任务数据刷新展示"""
+        self._last_task = task
         self._status = task.status if task.status in COLUMNS else "todo"
         self._accent = COLUMN_META.get(self._status, {}).get("accent", "#8A8F98")
         self._processing = bool(processing)
@@ -161,6 +167,10 @@ class TaskCardWidget(QFrame):
         self._report_btn.setVisible(has_report)
 
         self._busy_ring.setVisible(self._processing)
+        if self._processing:
+            self._tick_timer.start()
+        else:
+            self._tick_timer.stop()
 
         self._refresh_style()
         # done 列淡化（用颜色而非 opacity）
@@ -168,6 +178,11 @@ class TaskCardWidget(QFrame):
         self._title_label.setStyleSheet(
             f"color: {title_color}; {FONT_CSS} font-size: {scale_font_size(13)}px;"
         )
+
+    def _on_tick(self):
+        """处理中每 2s 自刷新耗时/轮次/预览（无需 controller 信号）"""
+        if self._processing and self._last_task is not None:
+            self.refresh(self._last_task, True)
 
     # ================================================================
     #  拖拽（按住卡片空白处拖动 → 列间移动）
