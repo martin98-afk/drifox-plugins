@@ -1,0 +1,32 @@
+{
+    "name": "weather-query",
+    "description": "天气查询工具 — 输入城市名返回实时天气与未来预报（wttr.in 免费接口，无需 API key）",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "0.1.0",
+    "author": {
+        "name": "black"
+    },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "weather",
+        "wttr",
+        "query"
+    ],
+    "components": {
+        "tools": true,
+        "commands": false,
+        "agents": false,
+        "skills": false,
+        "hooks": false,
+        "mcp": false,
+        "lsp": false,
+        "themes": false
+    }
+}
