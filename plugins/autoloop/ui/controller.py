@@ -28,6 +28,7 @@ class _WindowSession:
         self.services: Optional[Dict[str, Any]] = None
         self.window_id: str = ""
         self.finishing: bool = False
+        self.prev_workdir: str = ""  # 循环启动前的工作目录（结束时还原）
 
 
 class AutoLoopController:
@@ -123,6 +124,8 @@ class AutoLoopController:
         if not project_path:
             project_path = services.get("get_workdir", lambda: "")() or os.getcwd()
         abs_path = os.path.abspath(project_path)
+        # 记录原工作目录（任务结束还原——修复 set_workdir 全局副作用不回收）
+        prev_workdir = services.get("get_workdir", lambda: "")() or ""
         if os.path.isdir(abs_path):
             services.get("set_workdir", lambda _p: None)(abs_path)
             config.project_path = abs_path
@@ -138,6 +141,7 @@ class AutoLoopController:
         session.window_id = window_id
         session.services = services
         session.finishing = False
+        session.prev_workdir = prev_workdir
 
         # 显示运行卡（full 覆盖层）。运行卡懒创建：首次 toggle 才构造实例，
         # showEvent 触发 bind_running_card 完成绑定，再从注册表取回实例。
@@ -372,6 +376,12 @@ class AutoLoopController:
         # 解锁 UI
         services.get("exit_exclusive_ui_mode", lambda _s: None)(PLUGIN_ID)
         session.finishing = False
+
+        # 还原启动前工作目录（set_workdir 副作用回收）
+        prev = session.prev_workdir
+        if prev:
+            services.get("set_workdir", lambda _p: None)(prev)
+            session.prev_workdir = ""
 
         # 通知用户
         services.get("notify", lambda *_: None)("AutoLoop", message)
