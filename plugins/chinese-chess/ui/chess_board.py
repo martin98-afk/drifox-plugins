@@ -396,7 +396,8 @@ class ChessCard(QWidget):
         legal = gen_legal_moves(self._board, RED)
         move = (c1, r1, c, r)
         if move in legal:
-            self._apply_move(move, source=source)
+            # 手动走子：不传 source，跳过 AI 兜底校验分支
+            self._apply_move(move)
         elif piece != "." and side_of(piece) == RED:
             # 切换选中
             self._select_piece(c, r)
@@ -544,7 +545,8 @@ class ChessCard(QWidget):
                 self._hint_label.setText(
                     f"AI 走法：{coord_to_str(c1, r1)} → {coord_to_str(c2, r2)}（LLM）"
                 )
-            self._apply_move(move)
+            # AI 走法：传 source 触发 _apply_move 合法性兜底校验
+            self._apply_move(move, source=source)
 
     def _on_ai_failed(self, reason: str):
         # 仅记录，不覆盖 done 的 UI 行为

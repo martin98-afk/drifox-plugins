@@ -330,6 +330,20 @@ class TestAnimatingGuard(unittest.TestCase):
         self.card._on_board_click(1, 9)
         self.card._select_piece.assert_called_once_with(1, 9)
 
+    def test_manual_click_moves_piece(self):
+        """P0 回归：手动点击走子不再抛 NameError(source 未定义)，且落子生效"""
+        # 模拟用户反馈的崩溃路径：手动模式红方点击落子
+        self.card._red_control = "manual"
+        self.card._side_to_move = RED
+        self.card._game_over = False
+        self.card._start_ai_move = MagicMock()  # 阻止真实 AI 线程副作用
+        # 选中红车 (0,9) 后点击目标格 (0,8) 走子
+        self.card._on_board_click(0, 9)
+        self.card._on_board_click(0, 8)
+        # 红车应到达 (0,8)，原 (0,9) 变空
+        self.assertEqual(self.card._board[8][0], "R")
+        self.assertEqual(self.card._board[9][0], ".")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
