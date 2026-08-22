@@ -72,6 +72,9 @@ class PieceLabel(QLabel):
         self.setGraphicsEffect(make_piece_shadow())
         # 让 #chessPiece 选择器可命中（否则 theme 的 #chessPiece 规则不生效）
         self.setObjectName("chessPiece")
+        # 关键：QLabel 默认不绘制 QSS 的 background 与 border-radius（仅绘 border/text），
+        # 必须开启 WA_StyledBackground 才能渲染木色渐变背景 + 圆形（否则透明方块）
+        self.setAttribute(Qt.WA_StyledBackground, True)
         self._refresh_style()
 
     def set_piece(self, piece: str):
