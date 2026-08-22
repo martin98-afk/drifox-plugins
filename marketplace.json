@@ -2119,7 +2119,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 16,
+            "downloads": 17,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -2289,7 +2289,7 @@
                 "tools": true,
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "self-evolve",
                 "plugin",
