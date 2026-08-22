@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787397147.372206,
+  "fetched_at": 1787398941.4632146,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -67,13 +67,13 @@
     "playground": 3,
     "ponytail": 9,
     "project-dashboard": 17,
-    "project-side-rail": 4,
+    "project-side-rail": 5,
     "prompt-enhancer": 17,
     "python-pro": 1,
     "rdr2": 4,
     "react-pro": 1,
     "security-guidance": 2,
-    "self-evolver": 2,
+    "self-evolver": 3,
     "seo-audit": 1,
     "skill-creator": 2,
     "slack-gif-creator": 1,
