@@ -362,6 +362,50 @@
             "icon": "icon.png"
         },
         {
+            "name": "chinese-chess",
+            "description": "中国象棋 — 与大模型对弈的浮动卡片游戏",
+            "version": "0.1.0",
+            "author": "马丁",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/chinese-chess",
+                "ref": "main"
+            },
+            "components": {
+                "tools": false,
+                "commands": false,
+                "agents": false,
+                "skills": false,
+                "hooks": false,
+                "mcp": false,
+                "lsp": false,
+                "themes": false,
+                "ui": true,
+                "providers": false,
+                "team_templates": false,
+                "model_adapters": false,
+                "loop_policies": false,
+                "storages": false,
+                "serializers": false,
+                "gateways": false,
+                "engines": false
+            },
+            "keywords": [
+                "chinese",
+                "evolved",
+                "xiangqi",
+                "象棋"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            }
+        },
+        {
             "name": "claude-api",
             "description": "Claude API 最佳实践 — SDK 用法、prompt caching、streaming、tool use、batch API、prompt 工程、token 优化。",
             "version": "1.0.0",
