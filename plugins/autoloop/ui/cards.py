@@ -6,6 +6,7 @@ AutoLoop 卡片组件 — 配置卡 + 运行卡
 - AutoLoopRunningCard: 运行状态显示 + 停止按钮（彩虹渐变边框动画）
 """
 
+import os
 import time
 from pathlib import Path
 
@@ -72,6 +73,7 @@ class AutoLoopConfigCard(QFrame):
         self.setObjectName("autoLoopConfigCard")
         self._ctx_provider = None
         self._last_ctx = {}
+        self._path_user_edited = False  # 用户手动改过路径则不自动预填
         # 注意：先 _build_ui 创建控件，再 _refresh_theme_style 刷新样式
         # 确保 _refresh_component_styles 访问控件时它们已存在
         self._build_ui()
@@ -84,16 +86,29 @@ class AutoLoopConfigCard(QFrame):
 
     def showEvent(self, event):
         super().showEvent(event)
-        if self._ctx_provider is not None:
-            try:
-                self._last_ctx = self._ctx_provider() or {}
-                # 项目路径预填（未手动填过时）
-                if not self._path_edit.text().strip():
-                    root = self._last_ctx.get("project_root") or ""
-                    if root:
-                        self._path_edit.setText(root)
-            except Exception:
-                pass
+        # 用户手动改过路径则尊重其选择，不再用上下文覆盖
+        if self._path_user_edited:
+            return
+        if self._ctx_provider is None:
+            return
+        try:
+            self._last_ctx = self._ctx_provider() or {}
+            # 默认项目路径 = 当前打开时上下文传递的项目路径
+            # 依次取：ctx.project_root → services.get_workdir → 当前工作目录
+            root = self._last_ctx.get("project_root") or ""
+            if not root:
+                services = self._last_ctx.get("services") or {}
+                root = (services.get("get_workdir", lambda: "")() or "").strip()
+            if not root:
+                root = os.getcwd()
+            if root:
+                self._path_edit.setText(os.path.abspath(root))
+        except Exception:
+            pass
+
+    def _on_path_edited(self, _text):
+        """用户手动编辑路径 → 标记已编辑，showEvent 不再自动覆盖"""
+        self._path_user_edited = True
 
     def refresh_font_size(self):
         """刷新字体大小配置"""
@@ -285,6 +300,7 @@ class AutoLoopConfigCard(QFrame):
         self._path_edit.setPlaceholderText("默认为当前工作目录")
         self._path_edit.setFixedHeight(28)
         self._path_edit.setStyleSheet(self._line_style())
+        self._path_edit.textEdited.connect(self._on_path_edited)
         path_row.addWidget(self._path_edit, 1)
         self._path_browse_btn = ToolButton(FluentIcon.FOLDER)
         self._path_browse_btn.setFixedSize(28, 28)
@@ -361,6 +377,7 @@ class AutoLoopConfigCard(QFrame):
             self._path_edit.text().strip() or "",
         )
         if folder:
+            self._path_user_edited = True
             self._path_edit.setText(folder)
 
     def _spin_style(self) -> str:
