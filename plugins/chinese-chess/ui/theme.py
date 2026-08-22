@@ -59,8 +59,8 @@ LABEL_FONT_PX = 11
 BORDER_RADIUS_PIECE = 50      # 圆形棋子 = width/2（百分比）
 BORDER_RADIUS_CARD = 12       # 卡片容器
 BORDER_RADIUS_BTN = 8         # 按钮
-PIECE_SHADOW_BLUR = 8
-PIECE_SHADOW_OFFSET_Y = 2
+PIECE_SHADOW_BLUR = 10
+PIECE_SHADOW_OFFSET_Y = 3
 PIECE_SHADOW_ALPHA = 120      # rgba 0-255
 
 # ── 棋盘视觉交互色（高亮/合法落点/hover）──
@@ -292,37 +292,29 @@ def get_full_qss(card_bg: Optional[str] = None) -> str:
 
 
 def get_piece_qss(side: str, hover: bool = False, selected: bool = False) -> str:
-    """生成棋子 QSS（红/黑、hover/selected 四种组合）。
+    """生成木制棋子 QSS（红/黑、hover/selected 四种组合）。
+
+    木制质感：深棕木底 + 35% 30% 高光点 + 边缘暗角 + 深棕描边，不透明（alpha=1）。
+    红/黑双方同木底，仅文字颜色区分（#c62828 / #1a1a1a），避免黑方不可见。
 
     Args:
         side: 'red' / 'black'
         hover: hover 高亮态（金色边框）
-        selected: 选中态（额外外圈）
+        selected: 选中态（加粗金色外圈）
     """
+    # 木色不透明径向渐变：亮高光 #f0d8a0 → 木黄 #e0b878 → 木橙 #c8924a → 深棕 #8b5a2b
+    bg_grad = (
+        f"qradial-gradient(circle at 35% 30%, "
+        f"#f0d8a0 0%, #e0b878 25%, #c8924a 60%, #8b5a2b 100%)"
+    )
+
     if side == "red":
-        bg_grad = (
-            f"qradial-gradient(circle at 35% 30%, "
-            f"#ffffff 0%, {PIECE_BG_RED_MID} 35%, {PIECE_BG_RED_BOT} 100%)"
-        )
-        base_border = PIECE_RED
         text_color = PIECE_RED
     else:
-        bg_grad = (
-            f"qradial-gradient(circle at 35% 30%, "
-            f"#ffffff 0%, {PIECE_BG_BLK_MID} 45%, {PIECE_BG_BLK_BOT} 100%)"
-        )
-        base_border = PIECE_BLACK
         text_color = PIECE_BLACK
 
-    # hover 时换高亮背景 + 金色边框
-    if hover:
-        bg_grad = (
-            f"qradial-gradient(circle at 35% 30%, "
-            f"#ffffff 0%, #fff7d6 40%, #f4d99c 100%)"
-        )
-        border_color = USER_ACCENT
-    else:
-        border_color = base_border
+    # hover：金色高亮边框；否则深棕木边
+    border_color = USER_ACCENT if hover else "#5a3a1a"
 
     border_width = "3px" if selected else "2px"
     sel_outline = f"outline: 2px solid {USER_ACCENT};" if selected else ""
@@ -342,8 +334,11 @@ def get_piece_qss(side: str, hover: bool = False, selected: bool = False) -> str
     )
 
 
-def make_piece_shadow(blur_radius: int = 8, offset_y: int = 2, alpha: int = 120):
-    """QGraphicsDropShadowEffect 工厂（PyQt5 QSS 不支持 box-shadow）。"""
+def make_piece_shadow(blur_radius: int = 10, offset_y: int = 3, alpha: int = 150):
+    """QGraphicsDropShadowEffect 工厂（PyQt5 QSS 不支持 box-shadow）。
+
+    木制棋子需更明显的立体阴影：blur=10 / yOffset=3 / alpha=150。
+    """
     from PyQt5.QtWidgets import QGraphicsDropShadowEffect
     from PyQt5.QtGui import QColor
 

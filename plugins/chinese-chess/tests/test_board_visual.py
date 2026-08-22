@@ -71,8 +71,8 @@ class TestGetPieceQss(unittest.TestCase):
     def test_hover_changes_border_to_gold(self):
         s = theme.get_piece_qss("red", hover=True)
         self.assertIn(theme.USER_ACCENT, s)
-        # hover 模式下背景应包含 #fff7d6 / #f4d99c 高光色
-        self.assertIn("#fff7d6", s)
+        # hover 模式：金色边框 + 木制背景（深棕木底关键色）
+        self.assertIn("#8b5a2b", s)
 
     def test_selected_adds_thicker_border(self):
         s_default = theme.get_piece_qss("red")
@@ -86,6 +86,25 @@ class TestGetPieceQss(unittest.TestCase):
         s = theme.get_piece_qss("black", hover=True, selected=True)
         self.assertIn(theme.USER_ACCENT, s)
         self.assertIn("3px", s)
+
+    def test_wood_opaque_background(self):
+        """木制背景不透明（无 rgba 半透明）+ 含木色关键值"""
+        for side in ("red", "black"):
+            s = theme.get_piece_qss(side)
+            self.assertIn("#8b5a2b", s)   # 深棕木底
+            self.assertIn("#c8924a", s)   # 木橙中段
+            # 背景不透明：不含任何 rgba(...) 半透明写法
+            self.assertNotIn("rgba", s.lower())
+
+    def test_red_and_black_share_wood_base(self):
+        """红/黑同木底，仅文字色不同"""
+        s_red = theme.get_piece_qss("red")
+        s_black = theme.get_piece_qss("black")
+        self.assertIn(theme.PIECE_RED, s_red)
+        self.assertIn(theme.PIECE_BLACK, s_black)
+        # 两者背景渐变保持一致（木色）
+        self.assertIn("#8b5a2b", s_red)
+        self.assertIn("#8b5a2b", s_black)
 
 
 class TestGetFullQss(unittest.TestCase):
@@ -155,6 +174,12 @@ class TestPieceLabelAttributes(unittest.TestCase):
         qss = self.label.styleSheet()
         self.assertIn("border-radius: 50%", qss)
         self.assertIn("qradial-gradient", qss)
+        # 木制不透明背景（含深棕木底关键色，无半透明）
+        self.assertIn("#8b5a2b", qss)
+        self.assertNotIn("rgba", qss.lower())
+
+    def test_piece_objectname_is_chess_piece(self):
+        self.assertEqual(self.label.objectName(), "chessPiece")
 
     def test_piece_qss_has_red_color(self):
         qss = self.label.styleSheet()
@@ -172,10 +197,12 @@ class TestPieceLabelAttributes(unittest.TestCase):
         self.assertFalse(self.label._hover)
         self.label.set_hover(True)
         self.assertTrue(self.label._hover)
-        # hover 后 QSS 含高亮背景色（#fff7d6）
-        self.assertIn("#fff7d6", self.label.styleSheet())
+        # hover 后 QSS 含金色边框（USER_ACCENT），木色背景仍在
+        qss = self.label.styleSheet()
+        self.assertIn(theme.USER_ACCENT, qss)
+        self.assertIn("#8b5a2b", qss)
         self.label.set_hover(False)
-        self.assertNotIn("#fff7d6", self.label.styleSheet())
+        self.assertNotIn(theme.USER_ACCENT, self.label.styleSheet())
 
     def test_selected_toggle(self):
         self.assertFalse(self.label._selected)
