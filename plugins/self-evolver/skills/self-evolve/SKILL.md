@@ -13,7 +13,7 @@ DriFox 的工具/插件全部可热重载（user 根 `~/.drifox/plugins/` 保存
 | 工具 | 用途 | 关键参数 |
 |------|------|----------|
 | `evolution_scaffold` | 需求 → 插件骨架（17 类组件模板） | `name`(kebab-case 必填) `description` `components=[...]` `force`(覆盖) `author` |
-| `evolution_validate` | 插件结构校验（准入门槛） | `plugin_name` |
+| `evolution_validate` | 插件结构校验（准入门槛） | `plugin_name` `deep`(bool，改工具逻辑/发布前 true，隔离实跑) |
 | `evolution_inspect` | 扫描已装插件/深查结构/TODO 定位 | `plugin_name` 或 `list_all=true` |
 | `evolution_mcp` | 读写 .mcp.json 管理 MCP 服务器 | `operation`(add/remove/enable/disable/list) `plugin_name` `server_name` `command`/`url` `args` `env`/`headers` |
 | `evolution_journal` | 进化审计日志（每次动作必记） | `operation`(log/list/stats/triage) `action`(create/optimize/fix/rollback/mcp/note) `plugin_name` `summary` `status`(ok/failed/pending) `limit` `lines` |
@@ -37,7 +37,7 @@ DriFox 的工具/插件全部可热重载（user 根 `~/.drifox/plugins/` 保存
 1. evolution_inspect plugin_name=<name> → 摸清结构（目录树/组件/TODO）
 2. read 目标实现文件 → 分析问题
 3. edit 修改（user 根热重载；system 根需同步主程序仓库）
-4. evolution_validate plugin_name=<name> → 复验
+4. evolution_validate plugin_name=<name> → 复验（改了工具逻辑时加 deep=true，隔离进程实跑 impl 确认不崩）
 5. evolution_journal operation=log action=optimize|fix plugin_name=<name> summary=...
 ```
 
@@ -87,6 +87,16 @@ scaffold 的 force 覆盖会把旧版备份为 `<name>.bak.<ts>`。
 
 `register(registry)` 收到的 `registry` 是 `_RegistryProxy` 包装，会转发 `set_active` 到底层真 `StorageRegistry`，可直接调用。
 
+## 自进化纪律（防止「脚本验证」绕路）
+
+自进化插件（self-evolver）的验证**必须**走主进程工具闭环，**禁止**绕到独立 bash/python 脚本验证（即使脚本写在 `~/.drifox/plugins/` 外、不污染 sys.modules）：
+
+- 改 `tools/*.py` 的 `impl` 逻辑后 → **必须** `evolution_validate(plugin_name="self-evolver", deep=true)`，等 success=True 才算完成
+- `deep=false` 仅适用于**纯脚手架生成**（仍含 TODO）或**纯配置改动**（manifest/frontmatter/无逻辑变更）
+- 含 tools 组件且**已有非骨架实现**的插件走 `deep=false` → 工具自提示「未实跑验证，禁止发布」；发布门槛由 `evolution_publish` 内置 deep 强制（待补）
+- 自进化语境下，`_run_deep_tools` 内的子进程机制、独立 `bench_verify.py` 等都是**探查辅助**，**不是替代**——最终闭环必须是工具调用结果（success=True 的 content）
+- **禁止**用 `bash`/`py -3` 写临时脚本验证自进化插件本身（即便写 `%TEMP%`）：这是绕路，违反自进化闭环纪律
+
 ## 硬约束
 
 - 插件名 kebab-case：`^[a-z][a-z0-9-]{1,63}$`
@@ -94,6 +104,7 @@ scaffold 的 force 覆盖会把旧版备份为 `<name>.bak.<ts>`。
 - `tools/*.py` 必须暴露顶层 `register(registry)`
 - impl 签名：`impl(tool_ctx, **kwargs) -> ToolResult`
 - 每次进化动作结束**必须**记 journal（可追溯性是自进化的底线）
+- 校验分两层：`evolution_validate`（默认静态，毫秒级）与 `deep=true`（隔离进程实跑 tools 的 register+impl，Harbor 等价物）。改了工具逻辑 / 发布前用 `deep=true`；纯脚手架或配置改动用默认静态即可
 - 修改 `plugins/system/` 禁止——那是主程序内置
 - 团队模板（`team_templates`）直接引用系统内置 `leader`，**禁止**在插件 `agents/` 自建 `leader.md`（重复定义、易混淆）；成员 agent 仅当团队需专属角色时才新增，其余引用全局已注册 agent
 - hooks/mcp/lsp 变更通常自动热重载；如未生效再重启 DriFox

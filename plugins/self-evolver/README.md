@@ -27,7 +27,7 @@ MCP 闭环：`evolution_mcp` 读写任意插件的 `.mcp.json`，为 DriFox 连�
 | 工具 | 功能 | danger |
 |------|------|--------|
 | `evolution_scaffold` | 按需求生成插件骨架（17 类组件模板，manifest/README） | safe |
-| `evolution_validate` | 校验插件结构合规（manifest/组件/py_compile/frontmatter） | safe |
+| `evolution_validate` | 校验插件结构合规（manifest/组件/py_compile/frontmatter）；`deep=true` 额外隔离实跑 tools | safe |
 | `evolution_inspect` | 扫描已装插件，返回结构摘要与文件清单 | safe |
 | `evolution_mcp` | 增/删/列/读 MCP 服务器配置（.mcp.json） | safe |
 | `evolution_journal` | 记录/查询进化审计日志（append-only） | safe |
