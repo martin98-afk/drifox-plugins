@@ -240,19 +240,51 @@ colors:
 '''
 
 _UI_INIT = '''# -*- coding: utf-8 -*-
-"""{plugin} UI 组件骨架 — DriFox 启动时 UIPluginRegistry.load_plugin 调用"""
+"""{plugin} UI 组件骨架 — DriFox 启动时 UIPluginRegistry.load_plugin 调用。
+
+主程序 UIPluginRegistry（app/plugins/registries/ui_plugin_registry.py）提供
+**8 类扩展点**（按需选用，可同时注册多个，不要全用）：
+
+| 扩展点 | 用途 | 典型场景 |
+|--------|------|----------|
+| register_content_renderer     | 自定义消息流内容块渲染（type_name → html） | 消息里出现特殊块时插入自定义 html |
+| register_welcome_tab          | 欢迎页加自定义 tab                          | 启动展示自定义页面 |
+| register_floating_card        | 浮动卡片（自动注册 /<card_id> 命令）        | 全屏/侧边/底部的卡片 UI |
+| register_sidebar_item         | 侧边栏插件项                                | 左/右侧导航新增图标入口 |
+| register_input_button         | 输入框插件按钮                              | 输入区旁的快捷按钮（图+提示） |
+| register_context_menu_action  | 右键菜单项（target ∈ message_card / tab）   | 消息卡片/标签右键加项 |
+| register_settings_card        | 设置面板卡片                                | 设置界面新增分类卡 |
+| register_message_factory      | 消息元素工厂（condition 命中 → 生成 widget）| 特定消息结构 → 自定义 QWidget |
+
+container 取值（仅 floating_card）：top / bottom / left / right / full（full=完整覆盖对话区，与系统配置卡片一致）。
+
+真实案例（强烈建议参照）：
+- 浮动卡片：plugins/context-usage-stats/ui/__init__.py + ui/cards.py（container="full"、title="用量统计"、default_visible=False）
+- 浮动卡片：plugins/file-tree / plugin-marketplace / share-history / shortcut-manager / system-cleaner
+
+热重载兼容（强烈建议照抄下面三行，避免旧 __pycache__ 残留导致 NameError）：
+    import sys
+    prefix = "{plugin}."  # 按需改成你的子模块前缀
+    stale = [k for k in sys.modules if k.startswith(prefix)]
+    for k in stale:
+        del sys.modules[k]
+"""
 
 
 def register_ui(registry):
-    """UI 注册入口（必须此函数名）
+    """UI 注册入口（必须此函数名，PluginToolLoader 反射调用）"""
+    import sys
+    prefix = "{plugin}."
+    stale = [k for k in sys.modules if k.startswith(prefix)]
+    for k in stale:
+        del sys.modules[k]
 
-    三类扩展点（按需选用）：
-    - registry.register_floating_card(...)   独立浮动卡片（自动注册 /<card_id> 命令）
-    - registry.register_content_renderer(...) 消息流自定义内容块渲染器
-    - registry.register_message_factory(...)  特定消息结构 → 自定义 QWidget
-
-    TODO: 参考主程序 plugins/context-usage-stats/（浮动卡片真实案例）实现
-    """
+    # TODO: 按需选用下列扩展点之一/多个，调对应 register_* 方法。
+    # 真实案例（从 .cards 导入 QWidget 子类）：
+    #     from .cards import MyCard
+    #     registry.register_floating_card(
+    #         plugin_name="{plugin}", card_id="my-card", widget_class=MyCard,
+    #         container="top", title="...", default_visible=False)
     pass
 '''
 

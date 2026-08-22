@@ -97,6 +97,39 @@ scaffold 的 force 覆盖会把旧版备份为 `<name>.bak.<ts>`。
 - 自进化语境下，`_run_deep_tools` 内的子进程机制、独立 `bench_verify.py` 等都是**探查辅助**，**不是替代**——最终闭环必须是工具调用结果（success=True 的 content）
 - **禁止**用 `bash`/`py -3` 写临时脚本验证自进化插件本身（即便写 `%TEMP%`）：这是绕路，违反自进化闭环纪律
 
+## UI 插件扩展点（必须按需选用）
+
+主程序 `UIPluginRegistry`（`app/plugins/registries/ui_plugin_registry.py`）提供 **8 类扩展点**，建 UI 插件时按需选用，**不要全用**：
+
+| 扩展点 | 用途 | 何时用 |
+|--------|------|--------|
+| `register_content_renderer`     | 自定义消息流内容块渲染（type_name → html） | 消息里要出现自定义块 |
+| `register_welcome_tab`          | 欢迎页加自定义 tab                          | 启动展示自定义页面 |
+| `register_floating_card`        | 浮动卡片（自动注册 `/<card_id>` 命令）      | 全屏/侧边/底部的卡片 UI |
+| `register_sidebar_item`         | 侧边栏插件项                                | 左/右侧导航新增图标入口 |
+| `register_input_button`         | 输入框插件按钮                              | 输入区旁的快捷按钮 |
+| `register_context_menu_action`  | 右键菜单项（target ∈ `message_card`/`tab`） | 消息卡片/标签右键加项 |
+| `register_settings_card`        | 设置面板卡片                                | 设置界面新增分类卡 |
+| `register_message_factory`      | 消息元素工厂（condition 命中 → 生成 widget）| 特定消息结构 → 自定义 QWidget |
+
+**容器方位**（仅 `register_floating_card` 的 `container`）：`top` / `bottom` / `left` / `right` / `full`（`full`=完整覆盖对话区，与系统配置卡片一致）。
+
+**真实案例**（强烈建议参照任一）：
+- 浮动卡片：`plugins/context-usage-stats/ui/__init__.py`（`container="full"`、`default_visible=False`）
+- 浮动卡片：`plugins/file-tree` / `plugin-marketplace` / `share-history` / `shortcut-manager` / `system-cleaner`
+
+**热重载兼容**（强烈建议照抄下面三行，否则旧 `__pycache__` 会导致 NameError）：
+
+```python
+import sys
+prefix = "<plugin>."  # 改成你的子模块前缀
+stale = [k for k in sys.modules if k.startswith(prefix)]
+for k in stale:
+    del sys.modules[k]
+```
+
+`scaffold_plugin.py` 的 `_UI_INIT` 模板已内置上述纪律与热重载兼容代码，骨架生成后按需选用扩展点。
+
 ## 硬约束
 
 - 插件名 kebab-case：`^[a-z][a-z0-9-]{1,63}$`
