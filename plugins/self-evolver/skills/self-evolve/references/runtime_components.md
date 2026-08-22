@@ -135,4 +135,10 @@ def register(registry):
         ]
     }
 }
+
+## 六、team_templates 经验速记（2026-08-22 复盘）
+
+- **`leader` 直接用系统内置，切勿在插件里自建 `leader.md`**：系统已注册全局 `leader`（团队统筹管理 Leader），team 模板按 `agent_name: leader` 引用即可。在新插件 `agents/` 再建 `leader.md` 属重复定义，无必要且易与系统 leader 混淆。
+- **team 模板本质是「编排配置」**：`agents` 列表里的 `agent_name` 引用**全局已注册**的 agent（可跨插件，如引用 system/user 根的工业专家），不需要把成员 agent 全部塞进本插件。仅当需为团队定制专属角色（如本插件的 `requirements-analyst`）时才新增 agent 文件。
+- **脚手架会生成默认 agent 占位**（`assistant.md` / `model-designer.md` 等），未被 team 模板引用即属垃圾，删除之。
 ```

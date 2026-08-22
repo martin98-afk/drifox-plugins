@@ -248,6 +248,26 @@ def _check_plugin_dir(base: Path, manifest: dict, name: str) -> tuple[list, list
             except json.JSONDecodeError as e:
                 errors.append(f".lsp.json 不是合法 JSON: {e}")
 
+    if comps.get("themes"):
+        d = base / "themes"
+        if not d.is_dir():
+            errors.append("components.themes=true 但 themes/ 不存在")
+        else:
+            # 真实结构：themes/<theme-id>/<theme-id>.yaml（对齐 laputa-fog/fe-fw）
+            yamls = sorted(d.glob("*/*.yaml"))
+            if not yamls:
+                errors.append("components.themes=true 但 themes/<id>/ 下无 .yaml（结构应为 themes/<id>/<id>.yaml）")
+            for y in yamls:
+                rel = f"themes/{y.parent.name}/{y.name}"
+                if y.stem != y.parent.name:
+                    warnings.append(f"{rel} 文件名与所在目录名不一致（惯例要求同名）")
+                text = y.read_text(encoding="utf-8")
+                for field in ("id:", "mode:", "colors:"):
+                    if field not in text:
+                        errors.append(f"{rel} 缺关键字段 {field.rstrip(':')}")
+                if "TODO" in text:
+                    warnings.append(f"{rel} 仍含 TODO 标记（骨架未填充）")
+
     if comps.get("ui"):
         init = base / "ui" / "__init__.py"
         if not init.exists():
