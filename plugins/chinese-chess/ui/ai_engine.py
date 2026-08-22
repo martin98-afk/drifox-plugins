@@ -71,34 +71,91 @@ _MOVE_RE = re.compile(
 )
 
 
-def parse_move(text: str) -> Optional[Tuple[int, int, int, int]]:
-    """从 LLM 文本中提取走法。返回 (c1,r1,c2,r2) 或 None。"""
-    if not text:
-        return None
+def parse_move(text: str) -> Tuple[Optional[Tuple[int, int, int, int]], str]:
+    """从 LLM 文本中提取走法。
+
+    Returns:
+        (move, error_msg)
+        - move: (c1, r1, c2, r2) 或 None
+        - error_msg: 空字符串表示成功；非空时含失败原因，供 UI 提示用
+          可取值：empty_response / think_only / truncated / no_json /
+                 invalid_int / out_of_range / no_normalized_path
+    """
+    if not text or not text.strip():
+        return None, "empty_response"
     # 思考型模型会把 <think>...</think> 混在 content 里：
     # - 已闭合：只取 </think> 之后的正文，避免思考中的试探性 JSON 被误匹配
-    # - 未闭合：说明输出被截断，正文还没生成，直接判失败
-    if "</think>" in text:
-        text = text.split("</think>", 1)[1]
-    elif "<think>" in text:
-        return None
+    # - 未闭合（说明输出被截断，正文还没生成） → 判失败
+    if "<think>" in text:
+        if "</think>" in text:
+            text = text.split("</think>", 1)[1]
+        else:
+            return None, "think_only"
+    text = text.strip()
+    if not text:
+        return None, "truncated"
     m = _MOVE_RE.search(text)
     if not m:
-        return None
+        return None, "no_json"
     try:
         c1, r1, c2, r2 = (int(x) for x in m.groups())
     except ValueError:
-        return None
+        return None, "invalid_int"
     if not (0 <= c1 < COLS and 0 <= r1 < ROWS and 0 <= c2 < COLS and 0 <= r2 < ROWS):
-        return None
-    return c1, r1, c2, r2
+        return None, "out_of_range"
+    return (c1, r1, c2, r2), ""
 
 
-def random_legal_move(board, side: str) -> Optional[Tuple[int, int, int, int]]:
+def fallback_legal_move(board, side: str) -> Optional[Tuple[int, int, int, int]]:
+    """兜底走法（不再用 random 坐标）。
+
+    策略：
+    1. 优先选吃子走法（命值最高：先吃车→马→炮→卒→士→相）；多个则取第一个
+    2. 无吃子走法时取第一个普通走法（按 gen_legal_moves 顺序，O(n)）
+    3. 仍无 → None
+
+    不引 random.seed 显式调用，行为完全确定 → 测试稳定。
+    """
     moves = gen_legal_moves(board, side)
     if not moves:
         return None
-    return random.choice(moves)
+
+    # 优先级：吃子价值
+    def _capture_value(c2: int, r2: int) -> int:
+        p = board[r2][c2]
+        if p == ".":
+            return 0
+        # 红方优先级（值越大越优先吃）；黑方用同样顺序
+        return _PIECE_VALUE.get(p.lower(), 0)
+
+    sorted_moves = sorted(
+        moves,
+        key=lambda m: -_capture_value(m[2], m[3]),
+    )
+    chosen = sorted_moves[0]
+    # 记录：可能不是吃子走法（target == '.'）
+    return chosen
+
+
+# 子力价值（吃子走法优先级排序，与 random 完全无关，可复现）
+_PIECE_VALUE = {
+    "r": 90,  # 车
+    "n": 45,  # 马
+    "c": 45,  # 炮
+    "p": 10,  # 卒/兵
+    "a": 20,  # 士
+    "b": 20,  # 相
+    "k": 1000,  # 将/帅
+}
+
+
+# 保留旧名以兼容历史调用（AI 引擎范围内仍可引用）
+def random_legal_move(board, side: str) -> Optional[Tuple[int, int, int, int]]:
+    """DEPRECATED: 旧随机兜底；新逻辑请用 fallback_legal_move()."""
+    moves = gen_legal_moves(board, side)
+    if not moves:
+        return None
+    return moves[0]  # 取第一个而非随机，保持可复现
 
 
 def _strip_thinking(text: str) -> str:
@@ -157,23 +214,33 @@ def _resolve_main_widget(card) -> Optional[Any]:
 class _AISignals(QObject):
     """AI 走子信号（卡片线程 → 主线程）
 
-    done(move, source) — move: (c1,r1,c2,r2) 或 None；
-                          source: 'llm' / 'fallback' / 'error'
-    error(reason)     — 严重错误（如对话服务未注入）
+    done(move, source, reason) — move: (c1,r1,c2,r2) 或 None；
+                                 source: 'llm' / 'fallback' / 'error'
+                                 reason: 失败/兜底的详细原因（成功时为空字符串）
+    error(reason)             — 致命异常（如对话服务未注入），独立信号保留
+    thought_received(side,    — #7 扩展：AI 思考原文（含 JSON / 思考块 / 解释）
+                     model,     side: '红' / '黑'（执子方中文）
+                     raw_text)  model: 模型显示名
+                                raw_text: LLM 原始响应（已剥离 <think>）
     """
 
-    done = pyqtSignal(object, str)
+    done = pyqtSignal(object, str, str)
     error = pyqtSignal(str)
+    thought_received = pyqtSignal(str, str, str)
 
 
 class _AIMoveTask(QRunnable):
     """单轮 LLM 决策任务（仿 _EnhanceTask）。
 
-    执行流程：
-      _one_shot_ask() → 取文本 → parse_move() + _is_legal() → 合法即走法
-      ├─ 非法：emit done(None, "fallback") 走 random_legal_move（若仍空 → done(None, "error")）
-      └─ 异常：emit error(reason)
+    重试策略（修复前 Bug：空响应 / 解析失败 / finish_reason≠stop 不重试）：
+      ├─ 空响应 / 仅有思考块 / 解析失败 → 重试，最多 2 次
+      ├─ finish_reason="length" 或 "content_filter" → 重试
+      ├─ 全部失败 → 走 fallback_legal_move（不再 random）
+      └─ 全异常 → emit error(reason) + done(None, "error", reason)
     """
+
+    # 重试上限：初次 + 1 次重试 = 最多 2 次调用（用户要求"重试 1 次"）
+    MAX_RETRY_ATTEMPTS = 2
 
     def __init__(
         self,
@@ -182,17 +249,24 @@ class _AIMoveTask(QRunnable):
         history: List[str],
         llm_config: Dict[str, Any],
         signals: _AISignals,
-        max_retries: int = 1,
+        max_retries: Optional[int] = None,
+        prompt_suffix: Optional[str] = None,
+        side_cn: Optional[str] = None,
+        model_name: Optional[str] = None,
     ):
         super().__init__()
         # 深拷贝棋盘，避免主线程修改影响后台任务
         self.board = [row[:] for row in board]
         self.side = side
+        # #7 扩展：执子方中文标签 / 模型显示名（用于 thought_received）
+        self.side_cn = side_cn or ("红" if side == RED else "黑")
+        self.model_name = model_name or llm_config.get("模型名称", "unknown")
         self.history = list(history or [])
         self.llm_config = llm_config
         self.signals = signals
-        self.max_retries = max_retries
-        self._lock = threading.Lock()  # 单实例自旋字段保留位（未来可扩展）
+        self.max_retries = max_retries if max_retries is not None else self.MAX_RETRY_ATTEMPTS - 1
+        self.prompt_suffix = prompt_suffix  # 可选：追加到 system prompt 末尾的额外约束
+        self._lock = threading.Lock()
         self.setAutoDelete(True)
 
     # ================================================================
@@ -200,49 +274,95 @@ class _AIMoveTask(QRunnable):
     # ================================================================
 
     def run(self):
-        try:
-            user_prompt = build_user_prompt(self.board, self.side, self.history)
-            text = self._one_shot_ask(user_prompt)
-            move = parse_move(text) if text else None
-            if move and self._is_legal(move):
-                logger.info(f"[chinese-chess] LLM 走法: {move}")
-                self.signals.done.emit(move, "llm")
-                return
-            # 诊断：把响应与模型配置暴露到日志，方便排障
-            logger.warning(
-                f"[chinese-chess] 解析失败/非法走法 (尝试上限 {self.max_retries + 1})→ 兜底: text={(text or '')[:200]!r}"
-            )
-            logger.warning(
-                f"[chinese-chess] 模型配置: api_key={bool(self.llm_config.get('API_KEY'))}, "
-                f"base_url={self.llm_config.get('API_URL')}, model={self.llm_config.get('模型名称')}"
-            )
-            fb = random_legal_move(self.board, self.side)
-            if fb:
-                logger.info(f"[chinese-chess] 兜底走法: {fb}")
-                self.signals.done.emit(fb, "fallback")
-            else:
-                self.signals.error.emit("无合法走法可用（已被将死或困毙）")
-                self.signals.done.emit(None, "error")
-        except Exception as e:
-            logger.exception(f"[chinese-chess] LLM 调用异常: {e}")
-            self.signals.error.emit(f"LLM 调用异常: {e}")
+        # 收集最后响应，给 UI 红条留 diagnostic
+        last_text = ""
+        last_finish_reason = None
+        last_error = ""
+        attempts = 0
+
+        for attempt in range(self.max_retries + 1):
+            attempts += 1
             try:
-                fb = random_legal_move(self.board, self.side)
-                if fb:
-                    self.signals.done.emit(fb, "fallback")
-                else:
-                    self.signals.done.emit(None, "error")
-            except Exception:
-                self.signals.done.emit(None, "error")
+                user_prompt = build_user_prompt(self.board, self.side, self.history)
+                text, finish_reason = self._one_shot_ask(user_prompt, retry_hint=last_error or None)
+            except Exception as e:
+                last_error = f"LLM 调用失败: {type(e).__name__}: {e}"
+                last_text = ""
+                last_finish_reason = None
+                logger.warning(f"[chinese-chess] LLM 尝试 {attempt + 1} 异常: {last_error}")
+                continue
+
+            last_text = text or ""
+            last_finish_reason = finish_reason
+
+            # 1. 空响应 / 仅有思考块 → 重试
+            if not last_text.strip():
+                last_error = "empty_response"
+                logger.warning(f"[chinese-chess] 尝试 {attempt + 1}: 空响应 → 重试")
+                continue
+
+            # 2. finish_reason = length / content_filter → 重试
+            if finish_reason in ("length", "content_filter"):
+                last_error = f"finish_reason={finish_reason}"
+                logger.warning(f"[chinese-chess] 尝试 {attempt + 1}: {last_error} → 重试")
+                continue
+
+            # 3. 解析
+            move, parse_err = parse_move(last_text)
+            if move is None:
+                last_error = parse_err or "parse_failed"
+                logger.warning(f"[chinese-chess] 尝试 {attempt + 1}: 解析失败 {parse_err} → 重试")
+                continue
+
+            # 4. 合法性校验
+            if not self._is_legal(move):
+                last_error = "illegal_move"
+                logger.warning(f"[chinese-chess] 尝试 {attempt + 1}: 非法走法 {move} → 重试")
+                continue
+
+            # ── 成功 ──
+            logger.info(f"[chinese-chess] LLM 走法成功 (尝试 {attempt + 1}): {move}")
+            self.signals.done.emit(move, "llm", "")
+            return
+
+        # ── 全部尝试后失败 → 兜底走法（非 random）──
+        logger.warning(
+            f"[chinese-chess] 全部 {attempts} 次尝试失败，最终兜底: "
+            f"text={last_text[:200]!r}, finish_reason={last_finish_reason}, last_err={last_error}"
+        )
+        logger.warning(
+            f"[chinese-chess] 模型配置: api_key={bool(self.llm_config.get('API_KEY'))}, "
+            f"base_url={self.llm_config.get('API_URL')}, model={self.llm_config.get('模型名称')}"
+        )
+
+        fb = fallback_legal_move(self.board, self.side)
+        if fb:
+            logger.info(f"[chinese-chess] 兜底走法（非 random）: {fb}")
+            # 兜底原因组装：含最后 1 次失败详情 + 最后响应前 500 字
+            reason = (
+                f"{last_error or 'unknown'} | "
+                f"finish_reason={last_finish_reason} | "
+                f"text={last_text[:500]!r}"
+            )
+            self.signals.done.emit(fb, "fallback", reason)
+        else:
+            err = "无合法走法可用（已被将死或困毙）"
+            self.signals.error.emit(err)
+            self.signals.done.emit(None, "error", err)
 
     # ================================================================
     #  单轮 ask
     # ================================================================
 
-    def _one_shot_ask(self, user_prompt: str) -> Optional[str]:
-        """单轮 chat.completions.create() + 至多 max_retries 次重试。
+    def _one_shot_ask(
+        self, user_prompt: str, retry_hint: Optional[str] = None
+    ) -> Tuple[str, Optional[str]]:
+        """单轮 chat.completions.create() 调用。
 
-        每次返回剥离 <think> 段落后的 text；全失败返回 None。
+        重试逻辑在 run() 主循环控制；本函数只做一次 LLM 调用。
+
+        Returns:
+            (text, finish_reason) — text 已剥离 <think> 段落；全失败抛异常。
         """
         from app.utils.http_client import build_openai_client
 
@@ -250,37 +370,47 @@ class _AIMoveTask(QRunnable):
         base_url = self.llm_config.get("API_URL")
         model = self.llm_config.get("模型名称", "gpt-4o")
 
-        last_err: Optional[str] = None
-        for attempt in range(self.max_retries + 1):
-            prompt = user_prompt
-            if last_err:
-                prompt += (
-                    f"\n\n⚠️ 你上一次的回答不合法（{last_err}）。请重新仔细核对棋盘上棋子的位置，只输出 1 行 JSON。"
-                )
+        # 解析失败重试：prompt 强化追加（明确"仅输出标准 JSON"）
+        extra_suffix = self.prompt_suffix or ""
+        if retry_hint:
+            extra_suffix += (
+                f"\n\n⚠️ 你上一次的回答不合法（{retry_hint}）。"
+                f"请仅输出标准 JSON，不要包含任何额外文字、注释、代码块或 <think> 段落。"
+                f"只输出 1 行：{{\"from\":[c1,r1],\"to\":[c2,r2]}}"
+            )
+
+        client = build_openai_client(api_key=api_key, base_url=base_url)
+        resp = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT + extra_suffix},
+                {"role": "user", "content": user_prompt},
+            ],
+            temperature=0.3,
+            max_tokens=500,
+        )
+        fr = getattr(resp.choices[0], "finish_reason", None)
+        msg = resp.choices[0].message
+        text = (msg.content or "").strip()
+        logger.debug(
+            f"[chinese-chess] LLM 响应: model={model}, finish_reason={fr}, "
+            f"content_len={len(msg.content or '')}, usage={getattr(resp, 'usage', None)}"
+        )
+
+        # ── #7 扩展：emit 原始响应给右侧面板（已剥离 <think> 段但保留 JSON） ──
+        # 仅首次成功响应时 emit；空响应 / 异常时不 emit（避免面板堆噪声）
+        if text:
             try:
-                client = build_openai_client(api_key=api_key, base_url=base_url)
-                resp = client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {"role": "system", "content": SYSTEM_PROMPT},
-                        {"role": "user", "content": prompt},
-                    ],
-                    temperature=0.3,
-                    max_tokens=500,  # 给 reasoning 模型留缓冲；JSON 本身极短
+                raw_for_panel = _strip_thinking(text)  # 去掉 <think>…</think>
+                self.signals.thought_received.emit(
+                    getattr(self, "side_cn", "?"),
+                    getattr(self, "model_name", model),
+                    raw_for_panel,
                 )
-                msg = resp.choices[0].message
-                # 记录 finish_reason + content 详情，帮助诊断「响应为空」
-                fr = getattr(resp.choices[0], "finish_reason", None)
-                logger.debug(
-                    f"[chinese-chess] LLM 响应: model={model}, finish_reason={fr}, "
-                    f"content_len={len(msg.content or '')}, usage={getattr(resp, 'usage', None)}"
-                )
-                text = (msg.content or "").strip()
-                return _strip_thinking(text)
-            except Exception as e:
-                last_err = f"LLM 调用失败: {type(e).__name__}: {e}"
-                logger.warning(f"[chinese-chess] LLM 尝试 {attempt + 1} 失败: {last_err}")
-        return None
+            except Exception:  # noqa: BLE001
+                logger.debug("[chinese-chess] thought_received emit 失败")
+
+        return _strip_thinking(text), fr
 
     # ================================================================
     #  校验
@@ -314,8 +444,23 @@ def start_ai_move(card):
         return False
 
     signals = _AISignals()
-    signals.done.connect(card._on_ai_done)
+    # Blocker #1：注入当前对局代际 id，旧任务结果在 _on_ai_done 被丢弃
+    gen_id = getattr(card, "_gen_id", 0)
+    signals.done.connect(
+        lambda move, source, reason: card._on_ai_done(move, source, reason, gen_id)
+    )
     signals.error.connect(card._on_ai_failed)
+    # #7 扩展：连接思考面板信号；面板自身可能不存在（容错）
+    try:
+        panel = getattr(card, "_thought_panel", None)
+        if panel is not None and hasattr(panel, "add_thought"):
+            signals.thought_received.connect(
+                lambda side_cn, model_name, raw_text: card._on_thought_received(
+                    side_cn=side_cn, model_name=model_name, raw_text=raw_text
+                )
+            )
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"[chinese-chess] thought_panel 信号连接失败: {e}")
 
     # 历史构造（与原 _start_ai_move 同格式）
     history: List[str] = []
@@ -326,6 +471,15 @@ def start_ai_move(card):
 
         history.append(f"{side_cn}方 {coord_to_str(c1, r1)}-{coord_to_str(c2, r2)}")
 
+    # #7：根据 _side_to_move 决定执子方中文 + 模型名（#4 已用 _red_model/_black_model 字段）
+    side_cn_now = "红" if card._side_to_move == RED else "黑"
+    model_now = llm_config.get("模型名称", "unknown")
+    # 模型选择（在 #4 已实现，此处仅展示用默认模型）
+    if hasattr(card, "_red_model") and card._side_to_move == RED and card._red_model:
+        model_now = card._red_model
+    if hasattr(card, "_black_model") and card._side_to_move == BLACK and card._black_model:
+        model_now = card._black_model
+
     task = _AIMoveTask(
         board=card._board,
         side=card._side_to_move,
@@ -333,6 +487,8 @@ def start_ai_move(card):
         llm_config=llm_config,
         signals=signals,
         max_retries=1,
+        side_cn=side_cn_now,
+        model_name=model_now,
     )
 
     pool = getattr(main_widget, "_gen_thread_pool", None) or QThreadPool.globalInstance()

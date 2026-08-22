@@ -34,5 +34,37 @@
         "serializers": false,
         "gateways": false,
         "engines": false
+    },
+    "config_schema": {
+        "title": "中国象棋",
+        "fields": [
+            {
+                "key": "red_control",
+                "label": "我方控制方式",
+                "type": "select",
+                "options": [
+                    {"value": "manual", "label": "手动操作"},
+                    {"value": "ai", "label": "AI 控制"}
+                ],
+                "default": "manual",
+                "description": "选择红方（我方）走子是手动点击还是 AI 自动"
+            },
+            {
+                "key": "red_model",
+                "label": "我方模型",
+                "type": "select",
+                "options": [],
+                "default": "",
+                "description": "我方 AI 使用的模型（启动时由 config_card.py 从主程序 LLM.SavedProviders 动态注入）"
+            },
+            {
+                "key": "black_model",
+                "label": "对方模型",
+                "type": "select",
+                "options": [],
+                "default": "",
+                "description": "对方 AI 使用的模型（启动时由 config_card.py 从主程序 LLM.SavedProviders 动态注入）"
+            }
+        ]
     }
 }
