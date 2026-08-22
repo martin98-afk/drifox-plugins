@@ -16,7 +16,7 @@ DriFox 的工具/插件全部可热重载（user 根 `~/.drifox/plugins/` 保存
 | `evolution_validate` | 插件结构校验（准入门槛） | `plugin_name` |
 | `evolution_inspect` | 扫描已装插件/深查结构/TODO 定位 | `plugin_name` 或 `list_all=true` |
 | `evolution_mcp` | 读写 .mcp.json 管理 MCP 服务器 | `operation`(add/remove/enable/disable/list) `plugin_name` `server_name` `command`/`url` `args` `env`/`headers` |
-| `evolution_journal` | 进化审计日志（每次动作必记） | `operation`(log/list/stats) `action`(create/optimize/fix/rollback/mcp/note) `plugin_name` `summary` `status`(ok/failed/pending) |
+| `evolution_journal` | 进化审计日志（每次动作必记） | `operation`(log/list/stats/triage) `action`(create/optimize/fix/rollback/mcp/note) `plugin_name` `summary` `status`(ok/failed/pending) `limit` `lines` |
 | `evolution_publish` | 发布到市场仓库 | `plugin_name` `mode`(local/direct/fork) `fork_remote` `push`(bool) `commit_type` `message` |
 
 ## 标准工作流
@@ -77,6 +77,16 @@ DriFox 的工具/插件全部可热重载（user 根 `~/.drifox/plugins/` 保存
 
 scaffold 的 force 覆盖会把旧版备份为 `<name>.bak.<ts>`。
 回滚 = 把备份目录内容移回原位，然后 journal 记 `action=rollback`。
+## storages 开发速记（高频坑，详见 references/storage_engine.md）
+
+做"存储替换插件 / 会话换格式"时**必记三点**（jsonl-storage 实战踩出的）：
+
+1. **`is_initialized` 必须 `__init__` 末尾立即置 True** — `history_manager._init_storage` 读 `getattr(engine, "is_initialized", False)`，False 会回退 JSON，`save_session` 永远走不到本引擎。`input_history` 走通只是因为 `main_widget.session_store.add_input_history` 是**直接调用**，不经 is_initialized 检查。
+2. **必须自激活** — 主程序 `StorageRegistry._active` 默认 `"sqlite"`，全仓库无代码会基于 `config_schema.enabled` 自动 `set_active`。插件须在 `register()` 末尾读 `PluginConfigStore().get(<plugin>, "enabled")` 为 true 时 `registry.set_active(<id>)`。
+3. **`config_schema` 字段类型用 `"bool"`**（不是 `"switch"`），否则 settings 面板渲染不出来。
+
+`register(registry)` 收到的 `registry` 是 `_RegistryProxy` 包装，会转发 `set_active` 到底层真 `StorageRegistry`，可直接调用。
+
 ## 硬约束
 
 - 插件名 kebab-case：`^[a-z][a-z0-9-]{1,63}$`
@@ -85,7 +95,17 @@ scaffold 的 force 覆盖会把旧版备份为 `<name>.bak.<ts>`。
 - impl 签名：`impl(tool_ctx, **kwargs) -> ToolResult`
 - 每次进化动作结束**必须**记 journal（可追溯性是自进化的底线）
 - 修改 `plugins/system/` 禁止——那是主程序内置
+- 团队模板（`team_templates`）直接引用系统内置 `leader`，**禁止**在插件 `agents/` 自建 `leader.md`（重复定义、易混淆）；成员 agent 仅当团队需专属角色时才新增，其余引用全局已注册 agent
 - hooks/mcp/lsp 变更通常自动热重载；如未生效再重启 DriFox
+
+## 安全护栏（防运行时污染，2026-08-22 事故复盘）
+
+> **事故**：自进化测试脚本 `test_scaffold_storage.py`（无 `register`、含 `sys.modules.update({"app.tools": ModuleType(...)})`）被写入 `self-evolver/tools/`，热重载时被 loader 当工具文件 `exec`，用空模块**覆盖运行时 `app.tools`**，导致全程序 `from app.tools import X` 全部 `(unknown location)` 崩溃，权限面板与发送前 schema 失效约 3.5 分钟。
+
+- **`tools/` 只放工具入口**：`tools/*.py` 必须是暴露 `register(registry)` 的工具文件。**禁止**把测试脚本 / 临时验证文件（如 `test_*.py`、`*_verify.py`）写入任何插件的 `tools/` 目录——它们会被热重载 loader 当工具文件 `exec`，其模块级代码会污染运行时 `sys.modules`。
+- **禁止 `sys.modules.update` 覆盖核心模块**：自进化测试 / 验证**不得**在插件代码或临时脚本里执行 `sys.modules.update({"app":..., "app.tools":...})` 或 `sys.modules["app.tools"] = ...`。这会用空模块覆盖真模块（`__file__=None` → `(unknown location)`）。
+- **测试用隔离环境**：验证生成的插件 / 模板时，在**独立 Python 进程 + 临时目录**中跑（如 `py -c "..." 2>&1` 另起进程），**绝不**把验证脚本写入当前 DriFox 进程的 `tools/` 目录、绝不改动主程序运行时 `sys.modules`。
+- **loader 侧已加安全网**：`plugin_tool_loader._is_tool_entry_module` 会拒绝无 `register` 入口或含 `sys.modules` 变异的文件（不 exec）。但**源头纪律仍是根本**——不要制造会被误加载的危险文件。
 
 ## 何时用哪个工具（决策表）
 
@@ -111,5 +131,8 @@ scaffold 的 force 覆盖会把旧版备份为 `<name>.bak.<ts>`。
 |----------|--------|
 | `references/runtime_components.md` | scaffold 选了 `storages/serializers/gateways/model_adapters/loop_policies/engines`，或用户提到"系统配置卡片/注册一个 X 引擎" |
 | `references/storage_engine.md` | 用户要做"存储替换插件/会话换格式/xlsx/jsonl/csv 存会话"等；接口对齐 `system/storages/sqlite.py` |
+| `references/troubleshooting.md` | **任何报错/异常/不生效时**：系统日志 `~/.drifox/logs/llm_chatter.log` 的位置、格式、常用查询、Windows python 命令 9009 坑、MCP 排障实例 |
+
+> 排障第一反射：`evolution_journal operation=triage`（扫日志 ERROR + 关联进化动作），细节见 troubleshooting.md。
 
 > 经验沉淀原则：每完成一个 runtime 组件或踩到一个反复出现的坑，把"症状+根因+正确写法"补到对应 reference，并 journal 记录"优化自进化系统"。

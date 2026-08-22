@@ -23,7 +23,7 @@ def _plugin_roots():
         from app.plugins.loaders.plugin_tool_loader import _plugin_roots as _lr
 
         for p in _lr():
-            roots.append((Path(p), "system" if "drifox-plugins2" not in str(p) else "system"))
+            roots.append((Path(p), "system"))
     except Exception:
         pass
     try:

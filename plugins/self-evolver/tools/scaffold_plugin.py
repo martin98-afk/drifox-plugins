@@ -166,6 +166,79 @@ _LSP_JSON = '''{
 
 # ---------- UI / Providers / TeamTemplates / 运行时组件模板 ----------
 
+# ---------- 主题模板（对齐 laputa-fog/fe-fw 真实结构：themes/<id>/<id>.yaml） ----------
+
+_THEME_YAML = '''# ─────────────────────────────────────────────
+# {plugin} 主题（骨架）
+# 完整字段参考 plugins/laputa-fog/themes/laputa-fog/laputa-fog.yaml
+# 背景图可选：把 <plugin>_bg.jpg 放同目录，取消 background 注释
+# ─────────────────────────────────────────────
+name: TODO 中文名
+id: {plugin}
+mode: light  # light | dark
+window:
+  gradient_start: rgba(228, 236, 242, 255)
+  gradient_end: rgba(210, 220, 228, 255)
+# background:
+#   chat_list:
+#     image: {plugin}_bg.jpg
+#     opacity: 0.13
+#     enabled: true
+colors:
+  # ── 基础色 ──
+  accent: '#5B7E8E'
+  accent_warm: '#C49A5C'
+  border: '#B6C2CC'
+  text_primary: '#1F2D38'
+  text_secondary: rgba(31, 45, 56, 0.60)
+  text_muted: '#7A8A96'
+  card_bg: rgba(233, 238, 242, 238)
+  card_bg_solid: rgba(233, 238, 242, 252)
+  content_bg: '#DDE5EC'
+  hover_bg: rgba(91, 126, 142, 0.08)
+  selected_bg: rgba(91, 126, 142, 0.18)
+
+  # ── 全局 UI 基底 ──
+  toolbar_bg: rgba(91, 126, 142, 0.05)
+  divider_color: rgba(0, 0, 0, 0.07)
+  scrollbar_handle_bg: rgba(0, 0, 0, 0.15)
+
+  # ── 语法高亮 ──
+  syntax_step: '#059669'
+  syntax_tool: '#B45309'
+  syntax_success: '#16A34A'
+  syntax_error: '#DC2626'
+  syntax_result: '#7C3AED'
+
+  # ── 用户 / AI 卡片 ──
+  user_card_bg: rgba(200, 222, 236, 195)
+  user_card_accent: '#5B7E8E'
+  user_card_text: '#1F2D38'
+  assistant_card_bg: rgba(245, 230, 200, 225)
+  assistant_card_accent: '#C49A5C'
+  assistant_card_text: '#1F2D38'
+
+  # ── 输入框 ──
+  input_bg_start: rgba(215, 230, 240, 210)
+  input_bg_end: rgba(205, 222, 234, 210)
+  input_text: '#1F2D38'
+  input_border: '#B6C2CC'
+  input_focus_border: '#5B7E8E'
+  input_placeholder: rgba(31, 45, 56, 0.35)
+
+  # ── 发送按钮 ──
+  send_btn_start: '#5B7E8E'
+  send_btn_end: '#4A6A78'
+  send_btn_radius: 17
+
+  # ── 上下文圆环 / 时间线（可按需扩展更多字段）──
+  ring_normal: '#5B7E8E'
+  ring_warning: '#C49A5C'
+  ring_danger: '#EF4444'
+  timeline_node: '#B0C0CC'
+  timeline_line: '#C8D4DE'
+'''
+
 _UI_INIT = '''# -*- coding: utf-8 -*-
 """{plugin} UI 组件骨架 — DriFox 启动时 UIPluginRegistry.load_plugin 调用"""
 
@@ -234,6 +307,79 @@ def register(registry):
     """注册入口 — 与 tools/providers 插件约定一致（source 由 loader 强制注入）"""
     registry.register({cls_name}())
 '''
+
+# storages 增强模板：预置已沉淀的正确实践（详见 self-evolver references/storage_engine.md）
+# 1) __init__ 末尾立即 _ensure_init() → is_initialized=True（history_manager 靠它探测）
+# 2) register() 末尾自激活（StorageRegistry 默认 sqlite，不自动按 enabled 切）
+# 3) 提示 config_schema 字段类型用 bool
+_STORAGE_PY = '''# -*- coding: utf-8 -*-
+"""storages 组件骨架 — 被 runtime_component_loader.scan_roots 调用。
+
+存储引擎：会话/数据持久化（参考 system/storages/sqlite.py）。
+
+⚠ 已沉淀踩坑（详见 self-evolver references/storage_engine.md）：
+1. 必须实现 is_initialized 且 __init__ 末尾立即 _ensure_init()，否则
+   history_manager._init_storage 读 is_initialized=False 回退 JSON，
+   save_session 永远走不到本引擎（input_history 因直接调用不受影响）。
+2. 主程序 StorageRegistry 默认 _active="sqlite"，不会自动按 config_schema.enabled
+   调 set_active —— 插件必须在 register() 末尾自激活。
+3. config_schema 字段类型用 "bool"（不是 "switch"）；在 plugin.json 加：
+   "enabled"(bool) + "db_dir"(text) 字段，引擎 __init__ 读 PluginConfigStore。
+"""
+from __future__ import annotations
+
+import threading
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+
+class {cls_name}:
+    """会话存储引擎 — 行为对齐 system/storages/sqlite.py（同名方法）"""
+
+    id = "{plugin}"
+
+    def __init__(self, db_dir: Optional[str] = None):
+        # ⚠ 先设 False 再调 _ensure_init（_ensure_init 首行 if self._initialized 需要属性存在）
+        self._initialized = False
+        if db_dir:
+            self._base = Path(db_dir)
+        else:
+            self._base = Path.home() / ".drifox" / "data" / "{plugin}"
+        self._sessions_dir = self._base / "sessions"
+        self._lock = threading.RLock()
+        # ⚠ 必须立即初始化：history_manager 靠 is_initialized 探测
+        self._ensure_init()
+
+    def _ensure_init(self) -> None:
+        if self._initialized:
+            return
+        for d in (self._base, self._sessions_dir):
+            d.mkdir(parents=True, exist_ok=True)
+        self._initialized = True
+
+    @property
+    def is_initialized(self) -> bool:
+        return self._initialized
+
+    # TODO: 实现 save/get/get_all/get_by_project/delete/update_session_title/
+    #       get_session_counts/get_input_history/add_input_history（对齐 sqlite.py）
+    def save(self, session: Dict[str, Any]) -> bool:
+        return False  # TODO
+
+
+def register(registry):
+    """注册入口 — source 由 loader 强制注入"""
+    engine = {cls_name}()
+    registry.register(engine)
+    # ⚠ 自激活：主程序不基于 config_schema.enabled 自动 set_active
+    try:
+        from app.plugins.managers.plugin_config_store import PluginConfigStore
+        if PluginConfigStore().get("{plugin}", "enabled"):
+            registry.set_active("{plugin}")
+    except Exception:
+        pass
+'''
+
 
 _KIND_NOTES = {
     "model_adapters": ("model_adapters", "模型适配器：统一不同厂商 API 差异（参考 system/model_adapters/openai_family.py）"),
@@ -336,6 +482,15 @@ def _write_components(base: Path, name: str, description: str, comps: list) -> l
         (base / ".lsp.json").write_text(_LSP_JSON, encoding="utf-8")
         written.append(".lsp.json")
 
+    if "themes" in comps:
+        # 真实主题结构：themes/<id>/<id>.yaml（背景图可选）
+        d = base / "themes" / name
+        d.mkdir(parents=True, exist_ok=True)
+        (d / f"{name}.yaml").write_text(
+            _THEME_YAML.format(plugin=name), encoding="utf-8"
+        )
+        written.append(f"themes/{name}/{name}.yaml")
+
     if "ui" in comps:
         d = base / "ui"
         d.mkdir(exist_ok=True)
@@ -367,12 +522,14 @@ def _write_components(base: Path, name: str, description: str, comps: list) -> l
             d.mkdir(exist_ok=True)
             mod = name.replace("-", "_")
             cls = mod.title().replace("_", "")
-            (d / f"{mod}.py").write_text(
-                _RUNTIME_PY.format(
+            if kind == "storages":
+                # storages 用增强模板：预置 is_initialized 初始化 + register 自激活
+                content = _STORAGE_PY.format(plugin=name, cls_name=cls)
+            else:
+                content = _RUNTIME_PY.format(
                     kind=kind, kind_note=note, sys_dir=sys_dir, plugin=name, cls_name=cls,
-                ),
-                encoding="utf-8",
-            )
+                )
+            (d / f"{mod}.py").write_text(content, encoding="utf-8")
             written.append(f"{kind}/{mod}.py")
 
     return written
