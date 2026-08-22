@@ -15,6 +15,9 @@ evolution_validate — 自进化工具 2：校验 DriFox 插件结构合规性�
 import ast
 import json
 import re
+import shutil
+import subprocess
+import tempfile
 from pathlib import Path
 
 from app.tools.result import ToolResult
@@ -305,6 +308,166 @@ def _check_plugin_dir(base: Path, manifest: dict, name: str) -> tuple[list, list
     return errors, warnings
 
 
+# ---------- deep 层：隔离子进程实跑 tools（Harbor 等价物） ----------
+# 设计要点：绝不污染主进程 sys.modules / 绝不写入任何 tools/ 目录。
+# 复制 tools/*.py 到临时目录 → 系统 Python 子进程内注入 app 轻量垫片 +
+# MockRegistry → 加载每个工具 register() → 按 schema.required 构造最小 kwargs
+# 调 impl(tool_ctx) → json 输出结果。主进程解析汇总。
+
+
+def _python_exe() -> list[str]:
+    """定位系统 Python 解释器（返回参数列表前段）。
+
+    DriFox 是 PyInstaller 打包，主进程内 sys.executable == Drifox.exe，
+    直接 [sys.executable, ...] 会启动主程序新实例。必须用系统 Python。
+    """
+    for cand in ("python.exe", "python", "python3.exe", "python3"):
+        p = shutil.which(cand)
+        if p and "WindowsApps" not in p:
+            return [p]
+    py = shutil.which("py.exe") or shutil.which("py")
+    if py:
+        return [py, "-3"]
+    raise RuntimeError(
+        "找不到系统 Python 解释器（python.exe 或 py.exe）。"
+        "deep 验证需要系统 Python 实跑工具，请安装 Python 3 并加入 PATH。"
+    )
+
+
+# 子进程内执行的 runner 源码（仅用标准库，注入 app 轻量垫片，绝不回写主进程）
+_DEEP_RUNNER = r'''
+import sys, json, types, importlib.util
+from pathlib import Path
+
+
+class ToolResult:
+    def __init__(self, success, content=None, error=None):
+        self.success = success
+        self.content = content
+        self.error = error
+
+
+_app = types.ModuleType("app")
+_tools = types.ModuleType("app.tools")
+_res = types.ModuleType("app.tools.result")
+_res.ToolResult = ToolResult
+_app.tools = _tools
+_tools.result = _res
+sys.modules["app"] = _app
+sys.modules["app.tools"] = _tools
+sys.modules["app.tools.result"] = _res
+
+
+class MockRegistry:
+    def __init__(self):
+        self.tools = []
+
+    def register(self, name, schema, impl=None, **kw):
+        self.tools.append((name, schema, impl, None))
+
+
+def main():
+    tools_dir = Path(sys.argv[1])
+    reg = MockRegistry()
+    for py in sorted(tools_dir.glob("*.py")):
+        if py.name.startswith("_"):
+            continue
+        spec = importlib.util.spec_from_file_location("bench_" + py.stem, py)
+        mod = importlib.util.module_from_spec(spec)
+        try:
+            spec.loader.exec_module(mod)
+        except Exception as e:
+            reg.tools.append((py.stem, None, None, "加载失败: %s: %s" % (type(e).__name__, e)))
+            continue
+        if not hasattr(mod, "register"):
+            reg.tools.append((py.stem, None, None, "缺少顶层 register(registry)"))
+            continue
+        try:
+            mod.register(reg)
+        except Exception as e:
+            reg.tools.append((py.stem, None, None, "register 抛异常: %s: %s" % (type(e).__name__, e)))
+    results = []
+    tool_ctx = {"workdir": str(tools_dir), "env": {"app_data_dir": str(tools_dir)}, "services": {}}
+    for name, schema, impl, load_err in reg.tools:
+        entry = {"name": name, "register": "ok", "call": "ok", "error": None}
+        if load_err is not None:
+            entry["register"] = "fail"
+            entry["error"] = load_err
+        elif impl is None:
+            entry["register"] = "fail"
+            entry["error"] = "register 未提供 impl"
+        else:
+            try:
+                params = (schema or {}).get("function", {}).get("parameters", {}) or {}
+                props = params.get("properties", {}) or {}
+                required = params.get("required", []) or []
+                kwargs = {k: "" if props.get(k, {}).get("type") == "string" else None for k in required}
+                out = impl(tool_ctx, **kwargs)
+                if not (hasattr(out, "success") and hasattr(out, "content")):
+                    entry["call"] = "fail"
+                    entry["error"] = "impl 返回非 ToolResult 实例"
+            except Exception as e:
+                entry["call"] = "fail"
+                entry["error"] = "%s: %s" % (type(e).__name__, e)
+        results.append(entry)
+    print(json.dumps(results, ensure_ascii=False))
+
+
+main()
+'''
+
+
+def _run_deep_tools(base: Path, plugin_name: str) -> tuple[list, list]:
+    """deep 层：隔离子进程实跑 tools 的 register+impl（Harbor 等价物）。
+
+    返回 (runtime_errors, runtime_lines)。绝不污染主进程 sys.modules。
+    任何异常都降级为非阻断警告（deep 是增强验证，不应阻断主流程）。
+    """
+    tools_dir = base / "tools"
+    if not tools_dir.is_dir():
+        return [], ["（无 tools 组件，跳过运行时验证）"]
+    try:
+        py = _python_exe()
+    except RuntimeError as e:
+        return [], [f"⚠ 跳过运行时验证（{e}）"]
+    with tempfile.TemporaryDirectory() as td:
+        dst = Path(td) / "plugin" / "tools"
+        dst.mkdir(parents=True)
+        for f in tools_dir.glob("*.py"):
+            if f.name.startswith("_"):
+                continue
+            shutil.copy(f, dst / f.name)
+        runner = Path(td) / "__deep_runner__.py"
+        runner.write_text(_DEEP_RUNNER, encoding="utf-8")
+        try:
+            r = subprocess.run(
+                py + [str(runner), str(dst)],
+                capture_output=True, text=True, encoding="utf-8",
+                errors="replace", timeout=120,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            )
+        except subprocess.TimeoutExpired:
+            return [], ["⚠ 运行时验证超时（>120s），跳过"]
+        if r.returncode != 0:
+            return [], [f"⚠ 运行时验证子进程异常：{(r.stderr or '')[:500]}"]
+        try:
+            results = json.loads(r.stdout.strip() or "[]")
+        except json.JSONDecodeError:
+            return [], [f"⚠ 运行时验证输出解析失败：{(r.stdout or '')[:300]}"]
+    errors, lines = [], ["运行时验证（deep=true，隔离进程实跑 tools）："]
+    for it in results:
+        name = it.get("name", "?")
+        if it.get("register") != "ok":
+            errors.append(f"runtime: {name} register 失败 → {it.get('error')}")
+            lines.append(f"  ✗ {name}: register 失败 → {it.get('error')}")
+        elif it.get("call") != "ok":
+            errors.append(f"runtime: {name} impl 抛异常 → {it.get('error')}")
+            lines.append(f"  ✗ {name}: impl 异常 → {it.get('error')}")
+        else:
+            lines.append(f"  ✅ {name}: register OK / impl OK")
+    return errors, lines
+
+
 def _impl(tool_ctx, **kwargs):
     try:
         plugin_name = (kwargs.get("plugin_name") or "").strip()
@@ -335,6 +498,17 @@ def _impl(tool_ctx, **kwargs):
 
         errors, warnings = _check_plugin_dir(base, manifest, plugin_name)
 
+        # deep 层：静态通过后启隔离子进程实跑 tools（Harbor 等价物）
+        deep = bool(kwargs.get("deep"))
+        runtime_errors, runtime_lines = [], []
+        if deep and not errors:
+            runtime_errors, runtime_lines = _run_deep_tools(base, plugin_name)
+            errors.extend(runtime_errors)
+        elif not deep and manifest.get("components", {}).get("tools"):
+            runtime_lines = [
+                "提示：检测到 tools 组件，结构 OK 但运行时未验证 → 加 deep=true 实跑确认 impl 不崩",
+            ]
+
         lines = [f"插件 {plugin_name} 校验{'✅ 通过' if not errors else '❌ 未通过'}（{base}）", ""]
         if errors:
             lines.append("错误：")
@@ -344,6 +518,9 @@ def _impl(tool_ctx, **kwargs):
             lines += [f"  ⚠ {w}" for w in warnings]
         if not errors and not warnings:
             lines.append("无错误无警告。")
+        if runtime_lines:
+            lines.append("")
+            lines += runtime_lines
         if not errors:
             lines.append("")
             lines.append("提示：修改后 watchfiles 热重载自动生效（hooks/mcp/lsp 通常自动重连；如未生效再重启 DriFox）。")
@@ -371,6 +548,15 @@ _SCHEMA = {
                 "plugin_name": {
                     "type": "string",
                     "description": "要校验的插件名（system+user 根中查找）",
+                },
+                "deep": {
+                    "type": "boolean",
+                    "description": (
+                        "true 时静态校验通过后，额外启隔离子进程实跑 tools 的 register+impl"
+                        "（Harbor 等价物：验证不抛异常且返回合法 ToolResult）。"
+                        "默认 false（仅静态结构校验，毫秒级、零执行）。改了工具逻辑或发布前建议 true。"
+                    ),
+                    "default": False,
                 },
             },
             "required": ["plugin_name"],
