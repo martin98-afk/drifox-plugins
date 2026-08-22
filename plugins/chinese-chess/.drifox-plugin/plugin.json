@@ -1,0 +1,38 @@
+{
+    "name": "chinese-chess",
+    "description": "中国象棋 — 与大模型对弈的浮动卡片游戏",
+    "version": "0.1.0",
+    "author": {
+        "name": "马丁"
+    },
+    "license": "GPL-3.0-or-later",
+    "type": "game",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "chinese",
+        "evolved",
+        "xiangqi",
+        "象棋"
+    ],
+    "components": {
+        "tools": false,
+        "commands": false,
+        "agents": false,
+        "skills": false,
+        "hooks": false,
+        "mcp": false,
+        "lsp": false,
+        "themes": false,
+        "ui": true,
+        "providers": false,
+        "team_templates": false,
+        "model_adapters": false,
+        "loop_policies": false,
+        "storages": false,
+        "serializers": false,
+        "gateways": false,
+        "engines": false
+    }
+}
