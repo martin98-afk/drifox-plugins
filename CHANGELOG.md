@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.8.3 (2026-08-23)
+### 🔧 修复 autoloop 配置卡项目路径预填（v1.0.1）
+- **打开时默认项目路径未用当前上下文**：`AutoLoopConfigCard.showEvent` 仅在路径为空且 `ctx` 含 `project_root` 时预填，来源单一（缺 `get_workdir`/`cwd` 兜底）且预填值会残留、不随当前上下文刷新；现改为按 `project_root → services.get_workdir → os.getcwd` 三级取当前上下文路径预填，并引入 `_path_user_edited` 标志：未手动编辑时每次打开刷新为当前上下文路径，手动改过则尊重用户选择不再覆盖
+
 ## 2.8.2 (2026-08-19)
 ### 🔧 修复 workbuddy 插件 plan 模式与 UI 产物面板（v1.0.1）
 - **plan 阻断失效（大小写根因）**：`ToolExecutor` 注入 hook context 的 `tool_name` 是 Claude Code 风格（PascalCase `Edit`/`Write`/`MultiEdit`/`BgStart`），而 hook 用小写匹配 → 永匹配不上，进入 plan 后仍可编辑；改为归一化（去下划线+小写）后比较阻断清单，单测通过（MultiEdit/BgStart→block，Read/无标记→放行）
