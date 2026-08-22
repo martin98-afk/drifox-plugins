@@ -70,6 +70,8 @@ class PieceLabel(QLabel):
         self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         # 立体阴影（PyQt5 QSS 不支持 box-shadow，用 QGraphicsDropShadowEffect）
         self.setGraphicsEffect(make_piece_shadow())
+        # 让 #chessPiece 选择器可命中（否则 theme 的 #chessPiece 规则不生效）
+        self.setObjectName("chessPiece")
         self._refresh_style()
 
     def set_piece(self, piece: str):
