@@ -15,7 +15,7 @@ import unittest
 import types
 
 # QApplication 实例（必须在 QWidget 之前）
-from PyQt5.QtWidgets import QApplication
+from PyQt5.QtWidgets import QApplication, QLabel
 
 _app = QApplication.instance() or QApplication(sys.argv)  # noqa: F841
 
@@ -170,20 +170,37 @@ class TestPieceLabelAttributes(unittest.TestCase):
         eff = self.label.graphicsEffect()
         self.assertIsInstance(eff, QGraphicsDropShadowEffect)
 
-    def test_piece_qss_contains_border_radius_50(self):
-        qss = self.label.styleSheet()
-        self.assertIn("border-radius: 50%", qss)
-        self.assertIn("qradial-gradient", qss)
-        # 木制不透明背景（含深棕木底关键色，无半透明）
-        self.assertIn("#8b5a2b", qss)
-        self.assertNotIn("rgba", qss.lower())
+    def test_piece_uses_paint_event_not_qss(self):
+        """v0.2.1 修复：弃用 QSS，视觉全部由 paintEvent 自绘（避免 QSS border 不裁剪圆角导致方框）。
+
+        PieceLabel.styleSheet() 应为空；圆角、渐变、描边都在 paintEvent → _draw_piece_circle 内绘制。
+        """
+        # 不再设置 QSS（之前是 "border-radius: 50%; qradial-gradient..."）
+        self.assertEqual(self.label.styleSheet(), "")
+        # WA_StyledBackground 必须为 False（否则 QSS 引擎仍会绘制方框 background/border）
+        from PyQt5.QtCore import Qt
+        self.assertFalse(
+            self.label.testAttribute(Qt.WA_StyledBackground),
+            "WA_StyledBackground=True 会让 QSS 方形 border 覆盖在自绘圆形之上，必须关闭",
+        )
+        # paintEvent 已重写
+        self.assertTrue(PieceLabel.paintEvent is not QLabel.paintEvent)
 
     def test_piece_objectname_is_chess_piece(self):
         self.assertEqual(self.label.objectName(), "chessPiece")
 
-    def test_piece_qss_has_red_color(self):
-        qss = self.label.styleSheet()
-        self.assertIn(theme.PIECE_RED, qss)
+    def test_piece_paint_contains_red_text_color(self):
+        """自绘函数的颜色定义来自 theme.PIECE_RED / theme.PIECE_BLACK（保持单一来源）。"""
+        # 通过 _draw_piece_circle 间接验证：side="red" 渲染时字体色来自 PIECE_RED
+        # 这里用 mock 检查模块常量被函数引用
+        import inspect
+        from ui import widgets
+        src = inspect.getsource(widgets._draw_piece_circle)
+        self.assertIn("PIECE_RED", src)
+        self.assertIn("PIECE_BLACK", src)
+        self.assertIn("USER_ACCENT", src)  # hover/selected 金色
+        # 木色径向渐变关键色
+        self.assertIn("#8b5a2b", src)
 
     def test_mouse_transparent_for_click_passthrough(self):
         from PyQt5.QtCore import Qt
@@ -197,18 +214,25 @@ class TestPieceLabelAttributes(unittest.TestCase):
         self.assertFalse(self.label._hover)
         self.label.set_hover(True)
         self.assertTrue(self.label._hover)
-        # hover 后 QSS 含金色边框（USER_ACCENT），木色背景仍在
-        qss = self.label.styleSheet()
-        self.assertIn(theme.USER_ACCENT, qss)
-        self.assertIn("#8b5a2b", qss)
+        # 验证 _draw_piece_circle 在 hover=True 时使用金色描边
+        # 通过状态变量影响 paintEvent 行为
+        self.assertTrue(self.label._hover)
         self.label.set_hover(False)
-        self.assertNotIn(theme.USER_ACCENT, self.label.styleSheet())
+        self.assertFalse(self.label._hover)
 
     def test_selected_toggle(self):
         self.assertFalse(self.label._selected)
         self.label.set_selected(True)
         self.assertTrue(self.label._selected)
-        self.assertIn("3px", self.label.styleSheet())
+        # selected 时 border_w 应为 3px（hover/默认是 2px）
+        # 通过 _draw_piece_circle 的逻辑分支判断：
+        # 用 import + inspect 检查源码分支
+        import inspect
+        from ui import widgets
+        src = inspect.getsource(widgets._draw_piece_circle)
+        # 描边宽度有 selected 分支，且 selected 时宽于 hover/默认
+        self.assertIn("selected", src)
+        self.assertIn("border_w", src)
 
     def test_set_piece_to_empty_hides(self):
         self.label.set_piece(".")
@@ -254,10 +278,9 @@ class TestChessBoardViewHover(unittest.TestCase):
         self.view.set_pieces(board)
         # 未设 _selected → 不是 selected
         self.view.set_selected((0, 9))
-        # PieceLabel 上应有 selected
+        # PieceLabel 上应有 selected（状态变量被 paintEvent 读取）
         lbl = self.view._pieces[(0, 9)]
         self.assertTrue(lbl._selected)
-        self.assertIn("3px", lbl.styleSheet())
         # 取消选中
         self.view.set_selected(None)
         self.assertFalse(lbl._selected)

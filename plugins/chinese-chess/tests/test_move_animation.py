@@ -211,7 +211,8 @@ class TestGhostPieceLabelVisual(unittest.TestCase):
     def test_red_ghost_styled(self):
         ghost = _GhostPieceLabel("R", 40, self.view)
         self.assertEqual(ghost._side, "red")
-        self.assertIn("#c62828", ghost.styleSheet() or "")
+        # v0.2.1：弃用 QSS，视觉由 paintEvent 自绘；styleSheet 应为空
+        self.assertEqual(ghost.styleSheet(), "")
         self.assertEqual(ghost.text(), "车")
 
     def test_black_ghost_styled(self):
