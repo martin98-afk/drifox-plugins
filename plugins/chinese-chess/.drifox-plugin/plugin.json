@@ -1,7 +1,7 @@
 {
     "name": "chinese-chess",
     "description": "中国象棋 — 与大模型对弈的浮动卡片游戏",
-    "version": "0.1.0",
+    "version": "0.2.1",
     "author": {
         "name": "马丁"
     },

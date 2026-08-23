@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.8.4 (2026-08-23)
+### 🔧 修复 chinese-chess 棋子视觉与 LLM 调用四连击（v0.2.1）
+- **棋子周围方框**：PyQt5 QSS 的 `border-radius` 只裁剪 `background`、不裁剪 `border`，`WA_StyledBackground=True` + `setStyleSheet(border: ...)` 让方形外框叠在自绘圆形之上 → 改 paintEvent 全自绘（公共函数 `_draw_piece_circle`，`PieceLabel` 与 `_GhostPieceLabel` 共用），关闭 `WA_StyledBackground`，弃用 QSS
+- **棋子上文字过小**：`_refresh_style` 计算了 `font_px=int(cell*0.46)` 但漏 `setFont`，painter 拿到 QPainter 系统默认字号（13-15px），比预期 24-28px 小一半；补 `setFont(bold + pixelSize=font_px)`
+- **LLM 始终空响应（reasoning 模型截断）**：`max_tokens=500` 对 reasoning 模型 MiniMax-M3 太小，`reasoning_tokens=499` 占满预算、答案被截为 `finish_reason=length`；提到 `max_tokens=2000` 留余量
+- **SYSTEM_PROMPT 未禁止 <think>（对比 prompt-enhancer）**：prompt-enhancer `DEFAULT_ENHANCE_PROMPT` 明确写"不要输出 <think> 等思考过程内容"，chinese-chess 之前没提；新增第 3 条要求（模型未必遵守，靠 `parse_move` 的 `<think>` 剥离逻辑兜底）
+- **验证**：`tests/` 133 个全过；用 DriFox `.drifox/app.config` 真实 MiniMax-M3 跑全链路（`start_ai_move` → `_AIMoveTask.run` → 真实 chat.completions.create），两次都返回合法走法（`马2进3 (1,0)→(2,2)`、`炮2平5 (1,2)→(4,2)`）
+
 ## 2.8.3 (2026-08-23)
 ### 🔧 修复 autoloop 配置卡项目路径预填（v1.0.1）
 - **打开时默认项目路径未用当前上下文**：`AutoLoopConfigCard.showEvent` 仅在路径为空且 `ctx` 含 `project_root` 时预填，来源单一（缺 `get_workdir`/`cwd` 兜底）且预填值会残留、不随当前上下文刷新；现改为按 `project_root → services.get_workdir → os.getcwd` 三级取当前上下文路径预填，并引入 `_path_user_edited` 标志：未手动编辑时每次打开刷新为当前上下文路径，手动改过则尊重用户选择不再覆盖
