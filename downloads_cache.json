@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787493062.8122902,
+  "fetched_at": 1787494467.8085444,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -10,7 +10,7 @@
     "beautiful-article-skills": 3,
     "breakout": 3,
     "browser": 29,
-    "calendar": 13,
+    "calendar": 14,
     "canvas-design": 1,
     "caveman": 4,
     "chinese-chess": 2,
@@ -18,7 +18,7 @@
     "code-reviewer": 1,
     "code-simplifier": 1,
     "codegraph-tools": 7,
-    "context-stats": 13,
+    "context-stats": 14,
     "context-usage-stats": 0,
     "context7": 4,
     "desktop-automation": 11,
