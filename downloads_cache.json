@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787455691.3357437,
+  "fetched_at": 1787458133.1270146,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -13,7 +13,7 @@
     "calendar": 13,
     "canvas-design": 1,
     "caveman": 4,
-    "chinese-chess": 1,
+    "chinese-chess": 2,
     "claude-api": 2,
     "code-reviewer": 1,
     "code-simplifier": 1,
