@@ -44,7 +44,8 @@ SYSTEM_PROMPT = (
     "你是中国象棋高手。请根据局面选择最佳走法。\n"
     "严格要求：\n"
     '1. 仅输出 1 行 JSON，格式 {"from":[c1,r1],"to":[c2,r2]}，c 与 r 为整数\n'
-    "2. 不要 markdown 代码块、不要多余文字、不要解释"
+    "2. 不要 markdown 代码块、不要多余文字、不要解释\n"
+    "3. 不要输出 <think> 等思考过程内容，仅输出最终走法 JSON"  # 对齐 prompt-enhancer：显式禁止 thinking 块
 )
 
 
