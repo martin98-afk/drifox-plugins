@@ -380,6 +380,8 @@ class _AIMoveTask(QRunnable):
             )
 
         client = build_openai_client(api_key=api_key, base_url=base_url)
+        # max_tokens 需给 reasoning 模型预留思考预算（实测 MiniMax-M3 用 ~499 token 思考），
+        # 500 太小会导致思考占满、答案截断为 length=length / 空响应。提到 2000 留充足余量。
         resp = client.chat.completions.create(
             model=model,
             messages=[
@@ -387,7 +389,7 @@ class _AIMoveTask(QRunnable):
                 {"role": "user", "content": user_prompt},
             ],
             temperature=0.3,
-            max_tokens=500,
+            max_tokens=2000,
         )
         fr = getattr(resp.choices[0], "finish_reason", None)
         msg = resp.choices[0].message

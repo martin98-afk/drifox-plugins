@@ -17,7 +17,7 @@
 from typing import Dict, List, Optional, Tuple
 
 from PyQt5.QtCore import Qt, pyqtSignal, QRect, QTimer, QPropertyAnimation, pyqtProperty
-from PyQt5.QtGui import QPainter, QColor, QPen, QFont, QBrush, QLinearGradient
+from PyQt5.QtGui import QPainter, QColor, QPen, QFont, QBrush, QLinearGradient, QRadialGradient
 from PyQt5.QtWidgets import QLabel, QWidget, QGraphicsDropShadowEffect, QGraphicsOpacityEffect
 
 from PyQt5 import QtGui  # noqa: F401  # PyQt5 路径颜色需要
@@ -41,13 +41,60 @@ BOARD_BG = BOARD_WOOD  # 向后兼容别名
 HOVER_HIGHLIGHT = "#d4af37"  # 金色 hover 圈
 
 
+# ── 棋子自绘公共函数 ──
+
+def _draw_piece_circle(p: QPainter, rect, side: str, text: str,
+                       hover: bool = False, selected: bool = False) -> None:
+    """在 painter 上画圆形木制棋子（共享给 PieceLabel 与 _GhostPieceLabel）。
+
+    视觉：木色径向渐变 + 描边 + 居中文字（红/黑字色）。
+    必须配合 QLabel.setAttribute(Qt.WA_TransparentForMouseEvents, True) 或非交互 widget 使用。
+    """
+    if not side or side not in ("red", "black"):
+        return
+    p.setRenderHint(QPainter.Antialiasing, True)
+
+    # 木色径向渐变（高光偏左上 35%/30%）
+    cx = rect.width() * 0.35
+    cy = rect.height() * 0.30
+    radius = rect.width() / 2
+    grad = QRadialGradient(cx, cy, radius)
+    grad.setColorAt(0.0, QColor("#f0d8a0"))
+    grad.setColorAt(0.25, QColor("#e0b878"))
+    grad.setColorAt(0.60, QColor("#c8924a"))
+    grad.setColorAt(1.0, QColor("#8b5a2b"))
+
+    # 边框：hover/selected 用金色，否则深棕
+    if selected:
+        border_w, border_color = 3, QColor(USER_ACCENT)
+    elif hover:
+        border_w, border_color = 2, QColor(USER_ACCENT)
+    else:
+        border_w, border_color = 2, QColor("#5a3a1a")
+
+    p.setBrush(QBrush(grad))
+    p.setPen(QPen(border_color, border_w))
+    inset = border_w // 2 + 1
+    p.drawEllipse(rect.adjusted(inset, inset, -inset, -inset))
+
+    # 文字（红/黑）
+    text_color = QColor(PIECE_RED if side == "red" else PIECE_BLACK)
+    p.setPen(text_color)
+    p.setFont(p.font())  # 用 painter 自带 font（已在外层设好字号）
+    p.drawText(rect, Qt.AlignCenter, text)
+
+
 # ── 棋子标签 ──
 
 class PieceLabel(QLabel):
-    """圆形棋子 — 红/黑两色 + 立体阴影 + hover/selected QSS 切换
+    """圆形棋子 — 红/黑两色 + 立体阴影 + hover/selected 自绘切换
+
+    视觉全部由 paintEvent 自绘（圆形 gradient 背景 + 描边 + 文字），
+    禁用了 WA_StyledBackground + QSS，避免 PyQt5 QSS 的 border 不跟随 border-radius
+    裁剪而出现"圆形棋子 + 方形外框"。
 
     鼠标穿透：WA_TransparentForMouseEvents 保持 True（点击穿透到 ChessBoardView），
-    hover 由 ChessBoardView.mouseMoveEvent 跟踪，调用 set_hover() 触发 setStyleSheet。
+    hover 由 ChessBoardView.mouseMoveEvent 跟踪，调用 set_hover() 触发 update。
     """
 
     def __init__(self, piece: str, cell: int, parent=None):
@@ -70,11 +117,11 @@ class PieceLabel(QLabel):
         self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         # 立体阴影（PyQt5 QSS 不支持 box-shadow，用 QGraphicsDropShadowEffect）
         self.setGraphicsEffect(make_piece_shadow())
-        # 让 #chessPiece 选择器可命中（否则 theme 的 #chessPiece 规则不生效）
+        # 关键：所有视觉（圆形背景 + 描边 + 文字）由 paintEvent 自绘，禁用 QSS 渲染。
+        # 之前开启 WA_StyledBackground 会让 QSS border 单独绘成方形外框（不跟随 border-radius 裁剪），
+        # 导致棋子周围出现"圆形 + 方框"的丑观感。
         self.setObjectName("chessPiece")
-        # 关键：QLabel 默认不绘制 QSS 的 background 与 border-radius（仅绘 border/text），
-        # 必须开启 WA_StyledBackground 才能渲染木色渐变背景 + 圆形（否则透明方块）
-        self.setAttribute(Qt.WA_StyledBackground, True)
+        # 不再调用 setAttribute(Qt.WA_StyledBackground, True)；QSS 完全弃用
         self._refresh_style()
 
     def set_piece(self, piece: str):
@@ -110,19 +157,20 @@ class PieceLabel(QLabel):
         text = PIECE_CN.get(self._piece, self._piece)
         font_px = int(self._cell * 0.46)
         self.setText(text)
-        try:
-            self.setStyleSheet(get_piece_qss(self._side, hover=self._hover, selected=self._selected))
-        except Exception:
-            # 兜底：失败时保留旧 hardcoded QSS，不让棋子消失
-            bg = "#fbf2dc"
-            text_color = PIECE_RED if self._side == "red" else PIECE_BLACK
-            border_color = text_color
-            self.setStyleSheet(
-                f"QLabel {{ background: {bg}; border: 2px solid {border_color};"
-                f" border-radius: {self.width() // 2}px; color: {text_color};"
-                f" font-weight: bold; font-family: 'Microsoft YaHei', '楷体';"
-                f" font-size: {font_px}px; }}"
-            )
+        # 视觉完全由 paintEvent 自绘，不再注入 QSS（避免 QSS 方形 border 与自绘圆形叠加）
+        self.update()
+
+
+    def paintEvent(self, _event):
+        """自绘圆形木制棋子（视觉全在 _draw_piece_circle，PyQt5 QSS 圆角不可靠故绕开）。"""
+        if not self._piece or self._piece == "." or not self._side:
+            return
+        p = QPainter(self)
+        _draw_piece_circle(
+            p, self.rect(), self._side, self.text(),
+            hover=self._hover, selected=self._selected,
+        )
+        p.end()
 
 
 # ── 棋盘视图 ──
@@ -731,7 +779,8 @@ def compute_attack_path(from_pos: Tuple[int, int], to_pos: Tuple[int, int],
 class _GhostPieceLabel(QLabel):
     """被吃棋子的淡出副本：保留视觉但不参与交互。
 
-    QPropertyAnimation 调整 windowOpacity 实现淡出。
+    QPropertyAnimation 调整 _ghost_effect.opacity 实现淡出。
+    视觉复用 _draw_piece_circle（与 PieceLabel 一致），不再用 QSS。
     """
     def __init__(self, char: str, size: int, parent: QWidget) -> None:
         super().__init__(parent)
@@ -740,23 +789,25 @@ class _GhostPieceLabel(QLabel):
         from .game_logic import side_of, RED, BLACK, PIECE_CN
         side = side_of(char)
         self._side = "red" if side == RED else ("black" if side == BLACK else None)
+        self._size = size
         self.setFixedSize(size, size)
-        self.setAlignment(Qt.AlignCenter)
         self.setText(PIECE_CN.get(char, char))
-        try:
-            from .theme import get_piece_qss
-            if self._side:
-                self.setStyleSheet(get_piece_qss(self._side))
-        except Exception:
-            self.setStyleSheet(
-                "QLabel { background: #fbf2dc; border: 2px solid #888;"
-                "border-radius: 50%; color: #333; font-weight: bold;"
-                "font-family: 'Microsoft YaHei', '楷体'; font-size: 22px; }"
-            )
+        # 自绘 painter 字号（size 的 46%），让 paintEvent 渲染时字号正确
+        font = QFont()
+        font.setBold(True)
+        font.setPixelSize(int(size * 0.46))
+        self.setFont(font)
         # 淡出副本用 QGraphicsOpacityEffect（setWindowOpacity 仅对顶层窗口有效）
         self._ghost_effect = QGraphicsOpacityEffect(self)
         self._ghost_effect.setOpacity(1.0)
         self.setGraphicsEffect(self._ghost_effect)
+
+    def paintEvent(self, _event):
+        if not self._side:
+            return
+        p = QPainter(self)
+        _draw_piece_circle(p, self.rect(), self._side, self.text())
+        p.end()
 
     # QPropertyAnimation 需要的 opacity 属性（基于 QGraphicsOpacityEffect）
     def _get_opacity(self) -> float:
