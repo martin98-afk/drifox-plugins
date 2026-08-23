@@ -156,6 +156,12 @@ class PieceLabel(QLabel):
             return
         text = PIECE_CN.get(self._piece, self._piece)
         font_px = int(self._cell * 0.46)
+        # 关键：setFont 把字号写入 widget，paintEvent → QPainter 自动取 widget.font()，
+        # _draw_piece_circle 内通过 p.setFont(p.font()) 拿到正确字号（之前漏设，字小一半）
+        f = self.font()
+        f.setBold(True)
+        f.setPixelSize(font_px)
+        self.setFont(f)
         self.setText(text)
         # 视觉完全由 paintEvent 自绘，不再注入 QSS（避免 QSS 方形 border 与自绘圆形叠加）
         self.update()
