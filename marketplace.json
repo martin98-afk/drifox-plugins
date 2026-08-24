@@ -530,7 +530,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 7,
+            "downloads": 8,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -556,7 +556,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 14,
+            "downloads": 15,
             "keywords": [
                 "welcome",
                 "stats",
@@ -656,7 +656,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 12,
+            "downloads": 13,
             "keywords": [
                 "desktop",
                 "automation",
@@ -1251,7 +1251,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 25,
+            "downloads": 26,
             "keywords": [
                 "git",
                 "source-control",
@@ -2139,7 +2139,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 8,
+            "downloads": 9,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -2164,7 +2164,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 17,
+            "downloads": 18,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -2823,7 +2823,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "twin",
                 "dual",
