@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787578202.8132527,
+  "fetched_at": 1787580717.014401,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -40,7 +40,7 @@
     "gateway-slack": 0,
     "gateway-telegram": 0,
     "gateway-wecom": 0,
-    "git-dashboard": 8,
+    "git-dashboard": 9,
     "git-panel": 26,
     "git-status": 2,
     "git-workflow": 3,
