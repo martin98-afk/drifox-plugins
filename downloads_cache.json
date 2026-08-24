@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787591003.6458685,
+  "fetched_at": 1787594096.7340176,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -68,7 +68,7 @@
     "playground": 3,
     "ponytail": 9,
     "project-dashboard": 17,
-    "project-side-rail": 9,
+    "project-side-rail": 11,
     "prompt-enhancer": 18,
     "python-pro": 1,
     "rdr2": 4,
