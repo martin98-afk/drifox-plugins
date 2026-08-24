@@ -150,7 +150,7 @@
                 "ui": true,
                 "agents": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "autoloop",
                 "loop",
@@ -2139,7 +2139,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 5,
+            "downloads": 8,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
