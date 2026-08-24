@@ -674,6 +674,7 @@ class ProjectSideRailCard(QWidget):
     """
 
     _MODE_THRESHOLD = 160  # 模式切换阈值
+    _DEFAULT_COLLAPSED_WIDTH = 40  # 默认折叠宽度（仅显示 icon 列）
 
     # 信号透传（窄模式点击 / 宽模式 ProjectSelectorCardContent 统一发出）
     projectSelected = pyqtSignal(str)
@@ -690,6 +691,9 @@ class ProjectSideRailCard(QWidget):
         self._provider: Optional[Callable[[], dict]] = None
         self._colors: dict = {}
         self._mode: str = ""
+        # 首次显示前：让 sizeHint/minimumSizeHint 主动声明 40px 宽度，
+        # 让 dockSplitter 启动时分配窄模式空间，避免 widget 默认展开成宽模式
+        self._first_show: bool = True
         self._setup_ui()
 
         self._refresh_timer = QTimer(self)
@@ -734,6 +738,8 @@ class ProjectSideRailCard(QWidget):
         self.setMinimumWidth(40)
         self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
 
+        # 默认折叠：初始宽度直接设为 40px，避免被 _full 页面 sizeHint 撑开成宽模式
+        self.resize(self._DEFAULT_COLLAPSED_WIDTH, self.sizeHint().height() or 600)
         self._apply_mode("narrow")
 
     # ── 拉模型上下文注入 ──
@@ -815,7 +821,27 @@ class ProjectSideRailCard(QWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
+        # 兜底折叠：若 dockSplitter 启动时未遵守 sizeHint 给的 40px 宽度，
+        # 首次显示时强制 resize 到折叠宽度。仅首次生效（避免覆盖用户主动拖宽操作）
+        if self._first_show:
+            self._first_show = False
+            if self.width() > self._MODE_THRESHOLD:
+                self.resize(self._DEFAULT_COLLAPSED_WIDTH, self.height())
         self._refresh()
+
+    def sizeHint(self) -> QSize:
+        """默认折叠宽度 — 让 dockSplitter 启动时按窄模式分配初始空间
+
+        返回的宽度仅影响 splitter 初始化时的比例分配；
+        用户后续拖宽 splitter 时仍可越过 _MODE_THRESHOLD 触发宽模式。
+        """
+        h = super().sizeHint().height()
+        return QSize(self._DEFAULT_COLLAPSED_WIDTH, h)
+
+    def minimumSizeHint(self) -> QSize:
+        """与 sizeHint 一致 — splitter 收缩时也保持折叠形态"""
+        h = super().minimumSizeHint().height()
+        return QSize(self._DEFAULT_COLLAPSED_WIDTH, h)
 
     def _on_tick(self):
         """5s 周期同步（兜底）：当前项目高亮（窄 + 宽）+ 项目列表变化"""
