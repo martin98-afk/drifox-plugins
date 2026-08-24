@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787545271.6021836,
+  "fetched_at": 1787548137.6471891,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -21,7 +21,7 @@
     "context-stats": 14,
     "context-usage-stats": 0,
     "context7": 4,
-    "desktop-automation": 11,
+    "desktop-automation": 12,
     "doc-coauthoring": 1,
     "dsh-router": 1,
     "dsh-super-injector": 0,
