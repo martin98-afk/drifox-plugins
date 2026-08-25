@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787658688.445981,
+  "fetched_at": 1787660886.9773943,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -58,12 +58,13 @@
     "laputa-fog": 6,
     "mcp-builder": 1,
     "memory-match": 1,
+    "midnight-aurora": 1,
     "minesweeper": 4,
     "minimax-h3": 5,
     "nuwa-skill": 8,
     "office-docs": 1,
     "ollama": 2,
-    "omml-docx": 5,
+    "omml-docx": 6,
     "openai": 2,
     "playground": 3,
     "ponytail": 9,

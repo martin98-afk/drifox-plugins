@@ -1813,6 +1813,7 @@
             "components": {
                 "themes": true
             },
+            "downloads": 1,
             "keywords": [
                 "theme",
                 "dark",
@@ -2005,7 +2006,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "omml",
                 "docx",
