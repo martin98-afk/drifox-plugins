@@ -133,7 +133,7 @@
 
 ```xml
 <!-- 指示函数：粗体 I，条件用方括号定界。加粗用 m:sty m:val="b"（OMML 无 m:b 元素！） -->
-<m:r><m:rPr><m:sty m:val="b"/></m:rPr><w:rPr><w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/></w:rPr><m:t>I</m:t></m:r>
+<m:r><m:rPr><m:sty m:val="b"/><m:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/></m:rPr><m:t>I</m:t></m:r>
 <m:d><m:dPr><m:begChr m:val="["/><m:endChr m:val="]"/></m:dPr><m:e>Viol=0</m:e></m:d>
 
 <!-- 范数：双竖线包住表达式 -->
@@ -142,7 +142,7 @@
 
 > ⚠️ **不要用 `<m:b m:val="1"/>` 加粗数学 run**——`m:rPr` 中没有 `m:b` 元素，
 > 部分 Word/WPS 会因此渲染中断。正确写法是 `<m:sty m:val="b"/>`。
-> 数学 run 建议带 `<w:rPr><w:rFonts w:ascii="Cambria Math" .../></w:rPr>` 字体声明。
+> 数学 run 建议带 `<m:rPr><m:rFonts w:ascii="Cambria Math" .../></m:rPr>` 字体声明（m:rFonts 在 m:rPr 内；w:rFonts 直接放 <m:r> 内非法，Word 会忽略）。
 
 ## 5. 文本拼接规则
 
@@ -175,4 +175,4 @@
 | `mnary` | `m:nary` |
 | `mhat` | `m:acc` |
 | `math_inline` | `m:oMath` |
-| `math_display` | `m:oMathPara` |
+| `math_display` | 行内 `m:oMath` + 居中段落（默认）；`block=True` 才用 `m:oMathPara` |

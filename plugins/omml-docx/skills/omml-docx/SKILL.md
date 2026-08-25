@@ -13,7 +13,7 @@ description: "用 Python 脚本生成规范的 Word 数学公式（OMML / Office
 2. **命名空间**：公式用 `m` 前缀，命名空间 `http://schemas.openxmlformats.org/officeDocument/2006/math`。`w:document` 根元素**必须声明** `xmlns:m`，否则公式无法解析。
 3. **行内公式是 `<w:p>` 的直接子元素**：`<m:oMath>…</m:oMath>` 与 `<w:r>` 平级排列在 `<w:p>` 内。**绝不能把 `oMath` 塞进 `<w:r>` 内部**——Word 会打不开或公式不渲染。
 4. **独立公式**（独占一行、默认居中）：**优先用行内公式** `<w:p><w:jc w:val="center"/><m:oMath>…</m:oMath></w:p>`。`<m:oMathPara>` 块级公式**在表格单元格中会渲染中断**——症状：公式只显示前半段（"只剩一半"），从 `<m:frac>`/`<m:nary>` 处丢失（2026-07 实测）。仅在**正文非表格段落**且已确认渲染正常时才用 `oMathPara`。
-5. **兼容性三戒**（Word/WPS 实测）：① `<m:frac>` 分数、`<m:nary>` 求和/积分兼容性差——稳妥用「/ 斜线文本」「文本 Σ + 上下标」（`mnary_safe`）；② `m:rPr` 中**没有** `<m:b>` 元素，加粗必须用 `<m:sty m:val="b"/>`；③ 数学 run 应内嵌 `<w:rPr><w:rFonts w:ascii="Cambria Math" .../>`（与 Word 原生公式一致）。
+5. **兼容性三戒**（Word/WPS 实测）：① `<m:frac>` 分数、`<m:nary>` 求和/积分兼容性差——稳妥用「/ 斜线文本」「文本 Σ + 上下标」（`mnary_safe`）；② `m:rPr` 中**没有** `<m:b>` 元素，加粗必须用 `<m:sty m:val="b"/>`；③ 数学 run 的 `m:rPr` 内应内嵌 `<m:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>`（注意是 m:rFonts 而非 w:rFonts；后者直接放在 `<m:r>` 内非法，Word 会忽略导致字体声明不生效）。
 6. **文本节点分两套**：普通文本在 `<w:t>`（w 命名空间），公式文本在 `<m:t>`（m 命名空间），且 `<m:t>` 要带 `xml:space="preserve"` 保留空格。
 
 ## 快速开始
@@ -115,7 +115,7 @@ build_docx(body_xml, "out.docx", template_docx="母版.docx")
    - 混合：`mixed_para([('text', …), ('math', …), …])`
    - 独立公式：`math_display(...)`
 3. **打包**：`build_docx("".join(body), out, template_docx=母版或None)`。
-4. **验证**：`python scripts/validate_omml.py out.docx`（9 项结构检查，必须全 PASS）。
+4. **验证**：`python scripts/validate_omml.py out.docx`（17 项结构检查，必须全 PASS）。
 5. **人工复核**：用 Word/WPS 打开确认公式渲染正确。
 
 ## 常见坑（踩过的）
@@ -131,7 +131,7 @@ build_docx(body_xml, "out.docx", template_docx="母版.docx")
 | **mfrac 内容不渲染** | **分数部分整体消失（尤其 oMathPara 中）** | **用 `mtext("A") + mtext(" / ") + mtext("B")` 斜线文本** |
 | **mnary 算子丢失** | **∑/∫ 符号消失，只剩上下标** | **用 `mnary_safe`（文本 Σ + 上下标）** |
 | **m:rPr 里写 m:b 加粗** | **该数学 run 渲染中断/异常** | **加粗用 `<m:sty m:val="b"/>`（OMML 无 m:b 元素）** |
-| **数学 run 无字体声明** | **部分 Word/WPS 环境公式字体异常** | **m:r 内嵌 `<w:rPr><w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/></w:rPr>`（库内已自动）** |
+| **数学 run 无字体声明** | **部分 Word/WPS 环境公式字体异常** | **m:rPr 内嵌 `<m:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>`（库内已自动，m:rFonts 在 m:rPr 内，合规）** |
 | 求和用下标模拟 Σ | 上下限不随算子缩放（不规范） | 用 `mnary("∑", …)` 标准结构；环境不兼容时用 `mnary_safe` |
 | Windows 终端中文乱码 | 只是显示问题 | 脚本本身 UTF-8 正确；PowerShell 里 `chcp 65001` 或重定向到文件查看 |
 | 直接改现有 docx 的 XML 字符串 | 极易破坏公式结构 | 走 build_docx（解压→替换→重打包），或从母版复用 |

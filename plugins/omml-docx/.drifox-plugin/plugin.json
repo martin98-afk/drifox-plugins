@@ -5,7 +5,7 @@
     "light": "icon.svg",
     "dark": "icon_dark.svg"
   },
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": {
     "name": "马丁"
   },
@@ -15,11 +15,16 @@
     "min_version": "0.5.0"
   },
   "keywords": [
+    "omml",
     "docx",
     "word",
     "math",
     "formula",
-    "公式"
+    "公式",
+    "数学公式",
+    "专利交底书",
+    "OMML",
+    "document-generation"
   ],
   "components": {
     "skills": true
