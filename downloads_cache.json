@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787630824.1418738,
+  "fetched_at": 1787634113.2485445,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -74,7 +74,7 @@
     "rdr2": 4,
     "react-pro": 1,
     "security-guidance": 2,
-    "self-evolver": 4,
+    "self-evolver": 5,
     "seo-audit": 1,
     "skill-creator": 2,
     "slack-gif-creator": 1,
