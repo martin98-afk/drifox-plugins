@@ -2427,6 +2427,36 @@
             }
         },
         {
+            "name": "session-tree",
+            "description": "会话树 — 左侧停靠面板，按时间分组展示当前项目的会话列表（类 Codex 桌面版）",
+            "version": "0.1.0",
+            "author": "Martin",
+            "license": "MIT",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/session-tree",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true
+            },
+            "keywords": [
+                "session",
+                "history",
+                "sidebar",
+                "conversation"
+            ],
+            "homepage": "https://github.com/martin98-afk/DriFox",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "skill-creator",
             "description": "技能创作专家 — 从零创建技能、修改优化既有技能、评测技能性能。含基准测试、描述优化、性能方差分析完整方法论。",
             "version": "1.0.0",
