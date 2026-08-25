@@ -1796,6 +1796,40 @@
             }
         },
         {
+            "name": "midnight-aurora",
+            "description": "午夜极光主题 — 深紫底色 + 青绿/粉橙双色 accent + 极光侧栏与场景图，给 DriFox 主窗口换上极地夜空氛围。",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "theme"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/midnight-aurora",
+                "ref": "main"
+            },
+            "components": {
+                "themes": true
+            },
+            "keywords": [
+                "theme",
+                "dark",
+                "midnight",
+                "aurora",
+                "极光",
+                "主题"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "minesweeper",
             "description": "经典扫雷游戏——在 DriFox 中直接玩的浮動卡片",
             "version": "0.1.0",
