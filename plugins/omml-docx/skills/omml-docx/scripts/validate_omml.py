@@ -74,24 +74,15 @@ def main() -> int:
     omaths = list(root.iter(M + "oMath"))
     check("V4 存在公式 (m:oMath)", len(omaths) >= 1, f"共 {len(omaths)} 个")
 
-    # V5 行内公式位置：oMath 的父必须是 w:p（且不是 w:r 的子）
+    # 建立 子 -> 父 映射，避免 O(n^2) 反复 iter 查找父元素
+    parent_map = {c: p for p in root.iter() for c in p}
+
+    # V5 行内公式位置：oMath 的直接父必须是 w:p（行内）或 m:oMathPara（块级独立）
     inline_ok = True
     for om in omaths:
-        parent = None
-        for anc in root.iter():
-            if om in list(anc):
-                parent = anc
-                break
-        # 直接父元素判断
-        direct_parent = None
-        for p in root.iter():
-            if om in list(p):
-                direct_parent = p
-                break
-        if direct_parent is not None and direct_parent.tag != W + "p":
-            # 允许 oMathPara 包 oMath（独立公式）
-            if direct_parent.tag != M + "oMathPara":
-                inline_ok = False
+        dp = parent_map.get(om)
+        if dp is None or dp.tag not in (W + "p", M + "oMathPara"):
+            inline_ok = False
     check("V5 行内公式为 w:p 直接子元素（未塞进 w:r）", inline_ok)
 
     # V6 兼容性：oMathPara 独立公式仅允许在非表格段落（表格内渲染中断）
@@ -99,21 +90,14 @@ def main() -> int:
     if omps:
         omp_bad = 0
         for omp in omps:
-            # 向上查找祖先：是否位于 w:tbl 内
+            # 沿 parent_map 向上查找祖先：是否位于 w:tbl 内
             node = omp
             in_tbl = False
             while node is not None:
-                parent = None
-                for p in root.iter():
-                    if node in list(p):
-                        parent = p
-                        break
-                if parent is None:
-                    break
-                if parent.tag == W + "tbl":
+                if node.tag == W + "tbl":
                     in_tbl = True
                     break
-                node = parent
+                node = parent_map.get(node)
             if in_tbl:
                 omp_bad += 1
         check("V6 兼容性: oMathPara 未置于表格单元格内", omp_bad == 0,
@@ -149,7 +133,9 @@ def main() -> int:
     check("V10 无非法 <m:b> 元素（加粗用 m:sty b）", bad_b == 0, f"{bad_b} 处")
 
     # V11 数学 run 字体声明（建议：与 Word 原生一致用 Cambria Math）
-    has_font = 'w:rFonts w:ascii="Cambria Math"' in xml
+    # 合规结构：<m:rPr><m:rFonts w:ascii="Cambria Math" .../>（m:rFonts 在 m:rPr 内）
+    has_font = ('m:rFonts w:ascii="Cambria Math"' in xml
+                or 'w:rFonts w:ascii="Cambria Math"' in xml)
     check("V11 数学 run 带 Cambria Math 字体声明（建议）", has_font)
 
     failed = [n for n, s in CHECKS if s == "FAIL"]

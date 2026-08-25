@@ -17,7 +17,8 @@
   - ``<m:oMathPara>`` 块级公式在**表格单元格**中会渲染中断——症状：公式只显示前半段（"只剩一半"），从 ``<m:frac>/<m:nary>`` 处丢失。
   - ``<m:frac>``（分数）、``<m:nary>``（求和/积分）兼容性差：稳妥方案是「/ 斜线文本」与「文本 Σ + 上下标」。
   - ``m:rPr`` 中**没有** ``<m:b>`` 元素——加粗必须用 ``<m:sty m:val="b"/>``（``<m:b>`` 会导致该数学 run 渲染中断）。
-  - 数学 run（``m:r``）内嵌 ``<w:rPr><w:rFonts w:ascii="Cambria Math" .../>`` 与 Word 原生公式一致。
+  - 数学 run（``m:r``）的 ``m:rPr`` 内嵌 ``<m:rFonts w:ascii="Cambria Math" .../>``
+    与 Word 原生公式一致（注意是 m:rFonts，不是 w:rFonts；后者放在 <m:r> 内非法）。
 * docx 就是 zip 包：改 ``word/document.xml`` 后重新 zip 即可。
 
 典型用法
@@ -46,8 +47,10 @@ def esc(s: str) -> str:
     return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
-#: 数学 run 的字体声明（Word 原生公式写法：m:r 内嵌 w:rPr 指定 Cambria Math）
-MATH_FONT = '<w:rPr><w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/></w:rPr>'
+#: 数学 run 的字体声明（合规 OMML 写法：m:rPr 内嵌 m:rFonts 指定 Cambria Math）。
+#: 注意是 m:rFonts（m 命名空间元素），不是 w:rFonts；后者直接放在 <m:r> 内非法，
+#: Word 会忽略导致 Cambria Math 字体声明不生效。
+MATH_FONT = '<m:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math"/>'
 
 
 # ---------------------------------------------------------------------------
@@ -58,8 +61,9 @@ def run(text: str, *, bold: bool = False, sz: int | None = None,
     """构造一个 <w:r> 文本 run。支持 \\n 换行（拆成多个 run + w:br）。"""
     rpr_parts = [
         f'<w:rFonts w:ascii="{font}" w:hAnsi="{font}" w:eastAsia="{font}"/>',
-        f'<w:b w:val="1"/>' if bold else '<w:b w:val="0"/>',
     ]
+    if bold:
+        rpr_parts.append('<w:b w:val="1"/>')
     if italic:
         rpr_parts.append('<w:i w:val="1"/>')
     if sz is not None:
@@ -102,13 +106,13 @@ def para_text(text: str, **kw) -> str:
 # ---------------------------------------------------------------------------
 def mtext(s: str) -> str:
     """数学 run（普通正体）：<m:r><m:rPr><m:sty m:val='p'/>…</m:rPr><m:t>…</m:t></m:r>"""
-    return (f'<m:r><m:rPr><m:sty m:val="p"/></m:rPr>{MATH_FONT}'
+    return (f'<m:r><m:rPr><m:sty m:val="p"/>{MATH_FONT}</m:rPr>'
             f'<m:t xml:space="preserve">{esc(s)}</m:t></m:r>')
 
 
 def mit(s: str) -> str:
     """数学 run（斜体，变量惯例）：<m:r><m:rPr><m:sty m:val='i'/><m:i m:val='1'/></m:rPr>…</m:r>"""
-    return (f'<m:r><m:rPr><m:sty m:val="i"/><m:i m:val="1"/></m:rPr>{MATH_FONT}'
+    return (f'<m:r><m:rPr><m:sty m:val="i"/><m:i m:val="1"/>{MATH_FONT}</m:rPr>'
             f'<m:t xml:space="preserve">{esc(s)}</m:t></m:r>')
 
 
@@ -166,9 +170,16 @@ def mnary_safe(operator: str, sub: str, sup: str, content: str) -> str:
     """兼容版求和/积分：文本算子 + 上下标（替代 <m:nary>）。
 
     适用场景：目标环境对 <m:nary> 渲染不佳（算子字符丢失、只剩上下标）时使用。
-    例：Σ_{j=1}^{N_a} → msub_sup(mtext("Σ"), mtext("j=1"), mtext("N_a")) + content
+
+    契约（与 mnary 不同）：参数 ``sub`` / ``sup`` / ``content`` 必须是**已构造好的
+    OMML XML 字符串**（由 mtext() / msub() / msub_sup() 等生成），函数内**不再二次
+    mtext 包裹**。若误传纯文本字符串，会在函数外被 mtext 二次包裹，导致内部 ``<m:t>``
+    被 esc 转义、Word 把公式渲染成原始 XML 字符串。
+
+    例：Σ_{j=1}^{N_a} → mnary_safe("Σ", mtext("j=1"), mtext("N_a"), content)
+        → msub_sup(mtext("Σ"), mtext("j=1"), mtext("N_a")) + content
     """
-    return msub_sup(mtext(operator), mtext(sub), mtext(sup)) + content
+    return msub_sup(mtext(operator), sub, sup) + content
 
 
 def mhat(var: str) -> str:
@@ -191,7 +202,7 @@ def I_chr() -> str:
     注意：OMML 的 m:rPr 中**没有** <m:b> 元素——加粗必须用
     <m:sty m:val="b"/>（<m:b> 在部分 Word/WPS 中会导致该数学 run 渲染中断）。
     """
-    return (f'<m:r><m:rPr><m:sty m:val="b"/></m:rPr>{MATH_FONT}'
+    return (f'<m:r><m:rPr><m:sty m:val="b"/>{MATH_FONT}</m:rPr>'
             '<m:t xml:space="preserve">I</m:t></m:r>')
 
 

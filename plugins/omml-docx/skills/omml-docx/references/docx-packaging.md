@@ -103,7 +103,7 @@ with zipfile.ZipFile('out.docx', 'w', zipfile.ZIP_DEFLATED) as zf:
 PY
 
 # 验证
-python scripts/validate_omml.py out.docx     # 结构 15 项
+python scripts/validate_omml.py out.docx     # 结构 17 项
 # 打开确认（Word/WPS/LibreOffice）
 ```
 

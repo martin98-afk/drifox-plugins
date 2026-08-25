@@ -53,7 +53,7 @@ omml-docx/
         ├── scripts/
         │   ├── omml_utils.py      ← OMML 辅助函数库
         │   ├── demo_build_docx.py ← 示例生成脚本
-        │   └── validate_omml.py   ← 结构验证（15 项）
+        │   └── validate_omml.py   ← 结构验证（17 项）
         └── references/
             ├── omml-elements.md   ← OMML 元素参考
             └── docx-packaging.md  ← docx 打包流水线
