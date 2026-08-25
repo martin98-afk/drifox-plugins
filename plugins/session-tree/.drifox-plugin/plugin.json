@@ -1,0 +1,24 @@
+{
+    "name": "session-tree",
+    "description": "会话树 — 左侧停靠面板，按时间分组展示当前项目的会话列表（类 Codex 桌面版）",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "0.1.0",
+    "author": {
+        "name": "Martin"
+    },
+    "homepage": "https://github.com/martin98-afk/DriFox",
+    "license": "MIT",
+    "type": "user",
+    "keywords": [
+        "session",
+        "history",
+        "sidebar",
+        "conversation"
+    ],
+    "components": {
+        "ui": true
+    }
+}
