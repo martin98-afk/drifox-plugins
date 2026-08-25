@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787677423.973004,
+  "fetched_at": 1787680349.9334486,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -80,7 +80,7 @@
     "session-tree": 1,
     "skill-creator": 2,
     "slack-gif-creator": 1,
-    "snake": 2,
+    "snake": 3,
     "ssh-toolkit": 8,
     "superclaude": 2,
     "superpowers": 3,
