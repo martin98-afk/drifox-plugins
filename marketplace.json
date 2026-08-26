@@ -1835,7 +1835,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "theme",
                 "dark",
@@ -2028,7 +2028,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 7,
+            "downloads": 8,
             "keywords": [
                 "omml",
                 "docx",
@@ -2113,6 +2113,7 @@
                 "gateways": false,
                 "engines": false
             },
+            "downloads": 1,
             "keywords": [
                 "openrouter",
                 "evolved"
