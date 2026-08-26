@@ -1,0 +1,36 @@
+{
+    "name": "openrouter-provider",
+    "description": "OpenRouter 服务商接入插件：声明图标/API URL/模型列表/models.dev 映射/余额查询，走 OpenAI 兼容协议",
+    "version": "0.1.0",
+    "author": {
+        "name": "self-evolver"
+    },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "openrouter",
+        "evolved"
+    ],
+    "components": {
+        "tools": false,
+        "commands": false,
+        "agents": false,
+        "skills": false,
+        "hooks": false,
+        "mcp": false,
+        "lsp": false,
+        "themes": false,
+        "ui": false,
+        "providers": true,
+        "team_templates": false,
+        "model_adapters": false,
+        "loop_policies": false,
+        "storages": false,
+        "serializers": false,
+        "gateways": false,
+        "engines": false
+    }
+}
