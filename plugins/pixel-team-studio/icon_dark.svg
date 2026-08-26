@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <!-- 像素小人：深色主题版（亮色描边） -->
+  <!-- 皇冠（leader 金） -->
+  <rect x="22" y="4" width="4" height="4" fill="#FFD700"/>
+  <rect x="30" y="4" width="4" height="4" fill="#FFD700"/>
+  <rect x="38" y="4" width="4" height="4" fill="#FFD700"/>
+  <rect x="18" y="8" width="28" height="6" fill="#FFD700"/>
+  <!-- 脸 -->
+  <rect x="20" y="14" width="24" height="10" fill="#F1C27D"/>
+  <rect x="24" y="18" width="4" height="4" fill="#3B2F2F"/>
+  <rect x="36" y="18" width="4" height="4" fill="#3B2F2F"/>
+  <!-- 身体（紫） -->
+  <rect x="16" y="26" width="32" height="10" fill="#8B5CF6"/>
+  <rect x="16" y="30" width="32" height="2" fill="#6D3FE0"/>
+  <!-- 腿 -->
+  <rect x="20" y="38" width="8" height="10" fill="#8B5CF6"/>
+  <rect x="36" y="38" width="8" height="10" fill="#8B5CF6"/>
+  <rect x="18" y="48" width="12" height="4" fill="#6D3FE0"/>
+  <rect x="34" y="48" width="12" height="4" fill="#6D3FE0"/>
+  <!-- 脚 -->
+  <rect x="16" y="52" width="14" height="6" fill="#5B21B6"/>
+  <rect x="34" y="52" width="14" height="6" fill="#5B21B6"/>
+</svg>
