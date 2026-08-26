@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787760598.9882197,
+  "fetched_at": 1787767851.8718095,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -9,7 +9,7 @@
     "autoloop": 6,
     "beautiful-article-skills": 3,
     "breakout": 3,
-    "browser": 29,
+    "browser": 30,
     "calendar": 14,
     "canvas-design": 1,
     "caveman": 4,
@@ -21,7 +21,6 @@
     "context-stats": 15,
     "context-usage-stats": 0,
     "context7": 4,
-    "cron-chat": 1,
     "desktop-automation": 13,
     "doc-coauthoring": 1,
     "dsh-router": 1,
@@ -69,6 +68,7 @@
     "omml-docx": 8,
     "openai": 2,
     "openrouter-provider": 2,
+    "pixel-team-studio": 0,
     "playground": 3,
     "ponytail": 9,
     "project-dashboard": 17,
