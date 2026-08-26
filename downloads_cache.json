@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787704889.5784485,
+  "fetched_at": 1787710768.8942673,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -58,7 +58,7 @@
     "laputa-fog": 6,
     "mcp-builder": 1,
     "memory-match": 1,
-    "midnight-aurora": 2,
+    "midnight-aurora": 3,
     "minesweeper": 4,
     "minimax-h3": 5,
     "nuwa-skill": 8,
