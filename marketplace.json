@@ -2778,7 +2778,7 @@
         {
             "name": "taskboard",
             "description": "任务看板对话引擎 — todo/inprogress/review/done 四列流水线，每列绑定专属智能体并行处理任务，智能体自主决定任务去留",
-            "version": "0.2.0",
+            "version": "0.3.0",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
