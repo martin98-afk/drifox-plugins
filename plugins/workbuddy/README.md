@@ -86,6 +86,7 @@ python tools/validate_plugins.py plugins/workbuddy
 
 ## 版本
 
+1.2.0 — 内核级还原：解包 WorkBuddy app.asar 对照原版提示词逐模块校对，补齐缺失的沟通风格（3.1）与主动可视化（6.2，Visualizer 适配为 ECharts/HTML 载体 + 主题设计规范 + 模型复杂度门控），记忆系统补检索选源策略与角色边界声明。
 1.1.0 — 还原 WorkBuddy 体验：Stop 钩子记忆更新提醒（PostToolUse 写入检测 + completed 续命一轮）+ wb_memory 记忆读写工具 + 产物面板重构为 Tab 式（头部标签页 + 整区内容预览，增量同步不闪烁）+ 自动弹出链路加固（_state key 规范化、/artifacts 命令修复、provider 空缺 cwd 兜底）。
 1.0.1 — 修复：plan 模式阻断时效（tool_name PascalCase 归一化）+ UI 产物面板加载（FluentIcon 非法枚举）+ _state plan 辅助函数。
 1.0.0 — 初版：BuildSystemPrompt 注入 + present_files 工具。
