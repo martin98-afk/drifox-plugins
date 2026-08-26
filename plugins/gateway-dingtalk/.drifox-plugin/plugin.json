@@ -37,6 +37,13 @@
                 "type": "password",
                 "default": "",
                 "placeholder": "钉钉应用 AppSecret"
+            },
+            {
+                "key": "create_bot",
+                "label": "创建机器人",
+                "type": "link",
+                "url": "https://open-dev.dingtalk.com/fe/app",
+                "placeholder": "前往钉钉开放平台创建"
             }
         ]
     }

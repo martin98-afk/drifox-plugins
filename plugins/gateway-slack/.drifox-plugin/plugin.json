@@ -37,6 +37,13 @@
                 "type": "password",
                 "default": "",
                 "placeholder": "Slack App Token (xapp-)"
+            },
+            {
+                "key": "create_bot",
+                "label": "创建应用",
+                "type": "link",
+                "url": "https://api.slack.com/apps",
+                "placeholder": "前往 Slack API 创建"
             }
         ]
     }

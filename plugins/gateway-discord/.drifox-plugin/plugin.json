@@ -37,6 +37,13 @@
                 "type": "bool",
                 "default": true,
                 "description": "频道中需要 @机器人 才回复（需开启 Message Content Intent）"
+            },
+            {
+                "key": "create_bot",
+                "label": "创建机器人",
+                "type": "link",
+                "url": "https://discord.com/developers/applications",
+                "placeholder": "前往 Discord 开发者门户创建"
             }
         ]
     }
