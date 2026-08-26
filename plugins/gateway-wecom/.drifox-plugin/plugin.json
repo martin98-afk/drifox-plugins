@@ -44,6 +44,13 @@
                 "type": "text",
                 "default": "wss://openws.work.weixin.qq.com",
                 "placeholder": "wss://openws.work.weixin.qq.com"
+            },
+            {
+                "key": "create_bot",
+                "label": "创建机器人",
+                "type": "link",
+                "url": "https://work.weixin.qq.com/",
+                "placeholder": "前往企业微信管理后台创建"
             }
         ]
     }

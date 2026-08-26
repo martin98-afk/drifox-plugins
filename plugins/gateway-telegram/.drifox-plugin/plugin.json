@@ -37,6 +37,13 @@
                 "type": "bool",
                 "default": true,
                 "description": "群聊中需要 @机器人 才回复"
+            },
+            {
+                "key": "create_bot",
+                "label": "创建机器人",
+                "type": "link",
+                "url": "https://t.me/BotFather",
+                "placeholder": "前往 Telegram 找 @BotFather 创建"
             }
         ]
     }

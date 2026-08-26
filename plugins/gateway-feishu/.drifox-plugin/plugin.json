@@ -37,6 +37,13 @@
                 "type": "password",
                 "default": "",
                 "placeholder": "飞书开放平台 App Secret"
+            },
+            {
+                "key": "create_bot",
+                "label": "创建应用",
+                "type": "link",
+                "url": "https://open.feishu.cn/app",
+                "placeholder": "前往飞书开放平台创建"
             }
         ]
     }
