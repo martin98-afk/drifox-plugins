@@ -20,28 +20,13 @@ _TOOLS_DIR = str(Path(__file__).resolve().parent)
 if _TOOLS_DIR not in sys.path:
     sys.path.insert(0, _TOOLS_DIR)
 
-# 注入插件根以导入 _state
-_PLUGIN_ROOT = str(Path(__file__).resolve().parent.parent)
-if _PLUGIN_ROOT not in sys.path:
-    sys.path.insert(0, _PLUGIN_ROOT)
-
 from app.tools.registry import make_summarize_from_preview  # noqa: E402
 from app.tools.result import ToolResult  # noqa: E402
-# 通过绝对文件路径显式加载 _state，避免与 sys.modules 中已缓存的同名模块
-# （如 app 包注册的 _state）冲突——裸名 `import _state` 会解析到错误的模块，
-# 缺少 plan_set/plan_clear，导致 wb_plan enter/exit 报 AttributeError。
-import importlib.util as _ilu
 
-_state_spec = _ilu.spec_from_file_location(
-    "workbuddy._state",
-    str(Path(__file__).resolve().parent.parent / "_state.py"),
-)
-assert _state_spec is not None and _state_spec.loader is not None, "workbuddy._state 加载失败"
-_state = _ilu.module_from_spec(_state_spec)
-# 必须先把模块注册进 sys.modules，否则 _state.py 内 _plan_state() 用
-# sys.modules[__name__] 访问自身时会抛 KeyError: 'workbuddy._state'（enter/exit 报 Execution error）
-sys.modules["workbuddy._state"] = _state
-_state_spec.loader.exec_module(_state)
+# 注：计划状态以磁盘标记文件（.wb_plan_active）为唯一真源——
+# PreToolUse hook 与 status 查询都读文件；不再引入 _state 内存镜像。
+# （PluginToolLoader 会拒绝任何写 sys.modules 的工具文件，旧版
+#   importlib 手动加载 _state 的方式触发该检查导致整个工具被拒载。）
 
 GROUP = "工作流控制"
 PLAN_DIR_PARTS = (".drifox", "workbuddy-mem")
@@ -71,7 +56,6 @@ def _enter(workdir: Path, content: str) -> ToolResult:
         json.dumps({"entered_at": ts, "plan_file": str(plan_path)}, ensure_ascii=False),
         encoding="utf-8",
     )
-    _state.plan_set(str(workdir), {"entered_at": ts, "plan_file": str(plan_path)})
 
     blocked = "write / edit / multi_edit / bash / bg_start / automation_update / EnterPlanMode"
     return ToolResult(
@@ -98,7 +82,6 @@ def _exit(workdir: Path) -> ToolResult:
         flag_path.unlink()
     if plan_path.exists():
         plan_path.unlink()
-    _state.plan_clear(str(workdir))
     return ToolResult(
         True,
         content=(
