@@ -1,7 +1,11 @@
 {
     "name": "openrouter-provider",
     "description": "OpenRouter 服务商接入插件：声明图标/API URL/模型列表/models.dev 映射/余额查询，走 OpenAI 兼容协议",
-    "version": "0.1.0",
+    "version": "0.1.1",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
     "author": {
         "name": "self-evolver"
     },
