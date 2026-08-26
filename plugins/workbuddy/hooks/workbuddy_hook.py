@@ -19,7 +19,6 @@ import argparse
 import json
 import logging
 import sys
-import threading
 import time
 from datetime import date, timedelta
 from pathlib import Path
@@ -52,15 +51,15 @@ _PLAN_MODE_BLOCKED_TOOLS = frozenset(
 PLAN_FLAG_FILENAME = ".wb_plan_active"
 
 # ── Stop hook 记忆提醒：本轮写入检测 ──────────────────────────
-# PostToolUse 记录写入类工具调用（进程内共享，同会话后续 Stop 读取）；
-# Stop（reason=completed）时若本轮有过写入 → 注入记忆更新提醒（续命一轮），
-# 模型自行判断是否真的需要写记忆；无可记录内容时直接安静收尾。
+# PostToolUse 检测到写入类工具 → 写磁盘标记文件；Stop（reason=completed）
+# 读取并判断是否注入提醒。
+# ⚠️ 必须用磁盘文件而非模块级变量：HookManager 对每个 (config_file, function)
+# 缓存键独立 exec_module，同一模块的不同 hook 函数各自持有独立的模块实例，
+# 模块级变量跨 hook 不共享（v1.3.0 记忆提醒永不触发的根因）。
 _WRITE_TOOLS_RAW = {"write", "edit", "multi_edit", "bash", "present_files", "wb_memory"}
 _WRITE_TOOLS = frozenset(p.replace("_", "").lower() for p in _WRITE_TOOLS_RAW)
-_RECENT_WRITE_WINDOW_SEC = 6 * 3600  # 距今 6 小时内的写入才算"本轮相关"，防止陈旧记录误触发
-# workdir -> 最近一次写入类工具调用的 time.time()
-_RECENT_WRITES: dict[str, float] = {}
-_RECENT_WRITES_LOCK = threading.Lock()
+_RECENT_WRITE_WINDOW_SEC = 6 * 3600  # 距今 6 小时内的写入才算"本轮相关"，防陈旧误触发
+_LAST_WRITE_FILENAME = ".last_write"
 
 
 def _normalize_tool_name(name: str) -> str:
@@ -297,15 +296,26 @@ def hook_pre_tool_use(event: str, context: dict):
 # ============================================================
 
 
-def handle_post_tool_use(context: dict) -> None:
-    """记录写入类工具调用时间戳（供 Stop hook 判断本轮是否有实质产出）"""
+def _last_write_path(workdir: Path) -> Path:
+    """写入时间标记文件路径（与工作区记忆同目录）"""
+    return workdir.joinpath(*WORKSPACE_MEMORY_DIR_PARTS) / _LAST_WRITE_FILENAME
+
+
+def handle_post_tool_use(context: dict) -> str:
+    """记录写入类工具调用时间戳（磁盘标记，供 Stop hook 跨模块实例读取）"""
     workdir = _resolve_workdir_from_context(context or {})
     if workdir is None:
-        return
+        return ""
     tool_name = _normalize_tool_name(context.get("tool_name") or "")
-    if tool_name in _WRITE_TOOLS:
-        with _RECENT_WRITES_LOCK:
-            _RECENT_WRITES[str(workdir)] = time.time()
+    if tool_name not in _WRITE_TOOLS:
+        return ""
+    try:
+        p = _last_write_path(workdir)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(str(time.time()), encoding="utf-8")
+    except OSError as exc:
+        log.warning("[workbuddy] 写入标记失败: %s", exc)
+    return ""
 
 
 def handle_stop(context: dict) -> str:
@@ -321,14 +331,15 @@ def handle_stop(context: dict) -> str:
     workdir = _resolve_workdir_from_context(context or {})
     if workdir is None:
         return ""
-    key = str(workdir)
-    last_write = _RECENT_WRITES.get(key)
-    if not last_write:
-        return ""  # 本轮无写入 → 不打扰
+    marker = _last_write_path(workdir)
+    if not marker.exists():
+        return ""  # 无写入记录 → 不打扰
+    try:
+        last_write = float(marker.read_text(encoding="utf-8").strip() or 0)
+    except (OSError, ValueError):
+        return ""
     now = time.time()
-    stale = (now - last_write) > _RECENT_WRITE_WINDOW_SEC
-    if stale:
-        _RECENT_WRITES.pop(key, None)
+    if (now - last_write) > _RECENT_WRITE_WINDOW_SEC:
         return ""  # 陈旧记录（跨会话残留）→ 不打扰
     root = str(workdir)
     mem_dir = root.replace("\\", "/") + "/.drifox/workbuddy-mem"
@@ -348,12 +359,13 @@ def handle_stop(context: dict) -> str:
 
 
 def hook_post_tool_use(event: str, context: dict):
-    """PostToolUse 钩子入口：记录写入类调用（无输出、不注入消息）"""
+    """PostToolUse 钩子入口：记录写入类调用（hooks.json 已显式
+    add_output_to_context=false，返回值不会被注入上下文）"""
     try:
-        handle_post_tool_use(context or {})
+        return handle_post_tool_use(context or {})
     except Exception:
         log.exception("PostToolUse hook failed")
-    return None
+    return ""
 
 
 def hook_stop(event: str, context: dict):
