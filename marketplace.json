@@ -639,43 +639,6 @@
             }
         },
         {
-            "name": "cron-chat",
-            "description": "CronChat 定时任务对话引擎 — 定时触发的自动化对话任务：周期/按间隔/单次三种调度，到点自动以提示词驱动带工具的自主执行，结果存运行记录并通知",
-            "version": "0.1.0",
-            "author": "DriFox Contributors",
-            "license": "MIT",
-            "categories": [
-                "ui"
-            ],
-            "source": {
-                "type": "git-subdir",
-                "url": "https://github.com/martin98-afk/drifox-plugins",
-                "path": "plugins/cron-chat",
-                "ref": "main"
-            },
-            "components": {
-                "ui": true
-            },
-            "downloads": 1,
-            "keywords": [
-                "cron",
-                "scheduler",
-                "automation",
-                "定时任务",
-                "自动化",
-                "对话引擎",
-                "cron-chat"
-            ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
-            "homepage": "https://github.com/martin98-afk/DriFox",
-            "icon": {
-                "light": "icons/定时_light.svg",
-                "dark": "icons/定时.svg"
-            }
-        },
-        {
             "name": "desktop-automation",
             "description": "桌面自动化工具（mouse / keyboard / screenshot）—— 通过 pynput + mss 控制桌面，从 DriFox 主程序迁出（工具插件化）",
             "version": "1.0.0",
@@ -1142,6 +1105,7 @@
             "components": {
                 "gateways": true
             },
+            "downloads": 1,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -1164,7 +1128,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 14,
+            "downloads": 15,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -1187,6 +1151,7 @@
             "components": {
                 "gateways": true
             },
+            "downloads": 1,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -1253,6 +1218,7 @@
             "components": {
                 "gateways": true
             },
+            "downloads": 1,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -2150,7 +2116,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "openrouter",
                 "evolved"
