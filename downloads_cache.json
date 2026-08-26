@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787726455.534846,
+  "fetched_at": 1787729892.1872044,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -66,6 +66,7 @@
     "ollama": 2,
     "omml-docx": 7,
     "openai": 2,
+    "openrouter-provider": 0,
     "playground": 3,
     "ponytail": 9,
     "project-dashboard": 17,
