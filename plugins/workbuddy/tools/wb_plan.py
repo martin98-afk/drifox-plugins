@@ -67,7 +67,7 @@ def _enter(workdir: Path, content: str) -> ToolResult:
             f"- 阻断工具：**{blocked}**\n"
             f"- 允许工具：wb_plan（自身，可退出）、read/list/grep/glob/webfetch/websearch/question/skill/\n"
             f"  subagent_*/team_*/todowrite/todoread/list_skills/mcp_list_servers/\n"
-            f"  wb_read_me/wb_tool_search/wb_present_files 等只读/调度类\n\n"
+            f"  wb_tool_search/wb_present_files 等只读/调度类\n\n"
             f"调用 `wb_plan mode=exit` 退出并恢复全部工具。"
         ),
     )

@@ -86,6 +86,7 @@ python tools/validate_plugins.py plugins/workbuddy
 
 ## 版本
 
+1.4.1 — 移除 wb_read_me 工具（read 工具已覆盖其能力，使用率低）。
 1.4.0 — 迁移 WorkBuddy 内置腾讯技能 4 个：tencent-local-office-edit（本地 Office/WPS 实时编辑，经 editor_sdk MCP）、tencent-docs-routing（本地文档任务路由）、geo-map-compliance-guard（中国地图合规红线）、wb-finance-skill（金融场景总入口 + 60+ 分析框架 references）。未迁移：buddy-multimodal-generation / cloudstudio-deploy / ardot-* 等依赖 WorkBuddy 专有工具链的技能。
 1.3.1 — Stop 记忆提醒修复：写入检测改磁盘标记文件通信（HookManager 按 function 缓存键独立 exec_module，模块级状态跨 hook 不共享导致提醒永不触发）；PostToolUse 显式 add_output_to_context=false。
 1.3.0 — 修复 wb_plan 拒载（sys.modules 写入触发 PluginToolLoader AST 检查）+ _PopupBridge 后台线程构造 moveToThread 加固 + UI 质感重做（胶囊 tab/图标按钮/居中空态/markdown 排版增强）。
