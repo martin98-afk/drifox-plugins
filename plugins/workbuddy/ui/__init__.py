@@ -38,6 +38,18 @@ class _PopupBridge(QObject):
         super().__init__()
         self._registry = registry
         self._requested.connect(self._do_popup, Qt.QueuedConnection)
+        # 线程归属加固：插件热重载链路可能在后台线程执行 register_ui，
+        # 若 bridge 在非主线程构造，其 QueuedConnection 槽会投递到无事件
+        # 循环的后台线程 → 永不执行（自动弹窗静默失败的根因之一）。
+        # 构造后迁移到主线程，保证槽在主线程事件循环中执行。
+        try:
+            from PyQt5.QtWidgets import QApplication
+
+            app = QApplication.instance()
+            if app is not None and self.thread() is not app.thread():
+                self.moveToThread(app.thread())
+        except Exception:
+            pass
 
     @pyqtSlot()
     def _do_popup(self):

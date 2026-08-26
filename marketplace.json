@@ -3185,7 +3185,7 @@
         {
             "name": "workbuddy",
             "description": "把 WorkBuddy「专家全能模式」的问答体验完整搬进 DriFox：BuildSystemPrompt 钩子注入专家提示词；present_files 产物呈现 + Tab 式产物面板；Stop 钩子记忆更新提醒 + wb_memory 记忆读写工具，还原 WorkBuddy 的记忆与产物体验。",
-            "version": "1.2.0",
+            "version": "1.3.0",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [

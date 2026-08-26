@@ -12,12 +12,7 @@ def _ctx_colors(ctx: dict) -> dict:
 
 
 def theme_colors(ctx: dict = None) -> dict:
-    """从 UI 上下文解析主题色（真实 token + 深浅 fallback）。
-
-    Args:
-        ctx: registry 注入的上下文 dict，含 colors / is_dark / font_family /
-             font_size 等字段；为空时用 qfluentwidgets 当前主题兜底。
-    """
+    """从 UI 上下文解析主题色（真实 token + 深浅 fallback）。"""
     try:
         from qfluentwidgets import isDarkTheme
 
@@ -48,12 +43,13 @@ def theme_colors(ctx: dict = None) -> dict:
         or ("rgba(22,30,45,0.96)" if is_dark else "#ffffff"),
         "raised": colors.get("content_bg") or ("#1d2533" if is_dark else "#f5f5f5"),
         "border": colors.get("border")
-        or ("rgba(128,128,128,0.25)" if is_dark else "rgba(0,0,0,0.12)"),
+        or ("rgba(128,128,128,0.25)" if is_dark else "rgba(0,0,0,0.10)"),
         "accent": colors.get("accent") or ("#66c6ff" if is_dark else "#0078d4"),
         "hover": colors.get("hover_bg")
-        or ("rgba(255,255,255,0.10)" if is_dark else "rgba(0,0,0,0.08)"),
+        or ("rgba(255,255,255,0.10)" if is_dark else "rgba(0,0,0,0.06)"),
         "selected": colors.get("selected_bg")
-        or ("rgba(102,198,255,0.32)" if is_dark else "rgba(0,120,215,0.22)"),
+        or ("rgba(102,198,255,0.32)" if is_dark else "rgba(0,120,215,0.18)"),
+        "code_bg": "#111722" if is_dark else "#f4f6f9",
     }
 
 
@@ -72,59 +68,63 @@ def make_style(color=None, ff="", fs=0, extra="") -> str:
 
 
 def panel_style(c: dict) -> str:
-    """卡片整体背景 / 圆角样式。"""
+    """面板整体：大圆角、无边框感（弱边框）、统一背景。
+
+    注意：QSS 类型选择器不认 Python 类名（ArtifactPanelCard），必须用
+    objectName 选择器（_build_ui 已 setObjectName("wbRoot")），否则整条
+    规则被 QSS 解析器静默丢弃（表现为背景失效 + 白底白字）。
+    """
     return (
-        f"QFrame {{ background: {c['card']}; border: 1px solid {c['border']};"
-        f" border-radius: 10px; }}"
+        f"QFrame#wbRoot {{ background: {c['card']};"
+        f" border: 1px solid {c['border']}; border-radius: 12px; }}"
+        f"QFrame#wbRoot QLabel {{ background: transparent; border: none; }}"
     )
 
 
-def list_style(c: dict, ff="", fs=0) -> str:
-    """左侧 artifact 列表样式（圆角 + hover/selected 主题态）。"""
-    font = f"font-family: '{ff}'; font-size: {fs}px;" if ff else ""
+def icon_btn_style(c: dict, ff="", fs=0) -> str:
+    """头部图标按钮：无边框透明底，hover 浮现圆角底色。"""
     return (
-        f"QListWidget {{ background: {c['raised']}; border: 1px solid {c['border']};"
-        f" border-radius: 8px; color: {c['text']}; {font} }}"
-        f"QListWidget::item {{ padding: 8px 10px; border-radius: 4px; {font} }}"
-        f"QListWidget::item:hover {{ background: {c['hover']}; }}"
-        f"QListWidget::item:selected {{ background: {c['selected']}; color: {c['text']}; }}"
-    )
-
-
-def viewer_style(c: dict, ff="", fs=0) -> str:
-    """右侧 viewer（QTextBrowser）样式。"""
-    font = f"font-family: '{ff}'; font-size: {fs}px;" if ff else ""
-    return (
-        f"QTextBrowser {{ background: {c['raised']}; border: 1px solid {c['border']};"
-        f" border-radius: 8px; color: {c['text']}; padding: 10px; {font} }}"
+        "QPushButton { background: transparent; border: none; border-radius: 6px;"
+        f" padding: 5px; color: {c['secondary']};"
+        + (f" font-family: '{ff}'; font-size: {max(fs - 2, 11)}px;" if ff else "")
+        + " }"
+        f"QPushButton:hover {{ background: {c['hover']}; color: {c['text']}; }}"
+        f"QPushButton:pressed {{ background: {c['selected']}; }}"
     )
 
 
 def tab_style(c: dict, ff="", fs=0) -> str:
-    """WorkBuddy 式 QTabWidget 样式：文档模式 tab 条 + 圆角内容区。"""
-    font = f"font-family: '{ff}'; font-size: {fs - 1}px;" if ff else ""
+    """WorkBuddy 式 QTabWidget：pill 选中态 + accent 下划线 + 内容区融合。"""
+    font = f"font-family: '{ff}'; font-size: {max(fs - 1, 12)}px;" if ff else ""
     return (
-        f"QTabWidget::pane {{ border: 1px solid {c['border']}; border-radius: 8px;"
+        # 内容 pane 与 tab 条无缝衔接
+        f"QTabWidget::pane {{ border: 1px solid {c['border']}; border-radius: 10px;"
         f" background: {c['raised']}; top: -1px; }}"
+        f"QTabWidget::tab-bar {{ left: 8px; }}"
         f"QTabBar {{ background: transparent; }}"
         f"QTabBar::tab {{ background: transparent; color: {c['secondary']};"
-        f" padding: 6px 12px; margin-right: 2px; border: 1px solid transparent;"
-        f" border-top-left-radius: 6px; border-top-right-radius: 6px; {font} }}"
+        f" padding: 5px 14px 5px 10px; margin: 3px 2px 3px 0;"
+        f" border-radius: 14px; border: 1px solid transparent; {font} }}"
         f"QTabBar::tab:hover {{ background: {c['hover']}; color: {c['text']}; }}"
-        f"QTabBar::tab:selected {{ background: {c['raised']};"
-        f" border-color: {c['border']}; color: {c['text']}; font-weight: 600; }}"
-        f"QTabBar::close-button {{ subcontrol-position: right;"
-        f" background: transparent; border-radius: 3px; }}"
+        f"QTabBar::tab:selected {{ background: {c['selected']};"
+        f" border-color: {c['accent']}; color: {c['text']}; font-weight: 600; }}"
+        # 不要写 QTabBar::close-button 规则——QSS 一旦出现该选择器，Qt 切换到
+        # stylesheet 渲染模式，代码里 setIcon 的关闭图标会被忽略（×不可见）。
     )
 
 
-def btn_style(c: dict, ff="", fs=0) -> str:
-    """圆角主题按钮样式（替代原生灰按钮）。"""
+def viewer_style(c: dict, ff="", fs=0) -> str:
+    """内容 viewer（QTextBrowser）：融入 pane 背景、无独立边框。"""
     font = f"font-family: '{ff}'; font-size: {fs}px;" if ff else ""
     return (
-        f"QPushButton {{ background: {c['raised']}; border: 1px solid {c['border']};"
-        f" border-radius: 6px; color: {c['text']}; padding: 5px 14px; {font} }}"
-        f"QPushButton:hover {{ background: {c['hover']}; }}"
-        f"QPushButton:pressed {{ background: {c['selected']}; }}"
-        f"QPushButton:disabled {{ color: {c['muted']}; }}"
+        f"QTextBrowser {{ background: transparent; border: none;"
+        f" color: {c['text']}; padding: 16px 20px; {font} }}"
+    )
+
+
+def empty_state_style(c: dict, ff="") -> str:
+    """空态容器样式。"""
+    return (
+        "QWidget#wbEmpty { background: transparent; }"
+        + (f"font-family: '{ff}';" if ff else "")
     )

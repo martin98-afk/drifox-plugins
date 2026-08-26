@@ -22,7 +22,7 @@ _PLUGIN_ROOT = str(Path(__file__).resolve().parent.parent)
 if _PLUGIN_ROOT not in sys.path:
     sys.path.insert(0, _PLUGIN_ROOT)
 
-from PyQt5.QtCore import QUrl, Qt, pyqtSignal, pyqtSlot  # noqa: E402
+from PyQt5.QtCore import QSize, QUrl, Qt, pyqtSignal, pyqtSlot  # noqa: E402
 from PyQt5.QtGui import QDesktopServices, QPixmap  # noqa: E402
 from PyQt5.QtWidgets import (  # noqa: E402
     QFrame,
@@ -42,7 +42,7 @@ from .theme import (  # noqa: E402
     panel_style,
     tab_style,
     viewer_style,
-    btn_style,
+    icon_btn_style,
 )
 
 try:
@@ -86,26 +86,41 @@ def _label_for_type(kind: str) -> str:
     }.get(kind, "📄")
 
 
-def _wrap_html(body: str, is_dark: bool) -> str:
-    """给 markdown 渲染结果加主题化样式包装"""
+def _wrap_html(body: str, is_dark: bool, ff: str = "Microsoft YaHei", fs: int = 14) -> str:
+    """给 markdown 渲染结果加主题化排版包装（标题层级/代码块/表格斑马纹/引用条）。"""
     if is_dark:
-        base = (
-            "body{background:#161e2d;color:rgba(255,255,255,0.90);}"
-            "pre,code{background:#1d2533;color:#e0e0e0;}"
-            "a{color:#66c6ff;} th{background:#1d2533;}"
-        )
+        base = "background:#1d2533;color:#e0e6f0;"
+        text = "rgba(255,255,255,0.90)"
+        sec = "rgba(255,255,255,0.55)"
+        accent = "#66c6ff"
+        row_alt = "rgba(255,255,255,0.03)"
     else:
-        base = "body{background:#ffffff;color:rgba(0,0,0,0.85);} pre,code{background:#f4f4f4;} a{color:#0078d4;}"
+        base = "background:#eef1f6;color:#24292f;"
+        text = "rgba(0,0,0,0.85)"
+        sec = "rgba(0,0,0,0.55)"
+        accent = "#0078d4"
+        row_alt = "rgba(0,0,0,0.02)"
     return (
-        '<html><head><meta charset="utf-8">'
-        f"<style>body{{font-family:-apple-system,'Segoe UI','Microsoft YaHei',sans-serif;"
-        f" line-height:1.65;padding:14px;}} {base} "
-        'pre{padding:10px;border-radius:6px;overflow:auto;} '
-        'code{padding:2px 5px;border-radius:3px;} '
-        'table{border-collapse:collapse;} th,td{border:1px solid rgba(128,128,128,0.35);'
-        ' padding:5px 10px;} blockquote{border-left:3px solid rgba(128,128,128,0.4);'
-        ' margin-left:0;padding-left:12px;color:rgba(128,128,128,0.9);}'
-        '</style></head><body>' + body + "</body></html>"
+        '<html><head><meta charset="utf-8"><style>'
+        f"body{{font-family:'{ff}',-apple-system,'Segoe UI',sans-serif;"
+        f"font-size:{fs}px;line-height:1.7;color:{text};}}"
+        "h1{font-size:1.45em;border-bottom:1px solid rgba(128,128,128,0.25);"
+        "padding-bottom:6px;margin:18px 0 10px;}"
+        f"h2{{font-size:1.25em;margin:16px 0 8px;}} h3{{font-size:1.08em;margin:14px 0 6px;}}"
+        f"h4,h5,h6{{color:{sec};margin:12px 0 4px;}}"
+        f"a{{color:{accent};text-decoration:none;}} a:hover{{text-decoration:underline;}}"
+        f"pre{{{base}padding:12px 14px;border-radius:8px;overflow:auto;line-height:1.5;}}"
+        f"code{{{base}padding:2px 6px;border-radius:4px;font-size:0.9em;}}"
+        "pre code{padding:0;background:none;}"
+        "table{border-collapse:collapse;width:auto;margin:10px 0;}"
+        "th{font-weight:600;text-align:left;}"
+        f"th,td{{border:1px solid rgba(128,128,128,0.28);padding:6px 12px;}}"
+        f"tr:nth-child(even) td{{background:{row_alt};}}"
+        f"blockquote{{border-left:3px solid {accent};margin:10px 0;padding:2px 14px;"
+        f"color:{sec};background:transparent;}}"
+        "hr{border:none;border-top:1px solid rgba(128,128,128,0.22);margin:16px 0;}"
+        "img{max-width:100%;border-radius:8px;}"
+        "</style></head><body>" + body + "</body></html>"
     )
 
 
@@ -138,25 +153,36 @@ class ArtifactPanelCard(QFrame):
     # ── UI 构建 ──────────────────────────────────────────────
 
     def _build_ui(self):
+        self.setObjectName("wbRoot")
         root = QVBoxLayout(self)
-        root.setContentsMargins(10, 8, 10, 10)
-        root.setSpacing(6)
+        root.setContentsMargins(12, 10, 12, 12)
+        root.setSpacing(8)
 
         header = QHBoxLayout()
-        header.setSpacing(8)
+        header.setSpacing(4)
         self._title = QLabel("📦 产物", self)
         header.addWidget(self._title)
         self._summary = QLabel("", self)
         self._summary.setWordWrap(True)
+        header.addSpacing(8)
         header.addWidget(self._summary, 1)
-        self._folder_btn = QPushButton("打开目录", self)
-        self._folder_btn.clicked.connect(self._on_open_folder)
+        from qfluentwidgets import FluentIcon as FIF
+
+        def _icon_btn(icon, tip, cb):
+            b = QPushButton(self)
+            b.setIcon(icon.icon())
+            b.setToolTip(tip)
+            b.setCursor(Qt.PointingHandCursor)
+            b.setFlat(True)
+            b.setFixedSize(30, 30)
+            b.clicked.connect(cb)
+            return b
+
+        self._folder_btn = _icon_btn(FIF.FOLDER, "打开产物目录", self._on_open_folder)
         header.addWidget(self._folder_btn)
-        self._refresh_btn = QPushButton("刷新", self)
-        self._refresh_btn.clicked.connect(self.refresh)
+        self._refresh_btn = _icon_btn(FIF.SYNC, "刷新", self.refresh)
         header.addWidget(self._refresh_btn)
-        self._clear_btn = QPushButton("清空", self)
-        self._clear_btn.clicked.connect(self._on_clear)
+        self._clear_btn = _icon_btn(FIF.DELETE, "清空全部产物", self._on_clear)
         header.addWidget(self._clear_btn)
         root.addLayout(header)
 
@@ -224,18 +250,40 @@ class ArtifactPanelCard(QFrame):
             self._show_empty()
 
     def _show_empty(self):
-        empty = QTextBrowser(self)
-        empty.setFrameShape(QFrame.NoFrame)
-        c = self._current_theme()
-        empty.setStyleSheet(viewer_style(c, c["ff"], c["fs"]))
-        empty.setPlainText(
-            "暂无产物\n\n"
-            "在对话中让助手完成任务后，它会调用 present_files 工具把成果文件呈现在这里；"
-            "每个成果以标签页打开，下方即为完整内容。"
+        # 居中空态：大图标 + 主文案 + 引导说明
+        empty = QWidget(self)
+        empty.setObjectName("wbEmpty")
+        v = QVBoxLayout(empty)
+        v.setAlignment(Qt.AlignCenter)
+        icon_lbl = QLabel("🗂", empty)
+        icon_lbl.setAlignment(Qt.AlignCenter)
+        title = QLabel("还没有产物", empty)
+        title.setAlignment(Qt.AlignCenter)
+        desc = QLabel(
+            "让助手完成一个任务，它会把成果文件呈现在这里。\n"
+            "每个成果以标签页打开，下方即为完整内容。",
+            empty,
         )
+        desc.setAlignment(Qt.AlignCenter)
+        v.addWidget(icon_lbl)
+        v.addSpacing(10)
+        v.addWidget(title)
+        v.addSpacing(6)
+        v.addWidget(desc)
         self._tabs.clear()
         self._open_tabs.clear()
         self._tabs.addTab(empty, "空")
+        self._style_tab_close_button(0)
+        self._tabs.tabBar().setTabToolTip(0, "")
+        # 空态样式随主题刷一次
+        c = self._current_theme()
+        icon_lbl.setStyleSheet("font-size: 44px; background: transparent;")
+        title.setStyleSheet(
+            make_style(c["text"], c["ff"], c["fs"] + 4) + "font-weight: 600; background: transparent;"
+        )
+        desc.setStyleSheet(
+            make_style(c["secondary"], c["ff"], max(c["fs"] - 1, 12)) + "background: transparent;"
+        )
 
     def _add_tab(self, item: dict) -> int:
         holder = QWidget(self)
@@ -245,9 +293,22 @@ class ArtifactPanelCard(QFrame):
         v.addWidget(viewer)
         self._load_content_into(viewer, holder, item)
         name = Path(item.get("path", "?")).name or item.get("path", "?")
-        return self._tabs.addTab(
+        idx = self._tabs.addTab(
             holder, f"{_label_for_type(item.get('type', 'file'))} {name}"
         )
+        self._style_tab_close_button(idx)
+        return idx
+
+    def _style_tab_close_button(self, index: int):
+        """给 tab 关闭按钮显式设置图标（Qt 默认图标在深色主题下不可见）。"""
+        from PyQt5.QtWidgets import QStyle, QTabBar
+
+        bar = self._tabs.tabBar()
+        btn = bar.tabButton(index, QTabBar.RightSide)
+        if btn is not None:
+            btn.setIcon(self.style().standardIcon(QStyle.SP_DialogCloseButton))
+            btn.setIconSize(QSize(10, 10))
+            btn.setToolTip("关闭")
 
     # ── viewer 工厂与渲染 ─────────────────────────────────────
 
@@ -292,7 +353,8 @@ class ArtifactPanelCard(QFrame):
             else:
                 c = self._current_theme()
                 viewer.setHtml(
-                    f"<body style=\"font-family:'{c['ff']}';font-size:{c['fs']}px;\">{html}</body>"
+                    f"<body style=\"font-family:'{c['ff']}';font-size:{c['fs']}px;"
+                    f"color:{c['text']};padding:16px 20px;line-height:1.6;\">{html}</body>"
                 )
 
         if not full.exists():
@@ -324,7 +386,7 @@ class ArtifactPanelCard(QFrame):
                 if _MARKDOWN_OK:
                     html = _md.markdown(text, extensions=["fenced_code", "tables"])
                     c = self._current_theme()
-                    viewer.setHtml(_wrap_html(html, c["is_dark"]))
+                    viewer.setHtml(_wrap_html(html, c["is_dark"], c["ff"], c["fs"]))
                 else:
                     viewer.setPlainText(text)
                 return
@@ -447,13 +509,14 @@ class ArtifactPanelCard(QFrame):
         ff, fs = c["ff"], c["fs"]
         self.setStyleSheet(panel_style(c))
         self._title.setStyleSheet(
-            make_style(c["text"], ff, max(fs - 1, 12)) + "font-weight:600;"
+            make_style(c["text"], ff, max(fs - 1, 12)) + "font-weight:600; background: transparent; border: none;"
         )
-        self._summary.setStyleSheet(make_style(c["secondary"], ff, 11))
+        self._summary.setStyleSheet(
+            make_style(c["secondary"], ff, 11) + "background: transparent; border: none;"
+        )
         self._tabs.setStyleSheet(tab_style(c, ff, fs))
-        self._folder_btn.setStyleSheet(btn_style(c, ff, fs))
-        self._refresh_btn.setStyleSheet(btn_style(c, ff, fs))
-        self._clear_btn.setStyleSheet(btn_style(c, ff, fs))
+        for b in (self._folder_btn, self._refresh_btn, self._clear_btn):
+            b.setStyleSheet(icon_btn_style(c, ff, fs))
 
     # ── /artifacts 命令 handler ──────────────────────────────
 
