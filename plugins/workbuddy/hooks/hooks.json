@@ -26,6 +26,33 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "python",
+            "function": ".workbuddy_hook:hook_post_tool_use",
+            "timeout": 5,
+            "enabled": true,
+            "id": "3b3a7d2e-7c1a-4f5b-9a8d-2e1f6c4b5a03"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "completed",
+        "hooks": [
+          {
+            "type": "python",
+            "function": ".workbuddy_hook:hook_stop",
+            "timeout": 5,
+            "enabled": true,
+            "id": "3b3a7d2e-7c1a-4f5b-9a8d-2e1f6c4b5a04"
+          }
+        ]
+      }
     ]
   }
 }

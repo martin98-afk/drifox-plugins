@@ -12,9 +12,23 @@ Plan mode 状态：wb_plan 写入，hook 读取。用模块属性持久化（避
 from threading import RLock
 from typing import Callable
 
+import os
+
 _LOCK = RLock()
 _STORE: dict[str, list[dict]] = {}  # workdir -> artifacts list
 _LISTENERS: list[Callable[[str, dict], None]] = []  # (workdir, entry) -> None
+
+
+def _norm(workdir: str) -> str:
+    """workdir key 规范化：绝对路径 + 分隔符/大小写归一（Windows 不区分大小写，
+    但工具写入端与 UI 读取端的原始字符串可能存在盘符大小写/正反斜杠差异，
+    不归一会导致面板偶尔读不到数据（表现为"自动弹出但空白"）。"""
+    if not workdir:
+        return ""
+    try:
+        return os.path.normcase(os.path.abspath(str(workdir)))
+    except OSError:
+        return str(workdir)
 
 
 def add(workdir: str, entry: dict) -> None:
@@ -22,7 +36,7 @@ def add(workdir: str, entry: dict) -> None:
     if not workdir:
         return
     with _LOCK:
-        _STORE.setdefault(workdir, []).append(entry)
+        _STORE.setdefault(_norm(workdir), []).append(entry)
     notify(workdir, entry)
 
 
@@ -31,7 +45,7 @@ def get_all(workdir: str) -> list[dict]:
     if not workdir:
         return []
     with _LOCK:
-        return list(_STORE.get(workdir, []))
+        return list(_STORE.get(_norm(workdir), []))
 
 
 def clear(workdir: str) -> None:
@@ -39,7 +53,7 @@ def clear(workdir: str) -> None:
     if not workdir:
         return
     with _LOCK:
-        _STORE.pop(workdir, None)
+        _STORE.pop(_norm(workdir), None)
 
 
 def last_message(workdir: str) -> str:

@@ -56,7 +56,13 @@ class _PopupBridge(QObject):
         card = ArtifactPanelCard._instance
         if card is not None:
             card.refresh()
+            if not card.isVisible():
+                # registry 路径静默失败（如 host 未就绪）→ 兜底直接显示
+                logger.warning("[workbuddy] toggle 后卡片仍不可见，直接 show 兜底")
+                card.show()
             card.raise_()
+        else:
+            logger.warning("[workbuddy] 弹窗后仍无卡片实例（floating card 注册可能未生效）")
 
 
 def register_ui(registry):
@@ -102,8 +108,14 @@ def register_ui(registry):
     # 创建主线程桥接器，供 state listener 跨线程安全地弹出卡片
     _POPUP_BRIDGE = _PopupBridge(registry)
 
-    # 4) 注册 state 监听者：新 artifact 写入时刷新并弹出已实例化的面板
-    def _on_state_change(workdir: str, _entry: dict) -> None:
+    # 4) 注册 state 监听者：新 artifact 写入时刷新、弹出面板并聚焦对应 tab
+    def _on_state_change(workdir: str, entry: dict) -> None:
+        items = (entry or {}).get("items") or []
+        if items:
+            # 聚焦本次 present 的最后一个产物（refresh 时消费）
+            ArtifactPanelCard.request_focus(
+                items[-1].get("absolute") or items[-1].get("path", "")
+            )
         card = ArtifactPanelCard._instance
         if card is None:
             # 卡片懒加载尚未实例化 → 经主线程桥接器创建并显示

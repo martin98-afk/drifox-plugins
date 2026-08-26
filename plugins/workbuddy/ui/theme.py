@@ -100,6 +100,24 @@ def viewer_style(c: dict, ff="", fs=0) -> str:
     )
 
 
+def tab_style(c: dict, ff="", fs=0) -> str:
+    """WorkBuddy 式 QTabWidget 样式：文档模式 tab 条 + 圆角内容区。"""
+    font = f"font-family: '{ff}'; font-size: {fs - 1}px;" if ff else ""
+    return (
+        f"QTabWidget::pane {{ border: 1px solid {c['border']}; border-radius: 8px;"
+        f" background: {c['raised']}; top: -1px; }}"
+        f"QTabBar {{ background: transparent; }}"
+        f"QTabBar::tab {{ background: transparent; color: {c['secondary']};"
+        f" padding: 6px 12px; margin-right: 2px; border: 1px solid transparent;"
+        f" border-top-left-radius: 6px; border-top-right-radius: 6px; {font} }}"
+        f"QTabBar::tab:hover {{ background: {c['hover']}; color: {c['text']}; }}"
+        f"QTabBar::tab:selected {{ background: {c['raised']};"
+        f" border-color: {c['border']}; color: {c['text']}; font-weight: 600; }}"
+        f"QTabBar::close-button {{ subcontrol-position: right;"
+        f" background: transparent; border-radius: 3px; }}"
+    )
+
+
 def btn_style(c: dict, ff="", fs=0) -> str:
     """圆角主题按钮样式（替代原生灰按钮）。"""
     font = f"font-family: '{ff}'; font-size: {fs}px;" if ff else ""

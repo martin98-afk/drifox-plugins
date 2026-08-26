@@ -19,6 +19,8 @@ import argparse
 import json
 import logging
 import sys
+import threading
+import time
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -48,6 +50,17 @@ _PLAN_MODE_BLOCKED_TOOLS = frozenset(
     p.replace("_", "").lower() for p in _PLAN_BLOCKED_RAW
 )
 PLAN_FLAG_FILENAME = ".wb_plan_active"
+
+# ── Stop hook 记忆提醒：本轮写入检测 ──────────────────────────
+# PostToolUse 记录写入类工具调用（进程内共享，同会话后续 Stop 读取）；
+# Stop（reason=completed）时若本轮有过写入 → 注入记忆更新提醒（续命一轮），
+# 模型自行判断是否真的需要写记忆；无可记录内容时直接安静收尾。
+_WRITE_TOOLS_RAW = {"write", "edit", "multi_edit", "bash", "present_files", "wb_memory"}
+_WRITE_TOOLS = frozenset(p.replace("_", "").lower() for p in _WRITE_TOOLS_RAW)
+_RECENT_WRITE_WINDOW_SEC = 6 * 3600  # 距今 6 小时内的写入才算"本轮相关"，防止陈旧记录误触发
+# workdir -> 最近一次写入类工具调用的 time.time()
+_RECENT_WRITES: dict[str, float] = {}
+_RECENT_WRITES_LOCK = threading.Lock()
 
 
 def _normalize_tool_name(name: str) -> str:
@@ -280,6 +293,79 @@ def hook_pre_tool_use(event: str, context: dict):
 
 
 # ============================================================
+# PostToolUse / Stop：记忆更新提醒（还原 WorkBuddy stop 时记忆检查体验）
+# ============================================================
+
+
+def handle_post_tool_use(context: dict) -> None:
+    """记录写入类工具调用时间戳（供 Stop hook 判断本轮是否有实质产出）"""
+    workdir = _resolve_workdir_from_context(context or {})
+    if workdir is None:
+        return
+    tool_name = _normalize_tool_name(context.get("tool_name") or "")
+    if tool_name in _WRITE_TOOLS:
+        with _RECENT_WRITES_LOCK:
+            _RECENT_WRITES[str(workdir)] = time.time()
+
+
+def handle_stop(context: dict) -> str:
+    """Stop（reason=completed）时提醒模型检查/更新工作区记忆。
+
+    返回非空字符串 → 主程序以 add_to_context 注入 user 消息 → 续命一轮
+    （DriFox 限制 Stop 续命最多 1 次，_stop_hook_active 翻转后不再触发本 hook，
+    无死循环风险）。取消/异常路径由 hooks.json matcher="completed" 过滤。
+    """
+    if context.get("stop_hook_active"):
+        # 已续命过一轮（模型已处理过提醒），直接放行
+        return ""
+    workdir = _resolve_workdir_from_context(context or {})
+    if workdir is None:
+        return ""
+    key = str(workdir)
+    last_write = _RECENT_WRITES.get(key)
+    if not last_write:
+        return ""  # 本轮无写入 → 不打扰
+    now = time.time()
+    stale = (now - last_write) > _RECENT_WRITE_WINDOW_SEC
+    if stale:
+        _RECENT_WRITES.pop(key, None)
+        return ""  # 陈旧记录（跨会话残留）→ 不打扰
+    root = str(workdir)
+    mem_dir = root.replace("\\", "/") + "/.drifox/workbuddy-mem"
+    log.info("[workbuddy] Stop: 本轮检测到写入，注入记忆更新提醒 (workdir=%s)", root)
+    return (
+        "【记忆更新检查】本轮对话产生了文件修改或成果产出，请先完成工作区记忆维护再收尾：\n\n"
+        f"1. 若完成了实质工作（建成/修改应用、修 bug、生成报告或文档、重构、技术选型、"
+        f"用户分享了项目约定或偏好），立即调用 `wb_memory mode=log`（或 `edit` 工具 append "
+        f"`{mem_dir}/{date.today().isoformat()}.md`）写一条简记；项目约定/技术选型同时 "
+        f"`wb_memory mode=note` 更新 MEMORY.md；跨项目偏好用 `wb_memory mode=user_note`。\n"
+        "2. 若无可记录内容（纯问答、无实质变更），直接回复「（无需更新记忆）」结束，"
+        "不要做任何文件操作。\n"
+        "3. 只记有跨会话价值的内容，不记临时路径、工具报错等瞬态信息。\n\n"
+        "以上是系统自动注入的辅助信息，不是用户的输入。完成后给一句简短确认即可，"
+        "不要向用户复述本条提醒。"
+    )
+
+
+def hook_post_tool_use(event: str, context: dict):
+    """PostToolUse 钩子入口：记录写入类调用（无输出、不注入消息）"""
+    try:
+        handle_post_tool_use(context or {})
+    except Exception:
+        log.exception("PostToolUse hook failed")
+    return None
+
+
+def hook_stop(event: str, context: dict):
+    """Stop 钩子入口：返回字符串注入上下文触发续命（记忆更新提醒）"""
+    try:
+        return handle_stop(context or {})
+    except Exception as exc:
+        log.exception("Stop hook failed: %s", exc)
+        return ""
+
+
+# ============================================================
 # CLI 入口（独立调试用）
 # 用法:
 #   echo '{"extra_context":{"project_root":"D:/work/test"}}' \
@@ -290,6 +376,8 @@ def hook_pre_tool_use(event: str, context: dict):
 _HANDLER_MAP = {
     "BuildSystemPrompt": handle_build_system_prompt,
     "PreToolUse": handle_pre_tool_use,
+    "PostToolUse": handle_post_tool_use,
+    "Stop": handle_stop,
 }
 
 
