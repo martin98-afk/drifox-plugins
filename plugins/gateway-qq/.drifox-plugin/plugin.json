@@ -1,0 +1,51 @@
+{
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "name": "gateway-qq",
+    "description": "QQ 机器人适配器（QQ 开放平台）：WebSocket 长连接收发群聊/单聊消息；不依赖第三方 SDK，复用宿主 aiohttp/httpx。",
+    "version": "1.0.0",
+    "author": {
+        "name": "DriFoxx Team"
+    },
+    "homepage": "https://github.com/martin98-afk/drifox-plugins2",
+    "license": "MIT",
+    "type": "user",
+    "components": {
+        "gateways": true
+    },
+    "config_schema": {
+        "title": "QQ 机器人配置",
+        "fields": [
+            {
+                "key": "enabled",
+                "label": "启用 QQ 网关",
+                "type": "bool",
+                "default": false
+            },
+            {
+                "key": "appid",
+                "label": "AppID",
+                "type": "text",
+                "default": "",
+                "placeholder": "QQ 机器人 AppID",
+                "description": "没有机器人？先到 q.qq.com 创建并获取 AppID"
+            },
+            {
+                "key": "app_secret",
+                "label": "AppSecret",
+                "type": "password",
+                "default": "",
+                "placeholder": "QQ 机器人 AppSecret"
+            },
+            {
+                "key": "websocket_url",
+                "label": "WebSocket",
+                "type": "text",
+                "default": "wss://api.sgroup.qq.com/websocket",
+                "placeholder": "wss://api.sgroup.qq.com/websocket"
+            }
+        ]
+    }
+}
