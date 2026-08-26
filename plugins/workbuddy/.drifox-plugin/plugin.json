@@ -1,11 +1,11 @@
 {
     "name": "workbuddy",
-    "description": "把 WorkBuddy「专家全能模式」的问答体验完整搬进 DriFox：通过 BuildSystemPrompt 钩子注入 WorkBuddy 风格的系统提示词（内容策略、文件安全、agent loop、结果呈现、最终回答规范），并附带语义等价的 present_files 成果呈现工具。安装即进入与 WorkBuddy 一致的问答模式。",
+    "description": "把 WorkBuddy「专家全能模式」的问答体验完整搬进 DriFox：BuildSystemPrompt 钩子注入专家提示词；present_files 产物呈现 + Tab 式产物面板；Stop 钩子记忆更新提醒 + wb_memory 记忆读写工具，还原 WorkBuddy 的记忆与产物体验。",
     "icon": {
         "light": "icon.svg",
         "dark": "icon_dark.svg"
     },
-    "version": "1.0.1",
+    "version": "1.1.0",
     "author": {
         "name": "DriFox Contributors"
     },
@@ -19,7 +19,9 @@
         "问答模式",
         "expert",
         "系统提示词",
-        "提示词注入"
+        "提示词注入",
+        "记忆",
+        "产物面板"
     ],
     "components": {
         "tools": true,

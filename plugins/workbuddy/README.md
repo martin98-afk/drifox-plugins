@@ -5,7 +5,10 @@
 ## 功能
 
 - **BuildSystemPrompt 钩子**：在会话构建 system prompt 时注入 `prompts/expert-prompt.md`，让助手进入"专家全能模式"——具备规划、工具调用、子代理、强制成果呈现、最终回答规范等完整行为。
-- **`present_files` 工具**：把任务产出的文件以结构化清单呈现给用户（路径、类型、大小、行数），是专家模式末尾的强制收尾步骤。
+- **`present_files` 工具**：把任务产出的文件以结构化清单呈现给用户（路径、类型、大小、行数），是专家模式末尾的强制收尾步骤；同时驱动产物面板自动弹出。
+- **Tab 式产物面板**：头部标签页列出所有已呈现的产物（可关闭/拖动排序），下方整区展示内容——Markdown 渲染、HTML 内嵌预览、文本、图片缩放、其余类型一键系统应用打开。新产物自动追加并聚焦。
+- **Stop 钩子记忆提醒**：本轮发生过文件修改时，回复结束自动注入【记忆更新检查】提醒（续命一轮，最多一次），还原 WorkBuddy"停止时更新记忆"体验。
+- **`wb_memory` 工具**：读取两层记忆全文 / 追加当日工作日志 / 项目长期笔记 / 用户级记忆，模型无需手工拼接记忆文件路径。
 
 ## 目录结构
 
@@ -14,16 +17,17 @@ workbuddy/
 ├── .drifox-plugin/
 │   └── plugin.json
 ├── hooks/
-│   ├── hooks.json                  # BuildSystemPrompt 事件映射
-│   └── workbuddy_hook.py           # 提示词注入实现
+│   ├── hooks.json                  # BuildSystemPrompt / PreToolUse / PostToolUse / Stop 事件映射
+│   └── workbuddy_hook.py           # 提示词注入 + plan 阻断 + 写入计数 + 记忆提醒
 ├── prompts/
 │   └── expert-prompt.md            # 专家模式系统提示词（hook 注入）
 ├── tools/
 │   ├── wb_present.py               # present_files 工具实现
-│   ├── icons/
-│   │   └── present.svg             # 深色主题图标
-│   └── icons_light/
-│       └── present.svg             # 浅色主题图标
+│   ├── wb_memory.py                # wb_memory 记忆读写工具实现
+│   ├── icons/ icons_light/         # 深/浅主题工具图标
+├── ui/
+│   ├── artifact_panel.py           # Tab 式产物面板
+│   └── theme.py                    # 主题样式
 ├── icon.svg
 ├── icon_dark.svg
 └── README.md
@@ -82,6 +86,7 @@ python tools/validate_plugins.py plugins/workbuddy
 
 ## 版本
 
+1.1.0 — 还原 WorkBuddy 体验：Stop 钩子记忆更新提醒（PostToolUse 写入检测 + completed 续命一轮）+ wb_memory 记忆读写工具 + 产物面板重构为 Tab 式（头部标签页 + 整区内容预览，增量同步不闪烁）+ 自动弹出链路加固（_state key 规范化、/artifacts 命令修复、provider 空缺 cwd 兜底）。
 1.0.1 — 修复：plan 模式阻断时效（tool_name PascalCase 归一化）+ UI 产物面板加载（FluentIcon 非法枚举）+ _state plan 辅助函数。
 1.0.0 — 初版：BuildSystemPrompt 注入 + present_files 工具。
 
