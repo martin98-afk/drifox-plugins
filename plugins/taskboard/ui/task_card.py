@@ -251,14 +251,21 @@ class TaskCardWidget(QFrame):
             border = f"1px solid {accent}"
         else:
             border = f"1px solid {Colors.BORDER}"
-        # hover 用主题半透明叠加（不再硬编码深色，浅色主题下不再变黑）
+        # 半透明磨砂：rgba 白底叠加 + 顶到底微渐变，hover 提高透明度，
+        # 让卡片透出列底色与主背景，与列容器保持一致的毛玻璃层次
+        # （之前用 Colors.CARD_BG_SOLID 实色，卡片挡住列的磨砂效果看起来像白块）
         if hover:
-            bg = Colors.HOVER_BG
+            bg_top, bg_bottom = "rgba(255, 255, 255, 0.08)", "rgba(255, 255, 255, 0.12)"
         else:
-            bg = Colors.CARD_BG_SOLID
+            bg_top, bg_bottom = "rgba(255, 255, 255, 0.02)", "rgba(255, 255, 255, 0.06)"
         self.setStyleSheet(f"""
             #taskboardTaskCard {{
-                background: {bg};
+                background-color: rgba(255, 255, 255, 0.06);
+                background-image: qlineargradient(
+                    x1:0, y1:0, x2:0, y2:1,
+                    stop:0 {bg_top},
+                    stop:1 {bg_bottom}
+                );
                 border: {border};
                 border-radius: 8px;
             }}

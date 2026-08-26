@@ -32,6 +32,13 @@ taskboard 把「多智能体协作」做成一张竖向任务看板：
 - ✋ **用户全权控制**：任意状态下可 ▶ 开始 / ⏹ 停止 / 🗑 删除任务；←→ 按钮或**拖拽**在列间移动
 - 💾 **持久化**：看板数据存 `<工作目录>/.taskboard/board.json`；done 报告存 `.taskboard/reports/<task_id>.md`；处理日志存 `.taskboard/logs/`
 
+## v0.3.0
+
+- **半透明磨砂质感** — 列容器 `rgba(255,255,255,0.10)` + 顶到底微渐变 + 1px 描边 + 顶部 accent 色带；任务卡 `rgba(255,255,255,0.06)` + 渐变，hover 提到 0.12；与主背景 `#2a2a2e` 形成连贯毛玻璃层次
+- **新增 hook 策略插件** `hook_policies/taskboard_skip_stop.py`（id=`taskboard_skip_stop`, scope=`main`）— taskboard 自建对话栈仅跳过 `StopEvent`，其余 hook（PreAssistantMessage / PostAssistantMessage / 工具级安全审查）照常触发。Worker 通过 `ConversationConfig(hook_policy_id=...)` 引用，避免外部 hook 续命/拦截与列智能体去留信号冲突
+- **修复列空卡时白底** — `QScrollArea` viewport 默认浅灰背景透出（卡片遮挡时看不出来，空列整块白），QSS 加 `QScrollArea > QWidget { background: transparent; }`
+- **修复 host widget objectName 缺失** — `taskboardColumnHost` 选择器原本因 `setObjectName` 缺失从未生效
+
 ## v0.2.0
 
 - 修复：空响应假完成静默问题；全链路诊断日志（loguru + `.taskboard/logs/`）

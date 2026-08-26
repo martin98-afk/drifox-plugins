@@ -28,6 +28,12 @@ from taskboard_core.config import (
 )
 from taskboard_core.models import Task
 
+# taskboard 自建对话栈，每任务独立处理：仅跳过 Stop hook（让列智能体自然
+# 终止不被外部续命/拦截），其余 hook（PreAssistantMessage / PostAssistantMessage
+# / 工具级安全审查等）照常触发。策略由本插件 hook_policies/taskboard_skip_stop
+# 实现，通过 hook_policy_id 引用。
+TASKBOARD_HOOK_POLICY_ID = "taskboard_skip_stop"
+
 # 信号解析：响应中最后一次出现的合法信号（独立成行）
 _SIGNAL_RE = re.compile(
     r"^\s*(TASK_ADVANCE|TASK_HOLD|TASK_DROP)\s*$", re.MULTILINE
@@ -215,7 +221,13 @@ class TaskWorker(QThread):
 
         from app.core.conversation.config import ConversationConfig, PermissionStrategy
 
-        conv_config = ConversationConfig(permission_strategy=PermissionStrategy.AUTO_ALLOW)
+        # hook_policy_id 优先级高于 hook_policy 枚举：传 id 后由 HookPolicyRegistry
+        # 取对应插件对象（plugins/.../hook_policies/ 注册）；这里用本插件自带的
+        # taskboard_skip_stop 策略，仅跳过 Stop hook，其余照常触发。
+        conv_config = ConversationConfig(
+            permission_strategy=PermissionStrategy.AUTO_ALLOW,
+            hook_policy_id=TASKBOARD_HOOK_POLICY_ID,
+        )
         core = stack.create_core(
             get_model_config=self._model_config_getter,
             agent_manager=self._agent_manager,

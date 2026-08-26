@@ -269,6 +269,7 @@ class BoardColumn(QFrame):
         self._scroll.setFrameShape(QFrame.NoFrame)
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._host = QWidget()
+        self._host.setObjectName("taskboardColumnHost")  # 让 #taskboardColumnHost 选择器生效
         self._list = QVBoxLayout(self._host)
         self._list.setContentsMargins(0, 0, 0, 0)
         self._list.setSpacing(6)
@@ -320,14 +321,25 @@ class BoardColumn(QFrame):
 
     def _refresh_style(self):
         Colors.refresh()
+        # 半透明磨砂质感：白底叠加 0.10 + 顶部到底部微渐变（增强层次） +
+        # 1px 描边 + 内顶光，模拟毛玻璃；顶部保留列 accent 色带。
         self.setStyleSheet(f"""
             #{self.objectName()} {{
-                background: {Colors.CARD_BG_DIM};
-                border: 1px solid {Colors.BORDER};
+                background-color: rgba(255, 255, 255, 0.10);
+                background-image: qlineargradient(
+                    x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(255, 255, 255, 0.06),
+                    stop:1 rgba(255, 255, 255, 0.02)
+                );
+                border: 1px solid rgba(255, 255, 255, 0.08);
                 border-top: 3px solid {self._accent};
                 border-radius: 10px;
             }}
+            /* QScrollArea + viewport + host 都要 transparent，否则空列 viewport
+            默认浅灰背景透出来，看上去就是「白块」（任务卡可遮挡，待办列无感，
+            其他三列无卡片时整个区域白）。 */
             QScrollArea {{ background: transparent; border: none; }}
+            QScrollArea > QWidget {{ background: transparent; }}
             QWidget#taskboardColumnHost {{ background: transparent; }}
         """)
         self._title_label.setStyleSheet(
