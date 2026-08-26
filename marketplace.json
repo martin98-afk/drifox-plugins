@@ -2130,6 +2130,30 @@
             }
         },
         {
+            "name": "pixel-team-studio",
+            "description": "像素智能体团队工作室 — 实时可视化智能体团队与成员状态，拖拽像素小人组建团队，查看工作状态与上下文负荷",
+            "version": "0.1.4",
+            "author": "马丁",
+            "license": "MIT",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/pixel-team-studio",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true
+            },
+            "homepage": "https://github.com/martin98-afk/DriFox",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "playground",
             "description": "交互式 HTML 练习场 — 单文件探索器：可视化控件 + 实时预览 + 提示词复制。",
             "version": "1.0.0",
