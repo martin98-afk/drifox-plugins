@@ -2276,7 +2276,7 @@
         {
             "name": "pixel-team-studio",
             "description": "像素智能体团队工作室 — 实时可视化智能体团队与成员状态，拖拽像素小人组建团队，双击切窗口/右键直接给成员发消息",
-            "version": "0.3.0",
+            "version": "0.3.1",
             "author": "马丁",
             "license": "MIT",
             "categories": [
