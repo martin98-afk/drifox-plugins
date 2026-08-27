@@ -306,6 +306,15 @@ class FeishuAdapter(BasePlatformAdapter):
                 )
             text = text.strip()
 
+            # 宽松命令提取：@<任意提及> + 斜杠命令 → 剥成纯命令。
+            # 覆盖三种透传形态：@_user_1 /model（机器占位符）、@drifox /model
+            # （机器人名直书）、@_user_1 机器人名 /model（占位符已被上文
+            # mention 替换）。仅当剥离结果以 "/" 开头才生效——普通 @人消息
+            # （"@张三 你好"）不匹配、零误伤。
+            _m = _re.match(r"^@\S+\s+(/\S+.*)$", text)
+            if _m:
+                text = _m.group(1).strip()
+
             # 提取 sender_id
             sender_id = ""
             if sender is not None:

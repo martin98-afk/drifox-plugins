@@ -261,10 +261,33 @@
     "dependencies": {
       "type": "object",
       "additionalProperties": {
-        "type": "string",
-        "pattern": "^[\\^~>=<]*\\s*\\d+\\.\\d+\\.\\d+.*$"
+        "oneOf": [
+          {
+            "type": "string",
+            "pattern": "^[\\^~>=<]*\\s*\\d+\\.\\d+\\.\\d+.*$",
+            "description": "插件依赖：SemVer 范围"
+          },
+          {
+            "type": "object",
+            "description": "pip 依赖声明（保留 key pip）：default + 平台 key（win32/linux/darwin），值为规格字符串或数组。运行时见 app/plugins/deps_loader.py resolve_pip_deps",
+            "additionalProperties": {
+              "oneOf": [
+                { "type": "string" },
+                { "type": "array", "items": { "type": "string" } }
+              ]
+            }
+          }
+        ]
       },
-      "description": "插件间依赖，键为插件名，值为 SemVer 范围"
+      "description": "插件间依赖（键=插件名，值=SemVer 范围）；dependencies.pip 为 pip 依赖声明"
+    },
+    "platforms": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["windows", "win32", "linux", "darwin", "macos", "mac"]
+      },
+      "description": "支持平台声明（缺省=全平台兼容）。友好名映射见 app/plugins/deps_loader.py PLATFORM_DIR_MAP"
     }
   }
 }
