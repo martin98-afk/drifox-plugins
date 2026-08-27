@@ -1205,7 +1205,7 @@
         {
             "name": "gateway-wechat",
             "description": "微信机器人适配器（iLink 官方接口）：扫码登录、长轮询收发单聊消息；无需公众号配置，复用宿主 httpx。",
-            "version": "0.1.3",
+            "version": "0.2.0",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [
