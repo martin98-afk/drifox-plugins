@@ -1,0 +1,40 @@
+{
+    "name": "openhanako-adapter",
+    "description": "openhanako（HanaAgent）能力适配插件：内置技能、智能体人格、beautify HTML 美学、日记（diary）、会话转技能（/xing）、即梦 CLI 生图",
+    "version": "0.1.0",
+    "author": {
+        "name": "mading"
+    },
+    "license": "Apache-2.0",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "openhanako",
+        "hana",
+        "diary",
+        "xing",
+        "jimeng",
+        "beautify"
+    ],
+    "components": {
+        "tools": true,
+        "commands": true,
+        "agents": true,
+        "skills": true,
+        "hooks": false,
+        "mcp": false,
+        "lsp": false,
+        "themes": false,
+        "ui": false,
+        "providers": false,
+        "team_templates": false,
+        "model_adapters": false,
+        "loop_policies": false,
+        "storages": false,
+        "serializers": false,
+        "gateways": false,
+        "engines": false
+    }
+}
