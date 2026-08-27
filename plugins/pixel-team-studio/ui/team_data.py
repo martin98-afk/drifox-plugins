@@ -87,6 +87,60 @@ def get_active_run_id() -> str:
         return ""
 
 
+def get_active_team() -> Dict[str, Any]:
+    """当前激活团队 {run_id, label}；无激活团队返回 {}"""
+    try:
+        tm = _team_manager()
+        rid = tm.get_team_run_id() or ""
+        if not rid:
+            return {}
+        label = tm.get_team_label_by_run(rid) or rid[:8]
+        return {"run_id": rid, "label": label}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def switch_to_window(window_id: str) -> bool:
+    """把 TabManagerWindow 激活 tab 切到指定成员窗口"""
+    win = _find_window(window_id)
+    if win is None:
+        return False
+    try:
+        from app.widgets.tab_manager_window import TabManagerWindow
+
+        tmw = TabManagerWindow.get_instance()
+        if tmw is None:
+            return False
+        idx = tmw._window_to_index.get(id(win), -1)
+        if idx < 0:
+            return False
+        tmw._tab_panel.set_active_index(idx)
+        return True
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"[pixel-team-studio] 切换窗口失败({window_id}): {e}")
+        return False
+
+
+def send_member_message(window_id: str, text: str) -> bool:
+    """直接给成员窗口发消息（不切 tab，复用团队邮件链路）
+
+    与 _process_team_task 同款入口：_on_send_clicked(preserve_input=True)
+    不清空/不记录成员窗口输入区；hook_event="TeamMail" 打团队邮件标记。
+    """
+    text = (text or "").strip()
+    if not text:
+        return False
+    win = _find_window(window_id)
+    if win is None:
+        return False
+    try:
+        win._on_send_clicked(text, hook_event="TeamMail", preserve_input=True)
+        return True
+    except Exception as e:  # noqa: BLE001
+        logger.exception(f"[pixel-team-studio] 发送消息失败({window_id}): {e}")
+        return False
+
+
 # ── 成员状态与上下文 ─────────────────────────────────────
 
 
@@ -185,6 +239,30 @@ def list_templates() -> List[Dict[str, Any]]:
 # ── 团队操作 ─────────────────────────────────────────────
 
 
+def _spawn_members_keep_focus(win, agent_names: List[str], run_id: str, team_label: str, team_name: str) -> int:
+    """调用主窗口 _spawn_team_members 并保持当前 tab 焦点不打断
+
+    优先传 keep_current_active=True（主程序支持时：抑制逐窗激活 +
+    结束后恢复原激活 tab，全程零跳动）；旧版主程序无此参数时 TypeError
+    回退不传（行为退化但不报错）。
+    """
+    try:
+        return win._spawn_team_members(
+            agent_names,
+            run_id=run_id,
+            team_label=team_label,
+            team_name=team_name,
+            keep_current_active=True,
+        )
+    except TypeError:
+        return win._spawn_team_members(
+            agent_names,
+            run_id=run_id,
+            team_label=team_label,
+            team_name=team_name,
+        )
+
+
 def create_team_from_template(template_name: str) -> int:
     """从模板一键创建团队：新 run_id + 为每个角色新建成员窗口
 
@@ -216,7 +294,8 @@ def create_team_from_template(template_name: str) -> int:
                 ],
             }
         )
-        count = win._spawn_team_members(
+        count = _spawn_members_keep_focus(
+            win,
             [a.agent_name for a in template.agents],
             run_id=new_run_id,
             team_label=template.template_name,
@@ -234,7 +313,8 @@ def add_member(agent_name: str, run_id: str, team_label: str) -> bool:
     if win is None:
         return False
     try:
-        count = win._spawn_team_members(
+        count = _spawn_members_keep_focus(
+            win,
             [agent_name],
             run_id=run_id or "",
             team_label=team_label or "",
