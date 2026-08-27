@@ -40,17 +40,30 @@ def _upload_impl(tool_ctx, **kwargs):
     ref = kwargs.get("handle") or kwargs.get("name")
     local = kwargs.get("local_path")
     remote = kwargs.get("remote_path")
+    text_mode = bool(kwargs.get("text_mode", False))
+    executable = bool(kwargs.get("executable", False))
     if not local or not remote:
         return ToolResult(False, error="需要 local_path 与 remote_path")
     try:
         client = _client(ref)
         remote = _norm_remote(remote, _home(client))
         sftp = client.open_sftp()
-        sftp.put(local, remote)
+        if text_mode:
+            with open(local, "rb") as f:
+                data = f.read().replace(b"\r\n", b"\n").replace(b"\r", b"\n")
+            with sftp.open(remote, "wb") as rf:
+                rf.write(data)
+            extra = f"，text_mode 已 CRLF→LF（{len(data)}B）"
+        else:
+            sftp.put(local, remote)
+            extra = ""
+        if executable:
+            sftp.chmod(remote, 0o755)
+            extra += "，已 chmod 755"
         sftp.close()
     except Exception as e:
         return ToolResult(False, error=f"上传失败：{e}")
-    return ToolResult(True, content=f"已上传 {local} → {remote} @ {ref}")
+    return ToolResult(True, content=f"已上传 {local} → {remote} @ {ref}{extra}")
 
 
 def _download_impl(tool_ctx, **kwargs):
@@ -100,6 +113,8 @@ def register(registry):
                 "name": {"type": "string", "description": "连接名"},
                 "local_path": {"type": "string", "description": "本地文件路径"},
                 "remote_path": {"type": "string", "description": "远程目标路径"},
+                "text_mode": {"type": "boolean", "description": "文本模式：上传前自动将 CRLF 转为 LF（默认 false，向后兼容）"},
+                "executable": {"type": "boolean", "description": "是否上传后自动 chmod 0o755（默认 false）"},
             }, "required": ["local_path", "remote_path"]},
         }},
         impl=_upload_impl, danger="dangerous", icon="ssh", cn_name="SSH 上传文件", group="SSH 远程",
