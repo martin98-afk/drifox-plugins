@@ -262,7 +262,7 @@ class PixelSprite(QWidget):
         self._scale = scale
         self._state: str = "idle"
         self._context_percent: float = 0.0  # 0-100
-        self._bounce_frame = 0
+        self._anim_frame = 0  # 全局动画帧（所有状态推进）
         w, h = self._calc_size()
         self.setFixedSize(w, h)
 
@@ -282,7 +282,7 @@ class PixelSprite(QWidget):
         state = state or "idle"
         if state != self._state:
             self._state = state
-            self._bounce_frame = 0
+            self._anim_frame = 0
             self.update()
 
     def set_context(self, percent: float):
@@ -292,13 +292,27 @@ class PixelSprite(QWidget):
             self._context_percent = percent
             self.update()
 
-    def advance_bounce(self):
-        """忙碌动画帧推进（busy 状态小人上下浮动）"""
-        if self._state in ("busy", "streaming", "thinking"):
-            self._bounce_frame += 1
+    def advance_anim(self):
+        """动画帧推进（150ms/帧）：活跃状态逐帧重绘，idle 呼吸降频省电"""
+        self._anim_frame += 1
+        if self._state in ("busy", "streaming", "thinking", "question", "error"):
+            self.update()
+        elif self._anim_frame % 3 == 0:  # idle 呼吸慢帧（~450ms）
             self.update()
 
+    # 兼容旧名（cards 轮询入口）
+    advance_bounce = advance_anim
+
     # ── 绘制 ──
+
+    def _badge_text(self) -> str:
+        """按状态与帧计算头顶徽标文案（动画）"""
+        f = self._anim_frame
+        if self._state == "thinking":  # 三点循环思考
+            return ("·", "· ·", "· · ·")[f % 3]
+        if self._state == "streaming":  # 输出箭头闪
+            return "▸▸" if f % 2 == 0 else " ▸"
+        return STATE_DEFS.get(self._state, STATE_DEFS["idle"])[0]
 
     def paintEvent(self, event):
         painter = QPainter(self)
@@ -308,21 +322,30 @@ class PixelSprite(QWidget):
         sc = self._scale
         sw = self.SPRITE_W * sc
         sx = (w - sw) // 2
+        f = self._anim_frame
+        state_color = QColor(STATE_DEFS.get(self._state, STATE_DEFS["idle"])[1])
 
-        # 顶部状态徽标（居中）
-        badge, _, _ = STATE_DEFS.get(self._state, STATE_DEFS["idle"])
+        # 顶部状态徽标（居中，按状态动画：question 上下跳 / error 左右抖）
+        badge = self._badge_text()
         if badge:
-            painter.setPen(QColor(255, 255, 255, 200))
+            bx, by = 0, 0
+            if self._state == "question":
+                by = -1 if (f // 2) % 2 == 0 else 1
+            elif self._state == "error":
+                bx = -1 if (f // 2) % 2 == 0 else 1
+            painter.setPen(state_color if self._state != "idle" else QColor(255, 255, 255, 200))
             font = painter.font()
             font.setPixelSize(11)
             font.setBold(True)
             painter.setFont(font)
-            painter.drawText(QRectF(0, 0, w, 14), Qt.AlignCenter, badge)
+            painter.drawText(QRectF(bx, by, w, 14), Qt.AlignCenter, badge)
 
-        # 浮动偏移：busy 时小跳
+        # 浮动偏移：活跃状态快跳，idle 慢呼吸
         bounce = 0
         if self._state in ("busy", "streaming", "thinking"):
-            bounce = 1 if (self._bounce_frame // 3) % 2 == 0 else 0
+            bounce = 1 if (f // 2) % 2 == 0 else 0
+        elif self._state == "idle" and (f // 6) % 2 == 1:
+            bounce = 1  # 呼吸：缓慢半格浮动
 
         # 像素小人
         draw_pixel_sprite(painter, sx, 14, sc, self._agent_name, bounce, self._salt)
@@ -333,6 +356,7 @@ class PixelSprite(QWidget):
         bar_h = 3
         painter.fillRect(QRectF(sx, bar_y, bar_w, bar_h), QColor(255, 255, 255, 30))
         pct = self._context_percent / 100.0
+        fill_w = 0
         if pct > 0:
             if pct < 0.6:
                 bar_color = QColor("#50E3C2")
@@ -342,12 +366,20 @@ class PixelSprite(QWidget):
                 bar_color = QColor("#FF6B6B")
             fill_w = max(2, int(bar_w * pct))
             painter.fillRect(QRectF(sx, bar_y, fill_w, bar_h), bar_color)
+            # 流光：streaming/busy 时高亮点沿填充段循环流动
+            if self._state in ("streaming", "busy") and fill_w > 8:
+                glow_w = 6
+                travel = max(fill_w - glow_w, 1)
+                gx = sx + (f * 3) % travel
+                painter.fillRect(QRectF(gx, bar_y, glow_w, bar_h), QColor(255, 255, 255, 170))
 
-        # 右下角状态点
+        # 右下角状态点（streaming 呼吸闪烁）
         dot_r = 4
-        dot_color = STATE_DEFS.get(self._state, STATE_DEFS["idle"])[1]
+        dot = QColor(STATE_DEFS.get(self._state, STATE_DEFS["idle"])[1])
+        if self._state == "streaming":
+            dot.setAlpha(255 if f % 2 == 0 else 140)
         painter.setPen(QPen(QColor(0, 0, 0, 120), 1))
-        painter.setBrush(QColor(dot_color))
+        painter.setBrush(dot)
         painter.drawEllipse(
             QRectF(sx + bar_w - dot_r * 2, bar_y + bar_h + 2, dot_r * 2, dot_r * 2)
         )

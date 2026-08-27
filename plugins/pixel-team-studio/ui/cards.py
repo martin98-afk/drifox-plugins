@@ -38,7 +38,7 @@ from .palette import make_palette, rgba
 from .widgets import AgentTile, TeamPanel, TrashZone
 
 REFRESH_MS = 5000
-ANIM_MS = 300
+ANIM_MS = 150
 BUSY_STATES = ("busy", "streaming", "thinking")
 
 
@@ -92,13 +92,23 @@ class PixelTeamStudioCard(QWidget):
     def hide_card(self):
         """CardManager 隐藏卡片时调用（切 tab 投影 / 互斥）
 
-        添加成员/建团后的保护窗口内拒绝隐藏——
-        _spawn_team_members 会强制切 tab 到新成员窗口，触发 sync 隐藏；
-        保护窗口内拦截后卡片保持可见，之后恢复 tab 再回到工作室。
+        两种情况不隐藏：
+        1. 添加成员/建团后的保护窗口内（spawn 后切 tab 触发 sync）
+        2. 纯切 tab 投影（UIPluginRegistry._tab_sync_in_progress）——工作室
+           卡片常驻所有 tab，切到成员窗口后仍在，方便继续管理。
+        用户主动关闭（_on_close）不受拦截。
         """
         if self._suppress_hide_until > time.monotonic():
             logger.debug("[pixel-team-studio] 保护窗口内拦截隐藏（添加成员/建团）")
             return
+        try:
+            from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
+
+            if getattr(UIPluginRegistry.get_instance(), "_tab_sync_in_progress", False):
+                logger.debug("[pixel-team-studio] 拦截切 tab 投影隐藏（卡片常驻）")
+                return
+        except Exception:  # noqa: BLE001
+            pass
         self.setVisible(False)
 
     def _apply_plugin_icon(self):
