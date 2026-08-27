@@ -1,0 +1,30 @@
+{
+    "icon": {
+        "light": "icons/clock.svg",
+        "dark": "icons/clock_light.svg"
+    },
+    "name": "cron-tasks",
+    "description": "定时任务中心 — 可视化配置 UI 定时任务（单次/间隔/Cron），到期自动驱动对话执行 prompt，带运行历史（参考 openhanako desk cron 设计）",
+    "version": "0.2.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "homepage": "https://github.com/martin98-afk/drifox-plugins",
+    "license": "MIT",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "cron",
+        "schedule",
+        "timer",
+        "automation",
+        "定时任务",
+        "计划任务",
+        "自动化"
+    ],
+    "components": {
+        "ui": true
+    }
+}
