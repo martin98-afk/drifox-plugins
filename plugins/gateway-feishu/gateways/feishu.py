@@ -286,6 +286,32 @@ class FeishuAdapter(BasePlatformAdapter):
                 # 如果不是 JSON，直接作为文本
                 text = content_str
 
+            # @提及处理：飞书群聊 @机器人 发命令时 text 形如 "@_user_1 /model"
+            # （机器占位符格式），前缀会让宿主 startswith("/") 判定失败、命令被
+            # 当普通对话送给 AI。只剥指向机器人自己（mentioned_type="app"）的
+            # 占位符；@人的占位符换成 @真实名字（语义不丢）。
+            import re as _re
+
+            mentions = getattr(message, "mentions", None) or []
+            bot_keys = {
+                m.key
+                for m in mentions
+                if getattr(m, "key", None) and getattr(m, "mentioned_type", "") == "app"
+            }
+            name_by_key = {
+                m.key: f"@{m.name}" for m in mentions if getattr(m, "key", None)
+            }
+            lead = _re.match(r"^(@_user_\d+)\s*", text)
+            if lead and (not mentions or lead.group(1) in bot_keys):
+                # 开头的机器人提及剥掉（mentions 缺失时防御性剥，@_user_N
+                # 为机器格式不会自然出现在正文）
+                text = text[lead.end():]
+            if name_by_key:
+                text = _re.sub(
+                    r"@\S+", lambda mm: name_by_key.get(mm.group(0), mm.group(0)), text
+                )
+            text = text.strip()
+
             # 提取 sender_id
             sender_id = ""
             if sender is not None:
