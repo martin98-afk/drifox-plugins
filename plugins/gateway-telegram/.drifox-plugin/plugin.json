@@ -5,7 +5,7 @@
     },
     "name": "gateway-telegram",
     "description": "Telegram 机器人平台适配器（社区插件，万物即插件 Phase E）：私聊/群组/论坛主题/媒体/命令，基于 python-telegram-bot 长轮询。",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "author": {
         "name": "DriFoxx Team"
     },
