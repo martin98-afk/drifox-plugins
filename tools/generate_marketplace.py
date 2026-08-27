@@ -208,6 +208,13 @@ def build_plugin_entry(plugin_dir: Path, manifest: dict) -> dict:
     if manifest.get("keywords"):
         entry["keywords"] = manifest["keywords"]
 
+    # 平台声明（platforms）与 pip 依赖（dependencies）：透传给市场端，
+    # 客户端据此显示兼容徽标/置灰不兼容平台的安装按钮，并在安装时自动装依赖
+    if manifest.get("platforms"):
+        entry["platforms"] = manifest["platforms"]
+    if manifest.get("dependencies"):
+        entry["dependencies"] = manifest["dependencies"]
+
     drifox_compat = manifest.get("drifox")
     if drifox_compat:
         entry["drifox"] = drifox_compat

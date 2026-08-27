@@ -11,14 +11,8 @@
 from __future__ import annotations
 
 
-# ── 插件自包含依赖注入：优先加载本插件 deps/ 目录 ────────────────
-# 平台 SDK（dingtalk-stream 及传递依赖 websockets 等）vendor 到插件根 deps/（即
-# gateways/ 的上一级）：本插件为社区插件，依赖自包含于 <plugin>/deps/；顶层只注入
-# 路径，SDK 本体仍在函数内延迟导入。注意：__file__ 在 gateways/ 内，需 .. 回退到插件根再进 deps。
-import os as _os, sys as _sys
-_deps = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), '..', 'deps'))
-if _deps not in _sys.path:
-    _sys.path.insert(0, _deps)
+# 依赖注入已由宿主统一接管：PluginManager 扫描时注入 deps/ 与 deps/<platform>/
+# （平台目录优先，见 app/plugins/deps_loader.py），插件组件不再自理 sys.path。
 import asyncio
 import json
 import uuid

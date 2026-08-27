@@ -12,6 +12,19 @@
     "homepage": "https://github.com/martin98-afk/drifox-plugins2",
     "license": "MIT",
     "type": "user",
+    "platforms": ["windows", "linux", "darwin"],
+    "dependencies": {
+        "pip": {
+            "linux": [
+                "charset-normalizer==3.5.1",
+                "pycryptodome==3.23.0"
+            ],
+            "darwin": [
+                "charset-normalizer==3.5.1",
+                "pycryptodome==3.23.0"
+            ]
+        }
+    },
     "components": {
         "gateways": true
     },

@@ -6,14 +6,10 @@ import sys
 
 # 注入 tools/ 目录到 sys.path（PluginToolLoader 用 importlib 加载时未自动注入，
 # 同目录的 _store/_pool/_auth 相互 import 会报 No module named）。
+# deps/ 与 deps/<platform>/ 注入已由宿主统一接管（app/plugins/deps_loader.py）。
 _TOOLS_DIR = os.path.dirname(os.path.abspath(__file__))
 if _TOOLS_DIR not in sys.path:
     sys.path.insert(0, _TOOLS_DIR)
-
-# 注入插件自包含的 deps/ 目录（paramiko 不在主程序环境，依赖本插件自带）
-_PLUGIN_DEPS = os.path.abspath(os.path.join(_TOOLS_DIR, "..", "deps"))
-if _PLUGIN_DEPS not in sys.path:
-    sys.path.insert(0, _PLUGIN_DEPS)
 
 
 def _ensure_openssl_path():
@@ -29,7 +25,9 @@ def _ensure_openssl_path():
     if cp:
         cands.append(os.path.join(cp, "Library", "bin"))
         cands.append(os.path.join(cp, "bin"))
-    cands.append(os.path.abspath(os.path.join(here, "..", "deps", "bin")))
+    # openssl dll 在平台专属 deps/win32/bin（deps 按平台分目录后）
+    for plat in ("win32", ""):
+        cands.append(os.path.abspath(os.path.join(here, "..", "deps", plat, "bin")))
     for d in cands:
         if d and os.path.isdir(d):
             if any(
@@ -45,13 +43,8 @@ def _ensure_openssl_path():
 
 
 _ensure_openssl_path()
-# 优先主环境 paramiko（pip 装到 conda env 后与 cryptography 兼容），缺失时降级插件自包含 deps/
-try:
-    import paramiko  # noqa: E402
-except ImportError:
-    if _PLUGIN_DEPS not in sys.path:
-        sys.path.insert(0, _PLUGIN_DEPS)
-    import paramiko  # noqa: E402
+# paramiko：优先主环境，缺失时由宿主注入的插件 deps/ 提供（无需自理 sys.path）
+import paramiko  # noqa: E402
 
 SUPPORTED = {"publickey", "password", "keyboard-interactive", "agent"}
 
