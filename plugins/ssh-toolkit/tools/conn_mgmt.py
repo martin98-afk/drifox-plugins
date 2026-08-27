@@ -70,7 +70,7 @@ def register(registry):
                 "note": {"type": "string", "description": "备注"},
             }, "required": ["name", "host", "user"]},
         }},
-        impl=_add_impl, danger="safe", icon="ssh", cn_name="SSH 保存连接", group="SSH 远程",
+        impl=_add_impl, danger="safe", icon="ssh_conn", cn_name="SSH 保存连接", group="SSH 远程",
         description="保存命名 SSH 连接配置",
     )
     registry.register(
@@ -80,7 +80,7 @@ def register(registry):
             "description": "列出所有已保存的 SSH 连接（密码掩码）",
             "parameters": {"type": "object", "properties": {}},
         }},
-        impl=_list_impl, danger="safe", icon="ssh", cn_name="SSH 列出连接", group="SSH 远程",
+        impl=_list_impl, danger="safe", icon="ssh_conn", cn_name="SSH 列出连接", group="SSH 远程",
         description="列出已保存的 SSH 连接",
     )
     registry.register(
@@ -92,6 +92,6 @@ def register(registry):
                 "name": {"type": "string", "description": "连接名"},
             }, "required": ["name"]},
         }},
-        impl=_remove_impl, danger="safe", icon="ssh", cn_name="SSH 删除连接", group="SSH 远程",
+        impl=_remove_impl, danger="safe", icon="ssh_conn", cn_name="SSH 删除连接", group="SSH 远程",
         description="删除已保存的 SSH 连接",
     )
