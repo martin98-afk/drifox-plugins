@@ -25,6 +25,7 @@ from PyQt5.QtWidgets import (
     QLabel,
     QLayout,
     QMenu,
+    QPushButton,
     QVBoxLayout,
     QWidget,
 )
@@ -293,8 +294,22 @@ class MemberTile(_DragSource):
         self._state_label.setAlignment(Qt.AlignCenter)
         v.addWidget(self._name_label)
         v.addWidget(self._state_label)
+        # 快捷发消息按钮（常显右下角，点击弹输入框）
+        self._msg_btn = QPushButton("✉", self)
+        self._msg_btn.setObjectName("msgBtn")
+        self._msg_btn.setFixedSize(24, 24)
+        self._msg_btn.setCursor(Qt.PointingHandCursor)
+        self._msg_btn.setToolTip("给这个成员发消息（不切窗口）")
+        self._msg_btn.clicked.connect(self._prompt_message)
         self._apply_base_style()
         self.apply_state(self._state, 0)
+
+    def resizeEvent(self, event):
+        """✉ 按钮钉在右下角"""
+        super().resizeEvent(event)
+        btn = getattr(self, "_msg_btn", None)
+        if btn is not None:
+            btn.move(self.width() - btn.width() - 4, self.height() - btn.height() - 4)
 
     def _apply_base_style(self):
         pal = self._palette
@@ -307,6 +322,10 @@ class MemberTile(_DragSource):
             f"font-weight: 600; background: transparent; }}"
             f"QLabel#memberState {{ color: {rgba(pal['text_secondary'])}; font-size: 11px; "
             f"background: transparent; }}"
+            f"QPushButton#msgBtn {{ border: none; border-radius: 12px; "
+            f"background: {rgba(pal['accent'], 46)}; color: {rgba(pal['accent'])}; "
+            f"font-size: 13px; }}"
+            f"QPushButton#msgBtn:hover {{ background: {rgba(pal['accent'], 110)}; }}"
         )
         self.update()
 
@@ -316,14 +335,19 @@ class MemberTile(_DragSource):
         self._apply_base_style()
 
     def _state_color_hex(self) -> str:
-        return {
-            "streaming": "#50E3C2",
-            "thinking": "#7EB3F5",
-            "question": "#FFC94D",
-            "error": "#FF7B72",
-            "busy": "#FFB25C",
-            "idle": "#7DD8A5",
-        }.get(self._state, "#9AA4B2")
+        """状态色：深浅底两套，高饱和高区分度"""
+        dark = self._palette["is_dark"]
+        table = {
+            # (深底色, 浅底色)
+            "streaming": ("#2DD4BF", "#0D9488"),  # 青绿
+            "thinking": ("#5CA9FF", "#1D4ED8"),  # 亮蓝
+            "question": ("#FFC53D", "#B45309"),  # 琥珀
+            "error": ("#FF7A70", "#DC2626"),  # 红
+            "busy": ("#FF9838", "#EA580C"),  # 橙
+            "idle": ("#4ADE80", "#15803D"),  # 绿
+        }
+        pair = table.get(self._state, ("#C8CEDA", "#475569"))
+        return pair[0] if dark else pair[1]
 
     def _refresh_labels(self):
         state_txt = state_cn(self._state)
@@ -332,7 +356,7 @@ class MemberTile(_DragSource):
         self._state_label.setText(state_txt)
         self._state_label.setStyleSheet(
             f"QLabel#memberState {{ color: {self._state_color_hex()}; font-size: 11px; "
-            f"background: transparent; }}"
+            f"font-weight: 600; background: transparent; }}"
         )
 
     def apply_state(self, state: str, task_count: int, context_percent: float = 0.0):
@@ -347,7 +371,7 @@ class MemberTile(_DragSource):
             f"状态: {state_cn(self._state)}\n"
             f"未完成任务: {task_count}\n"
             f"窗口: {self.window_id}\n\n"
-            "双击切到该窗口 · 右键发消息/移除\n拖出面板或拖到垃圾桶可移除（窗口保留）"
+            "双击切到该窗口 · 点✉直接发消息\n拖出面板或拖到垃圾桶可移除（窗口保留）"
         )
 
     def mouseDoubleClickEvent(self, event):
