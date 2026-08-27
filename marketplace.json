@@ -131,6 +131,52 @@
             }
         },
         {
+            "name": "archify",
+            "description": "把代码库/系统描述/纯语言需求/Mermaid 转成自包含交互式架构图 HTML（architecture/workflow/sequence/dataflow/lifecycle），内置 tt-a1i/archify 运行时，开箱即用。",
+            "version": "0.1.0",
+            "author": "马丁",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/archify",
+                "ref": "main"
+            },
+            "components": {
+                "tools": true,
+                "commands": false,
+                "agents": false,
+                "skills": true,
+                "hooks": false,
+                "mcp": false,
+                "lsp": false,
+                "themes": false,
+                "ui": false,
+                "providers": false,
+                "team_templates": false,
+                "model_adapters": false,
+                "loop_policies": false,
+                "storages": false,
+                "serializers": false,
+                "gateways": false,
+                "engines": false
+            },
+            "keywords": [
+                "archify",
+                "evolved"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "autoloop",
             "description": "AutoLoop 自动循环模式 — 规划→执行→归档三阶段长任务自动执行（对话引擎插件化首例，经 UI 服务门面驱动自建 ConversationCore）",
             "version": "1.1.0",

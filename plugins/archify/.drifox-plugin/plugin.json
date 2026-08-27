@@ -1,0 +1,40 @@
+{
+    "name": "archify",
+    "description": "把代码库/系统描述/纯语言需求/Mermaid 转成自包含交互式架构图 HTML（architecture/workflow/sequence/dataflow/lifecycle），内置 tt-a1i/archify 运行时，开箱即用。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "0.1.0",
+    "author": {
+        "name": "马丁"
+    },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "archify",
+        "evolved"
+    ],
+    "components": {
+        "tools": true,
+        "commands": false,
+        "agents": false,
+        "skills": true,
+        "hooks": false,
+        "mcp": false,
+        "lsp": false,
+        "themes": false,
+        "ui": false,
+        "providers": false,
+        "team_templates": false,
+        "model_adapters": false,
+        "loop_policies": false,
+        "storages": false,
+        "serializers": false,
+        "gateways": false,
+        "engines": false
+    }
+}
