@@ -6,6 +6,7 @@ AutoLoop 卡片组件 — 配置卡 + 运行卡
 - AutoLoopRunningCard: 运行状态显示 + 停止按钮（彩虹渐变边框动画）
 """
 
+import json
 import os
 import time
 from pathlib import Path
@@ -54,6 +55,45 @@ from app.utils.design_tokens import Colors, font_size_css, scale_font_size
 from app.utils.utils import get_font_family_css, get_icon
 
 FONT_CSS = get_font_family_css()
+
+
+# ============================================================
+#  AutoLoop 配置自管存储（独立于主程序系统设置）
+# ============================================================
+
+
+def _state_path() -> Path:
+    """autoloop 自己的配置文件路径：<app_data_dir>/plugins/autoloop/config.json"""
+    try:
+        from app.utils.utils import get_app_data_dir
+
+        return Path(get_app_data_dir()) / "plugins" / "autoloop" / "config.json"
+    except Exception:
+        return Path(".drifox") / "plugins" / "autoloop" / "config.json"
+
+
+def _load_state() -> dict:
+    """读取本地配置（损坏/缺失返回空 dict）"""
+    path = _state_path()
+    try:
+        if path.exists():
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                return data
+    except Exception:
+        pass
+    return {}
+
+
+def _save_state(values: dict) -> bool:
+    """保存本地配置（不抛异常，失败仅静默）"""
+    try:
+        path = _state_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(values, ensure_ascii=False, indent=2), encoding="utf-8")
+        return True
+    except Exception:
+        return False
 
 
 # ============================================================
@@ -178,26 +218,20 @@ class AutoLoopConfigCard(QFrame):
         self._refresh_component_styles()
 
     def _build_ui(self):
-        # 从 PluginConfigStore 读取默认值（E1 配置持久化），缺失时回退到 AutoLoopConfig 默认
+        # 从 autoloop 自管 JSON 读取上次的用户配置（独立于主程序系统设置）
         _default_config = AutoLoopConfig()
+        _state = _load_state()
         try:
-            from app.plugins.managers.plugin_config_store import PluginConfigStore
-
-            _store = PluginConfigStore()
-            _default_config.max_iterations = int(
-                _store.get("autoloop", "max_iterations", _default_config.max_iterations)
-            )
-            _default_config.max_tokens = int(
-                _store.get("autoloop", "max_tokens", _default_config.max_tokens)
-            )
-            _default_config.max_duration_minutes = int(
-                _store.get("autoloop", "max_duration_minutes", _default_config.max_duration_minutes)
-            )
-            _default_config.completion_threshold = int(
-                _store.get("autoloop", "completion_threshold", _default_config.completion_threshold)
-            )
+            if "max_iterations" in _state:
+                _default_config.max_iterations = int(_state["max_iterations"])
+            if "max_tokens" in _state:
+                _default_config.max_tokens = int(_state["max_tokens"])
+            if "max_duration_minutes" in _state:
+                _default_config.max_duration_minutes = int(_state["max_duration_minutes"])
+            if "completion_threshold" in _state:
+                _default_config.completion_threshold = int(_state["completion_threshold"])
         except Exception:
-            # 缺 store / 未连接主程序 / 字段未声明 → 用 AutoLoopConfig 默认值
+            # 字段类型异常 → 用 AutoLoopConfig 默认值
             pass
 
         layout = QVBoxLayout(self)
@@ -356,6 +390,15 @@ class AutoLoopConfigCard(QFrame):
             completion_threshold=self._threshold_spin.value(),
             project_path=self._path_edit.text().strip(),
             task_prompt=self._prompt_edit.toPlainText().strip(),
+        )
+        # 把当前配置落到 autoloop 自管 JSON（独立于主程序系统设置）
+        _save_state(
+            {
+                "max_iterations": config.max_iterations,
+                "max_tokens": config.max_tokens,
+                "max_duration_minutes": config.max_duration_minutes,
+                "completion_threshold": config.completion_threshold,
+            }
         )
         # 刷新最新上下文后交给控制器启动
         if self._ctx_provider is not None:

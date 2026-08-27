@@ -5,7 +5,7 @@
     },
     "name": "autoloop",
     "description": "AutoLoop 自动循环模式 — 规划→执行→归档三阶段长任务自动执行（对话引擎插件化首例，经 UI 服务门面驱动自建 ConversationCore）",
-    "version": "1.0.1",
+    "version": "1.1.0",
     "author": {
         "name": "DriFox Contributors"
     },
@@ -30,42 +30,5 @@
     "components": {
         "ui": true,
         "agents": true
-    },
-    "config_schema": {
-        "title": "AutoLoop 循环",
-        "fields": [
-            {
-                "key": "max_iterations",
-                "label": "最大迭代轮数",
-                "type": "int",
-                "default": 50,
-                "placeholder": "50",
-                "description": "单次 AutoLoop 任务的最大循环轮数上限。"
-            },
-            {
-                "key": "max_tokens",
-                "label": "Token 上限",
-                "type": "int",
-                "default": 5000000,
-                "placeholder": "5000000",
-                "description": "单次任务累计 token 消耗上限，超出自动停止。"
-            },
-            {
-                "key": "max_duration_minutes",
-                "label": "时长上限（分钟）",
-                "type": "int",
-                "default": 120,
-                "placeholder": "120",
-                "description": "单次任务最长运行时长（分钟），超出自动停止。"
-            },
-            {
-                "key": "completion_threshold",
-                "label": "完成信号阈值",
-                "type": "int",
-                "default": 3,
-                "placeholder": "3",
-                "description": "MISSION_COMPLETE 需连续输出的次数（防误判提前完成）。"
-            }
-        ]
     }
 }
