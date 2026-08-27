@@ -2108,6 +2108,53 @@
             }
         },
         {
+            "name": "openhanako-adapter",
+            "description": "openhanako（HanaAgent）能力适配插件：内置技能、智能体人格、beautify HTML 美学、日记（diary）、会话转技能（/xing）、即梦 CLI 生图",
+            "version": "0.1.0",
+            "author": "mading",
+            "license": "Apache-2.0",
+            "categories": [
+                "agent",
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/openhanako-adapter",
+                "ref": "main"
+            },
+            "components": {
+                "tools": true,
+                "commands": true,
+                "agents": true,
+                "skills": true,
+                "hooks": false,
+                "mcp": false,
+                "lsp": false,
+                "themes": false,
+                "ui": false,
+                "providers": false,
+                "team_templates": false,
+                "model_adapters": false,
+                "loop_policies": false,
+                "storages": false,
+                "serializers": false,
+                "gateways": false,
+                "engines": false
+            },
+            "keywords": [
+                "openhanako",
+                "hana",
+                "diary",
+                "xing",
+                "jimeng",
+                "beautify"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            }
+        },
+        {
             "name": "openrouter-provider",
             "description": "OpenRouter 服务商接入插件：声明图标/API URL/模型列表/models.dev 映射/余额查询，走 OpenAI 兼容协议",
             "version": "0.1.1",
