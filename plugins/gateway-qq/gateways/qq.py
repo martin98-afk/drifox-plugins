@@ -65,8 +65,9 @@ STREAM_IDLE_TIMEOUT = 30.0  # 无后续内容自动收尾（秒）
 STREAM_MAX_CHUNK = 1800  # 单分片内容上限
 STREAM_UPDATE_MIN_INTERVAL = 0.6  # replace 打字机更新最小间隔（宿主已节流 300ms，插件侧再保险）
 
-# 结束片触发前缀（宿主 backend.py 推送的最终回复/错误标记）
-FINAL_MARKERS = ("💬", "❌")
+# 工具进度前缀（宿主 backend.py 推送）：进度消息只追加不终流；
+# 无前缀消息（最终正文）发结束片
+PROGRESS_MARKERS = ("🤔", "🔧", "✅")
 
 # 事件类型 → 聊天类型
 EVENT_CHAT_TYPE = {
@@ -648,8 +649,9 @@ class QqAdapter(BasePlatformAdapter):
     ) -> SendResult:
         """replace 流存活期间，普通 send 推送并入快照末尾（保持前缀单调）"""
         snapshot = st.last_snapshot + ("\n\n" if st.last_snapshot else "") + content.strip()
-        ok = await self._send_replace(chat_id, openid, st, snapshot, final=content.startswith(FINAL_MARKERS))
-        if content.startswith(FINAL_MARKERS):
+        is_progress = content.startswith(PROGRESS_MARKERS)
+        ok = await self._send_replace(chat_id, openid, st, snapshot, final=not is_progress)
+        if not is_progress:
             self._streams.pop(chat_id, None)
         return SendResult(success=ok)
 
@@ -723,14 +725,13 @@ class QqAdapter(BasePlatformAdapter):
     # ── 单聊流式合并（stream_messages append 模式） ───────
 
     async def _send_stream(self, chat_id: str, openid: str, msg_id: str, content: str) -> SendResult:
-        """把宿主推的思考占位/工具进度/最终回复折叠为一条打字机消息。
+        """把宿主推的思考占位/工具进度折叠为一条打字机消息（旧宿主链路）。
 
-        - 首条内容立即发首片（input_state=1, index=0）拿 stream_msg_id
-        - 后续内容 debounce 合并续片（append，间隔 ≥STREAM_MIN_INTERVAL）
-        - 最终回复（💬/❌ 开头）立即发结束片（input_state=10）
+        - 进度消息（🤔/🔧/✅ 开头）追加续片
+        - 无前缀消息（最终正文）立即发结束片（input_state=10）
         - 超长正文不进流，结束片发引导语后普通分片发送
         """
-        is_final = content.startswith(FINAL_MARKERS)
+        is_progress = content.startswith(PROGRESS_MARKERS)
         st = self._streams.get(chat_id)
         if st is None or st.msg_id != msg_id:
             # 新会话流：若存在旧流（不同 msg_id），先静默丢弃
@@ -743,9 +744,9 @@ class QqAdapter(BasePlatformAdapter):
         self._restart_watchdog(chat_id)
 
         now = time.monotonic()
-        if is_final or not st.stream_msg_id or now - st.last_flush >= STREAM_MIN_INTERVAL:
+        if not is_progress or not st.stream_msg_id or now - st.last_flush >= STREAM_MIN_INTERVAL:
             self._cancel_debounce(st)
-            return await self._flush_stream(chat_id, openid, final=is_final)
+            return await self._flush_stream(chat_id, openid, final=not is_progress)
 
         # 未到间隔：合并缓冲，调度定时 flush
         self._schedule_debounce(chat_id, openid, STREAM_MIN_INTERVAL - (now - st.last_flush))
