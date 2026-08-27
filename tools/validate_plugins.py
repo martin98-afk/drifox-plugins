@@ -928,6 +928,8 @@ def check_dependencies(
     } if PLUGINS_DIR.exists() else set()
 
     for dep_name in deps:
+        if dep_name == "pip":  # 保留 key：pip 依赖声明（deps_loader），非插件名
+            continue
         if dep_name not in available:
             errors.append(f"dependencies 引用的插件不存在: {dep_name}")
 
