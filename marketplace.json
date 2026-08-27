@@ -164,6 +164,7 @@
                 "gateways": false,
                 "engines": false
             },
+            "downloads": 3,
             "keywords": [
                 "archify"
             ],
@@ -195,7 +196,7 @@
                 "ui": true,
                 "agents": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "autoloop",
                 "loop",
@@ -295,7 +296,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 30,
+            "downloads": 31,
             "keywords": [
                 "browser",
                 "web",
@@ -327,7 +328,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 14,
+            "downloads": 15,
             "keywords": [
                 "calendar",
                 "date",
@@ -601,7 +602,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 15,
+            "downloads": 16,
             "keywords": [
                 "welcome",
                 "stats",
@@ -737,7 +738,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 13,
+            "downloads": 14,
             "keywords": [
                 "desktop",
                 "automation",
@@ -1263,7 +1264,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 17,
+            "downloads": 19,
             "platforms": [
                 "windows",
                 "linux",
@@ -1303,7 +1304,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -1454,7 +1455,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 26,
+            "downloads": 27,
             "keywords": [
                 "git",
                 "source-control",
@@ -2209,7 +2210,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 8,
+            "downloads": 9,
             "keywords": [
                 "omml",
                 "docx",
@@ -2295,6 +2296,7 @@
                 "gateways": false,
                 "engines": false
             },
+            "downloads": 1,
             "keywords": [
                 "openhanako",
                 "hana",
@@ -2372,6 +2374,7 @@
             "components": {
                 "ui": true
             },
+            "downloads": 1,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -2695,7 +2698,7 @@
                 "tools": true,
                 "skills": true
             },
-            "downloads": 8,
+            "downloads": 9,
             "keywords": [
                 "self-evolve",
                 "plugin",
@@ -2887,7 +2890,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 9,
+            "downloads": 11,
             "platforms": [
                 "windows",
                 "linux",
@@ -3509,7 +3512,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 15,
+            "downloads": 17,
             "keywords": [
                 "powershell",
                 "windows",
