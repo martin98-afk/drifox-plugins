@@ -346,7 +346,7 @@
                 "skills": true,
                 "agents": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "productivity",
                 "communication",
@@ -1128,7 +1128,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 15,
+            "downloads": 17,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -1151,7 +1151,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -1221,6 +1221,7 @@
                 "gateways": true,
                 "tools": true
             },
+            "downloads": 5,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -1863,7 +1864,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "theme",
                 "dark",
@@ -1957,7 +1958,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 8,
+            "downloads": 9,
             "keywords": [
                 "skill",
                 "agents",
@@ -2372,7 +2373,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 18,
+            "downloads": 19,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -2542,7 +2543,7 @@
                 "tools": true,
                 "skills": true
             },
-            "downloads": 6,
+            "downloads": 8,
             "keywords": [
                 "self-evolve",
                 "plugin",
@@ -2734,7 +2735,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 8,
+            "downloads": 9,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -3335,7 +3336,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 14,
+            "downloads": 15,
             "keywords": [
                 "powershell",
                 "windows",
