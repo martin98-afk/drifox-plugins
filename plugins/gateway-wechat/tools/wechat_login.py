@@ -3,7 +3,7 @@
 微信 iLink 扫码登录工具
 
 流程（对应 iLink 官方接口，协议参考 openhanako wechat-login.ts，Apache-2.0）：
-    1. get_qr:   GET /ilink/bot/get_bot_qrcode → 二维码内容 → segno 渲染 PNG → 返回本地路径
+    1. get_qr:   GET /ilink/bot/get_bot_qrcode → 二维码内容 → segno 渲染 PNG → image_data 直接回显对话
     2. poll:     GET /ilink/bot/get_qrcode_status（35s 长轮询）→ confirmed → bot_token 写入配置
     3. status:   查看当前 token / 连接状态
 
@@ -12,11 +12,11 @@ token 失效（约 24h 或服务端踢下线）后重新扫码即可。
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import sys
 import urllib.parse
-from pathlib import Path
 from typing import Any, Dict
 
 # ── 插件自包含依赖：segno（零依赖二维码库）vendor 到插件 deps/ ──
@@ -47,22 +47,16 @@ def _http_get(url: str, timeout: int = POLL_TIMEOUT) -> Dict[str, Any]:
     return resp.json()
 
 
-def _qr_png_path() -> Path:
-    """二维码 PNG 输出路径（宿主数据目录）"""
-    from app.gateway.base import get_cache_dir
+def _render_qr_png(qr_text: str, scale: int = 8) -> bytes:
+    """segno 渲染二维码 PNG，返回字节"""
+    import io
 
-    d = get_cache_dir("wechat")
-    return d / "login_qr.png"
-
-
-def _render_qr(qr_text: str) -> str:
-    """segno 渲染 PNG，返回绝对路径"""
     import segno
 
     qr = segno.make(qr_text, error="m")
-    path = _qr_png_path()
-    qr.save(str(path), scale=8, border=2)
-    return str(path)
+    buf = io.BytesIO()
+    qr.save(buf, kind="png", scale=scale, border=2)
+    return buf.getvalue()
 
 
 def _save_bot_token(token: str) -> None:
@@ -88,16 +82,16 @@ def _wechat_login_impl(tool_ctx, **kwargs) -> ToolResult:
             if not qr_content or not qrcode_id:
                 return ToolResult(False, error=f"服务器未返回二维码: {json.dumps(data, ensure_ascii=False)[:200]}")
 
-            png_path = _render_qr(str(qr_content))
+            png_bytes = _render_qr_png(str(qr_content))
             return ToolResult(
                 True,
                 content=(
-                    f"二维码已生成：{png_path}\n\n"
-                    f"请用微信扫码（打开图片后扫一扫）。二维码内容前缀：{str(qr_content)[:50]}…\n"
-                    f"qrcode_id: {qrcode_id}\n\n"
-                    f"扫码后调用 wechat_login(action=\"poll\", qrcode_id=\"{qrcode_id}\") 等待确认。"
+                    "请用微信扫码登录（扫屏幕或截图识别均可）。\n\n"
+                    f"扫完并手机确认后，调用 wechat_login(action=\"poll\", qrcode_id=\"{qrcode_id}\") 等待确认。\n"
+                    "二维码约 2 分钟内有效，过期重新 get_qr。"
                 ),
-                data={"qrcode_id": qrcode_id, "qr_png": png_path},
+                image_data={"mime": "image/png", "data": base64.b64encode(png_bytes).decode()},
+                data={"qrcode_id": qrcode_id, "status": "pending"},
             )
 
         if action == "poll":
@@ -110,9 +104,9 @@ def _wechat_login_impl(tool_ctx, **kwargs) -> ToolResult:
 
             status = str(data.get("status") or "waiting")
             if status in ("wait", "waiting"):
-                return ToolResult(True, content="等待扫码中（长轮询一次约 35s），请再调用一次 poll。", data={"status": "waiting"})
+                return ToolResult(True, content="等待扫码中（本次长轮询约 35s 内无事件），请再调用一次 poll。", data={"status": "waiting"})
             if status == "scaned":
-                return ToolResult(True, content="已扫码，等待用户在手机上确认。再调用一次 poll。", data={"status": "scanned"})
+                return ToolResult(True, content="已扫码，等待用户在手机上点确认。再调用一次 poll。", data={"status": "scaned"})
             if status == "expired":
                 return ToolResult(False, error="二维码已过期，请重新 get_qr。")
             if status == "confirmed":
@@ -125,14 +119,9 @@ def _wechat_login_impl(tool_ctx, **kwargs) -> ToolResult:
                     content=(
                         "✅ 微信登录成功！bot_token 已写入 gateway-wechat 配置。\n"
                         f"bot_id: {data.get('ilink_bot_id', '')}\n"
-                        "请在设置中启用「微信网关」开关，或让用户直接发消息测试。"
+                        "请在设置中启用「微信网关」开关，即可收发消息。"
                     ),
-                    data={
-                        "status": "confirmed",
-                        "bot_token": str(token),
-                        "ilink_bot_id": data.get("ilink_bot_id"),
-                        "ilink_user_id": data.get("ilink_user_id"),
-                    },
+                    data={"status": "confirmed", "bot_id": str(data.get("ilink_bot_id") or "")},
                 )
             return ToolResult(False, error=f"未知状态: {json.dumps(data, ensure_ascii=False)[:200]}")
 
@@ -165,7 +154,7 @@ _WECHAT_LOGIN_SCHEMA = {
     "function": {
         "name": "wechat_login",
         "description": (
-            "微信扫码登录工具（iLink 官方接口）。action=get_qr 生成登录二维码 PNG 并返回路径；"
+            "微信扫码登录工具（iLink 官方接口）。action=get_qr 生成登录二维码（直接在对话中显示）；"
             "action=poll 轮询扫码状态（confirmed 后自动写入 bot_token）；action=status 查看配置状态。"
         ),
         "parameters": {

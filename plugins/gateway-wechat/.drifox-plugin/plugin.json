@@ -26,6 +26,26 @@
                 "default": false
             },
             {
+                "key": "qr_login",
+                "label": "扫码登录",
+                "type": "action",
+                "placeholder": "扫码登录",
+                "description": "点击生成二维码弹窗，微信扫码确认后自动写入 token",
+                "action": {
+                    "tool": "wechat_login",
+                    "args": {"action": "get_qr"},
+                    "poll": {
+                        "args": {"action": "poll", "qrcode_id": "{data.qrcode_id}"},
+                        "interval_ms": 4000,
+                        "max_rounds": 45,
+                        "stop_when": {
+                            "data.status": ["confirmed", "expired"],
+                            "error": true
+                        }
+                    }
+                }
+            },
+            {
                 "key": "bot_token",
                 "label": "Bot Token",
                 "type": "password",
