@@ -47,8 +47,8 @@ def _http_get(url: str, timeout: int = POLL_TIMEOUT) -> Dict[str, Any]:
     return resp.json()
 
 
-def _render_qr_png(qr_text: str, scale: int = 8) -> bytes:
-    """segno 渲染二维码 PNG，返回字节"""
+def _render_qr_png(qr_text: str, scale: int = 12) -> bytes:
+    """segno 渲染二维码 PNG，返回字节（scale 12 ≈ 540px 源，420px 展示仍清晰可扫）"""
     import io
 
     import segno
