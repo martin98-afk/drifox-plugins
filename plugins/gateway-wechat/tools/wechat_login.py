@@ -68,13 +68,32 @@ def _render_qr_png(qr_text: str, scale: int = 12) -> bytes:
 
 
 def _save_bot_token(token: str) -> None:
-    """confirmed 后写入插件配置"""
+    """confirmed 后写入插件配置并触发网关重建重连（扫码后免重启）"""
     from app.plugins.managers.plugin_config_store import PluginConfigStore
 
     PluginConfigStore().set_values(
         "gateway-wechat",
         {"bot_token": token},
     )
+    # 重建 adapter（旧实例持有旧空 token 配置）并重启连接；
+    # 未启用时不启动（用户开开关时自会触发）
+    try:
+        from app.plugins.managers.plugin_config_store import PluginConfigStore as _S
+
+        enabled = bool(_S().get("gateway-wechat", "enabled"))
+        if enabled:
+            from app.gateway.manager import get_platform_manager
+
+            mgr = get_platform_manager()
+            if mgr is not None:
+                mgr.rebuild_plugin_platforms("gateway-wechat", restart_if_running=True)
+                logger.info("[wechat_login] token 已写入，网关已重建重连")
+            else:
+                logger.info("[wechat_login] token 已写入（网关管理器未初始化）")
+        else:
+            logger.info("[wechat_login] token 已写入（网关未启用，开启开关后连接）")
+    except Exception as e:
+        logger.warning(f"[wechat_login] 自动重连未触发（可手动开关启用）: {e}")
 
 
 def _wechat_login_impl(tool_ctx, **kwargs) -> ToolResult:
