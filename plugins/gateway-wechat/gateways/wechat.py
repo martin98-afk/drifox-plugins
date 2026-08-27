@@ -109,8 +109,8 @@ class WechatAdapter(BasePlatformAdapter):
             return False
 
         if not self._bot_token:
-            self._last_error = "缺少 bot_token：请使用 wechat_login 工具扫码登录"
-            logger.error("[Wechat] %s", self._last_error)
+            self._last_error = "缺少 bot_token：请在设置卡点「扫码登录」（或让 AI 调 wechat_login 工具）获取"
+            logger.warning(f"[Wechat] {self._last_error}")
             return False
 
         try:
@@ -120,13 +120,13 @@ class WechatAdapter(BasePlatformAdapter):
             # 探活：一次 getupdates 空轮询验证 token
             ok, expired, err = await self._poll_once()
             if expired:
-                self._last_error = "bot_token 已失效（errcode -14），请重新扫码登录"
-                logger.error("[Wechat] %s", self._last_error)
+                self._last_error = f"bot_token 已失效（errcode -14），请重新扫码登录"
+                logger.error(f"[Wechat] {self._last_error}")
                 await self._cleanup()
                 return False
             if err and "HTTP" in str(err):
                 self._last_error = f"连接失败: {err}"
-                logger.error("[Wechat] %s", err)
+                logger.error(f"[Wechat] {self._last_error}")
                 await self._cleanup()
                 return False
 
@@ -138,7 +138,7 @@ class WechatAdapter(BasePlatformAdapter):
             return True
 
         except Exception as e:
-            logger.error("[Wechat] Connection failed: %s", e, exc_info=True)
+            logger.error(f"[Wechat] Connection failed: {e}", exc_info=True)
             self._last_error = f"连接失败: {e}"
             await self._cleanup()
             return False
@@ -212,7 +212,7 @@ class WechatAdapter(BasePlatformAdapter):
             if p.exists():
                 self._get_updates_buf = json.loads(p.read_text(encoding="utf-8")).get("get_updates_buf", "")
         except Exception as e:
-            logger.debug("[Wechat] load cursor failed: %s", e)
+            logger.debug(f"[Wechat] load cursor failed: {e}")
 
     def _save_cursor(self) -> None:
         try:
@@ -220,7 +220,7 @@ class WechatAdapter(BasePlatformAdapter):
                 json.dumps({"get_updates_buf": self._get_updates_buf}), encoding="utf-8"
             )
         except Exception as e:
-            logger.debug("[Wechat] save cursor failed: %s", e)
+            logger.debug(f"[Wechat] save cursor failed: {e}")
 
     # ── 长轮询主循环 ────────────────────────────────────
 
@@ -262,7 +262,7 @@ class WechatAdapter(BasePlatformAdapter):
                 if err is not None:
                     consecutive += 1
                     if consecutive >= MAX_CONSECUTIVE_FAILURES:
-                        logger.error("[Wechat] Poll failed x%d: %s", consecutive, err)
+                        logger.error(f"[Wechat] Poll failed x{consecutive}: {err}")
                         self._last_error = str(err)[:200]
                     delay = BACKOFF_DELAYS[min(consecutive - 1, len(BACKOFF_DELAYS) - 1)]
                     await asyncio.sleep(delay)
@@ -276,11 +276,11 @@ class WechatAdapter(BasePlatformAdapter):
                     try:
                         self._handle_inbound(msg)
                     except Exception as e:
-                        logger.error("[Wechat] handle_inbound error: %s", e, exc_info=True)
+                        logger.error(f"[Wechat] handle_inbound error: {e}", exc_info=True)
         except asyncio.CancelledError:
             pass
         except Exception as e:
-            logger.error("[Wechat] Poll loop crashed: %s", e, exc_info=True)
+            logger.error(f"[Wechat] Poll loop crashed: {e}", exc_info=True)
             self._last_error = str(e)
             self._connected = False
 
@@ -329,7 +329,7 @@ class WechatAdapter(BasePlatformAdapter):
 
         text = self._extract_text(msg.get("item_list"))
         if not text.strip():
-            logger.debug("[Wechat] Non-text message skipped (from=%s)", from_user_id[:12])
+            logger.debug(f"[Wechat] Non-text message skipped (from={from_user_id[:12]})")
             return
 
         event = MessageEvent(
@@ -391,7 +391,7 @@ class WechatAdapter(BasePlatformAdapter):
                     await self._api_post("ilink/bot/sendmessage", body)
                 except Exception as e:
                     ok, err = False, str(e)[:200]
-                    logger.error("[Wechat] Send failed: %s", err)
+                    logger.error(f"[Wechat] Send failed: {err}")
                     if self._is_session_expired(e):
                         self._last_error = "bot_token 已失效，请重新扫码登录"
                         self._connected = False
@@ -399,7 +399,7 @@ class WechatAdapter(BasePlatformAdapter):
 
             return SendResult(success=ok, error=err, retryable=(err is None or "HTTP" in str(err)))
         except Exception as e:
-            logger.error("[Wechat] Send failed: %s", e, exc_info=True)
+            logger.error(f"[Wechat] Send failed: {e}", exc_info=True)
             return SendResult(success=False, error=str(e), retryable=True)
 
     async def get_chat_info(self, chat_id: str) -> ChatInfo:
