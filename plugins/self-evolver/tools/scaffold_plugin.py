@@ -75,6 +75,11 @@ def register(registry):
         cn_name="{cn_tool_name}",
         group="{group}",
         description="{plugin} 工具（骨架）",
+        # ── 可选注册参数（按需取消注释） ──
+        # render_mode="inline",     # 完成框形态：""=折叠卡 / "inline"=单行无body / "expand"=常开 / "none"=不渲染
+        # keep_in_content=True,     # True=完成卡常驻消息正文；缺省=简洁模式收进「工具与思考」折叠区
+        # preview=_preview_fn,      # 自然语言参数预览：preview(tool_args) -> str（inline卡/折叠头显示）
+        # metadata={{"permission_arg": "path"}},  # 权限/视觉/交互等语义声明，详见 docs/plugins
     )
 '''
 
