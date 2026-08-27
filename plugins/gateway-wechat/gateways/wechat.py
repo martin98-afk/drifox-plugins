@@ -342,7 +342,8 @@ class WechatAdapter(BasePlatformAdapter):
             platform=self.platform,
             chat_type="dm",
         )
-        asyncio.get_event_loop().create_task(self.handle_message(event))
+        # 事件分发（poll_loop 已在事件循环内，create_task 安全）
+        asyncio.get_running_loop().create_task(self.handle_message(event))
 
     # ── 发送 ────────────────────────────────────────────
 
