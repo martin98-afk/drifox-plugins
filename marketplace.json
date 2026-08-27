@@ -1115,7 +1115,7 @@
         {
             "name": "gateway-feishu",
             "description": "飞书 (Feishu/Lark) WebSocket 模式适配器（社区插件，万物即插件 Phase E）：实时消息收发，基于 lark-oapi SDK。",
-            "version": "1.0.0",
+            "version": "1.1.0",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [],

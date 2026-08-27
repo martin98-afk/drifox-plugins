@@ -280,7 +280,7 @@ class FeishuAdapter(BasePlatformAdapter):
                     content_data = json.loads(content_str)
                     if isinstance(content_data, dict):
                         text = content_data.get("text", "") or content_data.get("content", "") or ""
-            except json.JSONDecodeError, TypeError:
+            except (json.JSONDecodeError, TypeError):
                 # 如果不是 JSON，直接作为文本
                 text = content_str
 
@@ -485,10 +485,13 @@ class FeishuAdapter(BasePlatformAdapter):
                     "Content-Type": "application/json",
                 }
 
+                # Markdown 卡片：多元素（标题/正文 Markdown 分离）渲染富文本；
+                # 卡片发送失败（旧应用无卡片权限）自动回退纯文本
+                card = self._build_markdown_card(chunk)
                 json_data = {
                     "receive_id": chat_id,
-                    "msg_type": "text",
-                    "content": json.dumps({"text": chunk}),
+                    "msg_type": "interactive",
+                    "content": json.dumps(card),
                 }
 
                 if reply_to and i == 0:
@@ -503,6 +506,25 @@ class FeishuAdapter(BasePlatformAdapter):
                     json=json_data,
                 )
 
+                # 卡片失败回退纯文本（部分应用未开通卡片消息权限）
+                if response.status_code != 200 or response.json().get("code") not in (0, None):
+                    logger.warning(
+                        "[Feishu] Card send fallback to text: HTTP %s code=%s",
+                        response.status_code,
+                        response.json().get("code"),
+                    )
+                    json_data = {
+                        "receive_id": chat_id,
+                        "msg_type": "text",
+                        "content": json.dumps({"text": chunk}),
+                    }
+                    response = await client.post(
+                        endpoint,
+                        params={"receive_id_type": "chat_id"},
+                        headers=headers,
+                        json=json_data,
+                    )
+
                 if response.status_code == 200:
                     resp_data = response.json()
                     if resp_data.get("code") == 0:
@@ -516,6 +538,36 @@ class FeishuAdapter(BasePlatformAdapter):
         except Exception as e:
             logger.error("[Feishu] Send failed: %s", e)
             return SendResult(success=False, error=str(e))
+
+    @staticmethod
+    def _build_markdown_card(content: str) -> dict:
+        """Markdown 文本 → 飞书 interactive 卡片（msg_type=interactive）。
+
+        首行 # 标题提为 header；其余进 Markdown 元素（飞书原生支持
+        加粗/斜体/链接/代码块/列表/图片语法，无需转换）。
+        """
+        import re
+
+        title = ""
+        body = content
+        m = re.match(r"^\s*#\s+(.+)\n", content)
+        if m:
+            title = m.group(1).strip()
+            body = content[m.end():]
+
+        elements = [
+            {
+                "tag": "markdown",
+                "content": body.strip() or "（空）",
+            }
+        ]
+        card = {"elements": elements}
+        if title:
+            card["header"] = {
+                "title": {"tag": "plain_text", "content": title},
+                "template": "blue",
+            }
+        return card
 
     async def _get_access_token(self) -> Optional[str]:
         """获取 tenant access token（带缓存，有效期 2 小时，提前 5 分钟刷新）"""
