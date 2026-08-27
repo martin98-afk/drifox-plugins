@@ -357,6 +357,21 @@ sys.modules["app"] = _app
 sys.modules["app.tools"] = _tools
 sys.modules["app.tools.result"] = _res
 
+# registry 垫片：插件常用 make_summarize_from_preview（win-powershell 等均有依赖），
+# 隔离环境无真实 ToolRegistry，注入行为等价的轻量替身，避免 deep 验证误报
+def _make_summarize_from_preview(preview_fn):
+    def _summarize(args=None, **kw):
+        try:
+            return preview_fn(args or {})
+        except Exception:
+            return ""
+    return _summarize
+
+_reg = types.ModuleType("app.tools.registry")
+_reg.make_summarize_from_preview = _make_summarize_from_preview
+_tools.registry = _reg
+sys.modules["app.tools.registry"] = _reg
+
 
 class MockRegistry:
     def __init__(self):
