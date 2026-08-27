@@ -144,6 +144,8 @@ class FeishuAdapter(BasePlatformAdapter):
                     self._verification_token or "",
                 )
                 .register_p2_im_message_receive_v1(self._on_feishu_message)
+                # 卡片回传交互（依赖 vendor ws client 的 CARD 帧分发补丁）
+                .register_p2_card_action_trigger(self._on_card_action)
                 .build()
             )
 
@@ -337,6 +339,73 @@ class FeishuAdapter(BasePlatformAdapter):
 
             traceback.print_exc()
 
+    # ==================== 卡片按钮回传（card.action.trigger） ====================
+
+    def _on_card_action(self, data: Any) -> Any:
+        """处理交互卡片按钮点击：取出按钮携带的命令并注入消息回环。
+
+        与手敲命令完全同路（_message_handler → 宿主 GatewayEngine.process），
+        命令结果由宿主作为新消息发回会话。
+        """
+        from app.gateway.base import MessageEvent, MessageType
+
+        try:
+            event = getattr(data, "event", None)
+            if event is None:
+                return self._card_toast("error", "无效的卡片回调")
+
+            action = getattr(event, "action", None)
+            value = getattr(action, "value", None)
+            cmd = value.get("drifox_cmd", "") if isinstance(value, dict) else ""
+            cmd = str(cmd).strip()
+            if not cmd.startswith("/"):
+                return self._card_toast("error", "未知按钮指令")
+
+            context = getattr(event, "context", None)
+            chat_id = str(getattr(context, "open_chat_id", "") or "") if context else ""
+            if not chat_id:
+                return self._card_toast("error", "缺少会话上下文")
+
+            operator = getattr(event, "operator", None)
+            operator_id = str(getattr(operator, "open_id", "") or "card_user") if operator else "card_user"
+
+            ev = MessageEvent(
+                text=cmd,
+                message_type=MessageType.TEXT,
+                message_id="",
+                chat_id=chat_id,
+                user_id=operator_id,
+                user_name=operator_id,
+                platform=Platform.FEISHU,
+                chat_type="dm",
+                media_urls=[],
+                media_types=[],
+            )
+
+            if self._message_handler:
+                loop = self._handler_loop
+                if loop is not None and loop.is_running():
+                    asyncio.run_coroutine_threadsafe(self._message_handler(ev), loop)
+                    logger.info("[Feishu] Card action injected: %s", cmd[:80])
+                    return self._card_toast("success", f"⏳ 已执行 {cmd[:40]}")
+                logger.error("[Feishu] Handler loop not running, card action dropped")
+                return self._card_toast("error", "处理循环不可用")
+
+            return self._card_toast("error", "消息处理器未就绪")
+
+        except Exception as e:
+            logger.error("[Feishu] Card action error: %s", e)
+            return self._card_toast("error", "处理失败")
+
+    @staticmethod
+    def _card_toast(toast_type: str, msg: str):
+        """构建卡片回调响应（点击后的轻提示）"""
+        from lark_oapi.event.callback.model.p2_card_action_trigger import (
+            P2CardActionTriggerResponse,
+        )
+
+        return P2CardActionTriggerResponse({"toast": {"type": toast_type, "content": msg}})
+
     async def disconnect(self) -> None:
         """断开连接（幂等）：真正关闭 ws 连接、停止线程与事件循环
 
@@ -485,9 +554,9 @@ class FeishuAdapter(BasePlatformAdapter):
                     "Content-Type": "application/json",
                 }
 
-                # Markdown 卡片：多元素（标题/正文 Markdown 分离）渲染富文本；
-                # 卡片发送失败（旧应用无卡片权限）自动回退纯文本
-                card = self._build_markdown_card(chunk)
+                # 命令响应 → 专属交互卡片（含按钮）；其余 → 通用 Markdown 卡片。
+                # 两者失败均自动回退纯文本（下方卡片失败回退逻辑）
+                card = self._detect_command_card(chunk) or self._build_markdown_card(chunk)
                 json_data = {
                     "receive_id": chat_id,
                     "msg_type": "interactive",
@@ -568,6 +637,270 @@ class FeishuAdapter(BasePlatformAdapter):
                 "template": "blue",
             }
         return card
+
+    # ==================== Gateway 命令输出的专属交互卡片 ====================
+    #
+    # 识别宿主 GatewayEngine 命令（/help /model /session /agent）的输出文案，
+    # 构建带按钮的交互卡片；按钮点击经 card.action.trigger 回传（见
+    # _on_card_action），注入命令与手敲完全同路。
+    # 文案格式对齐宿主 app/core/engines/gateway/engine.py；宿主改版导致解析
+    # 失败时回退 _build_markdown_card，功能不劣化。
+
+    @staticmethod
+    def _btn(label: str, cmd: str, btn_type: str = "default", disabled: bool = False) -> dict:
+        """交互卡片按钮（回传交互型：value 随 card.action.trigger 返回）"""
+        btn = {
+            "tag": "button",
+            "text": {"tag": "plain_text", "content": label},
+            "type": btn_type,
+            "value": {"drifox_cmd": cmd},
+        }
+        if disabled:
+            btn["disabled"] = True
+        return btn
+
+    @staticmethod
+    def _detect_command_card(content: str) -> Optional[dict]:
+        """命令输出识别入口：命中返回专属卡片，未命中返回 None"""
+        try:
+            if content.startswith("🤖 **DriFox Gateway 命令**"):
+                return FeishuAdapter._build_help_card()
+            if content.startswith("📋 **可用模型**"):
+                providers = FeishuAdapter._parse_model_list(content)
+                return FeishuAdapter._build_model_card(providers) if providers else None
+            if content.startswith("📋 **Gateway 会话**"):
+                sessions = FeishuAdapter._parse_session_list(content)
+                return FeishuAdapter._build_session_card(sessions) if sessions else None
+            if content.startswith("📋 **可用 Agent**"):
+                agents = FeishuAdapter._parse_agent_list(content)
+                return FeishuAdapter._build_agent_card(agents) if agents else None
+        except Exception as e:
+            logger.warning("[Feishu] Command card detect failed, fallback: %s", e)
+        return None
+
+    @staticmethod
+    def _build_help_card() -> dict:
+        return {
+            "config": {"wide_screen_mode": True},
+            "header": {
+                "title": {"tag": "plain_text", "content": "🤖 DriFox Gateway 命令"},
+                "template": "blue",
+            },
+            "elements": [
+                {
+                    "tag": "markdown",
+                    "content": "**会话管理**\n`/new` `/reset` 重置会话 · `/clear` 清空记录\n`/session` 列出 / 切换历史会话",
+                },
+                {
+                    "tag": "markdown",
+                    "content": "**模型 & Agent**\n`/model` 查看 / 切换服务商与模型\n`/agent` 查看 / 切换 Agent",
+                },
+                {"tag": "hr"},
+                {
+                    "tag": "action",
+                    "actions": [
+                        FeishuAdapter._btn("🔄 新会话", "/new", "primary"),
+                        FeishuAdapter._btn("📋 模型", "/model"),
+                        FeishuAdapter._btn("💬 会话", "/session"),
+                        FeishuAdapter._btn("🤖 Agent", "/agent"),
+                    ],
+                },
+                {
+                    "tag": "note",
+                    "elements": [{"tag": "plain_text", "content": "点按钮直达 · Gateway 会话与桌面端完全隔离"}],
+                },
+            ],
+        }
+
+    @staticmethod
+    def _parse_model_list(content: str) -> List[dict]:
+        """解析宿主 /model 无参输出 → [{display, current, session, default_model, models[]}]"""
+        import re
+
+        providers: List[dict] = []
+        cur: Optional[dict] = None
+        for line in content.splitlines():
+            line = line.rstrip()
+            m = re.match(r"^\*\*(.+?)\*\*(.*?)(?: — `(.+?)`)?$", line)
+            if m and not line.startswith("  "):
+                cur = {
+                    "display": m.group(1),
+                    "current": "◀" in (m.group(2) or ""),
+                    "session": "⚡" in (m.group(2) or ""),
+                    "default_model": m.group(3) or "",
+                    "models": [],
+                }
+                providers.append(cur)
+                continue
+            if cur is None:
+                continue
+            m2 = re.match(r"^  模型: `(.+?)`$", line)
+            if m2:
+                cur["default_model"] = m2.group(1)
+                continue
+            m3 = re.match(r"^  可选: (.+)$", line)
+            if m3:
+                cur["models"] = re.findall(r"`([^`]+)`", m3.group(1))
+        return providers
+
+    @staticmethod
+    def _build_model_card(providers: List[dict]) -> dict:
+        elements: List[dict] = []
+        for p in providers:
+            flags = []
+            if p["current"]:
+                flags.append("◀ 当前服务商")
+            if p["session"]:
+                flags.append("⚡ 会话覆盖")
+            title = f"**{p['display']}**" + (f" {' '.join(flags)}" if flags else "")
+            body = title
+            if p["default_model"]:
+                body += f"\n当前模型: `{p['default_model']}`"
+            elements.append({"tag": "markdown", "content": body})
+
+            # 服务商名含空格时宿主命令解析歧义（split(maxsplit=1)），不生成按钮
+            has_space = " " in p["display"]
+            btn_models = p["models"][:8]
+            if not btn_models and p["default_model"] and not has_space:
+                btn_models = [p["default_model"]]
+            if btn_models and not has_space:
+                default = p["default_model"]
+                elements.append({
+                    "tag": "action",
+                    "actions": [
+                        FeishuAdapter._btn(
+                            m,
+                            f"/model {p['display']} {m}",
+                            disabled=(m == default and p["current"]),
+                        )
+                        for m in btn_models
+                    ],
+                })
+            elif p["models"] or p["default_model"]:
+                opts = p["models"][:8] or ([p["default_model"]] if p["default_model"] else [])
+                elements.append({
+                    "tag": "markdown",
+                    "content": f"可选: {', '.join(f'`{m}`' for m in opts)}\n*服务商名含空格，暂不支持按钮切换*",
+                })
+            elements.append({"tag": "hr"})
+
+        if elements and elements[-1].get("tag") == "hr":
+            elements.pop()
+        elements.append({
+            "tag": "note",
+            "elements": [{"tag": "plain_text", "content": "点模型按钮立即切换（仅当前 Gateway 会话生效）"}],
+        })
+        return {
+            "config": {"wide_screen_mode": True},
+            "header": {
+                "title": {"tag": "plain_text", "content": "📋 可用模型"},
+                "template": "blue",
+            },
+            "elements": elements,
+        }
+
+    @staticmethod
+    def _parse_session_list(content: str) -> List[dict]:
+        """解析宿主 /session 无参输出 → [{sid, name, count, current}]"""
+        import re
+
+        sessions: List[dict] = []
+        for line in content.splitlines():
+            m = re.match(r"^- `([^`\s]+)`\.\.\. \*\*(.+?)\*\* \((\d+) 条\)(.*)$", line)
+            if m:
+                sessions.append({
+                    "sid": m.group(1),
+                    "name": m.group(2),
+                    "count": int(m.group(3)),
+                    "current": "◀" in (m.group(4) or ""),
+                })
+        return sessions
+
+    @staticmethod
+    def _build_session_card(sessions: List[dict]) -> dict:
+        elements: List[dict] = []
+        for s in sessions:
+            title = f"**{s['name']}** · {s['count']} 条" + (" ◀ 当前" if s["current"] else "")
+            elements.append({
+                "tag": "markdown",
+                "content": f"{title}\n`{s['sid']}...`",
+            })
+            elements.append({
+                "tag": "action",
+                "actions": [
+                    FeishuAdapter._btn(
+                        "✅ 切换到该会话" if not s["current"] else "当前会话",
+                        f"/session {s['sid']}",
+                        "primary" if not s["current"] else "default",
+                        disabled=s["current"],
+                    )
+                ],
+            })
+            elements.append({"tag": "hr"})
+
+        if elements and elements[-1].get("tag") == "hr":
+            elements.pop()
+        return {
+            "config": {"wide_screen_mode": True},
+            "header": {
+                "title": {"tag": "plain_text", "content": "💬 Gateway 会话"},
+                "template": "blue",
+            },
+            "elements": elements,
+        }
+
+    @staticmethod
+    def _parse_agent_list(content: str) -> List[dict]:
+        """解析宿主 /agent 无参输出 → [{name, desc, current}]"""
+        import re
+
+        agents: List[dict] = []
+        for line in content.splitlines():
+            m = re.match(r"^- \*\*(.+?)\*\*(.*?): (.+)$", line)
+            if m:
+                agents.append({
+                    "name": m.group(1),
+                    "desc": m.group(3),
+                    "current": "◀" in (m.group(2) or ""),
+                })
+        return agents
+
+    @staticmethod
+    def _build_agent_card(agents: List[dict]) -> dict:
+        elements: List[dict] = []
+        for a in agents:
+            title = f"**{a['name']}**" + (" ◀ 当前" if a["current"] else "")
+            elements.append({
+                "tag": "markdown",
+                "content": f"{title}\n{a['desc']}",
+            })
+            elements.append({
+                "tag": "action",
+                "actions": [
+                    FeishuAdapter._btn(
+                        "✅ 使用该 Agent" if not a["current"] else "使用中",
+                        f"/agent {a['name']}",
+                        "primary" if not a["current"] else "default",
+                        disabled=a["current"],
+                    )
+                ],
+            })
+            elements.append({"tag": "hr"})
+
+        if elements and elements[-1].get("tag") == "hr":
+            elements.pop()
+        elements.append({
+            "tag": "note",
+            "elements": [{"tag": "plain_text", "content": "点按钮切换 Agent（仅当前 Gateway 会话生效）"}],
+        })
+        return {
+            "config": {"wide_screen_mode": True},
+            "header": {
+                "title": {"tag": "plain_text", "content": "🤖 可用 Agent"},
+                "template": "blue",
+            },
+            "elements": elements,
+        }
 
     async def _get_access_token(self) -> Optional[str]:
         """获取 tenant access token（带缓存，有效期 2 小时，提前 5 分钟刷新）"""

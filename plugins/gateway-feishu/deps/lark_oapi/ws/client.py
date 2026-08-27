@@ -340,7 +340,13 @@ class Client(object):
             if message_type == MessageType.EVENT:
                 result = self._event_handler._do_without_validation(pl)
             elif message_type == MessageType.CARD:
-                return
+                # PATCH(drifox card-callback): 上游 bug——CARD 帧被静默丢弃
+                # (larksuite/oapi-sdk-python#126)，register_p2_card_action_trigger
+                # 注册的卡片回调永不触发（点击卡片按钮报 200340）。
+                # 卡片回调 payload 与事件同构（schema=2.0 + header.event_type），
+                # 走同一分发路径；result(P2CardActionTriggerResponse) 经下方
+                # base64 回写即为 ws 模式卡片回调响应。
+                result = self._event_handler._do_without_validation(pl)
             else:
                 return
             end = int(round(time.time() * 1000))
