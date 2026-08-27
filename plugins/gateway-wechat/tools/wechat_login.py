@@ -30,7 +30,8 @@ from app.tools.result import ToolResult
 
 LOGIN_BASE_URL = "https://ilinkai.weixin.qq.com"
 BOT_TYPE = "3"
-POLL_TIMEOUT = 40  # 服务端 hold 35s + 余量
+POLL_TIMEOUT = 45  # 服务端 hold 35s + 余量
+GET_QR_TIMEOUT = 15
 
 
 def _login_headers() -> Dict[str, str]:
@@ -38,10 +39,17 @@ def _login_headers() -> Dict[str, str]:
 
 
 def _http_get(url: str, timeout: int = POLL_TIMEOUT) -> Dict[str, Any]:
-    """同步 GET（工具在 executor 线程跑，阻塞可接受）"""
+    """同步 GET（工具在 executor 线程跑，阻塞可接受）。
+
+    长轮询接口服务端 hold 35s，读超时须大于它；connect 独立短超时。
+    """
     import httpx
 
-    resp = httpx.get(url, headers=_login_headers(), timeout=timeout)
+    resp = httpx.get(
+        url,
+        headers=_login_headers(),
+        timeout=httpx.Timeout(timeout, connect=10.0),
+    )
     if resp.status_code >= 400:
         raise RuntimeError(f"HTTP {resp.status_code}: {resp.text[:200]}")
     return resp.json()
@@ -76,7 +84,7 @@ def _wechat_login_impl(tool_ctx, **kwargs) -> ToolResult:
     try:
         if action == "get_qr":
             url = f"{LOGIN_BASE_URL}/ilink/bot/get_bot_qrcode?bot_type={BOT_TYPE}"
-            data = _http_get(url, timeout=15)
+            data = _http_get(url, timeout=GET_QR_TIMEOUT)
             qr_content = data.get("qrcode_img_content") or data.get("qrcode")
             qrcode_id = data.get("qrcode")
             if not qr_content or not qrcode_id:

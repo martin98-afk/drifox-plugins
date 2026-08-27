@@ -1205,7 +1205,7 @@
         {
             "name": "gateway-wechat",
             "description": "微信机器人适配器（iLink 官方接口）：扫码登录、长轮询收发单聊消息；无需公众号配置，复用宿主 httpx。",
-            "version": "0.1.2",
+            "version": "0.1.3",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [
@@ -3320,7 +3320,7 @@
         {
             "name": "win-powershell",
             "description": "专用 Windows PowerShell 执行工具——强制走 PowerShell 原生入口运行 PS 脚本/命令（cmdlet、管道对象、ConvertTo-Json），自动处理 UTF-8 编码与超时，区别于通用 bash 工具。",
-            "version": "1.0.4",
+            "version": "1.0.5",
             "author": "马丁",
             "license": "GPL-3.0-or-later",
             "categories": [

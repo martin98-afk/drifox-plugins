@@ -5,7 +5,7 @@
     },
     "name": "gateway-wechat",
     "description": "微信机器人适配器（iLink 官方接口）：扫码登录、长轮询收发单聊消息；无需公众号配置，复用宿主 httpx。",
-    "version": "0.1.2",
+    "version": "0.1.3",
     "author": {
         "name": "DriFoxx Team"
     },
@@ -33,16 +33,24 @@
                 "description": "点击生成二维码弹窗，微信扫码确认后自动写入 token",
                 "action": {
                     "tool": "wechat_login",
-                    "args": {"action": "get_qr"},
+                    "args": {
+                        "action": "get_qr"
+                    },
                     "image_width": 420,
                     "dialog_width": 500,
                     "dialog_height": 620,
                     "poll": {
-                        "args": {"action": "poll", "qrcode_id": "{data.qrcode_id}"},
+                        "args": {
+                            "action": "poll",
+                            "qrcode_id": "{data.qrcode_id}"
+                        },
                         "interval_ms": 4000,
                         "max_rounds": 45,
                         "stop_when": {
-                            "data.status": ["confirmed", "expired"],
+                            "data.status": [
+                                "confirmed",
+                                "expired"
+                            ],
                             "error": true
                         }
                     }
