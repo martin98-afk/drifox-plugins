@@ -42,6 +42,8 @@ MAX_CONSECUTIVE_FAILURES = 3
 BACKOFF_DELAYS = [2, 5, 30]
 CONTEXT_TOKEN_TTL = 24 * 3600  # context_token 有效期（秒）
 MSG_CHUNK_LIMIT = 4000  # 单条消息文本上限
+# ret=-2：context_token 失效（久未互动）或限流；前者需对方重新发消息，后者退避重试
+SEND_RETRY_DELAYS = [1.0, 3.0, 8.0]  # 分片限流退避（秒）
 
 # iLink 消息类型
 ITEM_TEXT = 1
@@ -51,6 +53,105 @@ ITEM_FILE = 4
 ITEM_VIDEO = 5
 MSG_TYPE_BOT = 2
 MSG_STATE_FINISH = 2
+
+
+# ── Markdown → 微信可读纯文本渲染 ────────────────────
+# 参考 openhanako 平台能力分层（Telegram→HTML、飞书→卡片）：
+# 微信 iLink 仅收纯文本 item，故 Markdown 转结构化符号排版。
+
+def render_markdown_plain(md: str) -> str:
+    """Markdown → 微信纯文本（无依赖逐行状态机）。
+
+    映射：#/##/### →【标题】；--- → ─×16；``` 代码块 → ┈ 围栏+缩进；
+    > 引用 →「 前缀；-/* 列表 → •；数字列表 → ①②③；[x] → ☑☐；
+    **粗体** →【】；`code` →「」；[文本](url) → 文本（url）；![图](url) → [图片] url
+    """
+    if not md:
+        return ""
+    import re as _re
+
+    lines = md.replace("\r\n", "\n").split("\n")
+    out: list = []
+    in_code = False
+
+    _INLINE_RULES = [
+        (_re.compile(r"!\[([^\]]*)\]\(([^)\s]+)[^)]*\)"), r"[图片] \2"),
+        (_re.compile(r"\[([^\]]+)\]\(([^)\s]+)[^)]*\)"), r"\1（\2）"),
+        (_re.compile(r"\*\*([^*]+)\*\*"), r"【\1】"),
+        (_re.compile(r"(?<!\*)\*([^*\n]+)\*(?!\*)"), r"\1"),
+        (_re.compile(r"__([^_]+)__"), r"【\1】"),
+        (_re.compile(r"(?<!_)_([^_\n]+)_(?!_)"), r"\1"),
+        (_re.compile(r"`([^`]+)`"), r"「\1」"),
+        (_re.compile(r"~~([^~]+)~~"), r"〜\1〜"),
+    ]
+
+    def _inline(text: str) -> str:
+        for pat, repl in _INLINE_RULES:
+            text = pat.sub(repl, text)
+        return text
+
+    circled = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
+
+    for line in lines:
+        stripped = line.strip()
+
+        if stripped.startswith("```"):
+            in_code = not in_code
+            out.append("┈" * 12)
+            continue
+        if in_code:
+            out.append("  " + line)
+            continue
+
+        if not stripped:
+            out.append("")
+            continue
+
+        m = _re.match(r"^(#{1,6})\s+(.*)$", stripped)
+        if m:
+            out.append(f"【{_inline(m.group(2))}】")
+            continue
+
+        if _re.match(r"^(-{3,}|\*{3,}|_{3,})$", stripped):
+            out.append("─" * 16)
+            continue
+
+        if stripped.startswith(">"):
+            q = _re.sub(r"^>\s?", "", line)
+            out.append("「 " + _inline(q))
+            continue
+
+        m = _re.match(r"^[-*+]\s+\[([ xX])\]\s+(.*)$", stripped)
+        if m:
+            box = "☑" if m.group(1).lower() == "x" else "☐"
+            out.append(f"{box} " + _inline(m.group(2)))
+            continue
+
+        m = _re.match(r"^[-*+]\s+(.*)$", stripped)
+        if m:
+            out.append("• " + _inline(m.group(1)))
+            continue
+
+        m = _re.match(r"^(\d+)[.)]\s+(.*)$", stripped)
+        if m:
+            n = int(m.group(1))
+            marker = circled[n - 1] if 1 <= n <= 20 else f"{n}."
+            out.append(f"{marker} " + _inline(m.group(2)))
+            continue
+
+        # 表格：去装饰行（|---|---|），保留数据行
+        if "|" in stripped and _re.match(r"^[\s|:-]+$", stripped):
+            continue
+
+        out.append(_inline(line))
+
+    # 3+ 连续空行压成 1
+    result: list = []
+    for ln in out:
+        if ln == "" and len(result) >= 2 and result[-1] == "" and result[-2] == "":
+            continue
+        result.append(ln)
+    return "\n".join(result).strip()
 
 
 def check_wechat_requirements() -> bool:
@@ -199,7 +300,6 @@ class WechatAdapter(BasePlatformAdapter):
         return "=-14" in msg or "=-14 " in msg or "errcode=-14" in msg
 
     # ── 游标持久化 ──────────────────────────────────────
-
     def _cursor_path(self) -> Path:
         from app.gateway.base import get_cache_dir
 
@@ -359,7 +459,12 @@ class WechatAdapter(BasePlatformAdapter):
         return entry["token"]
 
     async def send(self, chat_id: str, content: str, **kwargs) -> SendResult:
-        """发送文本消息（被动回复，需对方 24h 内发过消息）"""
+        """发送文本消息（被动回复，需对方 24h 内发过消息）。
+
+        - Markdown 自动渲染为微信可读纯文本（render_markdown_plain）
+        - 分片间带限流退避（ret=-2 rate limited）
+        - ret=-2 prepare failed（context_token 失效）时提示对方重新发消息
+        """
         if not self._http_client:
             return SendResult(success=False, error="Not connected", retryable=True)
 
@@ -373,9 +478,13 @@ class WechatAdapter(BasePlatformAdapter):
                     retryable=False,
                 )
 
+            rendered = render_markdown_plain(content)
             ok, err = True, None
-            for i in range(0, max(len(content), 1), MSG_CHUNK_LIMIT):
-                chunk = content[i : i + MSG_CHUNK_LIMIT]
+            chunks = [
+                rendered[i : i + MSG_CHUNK_LIMIT]
+                for i in range(0, max(len(rendered), 1), MSG_CHUNK_LIMIT)
+            ]
+            for ci, chunk in enumerate(chunks):
                 body = {
                     "msg": {
                         "from_user_id": "",
@@ -388,15 +497,38 @@ class WechatAdapter(BasePlatformAdapter):
                     },
                     "base_info": {"channel_version": "1.0.0"},
                 }
-                try:
-                    await self._api_post("ilink/bot/sendmessage", body)
-                except Exception as e:
-                    ok, err = False, str(e)[:200]
+                sent = False
+                for delay in [0.0] + SEND_RETRY_DELAYS:  # 首发直发，失败退避重试
+                    if delay:
+                        await asyncio.sleep(delay)
+                    try:
+                        await self._api_post("ilink/bot/sendmessage", body)
+                        sent = True
+                        break
+                    except Exception as e:
+                        err = str(e)[:200]
+                        msg = str(e)
+                        if self._is_session_expired(e):
+                            self._last_error = "bot_token 已失效，请重新扫码登录"
+                            self._connected = False
+                            return SendResult(success=False, error=err, retryable=False)
+                        if "prepare failed" in msg or "ret=-2" in msg:
+                            # context_token 失效：重试无意义，提示对方重发
+                            if "prepare failed" in msg:
+                                logger.warning(f"[Wechat] context_token 失效（对方久未发消息），需重新发消息触发")
+                                return SendResult(
+                                    success=False,
+                                    error="回复窗口已失效：请让对方重新发一条消息再试",
+                                    retryable=False,
+                                )
+                            continue  # 真限流：退避重试
+                        break  # 其他错误：不重试
+                if not sent:
+                    ok = False
                     logger.error(f"[Wechat] Send failed: {err}")
-                    if self._is_session_expired(e):
-                        self._last_error = "bot_token 已失效，请重新扫码登录"
-                        self._connected = False
                     break
+                if ci < len(chunks) - 1:
+                    await asyncio.sleep(0.5)  # 分片间隔，降低限流概率
 
             return SendResult(success=ok, error=err, retryable=(err is None or "HTTP" in str(err)))
         except Exception as e:
