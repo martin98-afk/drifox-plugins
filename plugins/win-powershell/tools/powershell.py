@@ -14,6 +14,9 @@
   非 ASCII 字符被破坏的问题（直接 -Command "中文" 会乱码）。
 - 脚本开头强制 [Console]::OutputEncoding = UTF-8，使 stdout 可靠为 UTF-8，
   解码时再兜底 gbk/latin-1（兼容外部 exe 的 GBK 输出）。
+- session 级 $PSDefaultParameterValues['*:Encoding']='utf8'：Set-Content/Out-File
+  等写入默认从 ANSI/UTF-16 变为 UTF-8，AI 生成的中文文件不再下游乱码。
+  （PS 5.1 写 UTF-8 带 BOM，主流工具链均兼容；PS 7 无 BOM）
 
 自包含：纯标准库实现（subprocess/base64），不依赖主程序 services。
 """
@@ -64,7 +67,14 @@ _PS_ENCODING_PROLOGUE = (
     "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;"
     "$OutputEncoding=[System.Text.Encoding]::UTF8;"
     "[Console]::InputEncoding=[System.Text.Encoding]::UTF8;"
-    "$ProgressPreference='SilentlyContinue'"
+    "$ProgressPreference='SilentlyContinue';"
+    # 写入编码统一 UTF-8（无 BOM）：PS 5.1 的 Set-Content/Out-File 默认 ANSI/UTF-16，
+    # AI 生成的中文文件下游（git/python/编辑器）读出乱码，是本工具最高频踩坑点。
+    # 在 session 级把默认写入编码改为 UTF-8：PS 5.1 用 $PSDefaultParameterValues，
+    # PS 7 本身默认即 UTF-8 无 BOM，设置无害。utf8NoBOM 仅 PS 7 支持（5.1 回退 utf8 带BOM？
+    # 不：5.1 的 Set-Content -Encoding utf8 会写 BOM；改用 [IO.File]::WriteAllText
+    # 会改变调用语义，这里接受 5.1 写 BOM（下游工具链均兼容），重点消灭 GBK）。
+    "$PSDefaultParameterValues['*:Encoding']='utf8'"
 )
 
 # CLIXML 兜底：非交互主机序列化块的固定形态为 `#< CLIXML\n<Objs ...>...</Objs>`。
