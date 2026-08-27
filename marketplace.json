@@ -1138,7 +1138,7 @@
         {
             "name": "gateway-qq",
             "description": "QQ 机器人适配器（QQ 开放平台）：WebSocket 长连接收发群聊/单聊消息；不依赖第三方 SDK，复用宿主 aiohttp/httpx。",
-            "version": "1.0.0",
+            "version": "1.1.0",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [],
@@ -1195,6 +1195,31 @@
             },
             "components": {
                 "gateways": true
+            },
+            "homepage": "https://github.com/martin98-afk/drifox-plugins2",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "gateway-wechat",
+            "description": "微信机器人适配器（iLink 官方接口）：扫码登录、长轮询收发单聊消息；无需公众号配置，复用宿主 httpx。",
+            "version": "0.1.0",
+            "author": "DriFoxx Team",
+            "license": "MIT",
+            "categories": [
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/gateway-wechat",
+                "ref": "main"
+            },
+            "components": {
+                "gateways": true,
+                "tools": true
             },
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
