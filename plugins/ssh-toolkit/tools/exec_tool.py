@@ -73,7 +73,7 @@ def register(registry):
                 "timeout": {"type": "integer", "description": "超时秒"},
             }, "required": []},
         }},
-        impl=_connect_impl, danger="dangerous", icon="ssh", cn_name="SSH 连接", group="SSH 远程",
+        impl=_connect_impl, danger="dangerous", icon="ssh_conn", cn_name="SSH 连接", group="SSH 远程",
         description="建立 SSH 连接",
     )
     registry.register(
@@ -102,6 +102,6 @@ def register(registry):
                 "forward_id": {"type": "string", "description": "端口转发 id"},
             }, "required": []},
         }},
-        impl=_disconnect_impl, danger="safe", icon="ssh", cn_name="SSH 断开", group="SSH 远程",
+        impl=_disconnect_impl, danger="safe", icon="ssh_conn", cn_name="SSH 断开", group="SSH 远程",
         description="关闭 SSH 连接/转发",
     )

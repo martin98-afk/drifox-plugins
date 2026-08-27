@@ -117,7 +117,7 @@ def register(registry):
                 "executable": {"type": "boolean", "description": "是否上传后自动 chmod 0o755（默认 false）"},
             }, "required": ["local_path", "remote_path"]},
         }},
-        impl=_upload_impl, danger="dangerous", icon="ssh", cn_name="SSH 上传文件", group="SSH 远程",
+        impl=_upload_impl, danger="dangerous", icon="ssh_upload", cn_name="SSH 上传文件", group="SSH 远程",
         description="SFTP 上传文件",
     )
     registry.register(
@@ -132,7 +132,7 @@ def register(registry):
                 "local_path": {"type": "string", "description": "本地目标路径"},
             }, "required": ["remote_path", "local_path"]},
         }},
-        impl=_download_impl, danger="dangerous", icon="ssh", cn_name="SSH 下载文件", group="SSH 远程",
+        impl=_download_impl, danger="dangerous", icon="ssh_download", cn_name="SSH 下载文件", group="SSH 远程",
         description="SFTP 下载文件",
     )
     registry.register(
