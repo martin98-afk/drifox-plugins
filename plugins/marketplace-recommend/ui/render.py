@@ -173,7 +173,7 @@ def render_recommend(ctx: Dict[str, Any]) -> str:
         dl = _fmt_downloads(int(meta.get("downloads", 0) or 0))
         cards.append(
             f'<div class="context-tag" data-type="{_ACTION_INSTALL}" data-content="{name}" '
-            f'style="flex:1 1 calc({100 // _PER_ROW}% - 8px); box-sizing:border-box; cursor:pointer; '
+            f'style="margin:4px; flex:1 1 calc({100 // _PER_ROW}% - 8px); box-sizing:border-box; cursor:pointer; '
             f"border:1px solid {card_border}; border-radius:10px; padding:9px 11px; background:{card_bg};\">"
             f'<div style="display:flex; align-items:center; gap:14px; font-weight:600; font-size:{_fs(13)}px; color:{fg}; overflow:hidden;">{_icon_img(meta, is_dark)}<span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{name}</span></div>'
             f'<div style="font-size:{_fs(11)}px; color:{muted}; margin-top:3px; line-height:1.5; '
@@ -183,11 +183,12 @@ def render_recommend(ctx: Dict[str, Any]) -> str:
         )
 
     # 标题行：左侧标题 + 右侧「换一批」（flex space-between 靠右）
+    # 卡片间距用 margin（不用 flex gap：旧渲染器 gap 不生效会无缝贴边）
     return (
         f'<div style="display:flex; justify-content:space-between; align-items:baseline; padding:2px;">'
         f'<span style="color:{muted}; font-size:{_fs(12)}px;">🧩 插件推荐 · 来自插件市场</span>'
         f'<span class="context-tag" data-type="{_ACTION_SHUFFLE}" data-content="shuffle" '
         f'style="cursor:pointer; font-size:{_fs(11)}px; color:{accent}; flex-shrink:0;">↻ 换一批</span>'
         f"</div>"
-        f'<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">{"".join(cards)}</div>'
+        f'<div style="display:flex; flex-wrap:wrap; margin:-4px; margin-top:2px;">{"".join(cards)}</div>'
     )
