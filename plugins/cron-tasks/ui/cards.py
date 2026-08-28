@@ -542,7 +542,7 @@ class JobEditPanel(QWidget):
         self._notify_target_edit.setPlaceholderText("平台:chat_id，如 feishu:ou_xxx")
         nrow.addWidget(self._notify_target_edit, 1)
         self._notify_target_row.setVisible(False)
-        layout.addLayout(self._notify_target_row)
+        layout.addWidget(self._notify_target_row)
 
         self._workdir_row = QWidget()
         wdrow = QHBoxLayout(self._workdir_row)
