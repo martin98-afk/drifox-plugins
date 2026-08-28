@@ -175,7 +175,7 @@ for k in stale:
 |----------|--------|
 | `references/runtime_components.md` | scaffold 选了 `storages/serializers/gateways/model_adapters/loop_policies/engines`，或用户提到"系统配置卡片/注册一个 X 引擎" |
 | `references/storage_engine.md` | 用户要做"存储替换插件/会话换格式/xlsx/jsonl/csv 存会话"等；接口对齐 `system/storages/sqlite.py` |
-| `references/troubleshooting.md` | **任何报错/异常/不生效时**：系统日志 `~/.drifox/logs/llm_chatter.log` 的位置、格式、常用查询、Windows python 命令 9009 坑、MCP 排障实例 |
+| `references/troubleshooting.md` | **任何报错/异常/不生效时**：日志拆分（`all.log` 兜底 + `llm`/`mcp`/`lsp`/`plugins`/`gateway`/`tools`/`team`/`store`/`ui` 分文件）的位置与按场景查询命令、Windows python 命令 9009 坑、MCP 排障实例 |
 
 > 排障第一反射：`evolution_journal operation=triage`（扫日志 ERROR + 关联进化动作），细节见 troubleshooting.md。
 
