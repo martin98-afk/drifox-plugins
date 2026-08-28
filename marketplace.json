@@ -410,7 +410,7 @@
         {
             "name": "chinese-chess",
             "description": "中国象棋 — 与大模型对弈的浮动卡片游戏",
-            "version": "0.2.1",
+            "version": "0.2.2",
             "author": "马丁",
             "license": "GPL-3.0-or-later",
             "categories": [
