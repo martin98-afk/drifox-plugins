@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import threading
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -492,7 +493,49 @@ class CronScheduler(QObject):
         # ——避免信号同线程 queued 卡住时 UI 永远不更新）
         icon = {"success": "✅", "error": "❌", "timeout": "⏱", "cancelled": "🛑"}.get(status, "•")
         summary = head if status == "success" and head else (error or status)
-        self.notify_requested.emit("定时任务", f"{icon}「{label}」{summary[:120]}")
+        text = f"{icon}「{label}」{summary[:120]}"
+        # 通知分派：按任务配置（默认 InfoBar / 系统托盘 / Gateway 消息）
+        notify_mode = str(getattr(job, "notify", "") or "")
+        if notify_mode == "system":
+            self._notify_system(text)
+        elif notify_mode.startswith("gateway:"):
+            self._notify_gateway(notify_mode, label, summary, icon)
+        else:
+            self.notify_requested.emit("定时任务", text)
+
+    def _notify_system(self, text: str):
+        """系统托盘弹窗（失败回退本地 InfoBar）"""
+        try:
+            from app.tray_manager import TrayManager
+
+            TrayManager.get_instance().notify("定时任务", text)
+        except Exception as e:
+            logger.warning(f"[cron-tasks] 系统通知失败，回退本地: {e}")
+            self.notify_requested.emit("定时任务", text)
+
+    def _notify_gateway(self, notify_mode: str, label: str, summary: str, icon: str):
+        """gateway:平台:chat_id → 后台线程异步发送（失败仅记日志，不阻塞收尾）"""
+        parts = notify_mode.split(":", 2)
+        platform_name = parts[1] if len(parts) > 1 else ""
+        chat_id = parts[2] if len(parts) > 2 else ""
+        text = f"{icon}「{label}」{summary[:300]}"
+
+        def _worker():
+            try:
+                import asyncio
+
+                from app.gateway import Platform, get_platform_manager
+
+                adapter = get_platform_manager().get_adapter(Platform(platform_name))
+                if adapter is None:
+                    logger.warning(f"[cron-tasks] gateway 平台不可用: {platform_name}")
+                    return
+                result = asyncio.run(adapter.send(chat_id, text))
+                logger.info(f"[cron-tasks] gateway 通知已发送 ({platform_name}): {result}")
+            except Exception as e:
+                logger.warning(f"[cron-tasks] gateway 通知发送失败: {e}")
+
+        threading.Thread(target=_worker, daemon=True, name="cron-gw-notify").start()
         self.job_finished.emit(job_id, label, status, summary)
         self.jobs_changed.emit()
 

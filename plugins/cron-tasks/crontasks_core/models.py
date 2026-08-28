@@ -166,9 +166,9 @@ def cron_to_human(expr: str) -> str:
     if mon == "*":
         if dom == "*" and dow == "*" and m.isdigit() and h.isdigit():
             return f"每天 {int(h):02d}:{int(m):02d}"
-        if dom == "*" and dow.isdigit() and m.isdigit() and h.isdigit():
-            wd = WEEKDAY_CN[int(dow) % 7]
-            return f"每{wd} {int(h):02d}:{int(m):02d}"
+        if dom == "*" and dow and m.isdigit() and h.isdigit() and all(p.isdigit() for p in dow.split(",")):
+            names = "/".join(WEEKDAY_CN[int(d) % 7] for d in dow.split(","))
+            return f"每{names} {int(h):02d}:{int(m):02d}"
         if dow == "*" and dom.isdigit() and m.isdigit() and h.isdigit():
             return f"每月 {dom} 日 {int(h):02d}:{int(m):02d}"
         if dom == "*" and dow == "*" and h == "*" and m.startswith("*/") and m[2:].isdigit():
@@ -206,6 +206,7 @@ class CronJob:
     agent: str = ""  # 执行智能体名；空 = 跟随主程序默认
     model_key: str = ""  # 执行模型（主程序 provider 配置名）；空 = 跟随当前会话模型
     workdir: str = ""  # 执行工作目录；空 = 当前工作目录
+    notify: str = ""  # 完成通知方式：""=默认弹窗 / "system"=系统托盘 / "gateway:平台:chat_id"
     enabled: bool = True
     created_at: str = field(default_factory=now_iso)
     next_run_at: str = ""  # ISO 本地时间；空 = 待计算/已失效
@@ -226,6 +227,7 @@ class CronJob:
             "agent": self.agent,
             "modelKey": self.model_key,
             "workdir": self.workdir,
+            "notify": self.notify,
             "enabled": self.enabled,
             "createdAt": self.created_at,
             "nextRunAt": self.next_run_at,
@@ -252,6 +254,7 @@ class CronJob:
         job.agent = str(data.get("agent") or "")
         job.model_key = str(data.get("modelKey") or "")
         job.workdir = str(data.get("workdir") or "")
+        job.notify = str(data.get("notify") or "")
         job.enabled = bool(data.get("enabled", True))
         job.created_at = str(data.get("createdAt") or "")
         job.next_run_at = str(data.get("nextRunAt") or "")
