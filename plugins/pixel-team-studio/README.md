@@ -54,8 +54,11 @@ ui/
 
 ## 版本
 
+- 0.3.2：bug 修复
+  - 补提交 0.3.1 ✉ 按钮位置——README 已声明"右上角"但源码仍在右下，`MemberTile.resizeEvent` 改为 `btn.move(self.width() - btn.width() - 4, 4)`（钉右上角 y=4）
+  - 修复从插件创建团队的成员 `_team_name` 全部被钉成 "default"——`create_team_from_template` / `add_member` 显式透传 `team_name=template.template_name` / `team_name=team_label or ""`（与 `team_label` 一致），不再依赖 `_spawn_team_member_window` 的模板回退，避免主程序 set_template 单槽覆盖影响
 - 0.3.1：5 项体验优化
-  - 成员格「✉」快捷发消息按钮（右下角常显，点击弹输入框；右键菜单保留）
+  - 成员格「✉」快捷发消息按钮（右上角常显，点击弹输入框；右键菜单保留）
   - 状态色重调：两套高饱和高区分色板（深/浅底），状态字 font-weight 600
   - 动画升级：150ms/帧；状态徽标动画（thinking 三点循环/streaming 箭头闪/question 上下跳/error 左右抖/idle 呼吸）；streaming/busy 进度条流光高亮
   - 工作室卡片常驻（hide_card 拦截切 tab 投影）——切到成员窗口后工作室仍在可继续管理
