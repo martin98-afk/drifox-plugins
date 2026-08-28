@@ -9,6 +9,7 @@ evolution_journal — 自进化工具 5：进化审计日志（append-only）。
 
 操作：log（记录）/ list（查询）/ stats（统计）
 """
+
 import json
 import time
 from pathlib import Path
@@ -40,7 +41,7 @@ def _plugin_version(plugin_name: str) -> str | None:
         if mf.exists():
             try:
                 return json.loads(mf.read_text(encoding="utf-8")).get("version")
-            except (json.JSONDecodeError, OSError):
+            except json.JSONDecodeError, OSError:
                 return None
     return None
 
@@ -61,9 +62,14 @@ def _journal_file(tool_ctx) -> Path:
     return _journal_dir(tool_ctx) / "journal.jsonl"
 
 
-def _system_log_tail(lines: int = 500) -> list:
-    """读系统日志尾部 N 行（GBK 编码容错；文件可能数 MB，只读尾部）"""
-    f = Path.home() / ".drifox" / "logs" / "llm_chatter.log"
+def _system_log_tail(lines: int = 500, subsystem: str | None = None) -> list:
+    """读系统日志尾部 N 行（GBK 编码容错；文件可能数 MB，只读尾部）
+
+    ``subsystem`` 可选：传入子系统名则读对应分文件（如 ``mcp`` → ``mcp.log``），
+    不传则读全量兜底 ``all.log``。子系统清单与 ``app.core.logging_setup.LOG_ROUTES`` 一致。
+    """
+    file_name = f"{subsystem}.log" if subsystem else "all.log"
+    f = Path.home() / ".drifox" / "logs" / file_name
     if not f.exists():
         return []
     try:
@@ -110,7 +116,7 @@ def _triage(lines: int, plugin_filter: str) -> str:
 
     tail = _system_log_tail(lines)
     if not tail:
-        return "未找到系统日志 ~/.drifox/logs/llm_chatter.log（或不可读）"
+        return "未找到系统日志 ~/.drifox/logs/all.log（或不可读）"
 
     err_re = re.compile(r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) \| (ERROR|CRITICAL) \| (.{0,600})")
     errors = [m.groups() for ln in tail if (m := err_re.match(ln))]
@@ -164,7 +170,9 @@ def _triage(lines: int, plugin_filter: str) -> str:
     if related:
         for e in related[-8:]:
             ver = f" v{e['version']}" if e.get("version") else ""
-            lines_out.append(f"  #{e.get('seq', '?')} {e.get('ts', '?')} [{e.get('action', '?')}] {e.get('plugin') or '-'}{ver} → {e.get('status', '?')}")
+            lines_out.append(
+                f"  #{e.get('seq', '?')} {e.get('ts', '?')} [{e.get('action', '?')}] {e.get('plugin') or '-'}{ver} → {e.get('status', '?')}"
+            )
             lines_out.append(f"      {e.get('summary', '')}")
     else:
         lines_out.append("  （journal 无相关插件记录 —— 问题可能与自进化动作无关）")
@@ -172,7 +180,7 @@ def _triage(lines: int, plugin_filter: str) -> str:
     lines_out.append("")
     lines_out.append("建议：")
     lines_out.append("  1. 若错误集中在某插件：先看该插件最近一次 journal 动作改了什么，再针对性回滚/修复")
-    lines_out.append("  2. 手查更多：Get-Content ~/.drifox/logs/llm_chatter.log -Tail 500 | Select-String 'ERROR|<插件名>'")
+    lines_out.append("  2. 手查更多：Get-Content ~/.drifox/logs/all.log -Tail 500 | Select-String 'ERROR|<插件名>'")
     lines_out.append("  3. 排障经验详见 self-evolver references/troubleshooting.md")
     return "\n".join(lines_out)
 
@@ -242,7 +250,8 @@ def _impl(tool_ctx, **kwargs):
             f_plugin = (kwargs.get("plugin_name") or "").strip()
             f_status = (kwargs.get("status") or "").strip()
             filtered = [
-                e for e in entries
+                e
+                for e in entries
                 if (not f_action or e.get("action") == f_action)
                 and (not f_plugin or e.get("plugin") == f_plugin)
                 and (not f_status or e.get("status") == f_status)
@@ -255,7 +264,7 @@ def _impl(tool_ctx, **kwargs):
             else:
                 try:
                     limit = int(raw_limit)
-                except (TypeError, ValueError):
+                except TypeError, ValueError:
                     limit = 50
                 if limit < 0:
                     limit = 0
@@ -291,7 +300,7 @@ def _impl(tool_ctx, **kwargs):
         if op == "triage":
             try:
                 lines = int(kwargs.get("lines") or 500)
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 lines = 500
             lines = max(50, min(lines, 5000))
             return ToolResult(True, content=_triage(lines, (kwargs.get("plugin_name") or "").strip()))
@@ -354,7 +363,12 @@ _SCHEMA = {
 def register(registry):
     """工具插件化注册入口（PluginToolLoader 调用）"""
     registry.register(
-        "evolution_journal", _SCHEMA, impl=_impl,
-        danger="safe", icon="evolution_journal", cn_name="进化审计日志",
-        group="自进化", description="记录/查询插件进化审计日志（append-only 可追溯）",
+        "evolution_journal",
+        _SCHEMA,
+        impl=_impl,
+        danger="safe",
+        icon="evolution_journal",
+        cn_name="进化审计日志",
+        group="自进化",
+        description="记录/查询插件进化审计日志（append-only 可追溯）",
     )
