@@ -38,7 +38,7 @@ DOWNLOADS_CACHE_PATH = REPO_ROOT / "downloads_cache.json"
 REPO_NAME = "drifox-official"
 REPO_DESCRIPTION = "DriFox 官方插件市场 — 托管官方插件与社区贡献插件的统一入口"
 REPO_URL = "https://github.com/martin98-afk/drifox-plugins"
-DEFAULT_REF = "main"
+DEFAULT_REF = "pyside6"
 DEFAULT_LICENSE = "GPL-3.0-or-later"
 
 # DriFox 运行时内置插件（D:/work/DriFox/plugins/ 下的插件）。

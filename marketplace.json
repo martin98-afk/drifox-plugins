@@ -16,7 +16,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/ai-image-gen",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true
@@ -48,7 +48,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/ai-video-gen",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true
@@ -80,7 +80,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/algorithmic-art",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true
@@ -113,7 +113,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/anthropic",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "providers": true
@@ -143,7 +143,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/archify",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": false,
@@ -190,7 +190,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/autoloop",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "ui": true,
@@ -231,7 +231,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/beautiful-article-skills",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true
@@ -263,7 +263,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/breakout",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -289,7 +289,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/browser",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -323,7 +323,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/calendar",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "ui": true
@@ -352,7 +352,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/canvas-design",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true
@@ -386,7 +386,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/caveman",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true,
@@ -420,7 +420,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/chinese-chess",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": false,
@@ -465,7 +465,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/claude-api",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -500,7 +500,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/code-reviewer",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -536,7 +536,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/code-simplifier",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "agents": true
@@ -571,7 +571,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/codegraph-tools",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": true
@@ -596,7 +596,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/command-code",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": false,
@@ -645,7 +645,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/context-stats",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "ui": true
@@ -685,7 +685,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/context-usage-stats",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "ui": true
@@ -709,7 +709,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/context7",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -746,7 +746,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/cron-tasks",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "ui": true,
@@ -784,7 +784,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/desktop-automation",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": true
@@ -816,7 +816,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/doc-coauthoring",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -850,7 +850,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/dsh-router",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -876,7 +876,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/dsh-super-injector",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "hooks": true,
@@ -900,7 +900,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/ecc",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "agents": true,
@@ -938,7 +938,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/evolver",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -973,7 +973,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/example-plugin",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": true,
@@ -1013,7 +1013,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/excalidraw-diagram",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true
@@ -1046,7 +1046,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/fe-fw",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "themes": true
@@ -1083,7 +1083,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/feature-dev",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -1118,7 +1118,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/frontend-design",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true
@@ -1152,7 +1152,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/frontend-pro",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -1187,7 +1187,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/game2048",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -1210,7 +1210,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/gateway-dingtalk",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "gateways": true
@@ -1260,7 +1260,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/gateway-discord",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "gateways": true
@@ -1310,7 +1310,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/gateway-feishu",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "gateways": true
@@ -1350,7 +1350,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/gateway-qq",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "gateways": true
@@ -1373,7 +1373,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/gateway-slack",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "gateways": true
@@ -1395,7 +1395,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/gateway-telegram",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "gateways": true
@@ -1419,7 +1419,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/gateway-wechat",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "gateways": true,
@@ -1443,7 +1443,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/gateway-wecom",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "gateways": true
@@ -1470,7 +1470,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/git-dashboard",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "ui": true
@@ -1501,7 +1501,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/git-panel",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "ui": true
@@ -1532,7 +1532,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/git-status",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "hooks": true
@@ -1556,7 +1556,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/git-workflow",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -1592,7 +1592,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/gpt-image-2",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true
@@ -1625,7 +1625,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/groq",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "providers": true
@@ -1655,7 +1655,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/guizang-ppt-skill",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true
@@ -1689,7 +1689,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/hashline-edit",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": true
@@ -1721,7 +1721,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/hookify",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -1748,7 +1748,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/internal-comms",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -1782,7 +1782,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/ip-switcher",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "ui": true
@@ -1814,7 +1814,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/j-space",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": false,
@@ -1855,7 +1855,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/jsonl-storage",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": false,
@@ -1901,7 +1901,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/kim-service",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "hooks": true,
@@ -1935,7 +1935,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/knowledge-base-skills",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true
@@ -1969,7 +1969,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/laputa-fog",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "themes": true
@@ -2004,7 +2004,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/marketplace-recommend",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": false,
@@ -2050,7 +2050,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/mcp-builder",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -2084,7 +2084,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/memory-match",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -2109,7 +2109,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/midnight-aurora",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "themes": true
@@ -2144,7 +2144,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/minesweeper",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -2169,7 +2169,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/minimax-h3",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -2203,7 +2203,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/nuwa-skill",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true
@@ -2236,7 +2236,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/office-docs",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -2272,7 +2272,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/ollama",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "providers": true
@@ -2302,7 +2302,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/omml-docx",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true
@@ -2341,7 +2341,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/openai",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "providers": true
@@ -2372,7 +2372,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/openhanako-adapter",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": true,
@@ -2419,7 +2419,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/openrouter-provider",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": false,
@@ -2466,7 +2466,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/pixel-team-studio",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "ui": true
@@ -2491,7 +2491,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/playground",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true
@@ -2524,7 +2524,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/ponytail",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -2559,7 +2559,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/project-dashboard",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "ui": true
@@ -2595,7 +2595,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/project-side-rail",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "ui": true
@@ -2620,7 +2620,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/prompt-enhancer",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "ui": true
@@ -2652,7 +2652,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/python-pro",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true,
@@ -2685,7 +2685,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/rdr2",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "themes": true
@@ -2720,7 +2720,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/react-pro",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -2754,7 +2754,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/security-guidance",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "hooks": true
@@ -2789,7 +2789,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/self-evolver",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": true,
@@ -2825,7 +2825,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/seo-audit",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -2860,7 +2860,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/session-tree",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "ui": true
@@ -2891,7 +2891,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/skill-creator",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true
@@ -2924,7 +2924,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/slack-gif-creator",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true
@@ -2957,7 +2957,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/snake",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -2982,7 +2982,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/ssh-toolkit",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": true
@@ -3029,7 +3029,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/superclaude",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -3063,7 +3063,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/superpowers",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true,
@@ -3099,7 +3099,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/tailwind-pro",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -3135,7 +3135,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/taskboard",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "ui": true,
@@ -3173,7 +3173,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/teach",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true
@@ -3207,7 +3207,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/tencent-hunyuan",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": false,
@@ -3258,7 +3258,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/test-scaffold",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -3292,7 +3292,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/tetris",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -3317,7 +3317,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/theme-factory",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true
@@ -3349,7 +3349,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/tool-locator",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": true
@@ -3382,7 +3382,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/twin-chat",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "ui": true
@@ -3420,7 +3420,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/ui-motion-skills",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true
@@ -3454,7 +3454,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/voice-clone",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -3490,7 +3490,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/voice-reply",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "hooks": true
@@ -3514,7 +3514,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/weather-query",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": true,
@@ -3552,7 +3552,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/web-artifacts-builder",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true
@@ -3586,7 +3586,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/web-design-skills",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true
@@ -3620,7 +3620,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/webapp-testing",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "commands": true,
@@ -3655,7 +3655,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/win-powershell",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": true
@@ -3689,7 +3689,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/workbuddy",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": true,
