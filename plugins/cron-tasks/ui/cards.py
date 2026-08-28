@@ -402,8 +402,18 @@ class JobEditPanel(QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(8)
 
+        # 顶部行：标题 + 右侧操作（保存/取消与标题同行，符合操作直觉）
+        header = QHBoxLayout()
         self._title = StrongBodyLabel("新建任务")
-        layout.addWidget(self._title)
+        header.addWidget(self._title)
+        header.addStretch()
+        self._cancel_btn = PushButton("取消")
+        self._cancel_btn.clicked.connect(self.cancelRequested.emit)
+        header.addWidget(self._cancel_btn)
+        self._save_btn = PrimaryPushButton("保存")
+        self._save_btn.clicked.connect(self._on_save)
+        header.addWidget(self._save_btn)
+        layout.addLayout(header)
 
         def _field(label_text: str, widget: QWidget, stretch: int = 1) -> QHBoxLayout:
             row = QHBoxLayout()
@@ -519,16 +529,6 @@ class JobEditPanel(QWidget):
         wd_field.addWidget(self._workdir_row)
         layout.addLayout(wd_field)
 
-        # 按钮
-        btns = QHBoxLayout()
-        btns.addStretch()
-        self._cancel_btn = PushButton("取消")
-        self._cancel_btn.clicked.connect(self.cancelRequested.emit)
-        self._save_btn = PrimaryPushButton("保存")
-        self._save_btn.clicked.connect(self._on_save)
-        btns.addWidget(self._cancel_btn)
-        btns.addWidget(self._save_btn)
-        layout.addLayout(btns)
         layout.addStretch()
 
         # 联动预览刷新
