@@ -3545,7 +3545,7 @@
         {
             "name": "win-powershell",
             "description": "专用 Windows PowerShell 执行工具——强制走 PowerShell 原生入口运行 PS 脚本/命令（cmdlet、管道对象、ConvertTo-Json），自动处理 UTF-8 编码与超时，区别于通用 bash 工具。",
-            "version": "1.0.5",
+            "version": "1.0.6",
             "author": "马丁",
             "license": "GPL-3.0-or-later",
             "categories": [
