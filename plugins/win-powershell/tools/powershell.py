@@ -126,15 +126,14 @@ def _powershell_impl(tool_ctx, **kwargs):
     """运行 PowerShell 脚本。
 
     参数:
-        script:  要执行的 PowerShell 脚本/命令/脚本块（必填）
-        cwd:     工作目录（可选，默认当前项目目录）
+        command: 要执行的 PowerShell 命令/脚本/脚本块（必填）
         timeout: 超时秒数（可选，默认 120，范围 1-3600）
     """
-    script = kwargs.get("script")
+    script = kwargs.get("command")
     if not script or not str(script).strip():
-        return ToolResult(False, error="script 不能为空")
+        return ToolResult(False, error="command 不能为空")
 
-    cwd = kwargs.get("cwd") or tool_ctx.get("workdir")
+    cwd = tool_ctx.get("workdir")
     if cwd is not None:
         cwd = str(cwd)
     timeout = int(kwargs.get("timeout") or 120)
@@ -217,27 +216,17 @@ _SCHEMA = {
         "parameters": {
             "type": "object",
             "properties": {
-                "script": {
-                    "type": "string",
-                    "description": "要执行的 PowerShell 脚本/命令/脚本块",
-                },
-                "cwd": {
-                    "type": "string",
-                    "description": "工作目录（可选，默认当前项目目录）",
-                },
-                "timeout": {
-                    "type": "integer",
-                    "description": "超时秒数（可选，默认 120，范围 1-3600）",
-                },
+                "command": {"type": "string", "description": "命令"},
+                "timeout": {"type": "integer", "description": "超时秒数"},
             },
-            "required": ["script"],
+            "required": ["command"],
         },
     },
 }
 
 
 def _preview(args: dict) -> str:
-    script = (args or {}).get("script", "")
+    script = (args or {}).get("command", "")
     first_line = (
         str(script).strip().splitlines()[0] if str(script).strip() else ""
     )
@@ -259,5 +248,5 @@ def register(registry):
         render_mode="",  # 默认折叠卡：长输出可折叠
         preview=_preview,
         summarize=make_summarize_from_preview(_preview),
-        metadata={"permission_arg": "script"},
+        metadata={"permission_arg": "command"},
     )
