@@ -336,6 +336,9 @@ class CronScheduler(QObject):
         except Exception as e:
             logger.warning(f"[cron-tasks] 组装执行上下文失败: {e}")
 
+        # 无人值守场景剔除 question：该工具会阻塞等用户回答，没人应答 → 卡满执行超时
+        tools = [t for t in tools if t.get("function", {}).get("name") != "question"]
+
         # 模型覆盖：任务指定模型 → 从主程序 _valid_configs 取完整配置传 override
         model_override = self._resolve_model_override(job)
 
@@ -423,6 +426,7 @@ class CronScheduler(QObject):
         response_text = str(result.get("response_text") or "")
         head = str(result.get("head") or "")
         tool_calls = int(result.get("tool_calls") or 0)
+        duration_ms = int(result.get("duration_ms") or 0)
 
         # 防覆盖：重读磁盘最新列表（内存 _jobs 可能过期 —— 运行期间用户删/建任务，
         # 或历史孤儿实例写过盘）。按 id 定位目标，不存在则仅写运行历史。
