@@ -599,9 +599,15 @@ class JobEditPanel(QWidget):
             combo.addItem("（暂无会话——先给机器人发条消息）", "")
         else:
             sessions = sorted(sessions, key=lambda s: s.last_active, reverse=True)
+            # 去重：同一 platform:chat_id 只保留最近活跃的一条
+            seen = set()
             for s in sessions:
                 p = getattr(s.platform, "value", s.platform)
-                combo.addItem(s.display_name, f"{p}:{s.chat_id}")
+                key = f"{p}:{s.chat_id}"
+                if key in seen:
+                    continue
+                seen.add(key)
+                combo.addItem(s.display_name, key)
         if current:
             cidx = combo.findData(current)
             if cidx >= 0:
