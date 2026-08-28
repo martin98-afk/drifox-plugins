@@ -26,6 +26,7 @@ from PyQt5.QtWidgets import (
 )
 from qfluentwidgets import (
     BodyLabel,
+    CheckBox,
     ComboBox,
     FluentIcon,
     LineEdit,
@@ -139,7 +140,7 @@ class ScheduleDraft:
         self.interval_value = 30
         self.interval_unit = 0  # 0=分钟 1=小时 2=天
         self.time = "09:00"
-        self.weekday = 0  # 0=周日 … 6=周六（cron dow 语义）
+        self.weekdays = {1}  # cron dow 集合（0=周日 … 6=周六），多选
         self.month_day = 1
         self.date_time = ""
         self.cron = "0 9 * * *"
@@ -172,8 +173,12 @@ class ScheduleDraft:
             if mon == "*" and dom == "*" and dow == "*" and m.isdigit() and h.isdigit():
                 self.mode, self.time = "daily", f"{int(h):02d}:{int(m):02d}"
                 return self
-            if mon == "*" and dom == "*" and dow.isdigit() and m.isdigit() and h.isdigit():
-                self.mode, self.weekday, self.time = "weekly", int(dow) % 7, f"{int(h):02d}:{int(m):02d}"
+            if mon == "*" and dom == "*" and dow and m.isdigit() and h.isdigit() and all(p.isdigit() for p in dow.split(",")):
+                self.mode, self.weekdays, self.time = (
+                    "weekly",
+                    {int(d) % 7 for d in dow.split(",")},
+                    f"{int(h):02d}:{int(m):02d}",
+                )
                 return self
             if mon == "*" and dow == "*" and dom.isdigit() and m.isdigit() and h.isdigit():
                 self.mode, self.month_day, self.time = "monthly", int(dom), f"{int(h):02d}:{int(m):02d}"
@@ -199,7 +204,10 @@ class ScheduleDraft:
             return "cron", expr
         hour, minute = (int(x) for x in self.time.split(":")[:2])
         if self.mode == "weekly":
-            return "cron", f"{minute} {hour} * * {int(self.weekday)}"
+            if not self.weekdays:
+                raise ValueError("请至少勾选一个星期")
+            dow_list = ",".join(str(d) for d in sorted(self.weekdays))
+            return "cron", f"{minute} {hour} * * {dow_list}"
         if self.mode == "monthly":
             return "cron", f"{minute} {hour} {int(self.month_day)} * *"
         return "cron", f"{minute} {hour} * * *"
@@ -466,15 +474,19 @@ class JobEditPanel(QWidget):
         irow.addStretch()
         sd_layout.addWidget(self._interval_row)
 
-        # 时间行：[星期(仅每周)] [时间(每天/每周/每月)] [几号(仅每月)]
+        # 时间行：[星期多选(仅每周)] [时间(每天/每周/每月)] [几号(仅每月)]
         self._time_row = QWidget()
         trow = QHBoxLayout(self._time_row)
         trow.setContentsMargins(0, 0, 0, 0)
         trow.setSpacing(6)
-        self._weekday_combo = ComboBox()
-        self._weekday_combo.addItems(WEEKDAY_CN)
-        self._weekday_combo.setFixedWidth(90)
-        trow.addWidget(self._weekday_combo)
+        # 每周多选：标签顺序周一..周日 → cron dow [1..6,0]
+        self._weekday_checks: List[QCheckBox] = []
+        for _lbl, _dow in zip(("一", "二", "三", "四", "五", "六", "日"), (1, 2, 3, 4, 5, 6, 0)):
+            cb = CheckBox(_lbl)
+            cb.stateChanged.connect(self._refresh_preview)
+            self._weekday_checks.append(cb)
+            trow.addWidget(cb)
+        self._weekday_checks[0].setChecked(True)  # 默认周一
         self._time_edit = QTimeEdit()
         self._time_edit.setDisplayFormat("HH:mm")
         from PyQt5.QtCore import QTime
@@ -488,9 +500,15 @@ class JobEditPanel(QWidget):
         trow.addStretch()
         sd_layout.addWidget(self._time_row)
 
-        # 单次：日期时间（once 模式）
-        self._once_edit = LineEdit()
-        self._once_edit.setPlaceholderText("格式: 2026-09-01 09:00（需为未来时间）")
+        # 单次：日期时间（once 模式，日历弹窗选择，不再手输）
+        from PyQt5.QtWidgets import QDateTimeEdit
+
+        self._once_edit = QDateTimeEdit()
+        self._once_edit.setCalendarPopup(True)
+        self._once_edit.setDisplayFormat("yyyy-MM-dd HH:mm")
+        from PyQt5.QtCore import QDateTime as _QDT
+
+        self._once_edit.setDateTime(_QDT.currentDateTime().addDays(1))
         sd_layout.addWidget(self._once_edit)
 
         # 高级 cron（advanced 模式）
@@ -507,6 +525,24 @@ class JobEditPanel(QWidget):
         # 智能体 + 工作目录
         self._agent_combo = ComboBox()
         layout.addLayout(_field("执行智能体", self._agent_combo))
+
+        # 完成通知方式
+        self._notify_combo = ComboBox()
+        self._notify_combo.addItems(["默认弹窗", "系统通知", "Gateway 消息"])
+        self._notify_combo.currentIndexChanged.connect(self._on_notify_mode_changed)
+        layout.addLayout(_field("完成通知", self._notify_combo))
+        self._notify_target_row = QWidget()
+        nrow = QHBoxLayout(self._notify_target_row)
+        nrow.setContentsMargins(0, 0, 0, 0)
+        nrow.setSpacing(4)
+        nlbl = BodyLabel("目标")
+        nlbl.setFixedWidth(90)
+        nrow.addWidget(nlbl)
+        self._notify_target_edit = LineEdit()
+        self._notify_target_edit.setPlaceholderText("平台:chat_id，如 feishu:ou_xxx")
+        nrow.addWidget(self._notify_target_edit, 1)
+        self._notify_target_row.setVisible(False)
+        layout.addLayout(self._notify_target_row)
 
         self._workdir_row = QWidget()
         wdrow = QHBoxLayout(self._workdir_row)
@@ -535,10 +571,13 @@ class JobEditPanel(QWidget):
         self._interval_spin.valueChanged.connect(self._refresh_preview)
         self._interval_unit_combo.currentIndexChanged.connect(self._refresh_preview)
         self._time_edit.timeChanged.connect(self._refresh_preview)
-        self._weekday_combo.currentIndexChanged.connect(self._refresh_preview)
         self._monthday_spin.valueChanged.connect(self._refresh_preview)
-        self._once_edit.textChanged.connect(self._refresh_preview)
+        self._once_edit.dateTimeChanged.connect(self._refresh_preview)
         self._cron_edit.textChanged.connect(self._refresh_preview)
+
+    def _on_notify_mode_changed(self, index: int):
+        # 仅 Gateway 模式需要目标（平台:chat_id）
+        self._notify_target_row.setVisible(index == 2)
 
     def _browse_workdir(self):
         from PyQt5.QtWidgets import QFileDialog
@@ -551,7 +590,8 @@ class JobEditPanel(QWidget):
         mode = SCHEDULE_MODES[index] if 0 <= index < len(SCHEDULE_MODES) else "daily"
         self._interval_row.setVisible(mode == "interval")
         self._time_row.setVisible(mode in ("daily", "weekly", "monthly"))
-        self._weekday_combo.setVisible(mode == "weekly")
+        for _cb in self._weekday_checks:
+            _cb.setVisible(mode == "weekly")
         self._monthday_spin.setVisible(mode == "monthly")
         self._once_edit.setVisible(mode == "once")
         self._cron_edit.setVisible(mode == "advanced")
@@ -628,6 +668,15 @@ class JobEditPanel(QWidget):
         midx = self._model_combo.findData(job.model_key)
         self._model_combo.setCurrentIndex(midx if midx >= 0 else 0)
         self._workdir_edit.setText(job.workdir or "")
+        # 完成通知回填：""=默认 / system / gateway:平台:chat_id
+        n = job.notify or ""
+        if n.startswith("gateway:"):
+            self._notify_combo.setCurrentIndex(2)
+            self._notify_target_edit.setText(":".join(n.split(":", 2)[1:]) or "")
+        elif n == "system":
+            self._notify_combo.setCurrentIndex(1)
+        else:
+            self._notify_combo.setCurrentIndex(0)
         self._refresh_preview()
 
     def _apply_draft_to_ui(self, d: ScheduleDraft):
@@ -638,10 +687,16 @@ class JobEditPanel(QWidget):
         from PyQt5.QtCore import QTime
 
         self._time_edit.setTime(QTime(h, m))
-        self._weekday_combo.setCurrentIndex(d.weekday)
+        for idx, cb in enumerate(self._weekday_checks):
+            cb.setChecked((idx + 1) % 7 in d.weekdays)
         self._monthday_spin.setValue(d.month_day)
         if d.date_time:
-            self._once_edit.setText(d.date_time)
+            from PyQt5.QtCore import QDateTime
+
+            try:
+                self._once_edit.setDateTime(QDateTime.fromString(d.date_time, "yyyy-MM-dd HH:mm"))
+            except Exception:
+                pass
         self._cron_edit.setText(d.cron)
         # 手动触发行可见性（setCurrentIndex 不触发 currentIndexChanged 时兜底）
         self._on_mode_changed(SCHEDULE_MODES.index(d.mode))
@@ -652,9 +707,11 @@ class JobEditPanel(QWidget):
         d.interval_value = self._interval_spin.value()
         d.interval_unit = self._interval_unit_combo.currentIndex()
         d.time = self._time_edit.time().toString("HH:mm")
-        d.weekday = self._weekday_combo.currentIndex()
+        d.weekdays = {
+            (idx + 1) % 7 for idx, cb in enumerate(self._weekday_checks) if cb.isChecked()
+        }
         d.month_day = self._monthday_spin.value()
-        d.date_time = self._once_edit.text().strip()
+        d.date_time = self._once_edit.dateTime().toString("yyyy-MM-dd HH:mm")
         d.cron = self._cron_edit.text().strip()
         return d
 
@@ -677,6 +734,15 @@ class JobEditPanel(QWidget):
         job.agent = self._agent_combo.currentData() or ""
         job.model_key = self._model_combo.currentData() or ""
         job.workdir = self._workdir_edit.text().strip()
+        ni = self._notify_combo.currentIndex()
+        if ni == 2:
+            target = self._notify_target_edit.text().strip().strip(":")
+            if not target:
+                self._title.setText("编辑任务 — ❗ Gateway 通知需填写 平台:chat_id")
+                return
+            job.notify = f"gateway:{target}"
+        else:
+            job.notify = "system" if ni == 1 else ""
         job.enabled = True
         err = job.validate()
         if err:
