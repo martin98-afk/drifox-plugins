@@ -685,42 +685,6 @@
             }
         },
         {
-            "name": "cron-tasks",
-            "description": "定时任务中心 — 可视化配置 UI 定时任务（单次/间隔/Cron），到期自动驱动对话执行 prompt，带运行历史（参考 openhanako desk cron 设计）",
-            "version": "0.2.3",
-            "author": "DriFox Contributors",
-            "license": "MIT",
-            "categories": [
-                "ui"
-            ],
-            "source": {
-                "type": "git-subdir",
-                "url": "https://github.com/martin98-afk/drifox-plugins",
-                "path": "plugins/cron-tasks",
-                "ref": "main"
-            },
-            "components": {
-                "ui": true
-            },
-            "keywords": [
-                "cron",
-                "schedule",
-                "timer",
-                "automation",
-                "定时任务",
-                "计划任务",
-                "自动化"
-            ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
-            "homepage": "https://github.com/martin98-afk/drifox-plugins",
-            "icon": {
-                "light": "icons/clock.svg",
-                "dark": "icons/clock_light.svg"
-            }
-        },
-        {
             "name": "desktop-automation",
             "description": "桌面自动化工具（mouse / keyboard / screenshot）—— 通过 pynput + mss 控制桌面，从 DriFox 主程序迁出（工具插件化）",
             "version": "1.0.0",
