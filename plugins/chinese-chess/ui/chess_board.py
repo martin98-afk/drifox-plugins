@@ -91,13 +91,13 @@ def _load_config_defaults() -> dict:
     try:
         store = PluginConfigStore()
         for k in defaults:
-            v = store.get("chinese-chess", k, None)
+            v = store.get("chinese-chess", k)
             if v is None or v == "":
                 continue
             if k == "red_control" and v in ("manual", "ai"):
                 defaults[k] = v
             elif k in ("red_model", "black_model"):
-                defaults[k] = str(v)
+                defaults[k] = "" if v == "__default__" else str(v)
     except Exception as e:  # noqa: BLE001
         logger.debug(f"[chinese-chess] 配置加载失败，使用默认: {e}")
     return defaults

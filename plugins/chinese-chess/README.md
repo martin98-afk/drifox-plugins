@@ -53,3 +53,5 @@
 ## 版本
 
 v0.1.0 — 完整规则引擎 + LLM 驱动 AI + 自动兜底
+
+v0.2.2 — 修复配置读取链路：适配 PluginConfigStore.get 两参签名；设置卡回显初始化顺序（_on_change_external 前置）；schema select 空 options 哨兵占位；热重载子模块清理前缀笔误
