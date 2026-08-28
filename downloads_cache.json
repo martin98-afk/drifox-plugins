@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1787850379.4018426,
+  "fetched_at": 1787880841.2748477,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -38,7 +38,7 @@
     "game2048": 2,
     "gateway-dingtalk": 1,
     "gateway-discord": 1,
-    "gateway-feishu": 19,
+    "gateway-feishu": 20,
     "gateway-qq": 3,
     "gateway-slack": 0,
     "gateway-telegram": 0,
