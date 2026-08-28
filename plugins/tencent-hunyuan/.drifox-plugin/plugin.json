@@ -1,0 +1,45 @@
+{
+    "name": "tencent-hunyuan",
+    "description": "腾讯混元 Hy 系列服务商接入插件：经腾讯云 TokenHub 开放，OpenAI 兼容协议（/v1/chat/completions），Bearer 鉴权，按量付费。Hy4 preview 当前在 WorkBuddy/CodeBuddy 限免两周（约 2026-09-11 止），Hy3 免费延至 2026-09-30。",
+    "version": "0.1.0",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "author": {
+        "name": "self-evolver"
+    },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "tencent",
+        "hunyuan",
+        "hy4",
+        "hy3",
+        "tokenhub",
+        "混元",
+        "llm"
+    ],
+    "components": {
+        "tools": false,
+        "commands": false,
+        "agents": false,
+        "skills": false,
+        "hooks": false,
+        "mcp": false,
+        "lsp": false,
+        "themes": false,
+        "ui": false,
+        "providers": true,
+        "team_templates": false,
+        "model_adapters": false,
+        "loop_policies": false,
+        "storages": false,
+        "serializers": false,
+        "gateways": false,
+        "engines": false
+    }
+}
