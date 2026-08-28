@@ -13,11 +13,13 @@ from typing import Any, Dict, List, Optional
 from PyQt5.QtCore import Qt, QSize, pyqtSignal
 from PyQt5.QtWidgets import (
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QListWidget,
     QListWidgetItem,
     QScrollArea,
+    QSizePolicy,
     QStackedWidget,
     QTextEdit,
     QTimeEdit,
@@ -50,6 +52,29 @@ from app.utils.utils import get_font_family_css
 from crontasks_core.models import CronJob, WEEKDAY_CN
 
 FONT_CSS = get_font_family_css()
+
+
+def _panel_title_css() -> str:
+    """面板标题（16px 主色）"""
+    return f"color: {Colors.TEXT_PRIMARY}; {font_size_css(16)} {FONT_CSS}"
+
+
+def _section_title_css() -> str:
+    """分组卡标题（13px 主色）"""
+    return f"color: {Colors.TEXT_PRIMARY}; {font_size_css(13)} {FONT_CSS}"
+
+
+def _field_label_css() -> str:
+    """字段小标签（11px 次要色）"""
+    return f"color: {Colors.TEXT_SECONDARY}; {font_size_css(11)} {FONT_CSS}; font-weight: 500;"
+
+
+def _make_scroll_transparent(scroll: QScrollArea) -> None:
+    """滚动区 viewport 透明化（默认 autoFillBackground 浅灰白，深色模式下成白块）"""
+    vp = scroll.viewport()
+    vp.setAutoFillBackground(False)
+    vp.setStyleSheet("background: transparent;")
+
 
 # 编辑器模式（对齐 openhanako ScheduleEditor 的 6 模式）
 SCHEDULE_MODES = ["interval", "daily", "weekly", "monthly", "once", "advanced"]
@@ -593,6 +618,56 @@ class JobRowCard(QFrame):
 # ============================================================
 
 
+class _ResponsiveFormBody(QWidget):
+    """编辑表单响应式主体：窄宽度三卡纵排；宽宽度左(任务)右(调度+通知)双列"""
+
+    WIDE_MIN_WIDTH = 720  # 触发双列的容器宽度阈值(px)
+
+    def __init__(self, s_task: QWidget, s_schedule: QWidget, s_notify: QWidget, parent=None):
+        super().__init__(parent)
+        self._cards = (s_task, s_schedule, s_notify)
+        self._wide = False
+        self._grid = QGridLayout(self)
+        self._grid.setContentsMargins(0, 0, 0, 0)
+        self._grid.setSpacing(14)
+        self._apply(wide=False)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        wide = self.width() >= self.WIDE_MIN_WIDTH
+        if wide != self._wide:
+            self._apply(wide=wide)
+
+    def _apply(self, wide: bool):
+        """按宽度切换网格布局（widget 仅移动位置，不销毁重建，编辑内容不丢）"""
+        self._wide = wide
+        while self._grid.count():
+            item = self._grid.takeAt(0)
+            w = item.widget()
+            if w is not None:
+                w.setParent(None)
+        s1, s2, s3 = self._cards
+        if wide:
+            # 左列：任务卡（纵跨两行）；右列：调度卡在上、通知卡在下
+            self._grid.addWidget(s1, 0, 0, 2, 1)
+            self._grid.addWidget(s2, 0, 1)
+            self._grid.addWidget(s3, 1, 1)
+            self._grid.setColumnStretch(0, 1)
+            self._grid.setColumnStretch(1, 1)
+            self._grid.setRowStretch(0, 3)  # 任务+调度卡为主伸缩
+            self._grid.setRowStretch(1, 1)
+        else:
+            self._grid.addWidget(s1, 0, 0)
+            self._grid.addWidget(s2, 1, 0)
+            self._grid.addWidget(s3, 2, 0)
+            self._grid.setColumnStretch(0, 1)
+            self._grid.setColumnStretch(1, 0)  # 重置宽模式残留的第 1 列拉伸，避免单列右侧空白
+            self._grid.setRowStretch(0, 1)  # 任务/调度卡分摊纵向余量，填满面板
+            self._grid.setRowStretch(1, 1)
+            self._grid.setRowStretch(2, 0)
+            self._grid.setRowStretch(3, 0)
+
+
 class JobEditPanel(QWidget):
     """新建/编辑任务表单"""
 
@@ -603,6 +678,8 @@ class JobEditPanel(QWidget):
         super().__init__(parent)
         self._job: Optional[CronJob] = None  # None = 新建
         self._draft = ScheduleDraft()
+        self._field_labels: List[QLabel] = []            # 主题切换需重刷的字段小标签
+        self._section_titles: List[StrongBodyLabel] = []  # 分组卡标题
         self._build_ui()
 
     # ---------- UI ----------
@@ -626,7 +703,7 @@ class JobEditPanel(QWidget):
         icon_w.setStyleSheet("background: transparent; border: none;")
         h_layout.addWidget(icon_w, 0, Qt.AlignVCenter)
         self._title = StrongBodyLabel("新建任务")
-        self._title.setStyleSheet(f"color: {Colors.TEXT_PRIMARY}; {font_size_css(16)} {FONT_CSS}")
+        self._title.setStyleSheet(_panel_title_css())
         h_layout.addWidget(self._title, 1)
         self._cancel_btn = PushButton("取消")
         self._cancel_btn.clicked.connect(self.cancelRequested.emit)
@@ -642,6 +719,8 @@ class JobEditPanel(QWidget):
         scroll.setFrameShape(QFrame.NoFrame)
         content_w = QWidget()
         scroll.setWidget(content_w)
+        _make_scroll_transparent(scroll)
+        self._scroll = scroll  # 主题刷新时重申 viewport 透明
         outer.addWidget(scroll, 1)
 
         layout = QVBoxLayout(content_w)
@@ -654,9 +733,8 @@ class JobEditPanel(QWidget):
             v.setContentsMargins(0, 0, 0, 0)
             v.setSpacing(4)
             lbl = CaptionLabel(label_text)
-            lbl.setStyleSheet(
-                f"color: {Colors.TEXT_SECONDARY}; {font_size_css(11)} {FONT_CSS}; font-weight: 500;"
-            )
+            lbl.setStyleSheet(_field_label_css())
+            self._field_labels.append(lbl)
             v.addWidget(lbl)
             v.addWidget(widget)
             return v
@@ -669,7 +747,8 @@ class JobEditPanel(QWidget):
             cl.setContentsMargins(16, 14, 16, 14)
             cl.setSpacing(10)
             hl = StrongBodyLabel(title_text)
-            hl.setStyleSheet(f"color: {Colors.TEXT_PRIMARY}; {font_size_css(13)} {FONT_CSS}")
+            hl.setStyleSheet(_section_title_css())
+            self._section_titles.append(hl)
             cl.addWidget(hl)
             return card, cl
 
@@ -683,8 +762,15 @@ class JobEditPanel(QWidget):
             "📝 到期后要执行的提示词（如：检查 D:/work 目录下今日新增文件并汇总）..."
         )
         self._prompt_edit.setMinimumHeight(72)
-        s1l.addLayout(_labeled("提示词", self._prompt_edit))
-        layout.addWidget(s1)
+        # 纵向 Ignored：消除 TextEdit 默认 sizeHint 膨胀（防止面板虚高出滚动条）
+        self._prompt_edit.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Ignored)
+        # label 与控件分开挂：TextEdit 直接带 stretch=1，确保独占卡片纵向余量
+        prompt_lbl = CaptionLabel("提示词")
+        prompt_lbl.setStyleSheet(
+            f"color: {Colors.TEXT_SECONDARY}; {font_size_css(11)} {FONT_CSS}; font-weight: 500;"
+        )
+        s1l.addWidget(prompt_lbl)
+        s1l.addWidget(self._prompt_edit, 1)
 
         # === Section 2: 调度与执行 ===
         s2, s2l = _section("调度与执行")
@@ -727,6 +813,7 @@ class JobEditPanel(QWidget):
             trow.addWidget(cb)
         self._time_edit = QTimeEdit()
         self._time_edit.setDisplayFormat("HH:mm")
+        self._time_edit.setStyleSheet(self._datetime_style())
         from PyQt5.QtCore import QTime
 
         self._time_edit.setTime(QTime(9, 0))
@@ -744,6 +831,8 @@ class JobEditPanel(QWidget):
         self._once_edit = QDateTimeEdit()
         self._once_edit.setCalendarPopup(True)
         self._once_edit.setDisplayFormat("yyyy-MM-dd HH:mm")
+        self._once_edit.setStyleSheet(self._datetime_style())
+        self._once_edit.calendarWidget().setStyleSheet(self._calendar_style())
         from PyQt5.QtCore import QDateTime as _QDT
 
         sd_layout.addWidget(self._once_edit)
@@ -757,11 +846,7 @@ class JobEditPanel(QWidget):
         # 调度预览 chip（圆角边框 + 浅背景，更现代）
         self._preview_label = BodyLabel("")
         self._preview_label.setWordWrap(True)
-        self._preview_label.setStyleSheet(
-            f"color: {Colors.TEXT_SECONDARY}; {font_size_css(12)} {FONT_CSS}; "
-            f"background: {Colors.CARD_BG_SOLID}; border: 1px solid {Colors.BORDER}; "
-            f"border-radius: 8px; padding: 8px 12px;"
-        )
+        self._preview_label.setStyleSheet(self._preview_style())
         s2l.addWidget(self._preview_label)
 
         # 执行模型 + 智能体（横向两列节省垂直空间）
@@ -772,7 +857,7 @@ class JobEditPanel(QWidget):
         exec_row.addLayout(_labeled("执行模型", self._model_combo), 1)
         exec_row.addLayout(_labeled("执行智能体", self._agent_combo), 1)
         s2l.addLayout(exec_row)
-        layout.addWidget(s2)
+        s2l.addStretch(1)  # 卡片被拉伸时内部吸收余量
 
         # === Section 3: 通知与目录 ===
         s3, s3l = _section("通知与目录")
@@ -787,9 +872,8 @@ class JobEditPanel(QWidget):
         nrow.setContentsMargins(0, 0, 0, 0)
         nrow.setSpacing(4)
         target_lbl = CaptionLabel("发送目标")
-        target_lbl.setStyleSheet(
-            f"color: {Colors.TEXT_SECONDARY}; {font_size_css(11)} {FONT_CSS}; font-weight: 500;"
-        )
+        target_lbl.setStyleSheet(_field_label_css())
+        self._field_labels.append(target_lbl)
         nrow.addWidget(target_lbl)
         self._notify_target_combo = ComboBox()
         nrow.addWidget(self._notify_target_combo)
@@ -810,9 +894,10 @@ class JobEditPanel(QWidget):
         wd_layout.addWidget(self._workdir_edit, 1)
         wd_layout.addWidget(browse_btn)
         s3l.addLayout(_labeled("工作目录", wd_widget))
-        layout.addWidget(s3)
 
-        layout.addStretch()
+        # 响应式主体：窄=单列纵排；宽(≥720px)=左(任务) 右上(调度) 右下(通知) 双列
+        body = _ResponsiveFormBody(s1, s2, s3)
+        layout.addWidget(body, 1)  # 拉满内容区，消除纵向空白/滚动条
 
         # 联动预览刷新（signal connect 必须在 setValue 之前）
         self._interval_spin.valueChanged.connect(self._refresh_preview)
@@ -827,6 +912,76 @@ class JobEditPanel(QWidget):
         self._weekday_checks[0].setChecked(True)  # 默认周一
         self._once_edit.setDateTime(_QDT.currentDateTime().addDays(1))
         self._refresh_preview()
+
+    def _preview_style(self) -> str:
+        return (
+            f"color: {Colors.TEXT_SECONDARY}; {font_size_css(12)} {FONT_CSS}; "
+            f"background: {Colors.CARD_BG_SOLID}; border: 1px solid {Colors.BORDER}; "
+            f"border-radius: 8px; padding: 8px 12px;"
+        )
+
+    def _datetime_style(self) -> str:
+        """原生时间/日期选择框深浅色适配（QTimeEdit/QDateTimeEdit 默认黑字）"""
+        return (
+            f"QTimeEdit, QDateTimeEdit {{ background: {Colors.CONTENT_BG}; "
+            f"color: {Colors.TEXT_PRIMARY}; border: 1px solid {Colors.BORDER}; "
+            f"border-radius: 6px; padding: 4px 8px; {font_size_css(13)} {FONT_CSS} }} "
+            f"QTimeEdit:focus, QDateTimeEdit:focus {{ border-color: {Colors.INPUT_FOCUS_BORDER}; }} "
+            f"QTimeEdit::up-button, QDateTimeEdit::up-button, "
+            f"QTimeEdit::down-button, QDateTimeEdit::down-button {{ width: 0px; }}"
+        )
+
+    def _calendar_style(self) -> str:
+        """日历弹窗深浅色适配（原生 QCalendarWidget 深色下全黑）"""
+        return f"""
+        QCalendarWidget QWidget {{ alternate-background-color: {Colors.CONTENT_BG}; }}
+        QCalendarWidget QAbstractItemView:enabled {{
+            color: {Colors.TEXT_PRIMARY};
+            background-color: {Colors.CARD_BG_SOLID};
+            selection-background-color: {Colors.INPUT_FOCUS_BORDER};
+            selection-color: #ffffff;
+            outline: 0;
+        }}
+        QCalendarWidget QAbstractItemView:disabled {{ color: {Colors.TEXT_MUTED}; }}
+        QCalendarWidget QToolButton {{
+            color: {Colors.TEXT_PRIMARY};
+            background-color: transparent;
+            border-radius: 6px;
+            padding: 4px 8px;
+            {font_size_css(13)} {FONT_CSS}
+        }}
+        QCalendarWidget QToolButton:hover {{ background-color: {Colors.CARD_BG_DIM}; }}
+        QCalendarWidget #qt_calendar_navigationbar {{
+            background-color: {Colors.CONTENT_BG};
+            padding: 6px;
+        }}
+        QCalendarWidget #qt_calendar_monthbutton::menu-indicator {{ image: none; }}
+        QCalendarWidget QSpinBox {{
+            background-color: {Colors.CARD_BG_SOLID};
+            color: {Colors.TEXT_PRIMARY};
+            border: 1px solid {Colors.BORDER};
+        }}
+        QCalendarWidget QMenu {{
+            background-color: {Colors.CARD_BG_SOLID};
+            color: {Colors.TEXT_PRIMARY};
+            border: 1px solid {Colors.BORDER};
+        }}
+        QCalendarWidget QMenu::item {{ padding: 4px 16px; }}
+        QCalendarWidget QMenu::item:selected {{ background: {Colors.INPUT_FOCUS_BORDER}; }}
+        """
+
+    def refresh_theme(self):
+        """主题切换刷新（theme_manager dispatch 回调）"""
+        Colors.refresh()
+        self._title.setStyleSheet(_panel_title_css())
+        for lbl in self._field_labels:
+            lbl.setStyleSheet(_field_label_css())
+        for lbl in self._section_titles:
+            lbl.setStyleSheet(_section_title_css())
+        self._preview_label.setStyleSheet(self._preview_style())
+        self._time_edit.setStyleSheet(self._datetime_style())
+        self._once_edit.setStyleSheet(self._datetime_style())
+        self._once_edit.calendarWidget().setStyleSheet(self._calendar_style())
 
     def _on_notify_mode_changed(self, index: int):
         # 仅 Gateway 模式需要目标：拉取主程序已连接 gateway 的已知会话
@@ -1077,7 +1232,7 @@ class RunHistoryPanel(QWidget):
         icon_w.setStyleSheet("background: transparent; border: none;")
         h_layout.addWidget(icon_w, 0, Qt.AlignVCenter)
         self._title = StrongBodyLabel("运行历史")
-        self._title.setStyleSheet(f"color: {Colors.TEXT_PRIMARY}; {font_size_css(16)} {FONT_CSS}")
+        self._title.setStyleSheet(_panel_title_css())
         h_layout.addWidget(self._title, 1)
         back_btn = PushButton("返回")
         back_btn.setIcon(FluentIcon.RETURN)
@@ -1094,9 +1249,7 @@ class RunHistoryPanel(QWidget):
         # 任务上下文摘要（次要色 12px）
         self._ctx_label = BodyLabel("")
         self._ctx_label.setWordWrap(True)
-        self._ctx_label.setStyleSheet(
-            f"color: {Colors.TEXT_MUTED}; {font_size_css(12)} {FONT_CSS}"
-        )
+        self._ctx_label.setStyleSheet(self._ctx_style())
         content_layout.addWidget(self._ctx_label)
 
         # 左右双栏：左侧时间线列表 + 右侧详情卡
@@ -1107,16 +1260,7 @@ class RunHistoryPanel(QWidget):
         self._list = QListWidget()
         self._list.setMinimumWidth(240)
         self._list.setMaximumWidth(320)
-        self._list.setStyleSheet(
-            f"QListWidget {{ background: {Colors.CARD_BG_SOLID}; "
-            f"border: 1px solid {Colors.BORDER}; border-radius: 12px; "
-            f"padding: 6px; {font_size_css(13)} {FONT_CSS} }} "
-            f"QListWidget::item {{ padding: 8px 10px; border-radius: 8px; "
-            f"margin: 2px 0; }} "
-            f"QListWidget::item:hover {{ background: rgba(125, 211, 252, 0.08); }} "
-            f"QListWidget::item:selected {{ background: rgba(125, 211, 252, 0.15); "
-            f"color: {Colors.TEXT_PRIMARY}; }}"
-        )
+        self._list.setStyleSheet(self._list_style())
         self._list.itemClicked.connect(self._on_item_clicked)
         body.addWidget(self._list, 3)
 
@@ -1133,28 +1277,20 @@ class RunHistoryPanel(QWidget):
         detail_layout.addLayout(self._fields_layout)
 
         # 分隔线
-        sep = QFrame()
-        sep.setFrameShape(QFrame.HLine)
-        sep.setStyleSheet(
-            f"background: {Colors.BORDER}; max-height: 1px; border: none;"
-        )
-        detail_layout.addWidget(sep)
+        self._sep = QFrame()
+        self._sep.setFrameShape(QFrame.HLine)
+        self._sep.setStyleSheet(self._sep_style())
+        detail_layout.addWidget(self._sep)
 
         # 响应全文区
-        response_header = CaptionLabel("响应全文")
-        response_header.setStyleSheet(
-            f"color: {Colors.TEXT_SECONDARY}; {font_size_css(11)} {FONT_CSS}; font-weight: 500;"
-        )
-        detail_layout.addWidget(response_header)
+        self._resp_hdr = CaptionLabel("响应全文")
+        self._resp_hdr.setStyleSheet(_field_label_css())
+        detail_layout.addWidget(self._resp_hdr)
 
         self._detail = QTextEdit()
         self._detail.setReadOnly(True)
         self._detail.setLineWrapMode(QTextEdit.WidgetWidth)
-        self._detail.setStyleSheet(
-            f"QTextEdit {{ background: {Colors.CARD_BG_SOLID}; "
-            f"border: 1px solid {Colors.BORDER}; border-radius: 8px; "
-            f"padding: 10px 12px; {font_size_css(13)} {FONT_CSS} }}"
-        )
+        self._detail.setStyleSheet(self._detail_style())
         detail_layout.addWidget(self._detail, 1)
         body.addWidget(self._detail_card, 5)
         content_layout.addLayout(body, 1)
@@ -1214,6 +1350,43 @@ class RunHistoryPanel(QWidget):
         lines.append(str(rec.get("responseText") or rec.get("responseHead") or "（无响应内容）"))
         self._detail.setPlainText("\n".join(lines))
 
+    # ---------- 主题 ----------
+
+    def _ctx_style(self) -> str:
+        return f"color: {Colors.TEXT_MUTED}; {font_size_css(12)} {FONT_CSS}"
+
+    def _list_style(self) -> str:
+        return (
+            f"QListWidget {{ background: {Colors.CARD_BG_SOLID}; "
+            f"border: 1px solid {Colors.BORDER}; border-radius: 12px; "
+            f"padding: 6px; {font_size_css(13)} {FONT_CSS} }} "
+            f"QListWidget::item {{ padding: 8px 10px; border-radius: 8px; "
+            f"margin: 2px 0; }} "
+            f"QListWidget::item:hover {{ background: rgba(125, 211, 252, 0.08); }} "
+            f"QListWidget::item:selected {{ background: rgba(125, 211, 252, 0.15); "
+            f"color: {Colors.TEXT_PRIMARY}; }}"
+        )
+
+    def _sep_style(self) -> str:
+        return f"background: {Colors.BORDER}; max-height: 1px; border: none;"
+
+    def _detail_style(self) -> str:
+        return (
+            f"QTextEdit {{ background: {Colors.CARD_BG_SOLID}; "
+            f"border: 1px solid {Colors.BORDER}; border-radius: 8px; "
+            f"padding: 10px 12px; {font_size_css(13)} {FONT_CSS} }}"
+        )
+
+    def refresh_theme(self):
+        """主题切换刷新（theme_manager dispatch 回调）"""
+        Colors.refresh()
+        self._title.setStyleSheet(_panel_title_css())
+        self._ctx_label.setStyleSheet(self._ctx_style())
+        self._list.setStyleSheet(self._list_style())
+        self._sep.setStyleSheet(self._sep_style())
+        self._resp_hdr.setStyleSheet(_field_label_css())
+        self._detail.setStyleSheet(self._detail_style())
+
 
 # ============================================================
 #  任务中心卡（主卡片，full 覆盖对话区）
@@ -1237,6 +1410,13 @@ class CronTasksCard(QFrame):
         # qfluentwidgets 组件字号跟随系统设置
         apply_font_size_to_widget(self)
         self._refresh_theme_style()
+        # 主题实时刷新：主程序 theme_manager reload 时回调 refresh_theme()
+        try:
+            from app.utils.theme_manager import theme_manager
+
+            theme_manager.register_refresh_target(self)
+        except Exception:
+            pass
 
     # ── 插件上下文（拉模型）──
 
@@ -1390,6 +1570,8 @@ class CronTasksCard(QFrame):
         scroll.setWidgetResizable(True)
         scroll.setWidget(self._jobs_container)
         scroll.setFrameShape(QFrame.NoFrame)
+        _make_scroll_transparent(scroll)
+        self._jobs_scroll = scroll  # 主题刷新时重申 viewport 透明
         lp_layout.addWidget(scroll)
         self._list_stack.addWidget(list_page)
 
@@ -1575,6 +1757,27 @@ class CronTasksCard(QFrame):
         if job is None:
             return
         row.refresh(job, running=True)
+
+    def refresh_theme(self):
+        """主题切换刷新（theme_manager dispatch 回调）：主卡/编辑/历史面板/行卡统一重取主题色"""
+        # 同步 qfluent 全局主题（ElevatedCardWidget 等自绘背景依赖它；主程序个别刷新路径可能未调 setTheme）
+        try:
+            from qfluentwidgets import Theme, setTheme
+            from app.utils.theme_manager import theme_manager as _tm
+
+            setTheme(Theme.LIGHT if _tm.is_light_theme() else Theme.DARK)
+        except Exception:
+            pass
+        # 滚动区 viewport 重申透明
+        for sc in (self._jobs_scroll, self._edit_panel._scroll):
+            _make_scroll_transparent(sc)
+        self._refresh_theme_style()
+        self._edit_panel.refresh_theme()
+        self._history_panel.refresh_theme()
+        try:
+            self.refresh_jobs()  # 行卡按新主题重建
+        except Exception:
+            pass
 
     def _refresh_theme_style(self):
         Colors.refresh()
