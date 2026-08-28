@@ -17,7 +17,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from loguru import logger
-from PyQt5.QtCore import QObject, QTimer, pyqtSignal
+from PySide6.QtCore import QObject, QTimer, Signal
 
 from .executor import CronExecutor
 from .models import CronJob
@@ -29,11 +29,11 @@ TICK_INTERVAL_MS = 30_000  # 30 秒检查一次（分钟粒度任务的最低唤
 class CronScheduler(QObject):
     """定时任务调度器（主线程 QTimer 驱动）"""
 
-    jobs_changed = pyqtSignal()  # 任务列表/状态变化（UI 刷新）
-    job_started = pyqtSignal(str)  # job_id
+    jobs_changed = Signal()  # 任务列表/状态变化（UI 刷新）
+    job_started = Signal(str)  # job_id
     # (job_id, label, status, summary) — summary 供通知展示
-    job_finished = pyqtSignal(str, str, str, str)
-    notify_requested = pyqtSignal(str, str)  # (title, message) → controller 转发
+    job_finished = Signal(str, str, str, str)
+    notify_requested = Signal(str, str)  # (title, message) → controller 转发
 
     def __init__(self, store: Optional[CronStore] = None, parent=None):
         super().__init__(parent)

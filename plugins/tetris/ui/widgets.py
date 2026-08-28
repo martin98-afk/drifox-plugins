@@ -8,9 +8,9 @@
 - ControlHints: 按键提示
 """
 
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal
-from PyQt5.QtGui import QFont, QPainter, QPen, QBrush, QColor, QKeyEvent
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QVBoxLayout, QSizePolicy
+from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtGui import QFont, QPainter, QPen, QBrush, QColor, QKeyEvent
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QVBoxLayout, QSizePolicy
 
 from .game_logic import TETROMINOES
 
@@ -78,15 +78,15 @@ class TetrisBoardCanvas(QWidget):
     """
 
     # 键盘信号
-    left_pressed = pyqtSignal()
-    right_pressed = pyqtSignal()
-    up_pressed = pyqtSignal()     # 旋转
-    down_pressed = pyqtSignal()   # 软降
-    space_pressed = pyqtSignal()  # 硬降
-    pause_pressed = pyqtSignal()  # 暂停
+    left_pressed = Signal()
+    right_pressed = Signal()
+    up_pressed = Signal()     # 旋转
+    down_pressed = Signal()   # 软降
+    space_pressed = Signal()  # 硬降
+    pause_pressed = Signal()  # 暂停
 
     # 清行动画信号
-    clearing_done = pyqtSignal()
+    clearing_done = Signal()
 
     def __init__(self, board_width: int = 10, board_height: int = 20,
                  cell_size: int = 26, parent=None):

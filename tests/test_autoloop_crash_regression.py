@@ -17,7 +17,7 @@ _PLUGIN_ROOT = Path(__file__).resolve().parent.parent / "plugins" / "autoloop"
 if str(_PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(_PLUGIN_ROOT))
 
-pytest.importorskip("PyQt5")
+pytest.importorskip("PySide6")
 
 
 def _make_controller_with_session(monkeypatch):

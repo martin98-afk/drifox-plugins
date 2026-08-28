@@ -11,7 +11,7 @@ import time
 from datetime import datetime
 from typing import Optional
 
-from PyQt5.QtCore import QObject, QThread, pyqtSignal
+from PySide6.QtCore import QObject, QThread, Signal
 from loguru import logger
 
 # HEAD 查询 TTL（秒）：build_cache_key 主线程同步跑 git，短 TTL 缓存避免每次渲染都起子进程
@@ -27,8 +27,8 @@ _collector = None
 class _CollectWorker(QObject):
     """后台采集 worker"""
 
-    finished = pyqtSignal(object)  # dict
-    error = pyqtSignal(str)
+    finished = Signal(object)  # dict
+    error = Signal(str)
 
     def __init__(self, project_root: str, is_dark: bool):
         super().__init__()

@@ -3,15 +3,15 @@
 
 设计约束（闭包）：
 - 不导入 app.core 或 app.widgets 内部的任何模块
-- 所有绘图直接通过 PyQt5 完成
+- 所有绘图直接通过 PySide6 完成
 """
 
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
-from PyQt5.QtCore import QPointF, QRectF, Qt
-from PyQt5.QtGui import QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
+from PySide6.QtWidgets import (
     QApplication,
     QFrame,
     QHBoxLayout,

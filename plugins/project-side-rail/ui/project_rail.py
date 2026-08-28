@@ -26,9 +26,9 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
 from loguru import logger
-from PyQt5.QtCore import QRect, QSize, Qt, QTimer, pyqtSignal
-from PyQt5.QtGui import QColor, QFont, QIcon, QPainter
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QRect, QSize, Qt, QTimer, Signal
+from PySide6.QtGui import QColor, QFont, QIcon, QPainter
+from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
     QLabel,
@@ -145,8 +145,8 @@ class _ProjectIcon(QWidget):
     - 不画左侧强调条（窄模式无空间放置 ✓）；hover/当前状态用背景 + 颜色变化表达
     """
 
-    clicked = pyqtSignal(str)
-    rightClicked = pyqtSignal(str, object)
+    clicked = Signal(str)
+    rightClicked = Signal(str, object)
 
     _SIZE = QSize(40, 30)  # 高度 30 对齐 ProjectItem 单行；宽度 40 给左右各 8px 边距
     _ICON = 24
@@ -241,7 +241,7 @@ class _ProjectIcon(QWidget):
 class ProjectSideRailNarrow(QWidget):
     """窄模式：竖向 icon 列 + 顶部小标题 + 底部刷新按钮"""
 
-    projectClicked = pyqtSignal(str)
+    projectClicked = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -325,11 +325,11 @@ class ProjectSideRailNarrow(QWidget):
                 _captured[0] = text
 
             _dialog.confirmed.connect(_on_confirmed)
-            _dialog.exec_()
+            _dialog.exec()
             name = _captured[0].strip() if _captured[0] else ""
         except Exception as e:
             logger.debug(f"[project-side-rail] SingleInputDialog unavailable, fallback to QInputDialog: {e}")
-            from PyQt5.QtWidgets import QInputDialog
+            from PySide6.QtWidgets import QInputDialog
 
             name, ok = QInputDialog.getText(self, "新建项目", "项目名：", text="")
             name = name.strip() if (ok and name) else ""
@@ -512,7 +512,7 @@ class ProjectSideRailNarrow(QWidget):
         copy_action.setEnabled(bool(workdir))
         menu.addSeparator()
         refresh_action = menu.addAction("↻ 刷新列表")
-        chosen = menu.exec_(global_pos)
+        chosen = menu.exec(global_pos)
         if chosen is None:
             return
         if chosen == open_action and workdir:
@@ -677,14 +677,14 @@ class ProjectSideRailCard(QWidget):
     _DEFAULT_COLLAPSED_WIDTH = 40  # 默认折叠宽度（仅显示 icon 列）
 
     # 信号透传（窄模式点击 / 宽模式 ProjectSelectorCardContent 统一发出）
-    projectSelected = pyqtSignal(str)
-    newProjectCreated = pyqtSignal(str)
-    archiveProject = pyqtSignal(str)
-    exportProject = pyqtSignal(str)
-    importProjectRequested = pyqtSignal()
-    projectFileDropped = pyqtSignal(str)
-    openFolderRequested = pyqtSignal(str, str)
-    folderDropped = pyqtSignal(str)
+    projectSelected = Signal(str)
+    newProjectCreated = Signal(str)
+    archiveProject = Signal(str)
+    exportProject = Signal(str)
+    importProjectRequested = Signal()
+    projectFileDropped = Signal(str)
+    openFolderRequested = Signal(str, str)
+    folderDropped = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)

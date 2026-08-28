@@ -6,10 +6,10 @@
 - StatusBar: 状态栏（分数 + 最高分 + 新游戏按钮）
 """
 
-from PyQt5.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, \
-    pyqtSignal, pyqtProperty
-from PyQt5.QtGui import QFont, QColor
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, \
+    Signal, Property
+from PySide6.QtGui import QFont, QColor
+from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -189,7 +189,7 @@ class TileButton(QPushButton):
 class StatusBar(QWidget):
     """状态栏：分数 | 最高分 | 新游戏按钮"""
 
-    new_game_clicked = pyqtSignal()
+    new_game_clicked = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)

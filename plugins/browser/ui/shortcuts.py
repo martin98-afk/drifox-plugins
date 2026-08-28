@@ -20,9 +20,8 @@
 - Ctrl+1..8        跳转到指定标签
 """
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QShortcut
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QKeySequence, QShortcut
 
 
 def install_shortcuts(card) -> None:

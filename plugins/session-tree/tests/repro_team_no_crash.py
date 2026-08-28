@@ -14,7 +14,7 @@ import sys
 
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ui"))
-from PyQt5.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 app = QApplication.instance() or QApplication([sys.argv[0]])
 

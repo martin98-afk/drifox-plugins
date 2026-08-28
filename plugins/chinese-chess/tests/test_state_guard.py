@@ -13,7 +13,7 @@ from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from PyQt5.QtWidgets import QApplication  # noqa: F401
+from PySide6.QtWidgets import QApplication  # noqa: F401
 
 _app = QApplication.instance() or QApplication(sys.argv)  # noqa: F841
 

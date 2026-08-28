@@ -20,7 +20,7 @@ import time
 from typing import Any, Dict, List, Optional
 
 from loguru import logger
-from PyQt5.QtCore import QThread, pyqtSignal
+from PySide6.QtCore import QThread, Signal
 
 from .models import CronJob
 
@@ -47,7 +47,7 @@ class CronExecutor(QThread):
     status: success / error / cancelled / timeout
     """
 
-    finished_with_result = pyqtSignal(dict)
+    finished_with_result = Signal(dict)
 
     def __init__(self, parent=None):
         super().__init__(parent)

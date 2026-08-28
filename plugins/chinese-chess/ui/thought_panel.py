@@ -21,9 +21,9 @@ from datetime import datetime
 from typing import Optional
 
 from loguru import logger
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont, QGuiApplication
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont, QGuiApplication
+from PySide6.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
     QLabel,

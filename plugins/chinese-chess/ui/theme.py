@@ -335,12 +335,12 @@ def get_piece_qss(side: str, hover: bool = False, selected: bool = False) -> str
 
 
 def make_piece_shadow(blur_radius: int = 10, offset_y: int = 3, alpha: int = 150):
-    """QGraphicsDropShadowEffect 工厂（PyQt5 QSS 不支持 box-shadow）。
+    """QGraphicsDropShadowEffect 工厂（PySide6 QSS 不支持 box-shadow）。
 
     木制棋子需更明显的立体阴影：blur=10 / yOffset=3 / alpha=150。
     """
-    from PyQt5.QtWidgets import QGraphicsDropShadowEffect
-    from PyQt5.QtGui import QColor
+    from PySide6.QtWidgets import QGraphicsDropShadowEffect
+    from PySide6.QtGui import QColor
 
     shadow = QGraphicsDropShadowEffect()
     shadow.setBlurRadius(blur_radius)

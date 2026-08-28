@@ -24,9 +24,9 @@ import os
 from typing import List, Optional, Tuple
 from urllib.parse import urlparse
 
-from PyQt5.QtCore import QPoint, QSize, Qt, pyqtSignal
-from PyQt5.QtGui import QColor, QFont, QIcon
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QPoint, QSize, Qt, Signal
+from PySide6.QtGui import QColor, QFont, QIcon
+from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -82,7 +82,7 @@ def _get_current_card() -> Optional["BrowserWindowCard"]:
 class BrowserWindowCard(QWidget):
     """浏览器浮动卡片"""
 
-    closed = pyqtSignal()
+    closed = Signal()
 
     # ── 生命周期管理 ──
 
@@ -323,7 +323,7 @@ class BrowserWindowCard(QWidget):
         if entry["view"] is not None:
             return entry["view"]
 
-        from PyQt5.QtWebEngineWidgets import QWebEngineView
+        from PySide6.QtWebEngineWidgets import QWebEngineView
 
         view = QWebEngineView()
         view.setPage(
@@ -598,7 +598,7 @@ class BrowserWindowCard(QWidget):
 
     def _apply_tab_limits(self):
         """超过 MAX_ALIVE_TABS 时冻结非活跃标签（释放渲染内存）"""
-        from PyQt5.QtWebEngineWidgets import QWebEnginePage
+        from PySide6.QtWebEngineWidgets import QWebEnginePage
 
         current = self._tab_bar.currentIndex()
         alive = 0
@@ -1035,7 +1035,7 @@ class BrowserWindowCard(QWidget):
 
 
 def _to_qurl(url: str):
-    from PyQt5.QtCore import QUrl
+    from PySide6.QtCore import QUrl
 
     return QUrl(url)
 

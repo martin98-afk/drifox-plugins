@@ -37,9 +37,9 @@ import re
 from typing import Callable, Dict, List, Optional, Tuple
 
 from loguru import logger
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal
-from PyQt5.QtGui import QColor, QFont
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtGui import QColor, QFont
+from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QInputDialog,
@@ -277,9 +277,9 @@ class _SessionItem(QWidget):
     depth=1 的子节点在左侧绘制树层级白线（竖线 + 连接横线）。
     """
 
-    clicked = pyqtSignal(str)  # session_id（团队节点传 run_id）
-    rightClicked = pyqtSignal(str, object)
-    toggled = pyqtSignal(str)  # 折叠切换（团队节点传 run_id）
+    clicked = Signal(str)  # session_id（团队节点传 run_id）
+    rightClicked = Signal(str, object)
+    toggled = Signal(str)  # 折叠切换（团队节点传 run_id）
 
     def __init__(
         self,
@@ -487,7 +487,7 @@ class _SessionItem(QWidget):
 class _GroupHeader(QLabel):
     """时间分组标题（今天 / 昨天 / 近7天 …），点击折叠/展开"""
 
-    toggled = pyqtSignal(str)  # group key
+    toggled = Signal(str)  # group key
 
     def __init__(self, text: str, group_key: str, colors: dict, parent=None):
         super().__init__(text, parent)
@@ -538,7 +538,7 @@ class _GroupHeader(QLabel):
 class SessionTreeCard(QWidget):
     """会话树浮动卡片 — 停靠在 Tab 窗口左侧停靠区"""
 
-    closed = pyqtSignal()
+    closed = Signal()
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -1003,7 +1003,7 @@ class SessionTreeCard(QWidget):
         archive_action = menu.addAction("📦 归档会话")
         menu.addSeparator()
         delete_action = menu.addAction("🗑 永久删除")
-        chosen = menu.exec_(global_pos)
+        chosen = menu.exec(global_pos)
         if chosen is None:
             return
         if chosen == rename_action:

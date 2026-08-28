@@ -110,7 +110,7 @@ plugins/cron-tasks/
 | 依赖 | 说明 |
 |------|------|
 | DriFox ≥ 0.5.0 | 需支持 `create_engine_session` 服务（EP3 契约）+ `register_input_button` |
-| PyQt5 / qfluentwidgets / loguru | UI 与日志 |
+| PySide6 / qfluentwidgets / loguru | UI 与日志 |
 
 ## 已知限制
 

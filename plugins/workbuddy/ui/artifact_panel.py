@@ -22,9 +22,9 @@ _PLUGIN_ROOT = str(Path(__file__).resolve().parent.parent)
 if _PLUGIN_ROOT not in sys.path:
     sys.path.insert(0, _PLUGIN_ROOT)
 
-from PyQt5.QtCore import QSize, QUrl, Qt, pyqtSignal, pyqtSlot  # noqa: E402
-from PyQt5.QtGui import QDesktopServices, QPixmap  # noqa: E402
-from PyQt5.QtWidgets import (  # noqa: E402
+from PySide6.QtCore import QSize, QUrl, Qt, Signal, Slot  # noqa: E402
+from PySide6.QtGui import QDesktopServices, QPixmap  # noqa: E402
+from PySide6.QtWidgets import (  # noqa: E402
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -52,7 +52,7 @@ except Exception:
     _MARKDOWN_OK = False
 
 try:
-    from PyQt5.QtWebEngineWidgets import QWebEngineView
+    from PySide6.QtWebEngineWidgets import QWebEngineView
     _WEB_ENGINE_OK = True
 except Exception:
     _WEB_ENGINE_OK = False
@@ -129,7 +129,7 @@ class ArtifactPanelCard(QFrame):
 
     # 自动弹出信号：由 _state 监听者（可能运行在后台线程）emit，
     # 经 QueuedConnection 投递到主线程执行 UI 操作，避免跨线程 Qt 崩溃
-    _auto_popup = pyqtSignal()
+    _auto_popup = Signal()
 
     # 类级单例（最近实例化的卡片，供 state listener 与 /artifacts 命令共享）
     _instance: "ArtifactPanelCard | None" = None
@@ -301,7 +301,7 @@ class ArtifactPanelCard(QFrame):
 
     def _style_tab_close_button(self, index: int):
         """给 tab 关闭按钮显式设置图标（Qt 默认图标在深色主题下不可见）。"""
-        from PyQt5.QtWidgets import QStyle, QTabBar
+        from PySide6.QtWidgets import QStyle, QTabBar
 
         bar = self._tabs.tabBar()
         btn = bar.tabButton(index, QTabBar.RightSide)
@@ -441,7 +441,7 @@ class ArtifactPanelCard(QFrame):
         if wd:
             QDesktopServices.openUrl(QUrl.fromLocalFile(wd))
 
-    @pyqtSlot()
+    @Slot()
     def _do_auto_popup(self):
         """主线程槽：由 _auto_popup 信号（QueuedConnection）触发。
 

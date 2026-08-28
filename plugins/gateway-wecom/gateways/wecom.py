@@ -644,7 +644,7 @@ def check_wecom_requirements() -> bool:
 # ── Phase E 插件注册 ────────────────────────────────────
 # 配置读写回调走主程序 Settings（存量用户配置零迁移；Task 5 统一切 E1
 # PluginConfigStore 时仅改本块闭包，调用方不动）。闭包内延迟 import
-# Settings/PlatformConfig，避免模块顶层触发 PyQt5 / Settings 副作用。
+# Settings/PlatformConfig，避免模块顶层触发 PySide6 / Settings 副作用。
 
 
 def _build_config() -> "PlatformConfig":

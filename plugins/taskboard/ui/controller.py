@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from loguru import logger
-from PyQt5.QtCore import QObject, Qt, pyqtSignal
+from PySide6.QtCore import QObject, Qt, Signal
 
 from taskboard_core.config import (
     BOARD_DIR_NAME,
@@ -34,10 +34,10 @@ class TaskBoardController(QObject):
     _instance: Optional["TaskBoardController"] = None
 
     # ── 看板变更广播（看板卡订阅）──
-    board_reset = pyqtSignal()               # 全量刷新（加载/清空）
-    tasks_changed = pyqtSignal()             # 任务增删/移动
-    task_changed = pyqtSignal(str)           # 单任务更新（task_id）
-    auto_mode_changed = pyqtSignal(bool)     # 自动/手动模式切换
+    board_reset = Signal()               # 全量刷新（加载/清空）
+    tasks_changed = Signal()             # 任务增删/移动
+    task_changed = Signal(str)           # 单任务更新（task_id）
+    auto_mode_changed = Signal(bool)     # 自动/手动模式切换
 
     @classmethod
     def get_instance(cls) -> "TaskBoardController":

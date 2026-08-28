@@ -12,8 +12,8 @@ UI 结构（与收藏/下载一致）：
 
 from typing import List
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLineEdit,
@@ -63,7 +63,7 @@ class HistoryPanel(QFrame, _PanelMixin):
             )
         )
 
-        from PyQt5.QtWidgets import QListWidget
+        from PySide6.QtWidgets import QListWidget
         self._list = QListWidget(self)
         self._list.itemDoubleClicked.connect(self._open_item)
         root.addWidget(self._list, 1)
@@ -139,7 +139,7 @@ class HistoryPanel(QFrame, _PanelMixin):
             self.hide()
 
     def _clear(self):
-        from PyQt5.QtWidgets import QMessageBox
+        from PySide6.QtWidgets import QMessageBox
 
         if (
             QMessageBox.question(self, "清空历史", "确定要清空全部历史记录吗？")

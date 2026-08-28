@@ -20,7 +20,7 @@
 - **git** 命令行工具（系统已安装即可）
 - **DriFox ≥ 0.4.15**：欢迎卡片骨架需加载 echarts vendor（`window.echarts` 存在），
   见主程序 `app/widgets/message_card.py` `_load_skeleton`（`_SKELETON_CACHE_VERSION >= 9`）
-- 无需 Python 第三方包（`PyQt5`/`loguru` 由 DriFox 运行时提供）
+- 无需 Python 第三方包（`PySide6`/`loguru` 由 DriFox 运行时提供）
 
 ## 安装
 

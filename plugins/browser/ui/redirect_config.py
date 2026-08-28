@@ -190,7 +190,7 @@ def _normalize_to_str(url: Any) -> str:
         pass
     # QUrl / QtCore.QUrl：本地文件需走 toLocalFile → file:// 再 toString
     try:
-        from PyQt5.QtCore import QUrl as _QUrl  # type: ignore
+        from PySide6.QtCore import QUrl as _QUrl  # type: ignore
 
         if isinstance(url, _QUrl):
             if url.isLocalFile():

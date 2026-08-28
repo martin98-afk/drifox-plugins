@@ -12,7 +12,7 @@
 
 from typing import Optional
 
-from PyQt5.QtGui import QColor
+from PySide6.QtGui import QColor
 
 
 def _luminance(c: QColor) -> float:

@@ -10,8 +10,8 @@
 import re
 from typing import Callable, List, Tuple
 
-from PyQt5.QtCore import QTimer, Qt, pyqtSignal
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QTimer, Qt, Signal
+from PySide6.QtWidgets import (
     QCompleter,
     QHBoxLayout,
     QLineEdit,
@@ -74,7 +74,7 @@ class UrlBar(QWidget):
         navigate_requested(str url): 用户回车导航
     """
 
-    navigate_requested = pyqtSignal(str)
+    navigate_requested = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)

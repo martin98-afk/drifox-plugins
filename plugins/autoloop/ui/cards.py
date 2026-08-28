@@ -11,13 +11,13 @@ import os
 import time
 from pathlib import Path
 
-from PyQt5.QtCore import (
+from PySide6.QtCore import (
     Qt,
     QTimer,
     QVariantAnimation,
-    pyqtSignal,
+    Signal,
 )
-from PyQt5.QtGui import (
+from PySide6.QtGui import (
     QBrush,
     QColor,
     QLinearGradient,
@@ -25,7 +25,7 @@ from PyQt5.QtGui import (
     QPen,
     QPixmap,
 )
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -104,9 +104,9 @@ def _save_state(values: dict) -> bool:
 class AutoLoopConfigCard(QFrame):
     """AutoLoop 配置卡片 — 插入到聊天区的竖排布局"""
 
-    startRequested = pyqtSignal(AutoLoopConfig)
+    startRequested = Signal(AutoLoopConfig)
 
-    closed = pyqtSignal()  # 关闭按钮通知  # 用户点击开始
+    closed = Signal()  # 关闭按钮通知  # 用户点击开始
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -412,7 +412,7 @@ class AutoLoopConfigCard(QFrame):
 
     def _browse_folder(self):
         """打开文件夹选择对话框"""
-        from PyQt5.QtWidgets import QFileDialog
+        from PySide6.QtWidgets import QFileDialog
 
         folder = QFileDialog.getExistingDirectory(
             self,
@@ -468,8 +468,8 @@ class AutoLoopConfigCard(QFrame):
 class AutoLoopRunningCard(QFrame):
     """AutoLoop 运行状态卡 — 彩虹渐变边框 + 进度 + 停止按钮"""
 
-    stopRequested = pyqtSignal()
-    archiveRequested = pyqtSignal()  # 归档按钮点击
+    stopRequested = Signal()
+    archiveRequested = Signal()  # 归档按钮点击
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -540,7 +540,7 @@ class AutoLoopRunningCard(QFrame):
         ):
             try:
                 sig.disconnect()
-            except TypeError, RuntimeError:
+            except (TypeError, RuntimeError):
                 pass
             sig.connect(slot)
 
@@ -1068,8 +1068,8 @@ class AutoLoopFullPage(QFrame):
     └─ SystemLog ─────────────────────────────────────────┘
     """
 
-    stopRequested = pyqtSignal()
-    forceArchiveRequested = pyqtSignal()
+    stopRequested = Signal()
+    forceArchiveRequested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)

@@ -7,9 +7,9 @@ container="right" 停靠（与浏览器卡同容器互斥：打开看板即替�
 
 from typing import Any, Dict, Optional
 
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QDragEnterEvent, QDropEvent
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QDragEnterEvent, QDropEvent
+from PySide6.QtWidgets import (
     QDialog,
     QFrame,
     QHBoxLayout,
@@ -227,7 +227,7 @@ class TaskDetailDialog(QDialog):
 class BoardColumn(QFrame):
     """看板单列 — 列头 + 竖向滚动任务列表 + 拖拽接收区"""
 
-    dropRequested = pyqtSignal(str, str)  # (task_id, 本列状态)
+    dropRequested = Signal(str, str)  # (task_id, 本列状态)
 
     def __init__(self, status: str, parent=None):
         super().__init__(parent)
@@ -472,7 +472,7 @@ class TaskBoardCard(QFrame):
 
     def _on_add_task(self):
         dlg = TaskDialog(self.window())
-        if dlg.exec_() == QDialog.Accepted:
+        if dlg.exec() == QDialog.Accepted:
             title, detail = dlg.get_task()
             if title:
                 self._controller.add_task(title, detail)
@@ -525,7 +525,7 @@ class TaskBoardCard(QFrame):
         if task is None:
             return
         report = self._controller.get_report(task_id)
-        ReportDialog(task.title, report, self.window()).exec_()
+        ReportDialog(task.title, report, self.window()).exec()
 
     def _show_detail(self, task_id: str):
         """打开任务详情（双击卡片；done 卡报告按钮仍直连报告）"""
@@ -539,7 +539,7 @@ class TaskBoardCard(QFrame):
             processing=self._controller.is_processing(task_id),
             preview=task.stream_preview,
             parent=self.window(),
-        ).exec_()
+        ).exec()
 
     # ================================================================
     #  渲染

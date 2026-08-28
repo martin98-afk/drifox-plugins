@@ -90,7 +90,7 @@ plugins/taskboard/
 | 依赖 | 说明 |
 |------|------|
 | DriFox ≥ 0.5.0 | 主程序需支持 `UIPluginRegistry.load_plugin` + `conversation_stack` EP2 契约 |
-| PyQt5 | UI 控件 |
+| PySide6 | UI 控件 |
 
 ## 安装
 

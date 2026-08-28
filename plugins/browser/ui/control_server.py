@@ -42,7 +42,7 @@ _server_ref = {"server": None, "token": "", "port": 0}
 
 def _run_js_sync(view, js: str, timeout: float = 8.0) -> Any:
     """在主线程内同步执行 JS 并返回结果（QEventLoop 等待回调）"""
-    from PyQt5.QtCore import QEventLoop, QTimer
+    from PySide6.QtCore import QEventLoop, QTimer
 
     result = {"value": None, "done": False}
     loop = QEventLoop()
@@ -57,14 +57,14 @@ def _run_js_sync(view, js: str, timeout: float = 8.0) -> Any:
 
     view.page().runJavaScript(js, _cb)
     timer.start(int(timeout * 1000))
-    loop.exec_()
+    loop.exec()
     timer.stop()
     return result.get("value")
 
 
 def _to_html_sync(view, timeout: float = 8.0) -> str:
     """主线程内同步获取页面 HTML"""
-    from PyQt5.QtCore import QEventLoop, QTimer
+    from PySide6.QtCore import QEventLoop, QTimer
 
     result = {"value": "", "done": False}
     loop = QEventLoop()
@@ -79,14 +79,14 @@ def _to_html_sync(view, timeout: float = 8.0) -> str:
 
     view.page().toHtml(_cb)
     timer.start(int(timeout * 1000))
-    loop.exec_()
+    loop.exec()
     timer.stop()
     return result.get("value") or ""
 
 
 def _wait_load(view, timeout: float = 15.0) -> bool:
     """等待页面加载完成（loadFinished 同步化）"""
-    from PyQt5.QtCore import QEventLoop, QTimer
+    from PySide6.QtCore import QEventLoop, QTimer
 
     result = {"ok": False}
     loop = QEventLoop()
@@ -95,7 +95,7 @@ def _wait_load(view, timeout: float = 15.0) -> bool:
     timer.timeout.connect(loop.quit)
     view.loadFinished.connect(lambda ok: (result.update(ok=bool(ok)), loop.quit()))
     timer.start(int(timeout * 1000))
-    loop.exec_()
+    loop.exec()
     timer.stop()
     return result["ok"]
 
@@ -198,7 +198,7 @@ def _op_screenshot() -> dict:
     pixmap = view.grab()
     if pixmap.isNull():
         return {"ok": False, "error": "截图失败"}
-    from PyQt5.QtCore import QDateTime
+    from PySide6.QtCore import QDateTime
 
     out_dir = Path.home() / ".drifox" / "plugins" / "browser" / "data" / "screenshots"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -289,7 +289,7 @@ def _op_close_tab(index: int) -> dict:
 
 
 def _to_qurl(url: str):
-    from PyQt5.QtCore import QUrl
+    from PySide6.QtCore import QUrl
 
     return QUrl(url)
 
@@ -317,8 +317,8 @@ def _dispatch_qt(fn, timeout: float = 20.0):
     if dispatcher is None:
         # 派发器未就绪时，仅主线程可直接执行；非主线程禁止跨线程 UI 操作
         try:
-            from PyQt5.QtCore import QThread
-            from PyQt5.QtWidgets import QApplication
+            from PySide6.QtCore import QThread
+            from PySide6.QtWidgets import QApplication
 
             app = QApplication.instance()
             if app is not None and QThread.currentThread() != app.thread():

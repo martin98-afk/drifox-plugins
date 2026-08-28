@@ -6,9 +6,9 @@
 - StatusBar: 状态栏（分数、速度、暂停按钮）
 """
 
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal
-from PyQt5.QtGui import QPainter, QPen, QColor, QKeyEvent
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton, QSizePolicy
+from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtGui import QPainter, QPen, QColor, QKeyEvent
+from PySide6.QtWidgets import QWidget, QHBoxLayout, QLabel, QPushButton, QSizePolicy
 
 
 # ── 颜色配置 ──
@@ -45,7 +45,7 @@ class GameCanvas(QWidget):
     - 键盘事件处理
     """
 
-    key_pressed = pyqtSignal(int)
+    key_pressed = Signal(int)
 
     def __init__(self, width: int = 15, height: int = 15, cell_size: int = 28, parent=None):
         super().__init__(parent)
@@ -208,7 +208,7 @@ class GameCanvas(QWidget):
 
     def _get_cell_rect(self, x: int, y: int, padding: int = 0) -> QColor:
         """获取格子的绘制矩形"""
-        from PyQt5.QtCore import QRect
+        from PySide6.QtCore import QRect
         return QRect(
             x * self._cell_size + padding,
             y * self._cell_size + padding,
@@ -230,8 +230,8 @@ class GameCanvas(QWidget):
 class StatusBar(QWidget):
     """状态栏：分数 | 速度 | 暂停按钮"""
 
-    pause_clicked = pyqtSignal()
-    restart_clicked = pyqtSignal()
+    pause_clicked = Signal()
+    restart_clicked = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)

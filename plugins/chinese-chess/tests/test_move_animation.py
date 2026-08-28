@@ -21,8 +21,8 @@ from unittest.mock import MagicMock
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 # QApplication 必须先存在
-from PyQt5.QtWidgets import QApplication, QLabel
-from PyQt5.QtCore import QTimer, QPropertyAnimation
+from PySide6.QtWidgets import QApplication, QLabel
+from PySide6.QtCore import QTimer, QPropertyAnimation
 
 _app = QApplication.instance() or QApplication(sys.argv)  # noqa: F841
 
@@ -232,7 +232,7 @@ class TestGhostPieceLabelVisual(unittest.TestCase):
 
     def test_opacity_backed_by_graphics_opacity_effect(self):
         """opacity 属性应走 QGraphicsOpacityEffect（修复 setWindowOpacity 对子部件无效）"""
-        from PyQt5.QtWidgets import QGraphicsOpacityEffect
+        from PySide6.QtWidgets import QGraphicsOpacityEffect
         ghost = _GhostPieceLabel("R", 40, self.view)
         self.assertIsInstance(ghost._ghost_effect, QGraphicsOpacityEffect)
         ghost._set_opacity(0.3)
@@ -260,7 +260,7 @@ class TestAnimatingGuard(unittest.TestCase):
     def setUp(self):
         # mock 主程序依赖
         self._mock_app_deps()
-        from PyQt5.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
         self._app = QApplication.instance() or QApplication(sys.argv)
 
         # 加载 ChessCard（之前需 mock qfluentwidgets 和 PluginConfigStore）

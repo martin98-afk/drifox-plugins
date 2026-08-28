@@ -95,7 +95,7 @@ Worker 内部通过 `ConversationCore.create()` 自建执行栈，**不依赖主
 | 依赖 | 说明 |
 |------|------|
 | DriFox ≥ 0.5.0 | 主程序需支持 `UIPluginRegistry.load_plugin` + `main_widget._build_ui_services` 注入约定 |
-| PyQt5 | UI 控件 |
+| PySide6 | UI 控件 |
 | loguru | 日志 |
 | watchfiles | 热重载 |
 

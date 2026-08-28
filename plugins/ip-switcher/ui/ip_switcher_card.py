@@ -25,9 +25,9 @@ import threading
 import time
 from typing import Callable, Optional
 
-from PyQt5.QtCore import QEvent, QSize, Qt, QTimer, pyqtSignal
-from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QEvent, QSize, Qt, QTimer, Signal
+from PySide6.QtGui import QFont
+from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -108,10 +108,10 @@ _TRIGGER_COLOR = {"ratelimit": "#ef4444", "manual": "#3b82f6"}
 class IPSwitcherCard(QWidget):
     """IP自动换绑仪表盘浮动卡片"""
 
-    closed = pyqtSignal()
+    closed = Signal()
     # 跨线程回主线程通道：后台线程完成后 emit(callable)，主线程事件循环执行
     # ⚠️ 不能从后台线程调 QTimer.singleShot / 直接改控件（回调永不执行/崩溃）
-    _sig_ui_task = pyqtSignal(object)
+    _sig_ui_task = Signal(object)
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -156,7 +156,7 @@ class IPSwitcherCard(QWidget):
         if self._context_provider is None or self._header_icon is None:
             return
         try:
-            from PyQt5.QtGui import QIcon
+            from PySide6.QtGui import QIcon
 
             ctx = self._context_provider()
             icon_info = ctx.get("plugin_icon", {})

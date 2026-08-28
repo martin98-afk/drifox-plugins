@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from loguru import logger
-from PyQt5.QtCore import QCoreApplication, QEventLoop, QThread, QTimer, pyqtSignal
+from PySide6.QtCore import QCoreApplication, QEventLoop, QThread, QTimer, Signal
 
 from taskboard_core.adapter import TaskConversationAdapter
 from taskboard_core.config import (
@@ -134,15 +134,15 @@ class TaskWorker(QThread):
     """单任务处理器 — 一个 (task, column) 一次完整对话"""
 
     # (task_id, log_text)：离散事件日志（时间戳行）
-    task_log = pyqtSignal(str, str)
+    task_log = Signal(str, str)
     # (task_id, preview)：流式内容预览（实时覆盖）
-    task_update = pyqtSignal(str, str)
+    task_update = Signal(str, str)
     # (task_id, signal, summary, report)：处理完成（signal ∈ VALID_SIGNALS|""）
-    task_finished = pyqtSignal(str, str, str, str)
+    task_finished = Signal(str, str, str, str)
     # (task_id, error)
-    task_error = pyqtSignal(str, str)
+    task_error = Signal(str, str)
     # (task_id, tool_rounds)：工具调用轮次累计
-    task_progress = pyqtSignal(str, int)
+    task_progress = Signal(str, int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -387,7 +387,7 @@ class TaskWorker(QThread):
             timeout_timer.setSingleShot(True)
             timeout_timer.timeout.connect(loop.quit)
             timeout_timer.start(60000)
-            loop.exec_()
+            loop.exec()
             timeout_timer.stop()
 
             elapsed = 0

@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Any, Dict, Optional
 
 from loguru import logger
-from PyQt5.QtCore import QTimer
+from PySide6.QtCore import QTimer
 
 PLUGIN_ID = "cron-tasks"
 

@@ -4,7 +4,7 @@
 从 registry 注入的 UI 上下文（ctx）派生主题色与 QSS，确保深浅主题跟随 DriFox，
 并正确使用 ctx 中的 font_family / font_size / is_dark / colors 等字段。
 """
-from PyQt5.QtCore import Qt  # noqa: F401
+from PySide6.QtCore import Qt  # noqa: F401
 
 
 def _ctx_colors(ctx: dict) -> dict:

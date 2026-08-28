@@ -12,14 +12,14 @@
 """
 
 from loguru import logger
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QLabel, QVBoxLayout, QWidget
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QLabel, QVBoxLayout, QWidget
 
 
 class TwinChatCard(QWidget):
     """并发对话浮动卡片：内嵌 OpenAIChatToolWindow 复制实例"""
 
-    closed = pyqtSignal()
+    closed = Signal()
 
     # 类级实例句柄（供 unload_ui 清理，与 workbuddy ArtifactPanelCard._instance 同模式）
     _instance = None

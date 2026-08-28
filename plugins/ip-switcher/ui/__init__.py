@@ -59,7 +59,7 @@ def register_ui(registry):
 
     # 3) 懒启动代理池（后台线程，不阻塞注册也不阻塞主线程）
     try:
-        from PyQt5.QtCore import QTimer
+        from PySide6.QtCore import QTimer
 
         def _lazy_start():
             import threading

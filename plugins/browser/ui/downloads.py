@@ -13,8 +13,8 @@ import webbrowser
 from functools import partial
 from pathlib import Path
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -103,14 +103,14 @@ def _on_download_requested(owner, item) -> None:
             owner._refresh_download_panel()
 
         def _on_download_state_changed(state):
-            from PyQt5.QtWebEngineCore import QWebEngineDownloadItem
+            from PySide6.QtWebEngineCore import QWebEngineDownloadRequest
 
-            if state == QWebEngineDownloadItem.DownloadCancelled:
+            if state == QWebEngineDownloadRequest.DownloadCancelled:
                 update_download_state(
                     download_id, "cancelled", item.receivedBytes(), item.totalBytes()
                 )
                 owner._set_status(f"下载取消: {filename}")
-            elif state == QWebEngineDownloadItem.DownloadInterrupted:
+            elif state == QWebEngineDownloadRequest.DownloadInterrupted:
                 update_download_state(
                     download_id, "interrupted", item.receivedBytes(), item.totalBytes()
                 )
@@ -212,7 +212,7 @@ class DownloadsPanel(QFrame, _PanelMixin):
             self._owner._set_status("下载目录不存在")
 
     def _clear(self):
-        from PyQt5.QtWidgets import QMessageBox
+        from PySide6.QtWidgets import QMessageBox
 
         if (
             QMessageBox.question(self, "清空下载", "确定要清空全部下载记录吗？")

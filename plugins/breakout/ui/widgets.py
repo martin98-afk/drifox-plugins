@@ -7,8 +7,8 @@
 - ControlHint: 操作提示
 """
 
-from PyQt5.QtCore import Qt, QRectF, QTimer, pyqtSignal
-from PyQt5.QtGui import (
+from PySide6.QtCore import Qt, QRectF, QTimer, Signal
+from PySide6.QtGui import (
     QBrush,
     QColor,
     QFont,
@@ -18,7 +18,7 @@ from PyQt5.QtGui import (
     QPen,
     QPixmap,
 )
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -222,8 +222,8 @@ class GameCanvas(QWidget):
 class StatusBar(QWidget):
     """状态栏：分数 | 生命值 | 控制按钮"""
 
-    start_clicked = pyqtSignal()
-    restart_clicked = pyqtSignal()
+    start_clicked = Signal()
+    restart_clicked = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)

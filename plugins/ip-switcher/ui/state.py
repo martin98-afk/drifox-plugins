@@ -3,7 +3,7 @@
 
 职责：
 - 维护当前出口 IP、换绑历史（内存 + 可选落盘）、统计计数
-- 通过 pyqtSignal 广播事件（换绑完成、代理池异常、模式变化）
+- 通过 Signal 广播事件（换绑完成、代理池异常、模式变化）
 - 线程安全：信号跨线程自动投递，计数加锁
 """
 
@@ -12,7 +12,7 @@ from collections import deque
 from dataclasses import dataclass
 from typing import Deque, Dict, List, Optional
 
-from PyQt5.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 
 @dataclass
@@ -31,9 +31,9 @@ class IPState(QObject):
     """全局状态总线（QObject 以便信号跨线程）"""
 
     # 信号：换绑事件、状态变化（供 UI 刷新）
-    switched = pyqtSignal(object)  # SwitchEvent
-    status_changed = pyqtSignal(str, str)  # (field, value)
-    pool_state_changed = pyqtSignal(str)  # "ok" | "error" | "starting"
+    switched = Signal(object)  # SwitchEvent
+    status_changed = Signal(str, str)  # (field, value)
+    pool_state_changed = Signal(str)  # "ok" | "error" | "starting"
 
     def __init__(self, parent=None):
         super().__init__(parent)
