@@ -1,0 +1,42 @@
+{
+    "name": "command-code",
+    "description": "Command Code 服务商接入插件：聚合 Claude / GPT / Gemini / DeepSeek / Kimi / GLM / MiniMax 等主流模型，走 OpenAI 兼容协议（/provider/v1），Bearer 鉴权，按量付费无加价",
+    "version": "0.1.0",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "author": {
+        "name": "self-evolver"
+    },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "command-code",
+        "commandcode",
+        "llm-gateway",
+        "evolved"
+    ],
+    "components": {
+        "tools": false,
+        "commands": false,
+        "agents": false,
+        "skills": false,
+        "hooks": false,
+        "mcp": false,
+        "lsp": false,
+        "themes": false,
+        "ui": false,
+        "providers": true,
+        "team_templates": false,
+        "model_adapters": false,
+        "loop_policies": false,
+        "storages": false,
+        "serializers": false,
+        "gateways": false,
+        "engines": false
+    }
+}
