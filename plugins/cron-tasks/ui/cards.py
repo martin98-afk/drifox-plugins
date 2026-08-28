@@ -1417,6 +1417,29 @@ class CronTasksCard(QFrame):
             theme_manager.register_refresh_target(self)
         except Exception:
             pass
+        # 记录创建时主题 ID，showEvent 时若发现已变更 → 自动 refresh_theme
+        # （修复：主程序主题切换时若卡片处于隐藏，主路径不调 hidden 卡片；
+        # 用户再次打开卡片时基于旧主题颜色显示，现在补刷）
+        try:
+            from app.utils.theme_manager import theme_manager
+
+            self._applied_theme_id = theme_manager.get_current_theme_id()
+        except Exception:
+            self._applied_theme_id = None
+
+    # ── 主程序主题热刷新白名单（main_widget.py _apply_runtime_ui_settings 调用）──
+    # 主程序主题切换走 _apply_runtime_ui_settings 显式遍历插件卡片，仅命中
+    # `_apply_latest_theme` / `_apply_theme` / `_retheme` 三个方法名（向后兼容约定）。
+    # register_refresh_target(self) 那条弱引用路径已不被主线采用，故此处补三个 alias。
+
+    def _apply_latest_theme(self):
+        return self.refresh_theme()
+
+    def _apply_theme(self):
+        return self.refresh_theme()
+
+    def _retheme(self):
+        return self.refresh_theme()
 
     # ── 插件上下文（拉模型）──
 
@@ -1425,6 +1448,17 @@ class CronTasksCard(QFrame):
 
     def showEvent(self, event):
         super().showEvent(event)
+        # 0) 主题变化兜底：主程序主题切换瞬间若卡片处于隐藏，主路径会跳过；
+        # 卡片再次显示前检测主题 ID 是否变更，变了就重刷样式（覆盖隐藏态被跳过场景）
+        try:
+            from app.utils.theme_manager import theme_manager
+
+            current_id = theme_manager.get_current_theme_id()
+            if current_id and current_id != getattr(self, "_applied_theme_id", None):
+                self.refresh_theme()
+                self._applied_theme_id = current_id
+        except Exception:
+            pass
         # 1) 先拉上下文并启动 controller（services 注入最关键，任何后续失败不影响调度）
         try:
             if self._ctx_provider is not None:
@@ -1780,6 +1814,13 @@ class CronTasksCard(QFrame):
         self._history_panel.refresh_theme()
         try:
             self.refresh_jobs()  # 行卡按新主题重建
+        except Exception:
+            pass
+        # 同步刷新标记：让 showEvent 不再重复刷
+        try:
+            from app.utils.theme_manager import theme_manager as _tm2
+
+            self._applied_theme_id = _tm2.get_current_theme_id()
         except Exception:
             pass
 
