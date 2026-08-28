@@ -1703,6 +1703,10 @@ class CronTasksCard(QFrame):
         """从 controller 拉最新任务列表重建行卡片"""
         from .controller import CronTasksController
 
+        # 热重载边界防御：多次 reload 后残留的旧实例可能属性不全，跳过避免崩
+        if not hasattr(self, "_jobs_layout"):
+            return
+
         ctrl = CronTasksController.get_instance()
         jobs = ctrl.scheduler.get_jobs()
         running_id = ctrl.scheduler.is_running_job() and ctrl.scheduler._executor._job.id or ""
