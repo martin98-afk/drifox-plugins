@@ -41,7 +41,7 @@ hidden: false
    - ...
    ```
 3. **确认**：把拟定的技能名（kebab-case）和 SKILL.md 内容概要给用户过目，确认后再装
-4. **安装**：`write` 写入本插件技能目录 `C:/Users/mading/.drifox/plugins/openhanako-adapter/skills/<name>/SKILL.md`（frontmatter `---` 开头，含 name/description；目录不存在则创建；插件热重载自动生效）
+4. **安装**：`write` 写入本插件技能目录 `~/.drifox/plugins/openhanako-adapter/skills/<name>/SKILL.md`（frontmatter `---` 开头，含 name/description；目录不存在则创建；插件热重载自动生效）。`~` 由系统自动展开为当前用户主目录，不要硬编码 `C:/Users/<name>/` 这类绝对路径——同一插件要给不同用户共用。
 5. 告知用户：以后对话中说「使用 `<技能名>` 技能」即可调用
 
 ## 判断值不值得沉淀

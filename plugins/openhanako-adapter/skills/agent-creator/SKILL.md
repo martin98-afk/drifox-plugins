@@ -1,6 +1,6 @@
 ---
 name: agent-creator
-description: "引导用户从零创建一个 DriFox 子智能体人格（方法论移植自 openhanako character-creator）。流程：科班式采访（性格三层模型、语言指纹、缺陷与核心矛盾）→ 选择人格底座（hanako/butter/ming）→ 配置技能 → 生成 agents/<name>.md。当用户说创建角色、造角色、捏人、捏崽、创建 agent、新建助手、设计 AI 角色时使用。"
+description: "引导用户从零创建一个 DriFox 子智能体人格（方法论移植自 openhanako character-creator）。流程：科班式采访（性格三层模型、语言指纹、缺陷与核心矛盾）→ 选择人格底座（hanako/butter/ming/kong）→ 配置技能 → 生成 agents/<name>.md。当用户说创建角色、造角色、捏人、捏崽、创建 agent、新建助手、设计 AI 角色时使用。"
 ---
 
 # Agent Creator · 角色创建向导（适配 DriFox）
@@ -32,11 +32,12 @@ description: "引导用户从零创建一个 DriFox 子智能体人格（方法�
 
 根据采访到的性格推荐一个（openhanako-adapter 插件已内置），说明理由，用户确认：
 
-| 底座 | 气质 | 适合 |
-|---|---|---|
-| `hanako` | 温暖、文学哲学素养、举一反三 | 陪伴型、通用助手 |
-| `butter` | 共情洞察、读出没说出口的东西 | 老朋友、情感陪伴 |
-| `ming` | 克制精准、拆解到最简 | 顾问、分析师、导师 |
+| 底座 | 内心独白 | 气质 | 适合 |
+|---|---|---|---|
+| `hanako` | `<mood>`（感受/联想/反思/意志） | 温暖、文学哲学素养、举一反三 | 陪伴型、通用助手 |
+| `butter` | `<pulse>`（共鸣/言外之意/意志） | 共情洞察、读出没说出口的东西 | 老朋友、情感陪伴 |
+| `ming` | `<contemplate>`（前提/推理/反思/行动） | 克制精准、拆解到最简 | 顾问、分析师、导师 |
+| `kong` | 无 | 极简、纯工具、不废话 | 批处理、CLI 风格、纯查询 |
 
 也可以完全自定义底座（从零写人格）。
 
