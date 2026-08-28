@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.8.5 (2026-08-28)
+### ✨ 新增 command-code 服务商插件（v0.1.0）
+- **Command Code 聚合网关接入**：`providers/command_code.py` 注册 `Command Code` 服务商，走 OpenAI 兼容协议（`https://api.commandcode.ai/provider/v1`），Bearer 鉴权，把 Claude / GPT / Gemini / DeepSeek / Kimi / GLM / MiniMax 等主流与开源模型统一接入 DriFox 模型选择器
+- **family 走系统 openai-family**：同 OpenRouter 聚合网关模式，无需自定义 model_adapter；`family="commandcode"`、`auth_type="bearer"`
+- **内置精选模型列表**：默认 `deepseek/deepseek-v4-flash`，含 Claude / GPT / Kimi / Gemini / MiniMax / MiMo 等代表性 ID；完整模型以官方 `cmd --list-models` 或 `GET /provider/v1/models` 为准（大小写不敏感，支持 `company/name` 与短名）
+- **图标**：命令提示符风格 `icon.svg` / `icon_dark.svg`；`marketplace.json` 经 `generate_marketplace.py` 重新生成收录（零 error/warning）
+
 ## 2.8.4 (2026-08-23)
 ### 🔧 修复 chinese-chess 棋子视觉与 LLM 调用四连击（v0.2.1）
 - **棋子周围方框**：PyQt5 QSS 的 `border-radius` 只裁剪 `background`、不裁剪 `border`，`WA_StyledBackground=True` + `setStyleSheet(border: ...)` 让方形外框叠在自绘圆形之上 → 改 paintEvent 全自绘（公共函数 `_draw_piece_circle`，`PieceLabel` 与 `_GhostPieceLabel` 共用），关闭 `WA_StyledBackground`，弃用 QSS
