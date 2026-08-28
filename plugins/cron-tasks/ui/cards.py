@@ -40,7 +40,7 @@ from qfluentwidgets import (
 )
 from qfluentwidgets.components.widgets.card_widget import CardSeparator
 
-from app.utils.design_tokens import Colors, font_size_css, scale_font_size
+from app.utils.design_tokens import Colors, font_size_css, scale_font_size, apply_font_size_to_widget
 from app.utils.utils import get_font_family_css
 
 from crontasks_core.models import CronJob, WEEKDAY_CN
@@ -293,6 +293,21 @@ class JobRowCard(QFrame):
             btn.clicked.connect(lambda _c, s=signal: s.emit(self._job.id))
             layout.addWidget(btn)
 
+        # qfluentwidgets 组件字号跟随系统设置（BodyLabel 等自身 QSS 写死不随缩放）
+        apply_font_size_to_widget(self)
+        self._apply_status_style()
+
+    def _apply_status_style(self):
+        """运行状态行样式：运行中高亮醒目，否则次要色"""
+        if self._running:
+            self._status_label.setStyleSheet(
+                f"color: {Colors.REALTIME_SUCCESS}; font-weight: bold; {font_size_css(13)} {FONT_CSS}"
+            )
+        else:
+            self._status_label.setStyleSheet(
+                f"color: {Colors.TEXT_SECONDARY}; {font_size_css(12)} {FONT_CSS}"
+            )
+
     def _on_run_clicked(self):
         """运行钮：常态=立即运行；运行中=停止"""
         if self._running:
@@ -311,8 +326,15 @@ class JobRowCard(QFrame):
 
     def refresh(self, job: CronJob, running: bool = False):
         self._job = job
+        was_running = self._running
         self._running = running
         self._apply_run_state()
+        if running != was_running:
+            # 运行态切换：刷新状态行颜色 + 卡片高亮边框（动态属性 + repolish）
+            self._apply_status_style()
+            self.setProperty("running", "true" if running else "false")
+            self.style().unpolish(self)
+            self.style().polish(self)
         self._switch.setChecked(job.enabled)
         self._title_label.setText(job.display_label())
         meta_parts = [f"⏱ {job.schedule_desc()}"]
@@ -349,6 +371,10 @@ class JobRowCard(QFrame):
                 {FONT_CSS}
             }}
             #cronJobRowCard:hover {{ border: 1px solid {Colors.INPUT_FOCUS_BORDER}; }}
+            #cronJobRowCard[running="true"] {{
+                border: 1px solid {Colors.REALTIME_SUCCESS};
+                border-left: 4px solid {Colors.REALTIME_SUCCESS};
+            }}
         """)
 
 
@@ -696,7 +722,7 @@ class RunHistoryPanel(QWidget):
         body = QHBoxLayout()
         self._list = QListWidget()
         self._list.setMinimumWidth(230)
-        self._list.setStyleSheet(f"QListWidget {{ {FONT_CSS} }}")
+        self._list.setStyleSheet(f"QListWidget {{ {font_size_css(13)} {FONT_CSS} }}")
         self._list.itemClicked.connect(self._on_item_clicked)
         body.addWidget(self._list, 3)
 
@@ -704,7 +730,7 @@ class RunHistoryPanel(QWidget):
         self._detail = QTextEdit()
         self._detail.setReadOnly(True)
         self._detail.setLineWrapMode(QTextEdit.WidgetWidth)
-        self._detail.setStyleSheet(f"QTextEdit {{ {FONT_CSS} }}")
+        self._detail.setStyleSheet(f"QTextEdit {{ {font_size_css(13)} {FONT_CSS} }}")
         detail_wrap.addWidget(self._detail, 1)
         body.addLayout(detail_wrap, 5)
         layout.addLayout(body, 1)
@@ -712,6 +738,8 @@ class RunHistoryPanel(QWidget):
         self._ctx_label.setStyleSheet(
             f"color: {Colors.TEXT_SECONDARY}; {font_size_css(12)} {FONT_CSS}"
         )
+        # qfluentwidgets 组件字号跟随系统设置
+        apply_font_size_to_widget(self)
 
     def load(self, job: CronJob, records: List[dict]):
         self._title.setText(f"运行历史 — {job.display_label()}")
@@ -784,6 +812,8 @@ class CronTasksCard(QFrame):
         self._last_ctx: Dict[str, Any] = {}
         self._rows: Dict[str, JobRowCard] = {}
         self._build_ui()
+        # qfluentwidgets 组件字号跟随系统设置
+        apply_font_size_to_widget(self)
         self._refresh_theme_style()
 
     # ── 插件上下文（拉模型）──
