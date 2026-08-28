@@ -18,7 +18,7 @@ openhanako（HanaAgent）能力适配插件：把其内置技能、智能体人�
 （/diary、/xing 不需要专用工具：命令 prompt 直接驱动模型，模型用 powershell/read/write 自主完成 IO）
 
 ### 智能体（人格底座）
-`hanako`（温暖·文学）、`butter`（共情·洞察）、`ming`（克制·深刻）——openhanako 三人格原样移植。
+`hanako`（温暖·文学，MOOD 块）、`butter`（共情·洞察，PULSE 块）、`ming`（克制·深刻，沉思块）、`kong`（极简·工具，无独白）——openhanako 四 yuan 底座原样移植。
 
 ### 技能
 | 技能 | 说明 |
