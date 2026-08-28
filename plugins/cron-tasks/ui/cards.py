@@ -535,12 +535,12 @@ class JobEditPanel(QWidget):
         nrow = QHBoxLayout(self._notify_target_row)
         nrow.setContentsMargins(0, 0, 0, 0)
         nrow.setSpacing(4)
-        nlbl = BodyLabel("目标")
+        nlbl = BodyLabel("发送目标")
         nlbl.setFixedWidth(90)
         nrow.addWidget(nlbl)
-        self._notify_target_edit = LineEdit()
-        self._notify_target_edit.setPlaceholderText("平台:chat_id，如 feishu:ou_xxx")
-        nrow.addWidget(self._notify_target_edit, 1)
+        # 直接对接主程序已连接 gateway：下拉列出机器人已知会话，免手填
+        self._notify_target_combo = ComboBox()
+        nrow.addWidget(self._notify_target_combo, 1)
         self._notify_target_row.setVisible(False)
         layout.addWidget(self._notify_target_row)
 
@@ -576,8 +576,39 @@ class JobEditPanel(QWidget):
         self._cron_edit.textChanged.connect(self._refresh_preview)
 
     def _on_notify_mode_changed(self, index: int):
-        # 仅 Gateway 模式需要目标（平台:chat_id）
+        # 仅 Gateway 模式需要目标：拉取主程序已连接 gateway 的已知会话
         self._notify_target_row.setVisible(index == 2)
+        if index == 2:
+            self._load_gateway_sessions()
+
+    def _load_gateway_sessions(self):
+        """从主程序 PlatformManager 拉取已知会话（platform:chat_id 免手填）"""
+        combo = self._notify_target_combo
+        current = combo.currentData()
+        combo.clear()
+        sessions = []
+        try:
+            from app.gateway import get_platform_manager
+
+            mgr = get_platform_manager()
+            if mgr is not None:
+                sessions = mgr.get_sessions() or []
+        except Exception as e:
+            logger.warning(f"[cron-tasks] 拉取 gateway 会话失败: {e}")
+        if not sessions:
+            combo.addItem("（暂无会话——先给机器人发条消息）", "")
+        else:
+            sessions = sorted(sessions, key=lambda s: s.last_active, reverse=True)
+            for s in sessions:
+                p = getattr(s.platform, "value", s.platform)
+                combo.addItem(s.display_name, f"{p}:{s.chat_id}")
+        if current:
+            cidx = combo.findData(current)
+            if cidx >= 0:
+                combo.setCurrentIndex(cidx)
+            else:
+                combo.addItem(f"（原配置）{current}", current)
+                combo.setCurrentIndex(combo.count() - 1)
 
     def _browse_workdir(self):
         from PyQt5.QtWidgets import QFileDialog
@@ -672,7 +703,10 @@ class JobEditPanel(QWidget):
         n = job.notify or ""
         if n.startswith("gateway:"):
             self._notify_combo.setCurrentIndex(2)
-            self._notify_target_edit.setText(":".join(n.split(":", 2)[1:]) or "")
+            self._notify_target_combo.clear()
+            self._notify_target_combo.addItem(
+                f"（原配置）{':'.join(n.split(':', 2)[1:])}", ":".join(n.split(':', 2)[1:])
+            )
         elif n == "system":
             self._notify_combo.setCurrentIndex(1)
         else:
@@ -736,9 +770,9 @@ class JobEditPanel(QWidget):
         job.workdir = self._workdir_edit.text().strip()
         ni = self._notify_combo.currentIndex()
         if ni == 2:
-            target = self._notify_target_edit.text().strip().strip(":")
+            target = str(self._notify_target_combo.currentData() or "")
             if not target:
-                self._title.setText("编辑任务 — ❗ Gateway 通知需填写 平台:chat_id")
+                self._title.setText("编辑任务 — ❗ 无可用 Gateway 会话（先给机器人发条消息）")
                 return
             job.notify = f"gateway:{target}"
         else:
