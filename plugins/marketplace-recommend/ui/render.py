@@ -182,11 +182,3 @@ def render_recommend(ctx: Dict[str, Any]) -> str:
         f"</div>"
         f'<div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:6px;">{"".join(cards)}</div>'
     )
-
-
-def force_refresh() -> None:
-    """清空内存缓存并后台重拉（换一批 / 安装后刷新推荐列表用）"""
-    with _state_lock:
-        _state["plugins"] = None
-        _state["fetched_at"] = 0.0
-    _get_marketplace_data()
