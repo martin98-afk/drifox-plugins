@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import threading
 from pathlib import Path
 from typing import List, Optional
@@ -22,7 +23,21 @@ RUNS_KEEP_PER_JOB = 30  # 每任务历史保留条数（现含响应全文，app
 
 
 def default_store_dir() -> Path:
-    """默认存储目录：<app_data>/plugins/cron-tasks/"""
+    """默认存储目录：<app_data>/plugin_data/cron-tasks/
+
+    独立于插件安装目录（<app_data>/plugins/cron-tasks/）：插件更新/重装清空
+    安装目录时任务与运行历史不丢失。
+    """
+    try:
+        from app.utils.utils import get_app_data_dir
+
+        return Path(get_app_data_dir()) / "plugin_data" / "cron-tasks"
+    except Exception:
+        return Path(".drifox") / "plugin_data" / "cron-tasks"
+
+
+def _legacy_store_dir() -> Path:
+    """旧版存储目录（v0.2.3 及之前：插件安装目录内，重装即丢）"""
     try:
         from app.utils.utils import get_app_data_dir
 
@@ -31,11 +46,41 @@ def default_store_dir() -> Path:
         return Path(".drifox") / "plugins" / "cron-tasks"
 
 
+def _migrate_legacy_store(new_base: Path) -> None:
+    """一次性迁移：旧目录（插件安装目录内）数据搬到独立数据目录。
+
+    幂等：新位置已有 jobs.json 时跳过（以新为准）；迁移失败静默（不阻断加载）。
+    """
+    try:
+        legacy = _legacy_store_dir()
+        if not (legacy / "jobs.json").exists() and not (legacy / "runs").exists():
+            return
+        if (new_base / "jobs.json").exists():
+            return  # 新目录已在使用，不覆盖
+        new_base.mkdir(parents=True, exist_ok=True)
+        if (legacy / "jobs.json").exists():
+            shutil.move(str(legacy / "jobs.json"), str(new_base / "jobs.json"))
+        if (legacy / "runs").exists():
+            shutil.move(str(legacy / "runs"), str(new_base / "runs"))
+        # 清理旧目录残留（.drifox-plugin/crontasks_core 等属插件本体，不动）
+        for leftover in (legacy.glob("*.json.tmp"),):
+            for f in leftover:
+                try:
+                    f.unlink()
+                except OSError:
+                    pass
+    except Exception:
+        pass  # 迁移失败不阻断调度加载
+
+
 class CronStore:
     """定时任务持久化仓库"""
 
     def __init__(self, base_dir: Optional[Path] = None):
-        self._base = Path(base_dir) if base_dir else default_store_dir()
+        if base_dir is None:
+            base_dir = default_store_dir()
+            _migrate_legacy_store(base_dir)  # 旧数据一次性搬入（仅默认路径时迁移）
+        self._base = Path(base_dir)
         self._jobs_path = self._base / "jobs.json"
         self._runs_dir = self._base / "runs"
         self._lock = threading.RLock()
