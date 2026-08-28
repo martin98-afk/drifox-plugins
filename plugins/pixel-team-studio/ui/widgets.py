@@ -294,7 +294,7 @@ class MemberTile(_DragSource):
         self._state_label.setAlignment(Qt.AlignCenter)
         v.addWidget(self._name_label)
         v.addWidget(self._state_label)
-        # 快捷发消息按钮（常显右下角，点击弹输入框）
+        # 快捷发消息按钮（常显右上角，点击弹输入框）
         self._msg_btn = QPushButton("✉", self)
         self._msg_btn.setObjectName("msgBtn")
         self._msg_btn.setFixedSize(24, 24)
@@ -305,11 +305,11 @@ class MemberTile(_DragSource):
         self.apply_state(self._state, 0)
 
     def resizeEvent(self, event):
-        """✉ 按钮钉在右下角"""
+        """✉ 按钮钉在右上角"""
         super().resizeEvent(event)
         btn = getattr(self, "_msg_btn", None)
         if btn is not None:
-            btn.move(self.width() - btn.width() - 4, self.height() - btn.height() - 4)
+            btn.move(self.width() - btn.width() - 4, 4)
 
     def _apply_base_style(self):
         pal = self._palette

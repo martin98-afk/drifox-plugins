@@ -299,7 +299,7 @@ def create_team_from_template(template_name: str) -> int:
             [a.agent_name for a in template.agents],
             run_id=new_run_id,
             team_label=template.template_name,
-            team_name="default",
+            team_name=template.template_name,
         )
         return count
     except Exception as e:  # noqa: BLE001
@@ -318,7 +318,7 @@ def add_member(agent_name: str, run_id: str, team_label: str) -> bool:
             [agent_name],
             run_id=run_id or "",
             team_label=team_label or "",
-            team_name="default",
+            team_name=team_label or "",
         )
         return count > 0
     except Exception as e:  # noqa: BLE001
