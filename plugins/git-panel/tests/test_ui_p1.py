@@ -39,8 +39,8 @@ def _load_plugin_modules():
 
 GitRepo, cards = _load_plugin_modules()
 
-from PyQt5.QtCore import QEventLoop, QTimer  # noqa: E402
-from PyQt5.QtWidgets import QApplication  # noqa: E402
+from PySide6.QtCore import QEventLoop, QTimer  # noqa: E402
+from PySide6.QtWidgets import QApplication  # noqa: E402
 
 _APP = QApplication([])
 
@@ -58,7 +58,7 @@ def wait_until(cond, timeout_ms=8000, interval=40):
 
     QTimer.singleShot(0, poll)
     QTimer.singleShot(timeout_ms, loop.quit)
-    loop.exec_()
+    loop.exec()
     return result["ok"]
 
 
@@ -168,7 +168,7 @@ class TestCommitDetailDialog(P1UITestBase):
         dlg.show()
         ok = wait_until(lambda: not hasattr(dlg, "_detail_thread") or True)
         # 触发 hash 点击复制
-        from PyQt5.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
 
         dlg._on_hash_click(None)
         self.assertEqual(QApplication.clipboard().text(), h)

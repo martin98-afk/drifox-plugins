@@ -59,7 +59,7 @@ _ensure_app_stubs()
 
 
 # 必须在 mock 之后导入
-from PyQt5.QtWidgets import QApplication  # noqa: E402
+from PySide6.QtWidgets import QApplication  # noqa: E402
 
 _app = QApplication.instance() or QApplication(sys.argv)  # noqa: F841
 

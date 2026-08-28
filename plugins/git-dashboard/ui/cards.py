@@ -13,9 +13,9 @@ from collections import defaultdict
 from datetime import datetime, timedelta
 from typing import Callable, Dict, List, Optional, Tuple
 
-from PyQt5.QtCore import QEvent, QObject, QPointF, QRectF, QSize, QThread, Qt, pyqtSignal
-from PyQt5.QtGui import QBrush, QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QEvent, QObject, QPointF, QRectF, QSize, QThread, Qt, Signal
+from PySide6.QtGui import QBrush, QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
+from PySide6.QtWidgets import (
     QApplication,
     QFrame,
     QHBoxLayout,
@@ -233,8 +233,8 @@ def _collect_recent_commits(cwd: str, n: int = COMMIT_COUNT) -> List[str]:
 
 
 class _GitDataWorker(QObject):
-    finished = pyqtSignal(dict)
-    error = pyqtSignal(str)
+    finished = Signal(dict)
+    error = Signal(str)
 
     def __init__(self, cwd: str):
         super().__init__()
@@ -818,7 +818,7 @@ class _CommitListWidget(QWidget):
 
 
 class GitDashboardCard(QWidget):
-    closed = pyqtSignal()
+    closed = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)

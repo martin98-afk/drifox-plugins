@@ -7,9 +7,9 @@
 - DifficultySelector: 难度选择条
 """
 
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QMouseEvent
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QMouseEvent
+from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -53,8 +53,8 @@ class MineCellButton(QPushButton):
     - 三种视觉状态：未翻开 / 已翻开 / 插旗
     """
 
-    left_clicked = pyqtSignal(int, int)
-    right_clicked = pyqtSignal(int, int)
+    left_clicked = Signal(int, int)
+    right_clicked = Signal(int, int)
 
     def __init__(self, x: int, y: int, cell_size: int = 32, parent=None):
         super().__init__(parent)
@@ -162,7 +162,7 @@ class MineCellButton(QPushButton):
 class StatusBar(QWidget):
     """状态栏：地雷计数 | 笑臉按钮 | 计时器"""
 
-    smiley_clicked = pyqtSignal()
+    smiley_clicked = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -255,7 +255,7 @@ class StatusBar(QWidget):
 class DifficultySelector(QWidget):
     """难度选择条"""
 
-    difficulty_changed = pyqtSignal(str)
+    difficulty_changed = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)

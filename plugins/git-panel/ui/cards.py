@@ -23,9 +23,9 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, List, Optional, Tuple
 
-from PyQt5.QtCore import QObject, QPoint, QRectF, QSize, QThread, Qt, QTimer, pyqtSignal
-from PyQt5.QtGui import QBrush, QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QObject, QPoint, QRectF, QSize, QThread, Qt, QTimer, Signal
+from PySide6.QtGui import QBrush, QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
+from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -138,8 +138,8 @@ def _make_style(color: str, font_family: str = "", font_size: int = 0, extra: st
 class _Worker(QObject):
     """后台执行任意阻塞操作，通过信号返回结果"""
 
-    finished = pyqtSignal(object)
-    error = pyqtSignal(str)
+    finished = Signal(object)
+    error = Signal(str)
 
     def __init__(self, fn, *args, **kwargs):
         super().__init__()
@@ -207,8 +207,8 @@ _CONFLICT_STATUS = {"UU", "AA", "DD", "DU", "UD", "AU", "UA"}
 class _FileRowWidget(QWidget):
     """单个文件变更行"""
 
-    staged_changed = pyqtSignal()  # 暂存/取消暂存后触发刷新
-    diff_requested = pyqtSignal(str, bool, str)  # (path, staged, status)
+    staged_changed = Signal()  # 暂存/取消暂存后触发刷新
+    diff_requested = Signal(str, bool, str)  # (path, staged, status)
 
     def __init__(self, file_info: dict, parent=None):
         super().__init__(parent)
@@ -506,7 +506,7 @@ class _FileRowWidget(QWidget):
         return menu
 
     def _copy_path(self):
-        from PyQt5.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
 
         QApplication.clipboard().setText(self._info["path"])
 
@@ -600,7 +600,7 @@ def _dialog_parent(parent) -> QWidget:
         top = parent.window()
         if top is not None:
             return top
-    from PyQt5.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     app = QApplication.instance()
     if app is not None and app.activeWindow() is not None:
@@ -831,7 +831,7 @@ class _ConfirmDialog(MaskDialogBase):
     @staticmethod
     def ask(title: str, message: str, parent=None) -> bool:
         dlg = _ConfirmDialog(title, message, parent)
-        dlg.exec_()
+        dlg.exec()
         return dlg._confirmed
 
 
@@ -954,7 +954,7 @@ def _confirm_ask(title: str, message: str, parent=None) -> bool:
     d = ConfirmDialog(title=title, content=message, confirm_text="确定",
                       cancel_text="取消", parent=_dialog_parent(parent))
     d.confirmed.connect(_yes)
-    d.exec_()
+    d.exec()
     return holder["ok"]
 
 
@@ -975,11 +975,11 @@ def _input_ask(title: str, hint: str = "", parent=None,
         d = SingleInputDialog(title=title, hint=hint, confirm_text=confirm_text,
                               cancel_text=cancel_text, parent=_dialog_parent(parent))
         d.confirmed.connect(_got)
-        d.exec_()
+        d.exec()
         return holder["text"]
     dlg = _InputDialog(title, hint=hint, confirm_text=confirm_text,
                        cancel_text=cancel_text, parent=parent)
-    dlg.exec_()
+    dlg.exec()
     return dlg.text()
 
 
@@ -1083,7 +1083,7 @@ class _CollapsibleSection(QWidget):
 class _StashRowWidget(QWidget):
     """单个 stash 条目"""
 
-    action_requested = pyqtSignal(str, str)  # (action, ref)
+    action_requested = Signal(str, str)  # (action, ref)
 
     def __init__(self, stash_info: dict, parent=None):
         super().__init__(parent)
@@ -1152,8 +1152,8 @@ class _StashRowWidget(QWidget):
 class _BranchRowWidget(QWidget):
     """单个分支行"""
 
-    switch_requested = pyqtSignal(str)  # branch_name
-    delete_requested = pyqtSignal(str)  # branch_name
+    switch_requested = Signal(str)  # branch_name
+    delete_requested = Signal(str)  # branch_name
 
     def __init__(self, branch_info: dict, parent=None):
         super().__init__(parent)
@@ -1246,7 +1246,7 @@ class _BranchRowWidget(QWidget):
 class _CommitRowWidget(QWidget):
     """单个提交行"""
 
-    detail_requested = pyqtSignal(str)  # hash
+    detail_requested = Signal(str)  # hash
 
     def __init__(self, commit_info: dict, parent=None):
         super().__init__(parent)
@@ -1395,7 +1395,7 @@ class _CommitDetailDialog(MaskDialogBase):
         self._center_widget()
 
     def _on_hash_click(self, event):
-        from PyQt5.QtWidgets import QApplication
+        from PySide6.QtWidgets import QApplication
 
         QApplication.clipboard().setText(self._hash)
         self._hash_lb.setText(f"{self._hash}  ·  已复制")
@@ -1620,7 +1620,7 @@ class _StashDetailDialog(MaskDialogBase):
 class GitPanelCard(QWidget):
     """Git 控制面板浮动卡片"""
 
-    closed = pyqtSignal()
+    closed = Signal()
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
@@ -1677,7 +1677,7 @@ class GitPanelCard(QWidget):
         # 应用插件图标（DriFox 注入 ctx["plugin_icon"] = {light, dark} 路径）
         # 与 plugin-marketplace 卡片同机制：IconWidget.setIcon(QIcon(path))
         try:
-            from PyQt5.QtGui import QIcon
+            from PySide6.QtGui import QIcon
             icon_info = ctx.get("plugin_icon", {}) or {}
             theme = "dark" if isDarkTheme() else "light"
             icon_path = icon_info.get(theme, "") or icon_info.get("light", "")
@@ -2061,7 +2061,7 @@ class GitPanelCard(QWidget):
     # ── 比例高度 ──
 
     def sizeHint(self):
-        from PyQt5.QtCore import QSize
+        from PySide6.QtCore import QSize
         base = super().sizeHint()
         win = self.window()
         if win and win.height() > 0:
@@ -2076,7 +2076,7 @@ class GitPanelCard(QWidget):
             self.updateGeometry()
 
     def eventFilter(self, obj, event):
-        from PyQt5.QtCore import QEvent
+        from PySide6.QtCore import QEvent
         if obj is self.window() and event.type() == QEvent.Resize:
             self.updateGeometry()
         return super().eventFilter(obj, event)
@@ -2464,7 +2464,7 @@ class GitPanelCard(QWidget):
             if not self._repo_path:
                 return
             dialog = _StashDetailDialog(self._repo_path, ref, self)
-            dialog.exec_()
+            dialog.exec()
             return
         if action == "drop":
             if not _confirm_ask("确认删除搁置", f"确定要删除 {ref} 吗？", self):
@@ -2554,14 +2554,14 @@ class GitPanelCard(QWidget):
     def _on_diff_request(self, path: str, staged: bool, status: str):
         """打开 Diff 预览对话框"""
         dialog = _DiffDialog(self._repo_path, path, staged, status, self)
-        dialog.exec_()
+        dialog.exec()
 
     def _on_commit_detail(self, hash_: str):
         """双击提交行：打开 Commit 详情对话框"""
         if not self._repo_path:
             return
         dialog = _CommitDetailDialog(self._repo_path, hash_, self)
-        dialog.exec_()
+        dialog.exec()
 
     def _do_push(self):
         """推送本地提交到远程（无 upstream 时自动 --set-upstream）"""

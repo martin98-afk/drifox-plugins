@@ -18,9 +18,9 @@ from typing import Callable, Optional
 
 import time
 
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -45,7 +45,7 @@ BUSY_STATES = ("busy", "streaming", "thinking")
 class PixelTeamStudioCard(QWidget):
     """像素智能体团队工作室浮动卡片"""
 
-    closed = pyqtSignal()
+    closed = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -386,7 +386,7 @@ class PixelTeamStudioCard(QWidget):
                 continue
             act.setToolTip(t.get("description", ""))
             act._template_name = t.get("name", "")
-        chosen = menu.exec_(self._new_team_btn.mapToGlobal(self._new_team_btn.rect().bottomLeft()))
+        chosen = menu.exec(self._new_team_btn.mapToGlobal(self._new_team_btn.rect().bottomLeft()))
         if chosen is None or not getattr(chosen, "_template_name", ""):
             return
         name = chosen._template_name

@@ -15,9 +15,9 @@
 
 from typing import Any, Callable, Optional
 
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QFont
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QFont
+from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -106,7 +106,7 @@ def _load_config_defaults() -> dict:
 class ChessCard(QWidget):
     """中国象棋浮动卡片"""
 
-    closed = pyqtSignal()
+    closed = Signal()
 
     # 文本回退色（无主题上下文时使用）
     _FG = "rgba(0,0,0,0.85)"
@@ -187,8 +187,8 @@ class ChessCard(QWidget):
                 self.setStyleSheet(full_qss)
 
             # 2) 棋盘容器用 QSS + 外发光
-            from PyQt5.QtWidgets import QGraphicsDropShadowEffect
-            from PyQt5.QtGui import QColor
+            from PySide6.QtWidgets import QGraphicsDropShadowEffect
+            from PySide6.QtGui import QColor
 
             board_container = self._board_view.parent()  # wrap 容器（QHBoxLayout 内的 spacer 之间）
             if board_container is not None and board_container.objectName() != "chessBoardPanel":

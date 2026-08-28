@@ -7,8 +7,8 @@
 - 超过 MAX_ALIVE_TABS 时后台标签冻结（setLifecycleState Frozen，M3 性能）
 """
 
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QMenu, QTabBar
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QMenu, QTabBar
 
 from .theme import menu_style, theme_colors
 
@@ -19,8 +19,8 @@ MAX_ALIVE_TABS = 6
 class ChromeTabBar(QTabBar):
     """Chrome 风格标签栏"""
 
-    new_tab_requested = pyqtSignal()
-    close_others_requested = pyqtSignal(int)
+    new_tab_requested = Signal()
+    close_others_requested = Signal(int)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -59,7 +59,7 @@ class ChromeTabBar(QTabBar):
             menu.addAction(
                 "关闭其他标签", lambda: self.close_others_requested.emit(idx)
             )
-        menu.exec_(self.mapToGlobal(pos))
+        menu.exec(self.mapToGlobal(pos))
 
     def apply_theme(self, c: dict):
         """应用主题派生色字典（来自 theme.theme_colors(owner)）。"""

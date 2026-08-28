@@ -7,9 +7,9 @@
 - DifficultySelector: 难度选择条
 """
 
-from PyQt5.QtCore import Qt, QPropertyAnimation, pyqtSignal, pyqtProperty
-from PyQt5.QtGui import QMouseEvent
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt, QPropertyAnimation, Signal, Property
+from PySide6.QtGui import QMouseEvent
+from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QPushButton,
@@ -35,7 +35,7 @@ class FlipableCard(QPushButton):
     - 左键点击信号
     """
 
-    clicked_card = pyqtSignal(int, int)  # row, col
+    clicked_card = Signal(int, int)  # row, col
 
     def __init__(self, row: int, col: int, cell_size: int = 64, parent=None):
         super().__init__(parent)
@@ -287,7 +287,7 @@ class MemoryStatusBar(QWidget):
 class MemoryDifficultySelector(QWidget):
     """难度选择条"""
 
-    difficulty_changed = pyqtSignal(str)
+    difficulty_changed = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)

@@ -25,9 +25,9 @@ import re
 from typing import Any, Dict, Optional
 
 from loguru import logger
-from PyQt5.QtCore import QObject, QRectF, QRunnable, QThreadPool, QTimer, Qt, pyqtSignal
-from PyQt5.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
-from PyQt5.QtWidgets import QPlainTextEdit
+from PySide6.QtCore import QObject, QRectF, QRunnable, QThreadPool, QTimer, Qt, Signal
+from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
+from PySide6.QtWidgets import QPlainTextEdit
 
 from app.plugins.managers.plugin_config_store import PluginConfigStore
 from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
@@ -312,8 +312,8 @@ def _on_enhance_clicked(context: Dict[str, Any]) -> None:
 
 
 class _EnhanceSignals(QObject):
-    done = pyqtSignal(str)
-    error = pyqtSignal(str)
+    done = Signal(str)
+    error = Signal(str)
 
 
 class _EnhanceTask(QRunnable):

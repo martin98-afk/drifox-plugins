@@ -9,9 +9,9 @@
 import time
 from typing import Optional
 
-from PyQt5.QtCore import QMimeData, QPoint, Qt, QTimer, pyqtSignal
-from PyQt5.QtGui import QDrag, QEnterEvent
-from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout
+from PySide6.QtCore import QMimeData, QPoint, Qt, QTimer, Signal
+from PySide6.QtGui import QDrag, QEnterEvent
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout
 
 from qfluentwidgets import FluentIcon as FIF, StrongBodyLabel, TransparentToolButton
 from qfluentwidgets.components.widgets.progress_ring import IndeterminateProgressRing
@@ -29,12 +29,12 @@ class TaskCardWidget(QFrame):
     """单张任务卡"""
 
     # 交互请求（由看板卡接线到 controller）
-    startRequested = pyqtSignal(str)    # task_id
-    stopRequested = pyqtSignal(str)
-    removeRequested = pyqtSignal(str)
-    moveRequested = pyqtSignal(str, str)  # (task_id, 目标列)
-    reportRequested = pyqtSignal(str)
-    detailRequested = pyqtSignal(str)
+    startRequested = Signal(str)    # task_id
+    stopRequested = Signal(str)
+    removeRequested = Signal(str)
+    moveRequested = Signal(str, str)  # (task_id, 目标列)
+    reportRequested = Signal(str)
+    detailRequested = Signal(str)
 
     def __init__(self, task_id: str, parent=None):
         super().__init__(parent)
@@ -225,7 +225,7 @@ class TaskCardWidget(QFrame):
                 mime.setText(MIME_TASK_ID)
                 mime.setData(MIME_TASK_ID, self._task_id.encode("utf-8"))
                 drag.setMimeData(mime)
-                drag.exec_(Qt.MoveAction)
+                drag.exec(Qt.MoveAction)
                 self._drag_start = None
                 return
         super().mouseMoveEvent(event)

@@ -10,8 +10,8 @@ import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from PyQt5.QtCore import Qt, QSize, pyqtSignal
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt, QSize, Signal
+from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -395,12 +395,12 @@ class ScheduleDraft:
 class JobRowCard(QFrame):
     """单个任务行：现代化分组卡（圆角 + 左侧状态色条 + chip 元信息 + 图标化操作）"""
 
-    toggleRequested = pyqtSignal(str)  # job_id
-    editRequested = pyqtSignal(str)
-    historyRequested = pyqtSignal(str)
-    deleteRequested = pyqtSignal(str)
-    runNowRequested = pyqtSignal(str)
-    stopRequested = pyqtSignal(str)
+    toggleRequested = Signal(str)  # job_id
+    editRequested = Signal(str)
+    historyRequested = Signal(str)
+    deleteRequested = Signal(str)
+    runNowRequested = Signal(str)
+    stopRequested = Signal(str)
 
     def __init__(self, job: CronJob, parent=None):
         super().__init__(parent)
@@ -460,14 +460,14 @@ class JobRowCard(QFrame):
         info.addStretch()  # 内容靠顶部对齐
 
         # info 包成 widget 便于设 sizePolicy，强制高度不超过 actions 列
-        from PyQt5.QtWidgets import QSizePolicy as _SP
+        from PySide6.QtWidgets import QSizePolicy as _SP
         info_w = QWidget()
         info_w.setLayout(info)
         info_w.setSizePolicy(_SP.Expanding, _SP.Maximum)
         layout.addWidget(info_w, 1)
 
         # 操作按钮（2x2 网格：节省垂直空间，从 4×32=128px 降到 2×32=68px）
-        from PyQt5.QtWidgets import QGridLayout
+        from PySide6.QtWidgets import QGridLayout
         actions = QGridLayout()
         actions.setSpacing(4)
         self._run_btn = ToolButton(FluentIcon.PLAY)
@@ -674,8 +674,8 @@ class _ResponsiveFormBody(QWidget):
 class JobEditPanel(QWidget):
     """新建/编辑任务表单"""
 
-    saveRequested = pyqtSignal(object)  # CronJob
-    cancelRequested = pyqtSignal()
+    saveRequested = Signal(object)  # CronJob
+    cancelRequested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -817,7 +817,7 @@ class JobEditPanel(QWidget):
         self._time_edit = QTimeEdit()
         self._time_edit.setDisplayFormat("HH:mm")
         self._time_edit.setStyleSheet(self._datetime_style())
-        from PyQt5.QtCore import QTime
+        from PySide6.QtCore import QTime
 
         self._time_edit.setTime(QTime(9, 0))
         trow.addWidget(self._time_edit)
@@ -829,14 +829,14 @@ class JobEditPanel(QWidget):
         sd_layout.addWidget(self._time_row)
 
         # 单次：日期时间
-        from PyQt5.QtWidgets import QDateTimeEdit
+        from PySide6.QtWidgets import QDateTimeEdit
 
         self._once_edit = QDateTimeEdit()
         self._once_edit.setCalendarPopup(True)
         self._once_edit.setDisplayFormat("yyyy-MM-dd HH:mm")
         self._once_edit.setStyleSheet(self._datetime_style())
         self._once_edit.calendarWidget().setStyleSheet(self._calendar_style())
-        from PyQt5.QtCore import QDateTime as _QDT
+        from PySide6.QtCore import QDateTime as _QDT
 
         sd_layout.addWidget(self._once_edit)
 
@@ -1028,7 +1028,7 @@ class JobEditPanel(QWidget):
                 combo.setCurrentIndex(combo.count() - 1)
 
     def _browse_workdir(self):
-        from PyQt5.QtWidgets import QFileDialog
+        from PySide6.QtWidgets import QFileDialog
 
         folder = QFileDialog.getExistingDirectory(self, "选择工作目录", self._workdir_edit.text() or "")
         if folder:
@@ -1135,14 +1135,14 @@ class JobEditPanel(QWidget):
         self._interval_spin.setValue(max(1, int(d.interval_value)))
         self._interval_unit_combo.setCurrentIndex(d.interval_unit)
         h, m = (int(x) for x in d.time.split(":")[:2])
-        from PyQt5.QtCore import QTime
+        from PySide6.QtCore import QTime
 
         self._time_edit.setTime(QTime(h, m))
         for idx, cb in enumerate(self._weekday_checks):
             cb.setChecked((idx + 1) % 7 in d.weekdays)
         self._monthday_spin.setValue(d.month_day)
         if d.date_time:
-            from PyQt5.QtCore import QDateTime
+            from PySide6.QtCore import QDateTime
 
             try:
                 self._once_edit.setDateTime(QDateTime.fromString(d.date_time, "yyyy-MM-dd HH:mm"))
@@ -1210,7 +1210,7 @@ class JobEditPanel(QWidget):
 class RunHistoryPanel(QWidget):
     """任务运行历史：左侧记录列表 + 右侧完整详情（响应全文）"""
 
-    backRequested = pyqtSignal()
+    backRequested = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -1399,7 +1399,7 @@ class RunHistoryPanel(QWidget):
 class CronTasksCard(QFrame):
     """定时任务中心 — 列表 / 编辑 / 历史 三页栈"""
 
-    closed = pyqtSignal()
+    closed = Signal()
 
     PAGE_LIST, PAGE_EDIT, PAGE_HISTORY = 0, 1, 2
 
@@ -1657,7 +1657,7 @@ class CronTasksCard(QFrame):
         layout.addWidget(self._stack, 1)
 
     def _build_title_icon(self, size: int):
-        from PyQt5.QtGui import QPixmap
+        from PySide6.QtGui import QPixmap
 
         from pathlib import Path
 

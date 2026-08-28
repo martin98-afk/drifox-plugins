@@ -20,7 +20,7 @@ import threading
 from typing import Any, Dict, List, Optional, Tuple
 
 from loguru import logger
-from PyQt5.QtCore import QObject, QRunnable, QThreadPool, pyqtSignal
+from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal
 
 from .game_logic import (
     BLACK,
@@ -225,9 +225,9 @@ class _AISignals(QObject):
                                 raw_text: LLM 原始响应（已剥离 <think>）
     """
 
-    done = pyqtSignal(object, str, str)
-    error = pyqtSignal(str)
-    thought_received = pyqtSignal(str, str, str)
+    done = Signal(object, str, str)
+    error = Signal(str)
+    thought_received = Signal(str, str, str)
 
 
 class _AIMoveTask(QRunnable):

@@ -16,9 +16,9 @@
 import json
 from typing import Any, Dict, List, Optional
 
-from PyQt5.QtCore import QMimeData, QPoint, QRect, QSize, Qt, pyqtSignal
-from PyQt5.QtGui import QDrag
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QMimeData, QPoint, QRect, QSize, Qt, Signal
+from PySide6.QtGui import QDrag
+from PySide6.QtWidgets import (
     QApplication,
     QFrame,
     QHBoxLayout,
@@ -80,7 +80,7 @@ class FlowLayout(QLayout):
 
     def insertWidget(self, index: int, w: QWidget):
         """在指定位置插入控件（-1 表示尾部）"""
-        from PyQt5.QtWidgets import QWidgetItem
+        from PySide6.QtWidgets import QWidgetItem
 
         self.addChildWidget(w)
         if index < 0:
@@ -184,7 +184,7 @@ class _DragSource(QFrame):
         if pm is not None:
             drag.setPixmap(pm)
             drag.setHotSpot(QPoint(pm.width() // 2, pm.height() // 2))
-        result = drag.exec_(Qt.CopyAction | Qt.MoveAction)
+        result = drag.exec(Qt.CopyAction | Qt.MoveAction)
         self._drag_start = None
         self._on_drag_finished(result)
 
@@ -202,7 +202,7 @@ class AgentTile(_DragSource):
     双击 → activated(agent_name)（加入激活团队）；拖拽 → 加入指定团队。
     """
 
-    activated = pyqtSignal(str)
+    activated = Signal(str)
 
     def __init__(self, agent_name: str, description: str = "", palette: Optional[dict] = None, parent=None):
         super().__init__(parent)
@@ -263,9 +263,9 @@ class MemberTile(_DragSource):
     拖出面板释放或拖到垃圾桶 → drag_out_requested（移除，窗口保留）。
     """
 
-    activated = pyqtSignal(str)  # window_id（双击切窗口）
-    drag_out_requested = pyqtSignal(str)  # window_id（拖出面板释放）
-    message_requested = pyqtSignal(str, str)  # (window_id, text)（右键发消息）
+    activated = Signal(str)  # window_id（双击切窗口）
+    drag_out_requested = Signal(str)  # window_id（拖出面板释放）
+    message_requested = Signal(str, str)  # (window_id, text)（右键发消息）
 
     def __init__(self, member: dict, palette: Optional[dict] = None, parent=None):
         super().__init__(parent)
@@ -391,7 +391,7 @@ class MemberTile(_DragSource):
         act_msg = menu.addAction("✉ 给这个成员发消息…")
         menu.addSeparator()
         act_remove = menu.addAction("移除成员（窗口保留）")
-        chosen = menu.exec_(event.globalPos())
+        chosen = menu.exec(event.globalPos())
         if chosen is act_open:
             self.activated.emit(self.window_id)
         elif chosen is act_msg:
@@ -431,7 +431,7 @@ class MemberTile(_DragSource):
         if panel is None:
             return
         try:
-            from PyQt5.QtGui import QCursor
+            from PySide6.QtGui import QCursor
 
             pos = panel.mapFromGlobal(QCursor.pos())
             if not panel.rect().contains(pos):
@@ -495,7 +495,7 @@ class TrashZone(QFrame):
             return
         event.acceptProposedAction()
         # 延迟执行，避免拖拽循环内调用主窗口方法（拖拽源仍持有鼠标）
-        from PyQt5.QtCore import QTimer
+        from PySide6.QtCore import QTimer
 
         wid = data.get("window_id", "")
         QTimer.singleShot(0, lambda: self._on_remove(wid))
@@ -693,7 +693,7 @@ class TeamPanel(QFrame):
             event.ignore()
             return
         event.acceptProposedAction()
-        from PyQt5.QtCore import QTimer
+        from PySide6.QtCore import QTimer
 
         agent = data.get("agent_name", "")
         QTimer.singleShot(0, lambda: self._on_add(agent, self._run_id, self._label))

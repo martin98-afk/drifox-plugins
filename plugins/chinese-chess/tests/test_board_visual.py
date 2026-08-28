@@ -15,7 +15,7 @@ import unittest
 import types
 
 # QApplication 实例（必须在 QWidget 之前）
-from PyQt5.QtWidgets import QApplication, QLabel
+from PySide6.QtWidgets import QApplication, QLabel
 
 _app = QApplication.instance() or QApplication(sys.argv)  # noqa: F841
 
@@ -136,11 +136,11 @@ class TestMakePieceShadow(unittest.TestCase):
 
     def test_default_params(self):
         s = theme.make_piece_shadow()
-        from PyQt5.QtWidgets import QGraphicsDropShadowEffect
+        from PySide6.QtWidgets import QGraphicsDropShadowEffect
 
         self.assertIsInstance(s, QGraphicsDropShadowEffect)
         self.assertEqual(s.blurRadius(), theme.PIECE_SHADOW_BLUR)
-        from PyQt5.QtCore import QPoint
+        from PySide6.QtCore import QPoint
         self.assertEqual(s.offset(), QPoint(0, theme.PIECE_SHADOW_OFFSET_Y))
 
     def test_custom_params(self):
@@ -166,7 +166,7 @@ class TestPieceLabelAttributes(unittest.TestCase):
         self.assertEqual(self.label.height(), expected)
 
     def test_piece_has_graphics_effect(self):
-        from PyQt5.QtWidgets import QGraphicsDropShadowEffect
+        from PySide6.QtWidgets import QGraphicsDropShadowEffect
         eff = self.label.graphicsEffect()
         self.assertIsInstance(eff, QGraphicsDropShadowEffect)
 
@@ -178,7 +178,7 @@ class TestPieceLabelAttributes(unittest.TestCase):
         # 不再设置 QSS（之前是 "border-radius: 50%; qradial-gradient..."）
         self.assertEqual(self.label.styleSheet(), "")
         # WA_StyledBackground 必须为 False（否则 QSS 引擎仍会绘制方框 background/border）
-        from PyQt5.QtCore import Qt
+        from PySide6.QtCore import Qt
         self.assertFalse(
             self.label.testAttribute(Qt.WA_StyledBackground),
             "WA_StyledBackground=True 会让 QSS 方形 border 覆盖在自绘圆形之上，必须关闭",
@@ -203,7 +203,7 @@ class TestPieceLabelAttributes(unittest.TestCase):
         self.assertIn("#8b5a2b", src)
 
     def test_mouse_transparent_for_click_passthrough(self):
-        from PyQt5.QtCore import Qt
+        from PySide6.QtCore import Qt
         self.assertTrue(
             self.label.testAttribute(Qt.WA_TransparentForMouseEvents),
             "棋子必须透明鼠标事件以让点击穿透到 ChessBoardView",
@@ -263,7 +263,7 @@ class TestChessBoardViewHover(unittest.TestCase):
         self.assertIsNone(pos)
 
     def test_mouse_tracking_enabled(self):
-        from PyQt5.QtCore import Qt
+        from PySide6.QtCore import Qt
         self.assertTrue(self.view.hasMouseTracking(), "需开启鼠标跟踪才能 mouseMove")
 
     def test_hover_pos_update_changes_state(self):

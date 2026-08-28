@@ -26,7 +26,7 @@
 ## 依赖
 
 - `git` 命令行工具（系统已安装即可）
-- 无需 Python 第三方包（运行时依赖 PyQt5 / qfluentwidgets，由 DriFox 提供）
+- 无需 Python 第三方包（运行时依赖 PySide6 / qfluentwidgets，由 DriFox 提供）
 
 ## 安装
 

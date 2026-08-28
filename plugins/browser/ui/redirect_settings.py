@@ -18,9 +18,9 @@
 
 from typing import Optional
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
     QLabel,
@@ -218,4 +218,4 @@ def show_redirect_settings(parent=None, owner=None):
         owner:  浏览器卡片实例（取 _context_provider 字体；可省略）
     """
     dlg = _RedirectSettingsDialog(parent, owner=owner)
-    dlg.exec_()
+    dlg.exec()

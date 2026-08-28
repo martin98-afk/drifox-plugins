@@ -7,8 +7,8 @@
 实现：QWebEnginePage.setDevToolsPage() + 独立 QMainWindow 承载 devtools view。
 """
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QMainWindow, QVBoxLayout, QWidget
 
 from loguru import logger
 
@@ -23,7 +23,7 @@ def open_devtools_for(owner) -> None:
         if view is None:
             return
 
-        from PyQt5.QtWebEngineWidgets import QWebEnginePage, QWebEngineView
+        from PySide6.QtWebEngineWidgets import QWebEnginePage, QWebEngineView
 
         page = view.page()
 

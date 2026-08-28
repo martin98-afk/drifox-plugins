@@ -20,8 +20,8 @@ H1 修复：
 
 from typing import Optional
 
-from PyQt5.QtCore import QSize, Qt
-from PyQt5.QtWidgets import QMainWindow, QWidget
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtWidgets import QMainWindow, QWidget
 from qfluentwidgets import FluentIcon
 
 from ._page_factory import create_page
@@ -87,7 +87,7 @@ class IncognitoWindow(QMainWindow):
     # ── UI 搭建 ──
 
     def _setup_ui(self):
-        from PyQt5.QtWidgets import QHBoxLayout, QLabel, QStackedWidget, QToolButton, QVBoxLayout
+        from PySide6.QtWidgets import QHBoxLayout, QLabel, QStackedWidget, QToolButton, QVBoxLayout
 
         central = QWidget(self)
         self.setCentralWidget(central)
@@ -134,7 +134,7 @@ class IncognitoWindow(QMainWindow):
     # ── 标签管理 ──
 
     def _new_tab(self, url: str = ""):
-        from PyQt5.QtWebEngineWidgets import QWebEngineView
+        from PySide6.QtWebEngineWidgets import QWebEngineView
 
         view = QWebEngineView()
         # N2 修复：统一通过 _page_factory.create_page() 创建（共享 browser_window）
@@ -230,7 +230,7 @@ class IncognitoWindow(QMainWindow):
 
 
 def _to_qurl(url: str):
-    from PyQt5.QtCore import QUrl
+    from PySide6.QtCore import QUrl
 
     return QUrl(url)
 

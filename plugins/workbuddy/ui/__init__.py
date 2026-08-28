@@ -21,7 +21,7 @@ if _PLUGIN_ROOT not in sys.path:
     sys.path.insert(0, _PLUGIN_ROOT)
 
 from loguru import logger
-from PyQt5.QtCore import QObject, pyqtSignal, pyqtSlot, Qt  # noqa: E402
+from PySide6.QtCore import QObject, Signal, Slot, Qt  # noqa: E402
 
 # 模块级 state 监听者句柄（热重载时调用 unregister_listener 清理）
 _UNREGISTER_LISTENER = None
@@ -32,7 +32,7 @@ _POPUP_BRIDGE = None
 class _PopupBridge(QObject):
     """主线程桥接器：后台线程的 state listener 经它安全地触发卡片显示。"""
 
-    _requested = pyqtSignal()
+    _requested = Signal()
 
     def __init__(self, registry):
         super().__init__()
@@ -43,7 +43,7 @@ class _PopupBridge(QObject):
         # 循环的后台线程 → 永不执行（自动弹窗静默失败的根因之一）。
         # 构造后迁移到主线程，保证槽在主线程事件循环中执行。
         try:
-            from PyQt5.QtWidgets import QApplication
+            from PySide6.QtWidgets import QApplication
 
             app = QApplication.instance()
             if app is not None and self.thread() is not app.thread():
@@ -51,7 +51,7 @@ class _PopupBridge(QObject):
         except Exception:
             pass
 
-    @pyqtSlot()
+    @Slot()
     def _do_popup(self):
         from .artifact_panel import ArtifactPanelCard
 

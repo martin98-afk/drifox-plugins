@@ -9,8 +9,8 @@ H2 修复：_reload 走 AsyncDataLoader 后台线程，主线程不阻塞。
 
 from typing import List
 
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QListWidget,
@@ -31,7 +31,7 @@ from .theme import font_css, scrollbar_style, theme_colors
 class BookmarkBar(QWidget):
     """地址栏下方的动态收藏栏，空间不足时把剩余项目放入溢出面板。"""
 
-    open_url = pyqtSignal(str)
+    open_url = Signal(str)
 
     def __init__(self, owner, parent=None):
         super().__init__(parent)
@@ -180,7 +180,7 @@ class BookmarksPanel(QFrame, _PanelMixin):
     浏览器卡片内悬浮、菜单按钮下方定位（owner._position_popup）。
     """
 
-    open_url = pyqtSignal(str)
+    open_url = Signal(str)
 
     def __init__(self, owner, parent=None):
         super().__init__(parent or owner)

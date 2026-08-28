@@ -277,7 +277,7 @@ def main(argv: list[str] | None = None) -> int:
     sys.path.insert(0, str(drifox_root))
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     try:
-        import PyQt5  # noqa: F401
+        import PySide6  # noqa: F401
         import loguru  # noqa: F401
     except ImportError as e:
         print(f"  {_red('致命')}: 缺少 DriFox 运行依赖: {e}")

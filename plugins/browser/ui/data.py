@@ -21,7 +21,7 @@ import traceback
 from pathlib import Path
 from typing import Callable, List, Optional, Tuple
 
-from PyQt5.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 from loguru import logger
 
 # ── 路径常量 ──────────────────────────────────────────────
@@ -322,8 +322,8 @@ def clear_history() -> int:
 class _DataWorker(QObject):
     """后台线程执行数据库读取（补全/管理面板数据）"""
 
-    finished = pyqtSignal(object)
-    error = pyqtSignal(str)
+    finished = Signal(object)
+    error = Signal(str)
 
     def __init__(self, query_name: str, *args, **kwargs):
         super().__init__()
@@ -362,7 +362,7 @@ class AsyncDataLoader(QObject):
 
     def load(self, query_name: str, on_done: Callable, on_error: Optional[Callable] = None, *args, **kwargs):
         """启动一次异步查询，结果通过 on_done(data) 回调"""
-        from PyQt5.QtCore import QThread
+        from PySide6.QtCore import QThread
 
         worker = _DataWorker(query_name, *args, **kwargs)
         thread = QThread(self)

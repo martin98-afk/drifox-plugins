@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""session-tree P1 冒烟测试（stdlib unittest + PyQt5 offscreen）
+"""session-tree P1 冒烟测试（stdlib unittest + PySide6 offscreen）
 
 覆盖：
 - 时间分组逻辑（_group_of / _time_text / _parse_ts）
@@ -33,8 +33,8 @@ def _ensure_qapp():
     """offscreen QApplication（保持模块级引用，避免 GC 崩溃）"""
     global _APP
     if _APP is None:
-        from PyQt5.QtCore import Qt
-        from PyQt5.QtWidgets import QApplication
+        from PySide6.QtCore import Qt
+        from PySide6.QtWidgets import QApplication
 
         os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
         _APP = QApplication.instance() or QApplication([sys.argv[0]])

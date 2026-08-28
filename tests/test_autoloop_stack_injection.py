@@ -18,7 +18,7 @@ _PLUGIN_ROOT = Path(__file__).resolve().parent.parent / "plugins" / "autoloop"
 if str(_PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(_PLUGIN_ROOT))
 
-pytest.importorskip("PyQt5")
+pytest.importorskip("PySide6")
 
 
 # ---- 桩 app.* 模块（让 worker.py + adapter.py 顶层 import 不抛） ----

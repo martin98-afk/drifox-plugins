@@ -171,7 +171,7 @@ class TestRetryLogic(unittest.TestCase):
     def test_done_signal_three_args(self):
         """done 信号签名变更为 (move, source, reason) 三元组。"""
         signals = _AISignals()
-        # pyqtSignal 在 mock 模式下不强校验参数数量，但 type 应兼容
+        # Signal 在 mock 模式下不强校验参数数量，但 type 应兼容
         # 这里只验证 signatures 不冲突
         # 用一个真实 receiver 试一次
         captured = []

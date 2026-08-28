@@ -14,7 +14,7 @@ import os
 from typing import Any, Dict, Optional
 
 from loguru import logger
-from PyQt5.QtCore import Qt
+from PySide6.QtCore import Qt
 
 PLUGIN_ID = "autoloop"
 
@@ -216,7 +216,7 @@ class AutoLoopController:
         if card:
             card.set_status("⏹ 正在停止...")
         # 兜底：5 秒未停强制收尾
-        from PyQt5.QtCore import QTimer
+        from PySide6.QtCore import QTimer
 
         QTimer.singleShot(5000, lambda wid=window_id: self._force_finish(wid))
 

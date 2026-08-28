@@ -4,9 +4,9 @@
 原理（monkey patch，UI 插件在主程序进程内执行）：
 - patch ``webbrowser.open``：标准库模块函数，全局生效
   （OAuth 授权、API 文档、设置页外链等所有调用点）
-- patch ``PyQt5.QtGui.QDesktopServices``：把模块属性替换为代理类。
+- patch ``PySide6.QtGui.QDesktopServices``：把模块属性替换为代理类。
   ⚠️ ``QDesktopServices.openUrl`` 是 sip 只读类属性，不能直接替换；
-  但 ``PyQt5.QtGui`` 是普通模块、模块属性可写。
+  但 ``PySide6.QtGui`` 是普通模块、模块属性可写。
   message_card.py / update_checker.py 均为函数内延迟 import，
   patch 后拿到代理类；main_widget.py 顶层 import 的旧引用不受影响
   （本地文件打开本就走系统，且非 http 协议会放行）。
@@ -45,7 +45,7 @@ import webbrowser
 from typing import Any, Optional
 
 from loguru import logger
-from PyQt5.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 # ── 热重载安全：动态解析当前 redirect_config ──────────────
 # ⚠️ 不能顶层 ``from .redirect_config import should_intercept``：
@@ -80,7 +80,7 @@ class _MainThreadDispatcher(QObject):
     永远不会触发；必须用信号投递到主线程，才能保证 UI 操作真正执行。
     """
 
-    _requested = pyqtSignal(object)
+    _requested = Signal(object)
 
     def __init__(self):
         super().__init__()
@@ -104,8 +104,8 @@ def _get_dispatcher() -> Optional[_MainThreadDispatcher]:
     global _dispatcher
     if _dispatcher is None:
         try:
-            from PyQt5.QtCore import QThread
-            from PyQt5.QtWidgets import QApplication
+            from PySide6.QtCore import QThread
+            from PySide6.QtWidgets import QApplication
 
             app = QApplication.instance()
             if app is None or QThread.currentThread() != app.thread():
@@ -180,8 +180,8 @@ def _open_in_browser_threadsafe(url: str, timeout: float = 8.0) -> bool:
     import threading
 
     try:
-        from PyQt5.QtCore import QThread
-        from PyQt5.QtWidgets import QApplication
+        from PySide6.QtCore import QThread
+        from PySide6.QtWidgets import QApplication
 
         app = QApplication.instance()
         if app is not None and QThread.currentThread() != app.thread():
@@ -217,7 +217,7 @@ def _notify_status(text: str) -> None:
     用户看到这条提示就明确知道「拦截是否真的生效」。
     """
     try:
-        from PyQt5.QtCore import QTimer
+        from PySide6.QtCore import QTimer
         from .browser_window import _get_current_card
 
         def _apply():
@@ -320,7 +320,7 @@ def install_redirect() -> bool:
         _get_dispatcher()
         return True
     try:
-        import PyQt5.QtGui as _qtgui
+        import PySide6.QtGui as _qtgui
     except Exception:
         _qtgui = None
 
@@ -340,7 +340,7 @@ def install_redirect() -> bool:
         _redirect_webbrowser_open._drifox_orig_open = _orig_webbrowser_open  # type: ignore[attr-defined]
         webbrowser.open = _redirect_webbrowser_open  # type: ignore[assignment]
 
-    # 2) patch PyQt5.QtGui.QDesktopServices（模块属性 → 代理类；同上支持接管）
+    # 2) patch PySide6.QtGui.QDesktopServices（模块属性 → 代理类；同上支持接管）
     if _qtgui is not None:
         prev_qds = _qtgui.QDesktopServices
         if prev_qds is not _RedirectDesktopServices:

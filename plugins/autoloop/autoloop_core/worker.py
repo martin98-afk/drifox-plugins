@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from loguru import logger
-from PyQt5.QtCore import QCoreApplication, QEventLoop, QThread, QTimer, pyqtSignal
+from PySide6.QtCore import QCoreApplication, QEventLoop, QThread, QTimer, Signal
 
 from app.core.conversation.config import ConversationConfig, PermissionStrategy, filter_interactive_tools
 from autoloop_core.adapter import AutoLoopConversationAdapter
@@ -34,25 +34,25 @@ class AutoLoopWorker(QThread):
     """AutoLoop 后台工作线程"""
 
     # === 进度信号 ===
-    iteration_started = pyqtSignal(int, int)  # (current, max)
-    iteration_completed = pyqtSignal(int, str)  # (iteration, summary)
-    progress_updated = pyqtSignal(dict)  # progress dict
-    loop_completed = pyqtSignal(str)  # 完成消息
-    loop_error = pyqtSignal(str)  # 错误消息
-    loop_stopped = pyqtSignal()  # 用户手动停止
+    iteration_started = Signal(int, int)  # (current, max)
+    iteration_completed = Signal(int, str)  # (iteration, summary)
+    progress_updated = Signal(dict)  # progress dict
+    loop_completed = Signal(str)  # 完成消息
+    loop_error = Signal(str)  # 错误消息
+    loop_stopped = Signal()  # 用户手动停止
 
     # === 阶段变更信号（用于运行卡 UI）===
-    phase_changed = pyqtSignal(str)  # "planning" / "executing" / "archiving" / "completed"
+    phase_changed = Signal(str)  # "planning" / "executing" / "archiving" / "completed"
 
     # === 迭代过程中的消息转发（用于日志显示）===
-    log_signal = pyqtSignal(str)  # 日志消息（离散事件，带时间戳）
-    log_update = pyqtSignal(str)  # 流式内容预览（实时覆盖更新，无时间戳）
+    log_signal = Signal(str)  # 日志消息（离散事件，带时间戳）
+    log_update = Signal(str)  # 流式内容预览（实时覆盖更新，无时间戳）
 
     # === Token 实时更新信号（直接更新运行卡 UI）===
-    tokens_updated = pyqtSignal(int)  # 追加的 token 数量
+    tokens_updated = Signal(int)  # 追加的 token 数量
 
     # === 消息日志列表信号（用于保存到会话）===
-    messages_logged = pyqtSignal(list)  # 发送完整的消息日志列表
+    messages_logged = Signal(list)  # 发送完整的消息日志列表
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -614,7 +614,7 @@ class AutoLoopWorker(QThread):
                 timeout_timer.setSingleShot(True)
                 timeout_timer.timeout.connect(loop.quit)
                 timeout_timer.start(60000)
-                loop.exec_()
+                loop.exec()
                 timeout_timer.stop()
                 # 阶段 2：兜底等 worker 彻底结束 + 持续处理信号
                 # 兜底等待：executor 可能在 processEvents 间隙 deleteLater worker
@@ -703,7 +703,7 @@ class AutoLoopWorker(QThread):
                 timeout_timer.setSingleShot(True)
                 timeout_timer.timeout.connect(loop.quit)
                 timeout_timer.start(60000)
-                loop.exec_()
+                loop.exec()
                 timeout_timer.stop()
                 while _alive(worker) and worker.isRunning() and not self._is_cancelled:
                     worker.wait(1000)

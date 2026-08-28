@@ -4,9 +4,9 @@
 
 def create_page(view, profile, new_page_callback=None, is_dark=True):
     """创建页面：左键在当前标签跳转，右键可显式在新标签打开。"""
-    from PyQt5.QtCore import Qt, QUrl
-    from PyQt5.QtWidgets import QApplication, QMenu
-    from PyQt5.QtWebEngineWidgets import (
+    from PySide6.QtCore import Qt, QUrl
+    from PySide6.QtWidgets import QApplication, QMenu
+    from PySide6.QtWebEngineWidgets import (
         QWebEnginePage,
         QWebEngineScript,
         QWebEngineSettings,
@@ -99,7 +99,7 @@ def create_page(view, profile, new_page_callback=None, is_dark=True):
         menu.addSeparator()
         menu.addAction("复制", lambda: page.triggerAction(QWebEnginePage.Copy))
         menu.addAction("全选", lambda: page.triggerAction(QWebEnginePage.SelectAll))
-        menu.exec_(view.mapToGlobal(pos))
+        menu.exec(view.mapToGlobal(pos))
 
     view.setContextMenuPolicy(Qt.CustomContextMenu)
     view.customContextMenuRequested.connect(show_context_menu)

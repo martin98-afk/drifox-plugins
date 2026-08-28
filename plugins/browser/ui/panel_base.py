@@ -16,7 +16,7 @@
 
 from typing import Any, Callable, List, Optional
 
-from PyQt5.QtWidgets import (
+from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QListWidget,

@@ -9,8 +9,8 @@
 插件自包含：不依赖主应用内部模块，可独立加载测试。
 """
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QLabel, QSizePolicy
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QLabel, QSizePolicy
 
 
 class _ElidedLabel(QLabel):

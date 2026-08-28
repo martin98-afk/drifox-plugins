@@ -13,7 +13,7 @@ import threading
 from typing import Any, Dict
 
 from loguru import logger
-from PyQt5.QtCore import QObject, QThread, pyqtSignal
+from PySide6.QtCore import QObject, QThread, Signal
 
 from . import mkt_bridge, render
 
@@ -28,8 +28,8 @@ _active_jobs: list = []
 class _InstallWorker(QThread):
     """后台安装单个插件（复用市场插件的 PluginInstaller）"""
 
-    ok = pyqtSignal(str)  # plugin_name
-    fail = pyqtSignal(str, str)  # plugin_name, error
+    ok = Signal(str)  # plugin_name
+    fail = Signal(str, str)  # plugin_name, error
 
     def __init__(self, meta: Dict[str, Any], parent=None):
         super().__init__(parent)

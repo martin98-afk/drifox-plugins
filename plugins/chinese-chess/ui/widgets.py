@@ -16,11 +16,11 @@
 
 from typing import Dict, List, Optional, Tuple
 
-from PyQt5.QtCore import Qt, pyqtSignal, QRect, QTimer, QPropertyAnimation, pyqtProperty
-from PyQt5.QtGui import QPainter, QColor, QPen, QFont, QBrush, QLinearGradient, QRadialGradient
-from PyQt5.QtWidgets import QLabel, QWidget, QGraphicsDropShadowEffect, QGraphicsOpacityEffect
+from PySide6.QtCore import Qt, Signal, QRect, QTimer, QPropertyAnimation, Property
+from PySide6.QtGui import QPainter, QColor, QPen, QFont, QBrush, QLinearGradient, QRadialGradient
+from PySide6.QtWidgets import QLabel, QWidget, QGraphicsDropShadowEffect, QGraphicsOpacityEffect
 
-from PyQt5 import QtGui  # noqa: F401  # PyQt5 路径颜色需要
+from PySide6 import QtGui  # noqa: F401  # PySide6 路径颜色需要
 
 from .game_logic import COLS, ROWS, RED, BLACK, side_of, PIECE_CN, make_move
 from .theme import (
@@ -90,7 +90,7 @@ class PieceLabel(QLabel):
     """圆形棋子 — 红/黑两色 + 立体阴影 + hover/selected 自绘切换
 
     视觉全部由 paintEvent 自绘（圆形 gradient 背景 + 描边 + 文字），
-    禁用了 WA_StyledBackground + QSS，避免 PyQt5 QSS 的 border 不跟随 border-radius
+    禁用了 WA_StyledBackground + QSS，避免 PySide6 QSS 的 border 不跟随 border-radius
     裁剪而出现"圆形棋子 + 方形外框"。
 
     鼠标穿透：WA_TransparentForMouseEvents 保持 True（点击穿透到 ChessBoardView），
@@ -115,7 +115,7 @@ class PieceLabel(QLabel):
         # 关键：让棋子对鼠标透明，点击事件穿透到 ChessBoardView
         # 否则 QLabel 会拦截 mousePressEvent，棋盘视图收不到点击
         self.setAttribute(Qt.WA_TransparentForMouseEvents, True)
-        # 立体阴影（PyQt5 QSS 不支持 box-shadow，用 QGraphicsDropShadowEffect）
+        # 立体阴影（PySide6 QSS 不支持 box-shadow，用 QGraphicsDropShadowEffect）
         self.setGraphicsEffect(make_piece_shadow())
         # 关键：所有视觉（圆形背景 + 描边 + 文字）由 paintEvent 自绘，禁用 QSS 渲染。
         # 之前开启 WA_StyledBackground 会让 QSS border 单独绘成方形外框（不跟随 border-radius 裁剪），
@@ -168,7 +168,7 @@ class PieceLabel(QLabel):
 
 
     def paintEvent(self, _event):
-        """自绘圆形木制棋子（视觉全在 _draw_piece_circle，PyQt5 QSS 圆角不可靠故绕开）。"""
+        """自绘圆形木制棋子（视觉全在 _draw_piece_circle，PySide6 QSS 圆角不可靠故绕开）。"""
         if not self._piece or self._piece == "." or not self._side:
             return
         p = QPainter(self)
@@ -191,7 +191,7 @@ class ChessBoardView(QWidget):
     - mouseMoveEvent 跟踪鼠标位置：空格时画淡黄小圆点；棋子时 set_hover(True)
     """
 
-    clicked = pyqtSignal(int, int)  # (col, row)
+    clicked = Signal(int, int)  # (col, row)
 
     def __init__(self, cell: int = 52, parent=None):
         super().__init__(parent)
@@ -455,7 +455,7 @@ class ChessBoardView(QWidget):
         cx = rect.center().x()
         cy = rect.center().y()
         rmax = max(rect.width(), rect.height()) // 2
-        from PyQt5.QtGui import QRadialGradient
+        from PySide6.QtGui import QRadialGradient
         rg = QRadialGradient(cx, cy, rmax)
         rg.setColorAt(0.0, QColor(255, 240, 200, 90))   # 35% alpha at center
         rg.setColorAt(0.7, QColor(120, 80, 40, 0))
@@ -682,7 +682,7 @@ class ChessBoardView(QWidget):
         p.setBrush(Qt.NoBrush)
 
         # 画连接相邻格的虚线段
-        from PyQt5.QtCore import QPointF
+        from PySide6.QtCore import QPointF
 
         prev = None
         for c, r in self._anim_path:
@@ -716,7 +716,7 @@ class ChessBoardView(QWidget):
                          ty - uy * size + vy * size * 0.6)
             p3 = QPointF(tx - ux * size - vx * size * 0.6,
                          ty - uy * size - vy * size * 0.6)
-            from PyQt5.QtGui import QPolygonF
+            from PySide6.QtGui import QPolygonF
             polygon = QPolygonF([p1, p2, p3])
             p.setPen(Qt.NoPen)
             p.setBrush(QBrush(QColor(PATH_ARROW_COLOR)))
@@ -822,7 +822,7 @@ class _GhostPieceLabel(QLabel):
     def _set_opacity(self, v: float) -> None:
         self._ghost_effect.setOpacity(v)
 
-    opacity = pyqtProperty(float, fget=_get_opacity, fset=_set_opacity)
+    opacity = Property(float, fget=_get_opacity, fset=_set_opacity)
     # 普通方法别名（方便外部 set_opacity(0.5) 调用）
     set_opacity = _set_opacity
     get_opacity = _get_opacity
