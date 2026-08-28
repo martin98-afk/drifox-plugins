@@ -269,7 +269,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -296,7 +296,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 31,
+            "downloads": 34,
             "keywords": [
                 "browser",
                 "web",
@@ -328,7 +328,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 15,
+            "downloads": 16,
             "keywords": [
                 "calendar",
                 "date",
@@ -392,7 +392,7 @@
                 "skills": true,
                 "agents": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "productivity",
                 "communication",
@@ -617,6 +617,7 @@
                 "gateways": false,
                 "engines": false
             },
+            "downloads": 2,
             "keywords": [
                 "command-code",
                 "commandcode",
@@ -752,7 +753,7 @@
                 "ui": true,
                 "tools": true
             },
-            "downloads": 6,
+            "downloads": 8,
             "keywords": [
                 "cron",
                 "schedule",
@@ -1506,7 +1507,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 27,
+            "downloads": 28,
             "keywords": [
                 "git",
                 "source-control",
@@ -2393,7 +2394,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 2,
+            "downloads": 4,
             "keywords": [
                 "openhanako",
                 "hana",
@@ -2625,7 +2626,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 19,
+            "downloads": 20,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -3387,7 +3388,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "twin",
                 "dual",
