@@ -598,7 +598,7 @@ class BrowserWindowCard(QWidget):
 
     def _apply_tab_limits(self):
         """超过 MAX_ALIVE_TABS 时冻结非活跃标签（释放渲染内存）"""
-        from PySide6.QtWebEngineWidgets import QWebEnginePage
+        from PySide6.QtWebEngineCore import QWebEnginePage
 
         current = self._tab_bar.currentIndex()
         alive = 0

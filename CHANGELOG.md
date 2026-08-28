@@ -3,9 +3,9 @@
 ## Unreleased
 ### 🔧 全量迁移 PyQt5 → PySide6（pyside6 分支）
 - **87 个文件迁移**：23 个带 UI 插件 + tests + tools，`PyQt5` → `PySide6`、`pyqtSignal/pyqtSlot/pyqtProperty` → `Signal/Slot/Property`、`exec_()` → `exec()`
-- **Qt6 改名适配**：`QWebEngineDownloadItem` → `QWebEngineDownloadRequest`（browser 下载面板）；`QShortcut` 从 QtWidgets 移到 QtGui（browser 快捷键）
+- **Qt6 改名适配**：`QWebEngineDownloadItem` → `QWebEngineDownloadRequest`（browser 下载面板）；`QShortcut` 从 QtWidgets 移到 QtGui（browser 快捷键）；**WebEngine 类归属**——`QWebEnginePage/Profile/Settings/Script` 从 QtWebEngineWidgets 移到 QtWebEngineCore（Widgets 仅剩 `QWebEngineView`），修 `_page_factory/devtools/browser_window/profile_manager` 共 6 处 import
 - **顺手修复 2 处 main 分支遗留语法错误**（Python 2 风格 except 元组缺括号，从未通过编译）：autoloop `cards.py:543`、gateway-dingtalk `dingtalk.py:243`
-- **验证**：独立 venv（PySide6 6.11.2 + PySide6-Fluent-Widgets 1.11.3，qfluentwidgets PySide6 分支版）py_compile 87/87 通过；64 个 UI/worker 模块真实 import 成功（含 stub 主程序 `app.*` 上下文的 7 个），0 失败
+- **验证**：独立 venv（PySide6 6.11.2 + PySide6-Fluent-Widgets 1.11.3，qfluentwidgets PySide6 分支版）py_compile 87/87 通过；64 个 UI/worker 模块真实 import 成功（含 stub 主程序 `app.*` 上下文的 7 个），0 失败；WebEngine 真开窗口渲染 + JS 回读 + 下载/Profile/Script API 断言 15/15 通过（offscreen，Chromium 正常起帧）
 - **文档同步**：autoloop / cron-tasks / git-panel / project-dashboard / taskboard 5 个 README 依赖表 PyQt5 → PySide6
 
 ## 2.8.5 (2026-08-28)
