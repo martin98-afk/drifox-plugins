@@ -21,6 +21,8 @@ _PLUGIN_NAME = "marketplace-recommend"
 # 安装中的插件名（防重复点击）
 _installing_lock = threading.Lock()
 _installing: set = set()
+# 存活的安装任务 (worker, coordinator)：QThread/协调器被 GC 会导致完成信号丢失
+_active_jobs: list = []
 
 
 class _InstallWorker(QThread):
@@ -109,20 +111,24 @@ def handle_install(content: str, ctx: Dict[str, Any]):
     name = content.strip()
     if not name:
         return
+    coordinator = _InstallCoordinator(ctx.get("main_widget"), ctx.get("window_id", ""))
     with _installing_lock:
         if name in _installing:
+            coordinator._infobar("info", "正在安装中", f"{name} 正在后台安装，请稍候")
             return
         meta = _find_meta(name)
         if meta is None:
-            _InstallCoordinator(ctx.get("main_widget"), ctx.get("window_id", ""))._infobar(
-                "warning", "未找到插件", f"市场数据中不存在 {name}"
-            )
+            coordinator._infobar("warning", "未找到插件", f"市场数据中不存在 {name}")
             return
         _installing.add(name)
+    coordinator._infobar("info", "开始安装", f"{name} 正在后台安装…")
     worker = _InstallWorker(meta)
-    coordinator = _InstallCoordinator(ctx.get("main_widget"), ctx.get("window_id", ""))
+    # 保引用防 GC（局部变量被回收 → 完成信号丢失、无任何反馈）
+    job = (worker, coordinator)
+    _active_jobs.append(job)
     worker.ok.connect(coordinator.on_ok)
     worker.fail.connect(coordinator.on_fail)
+    worker.finished.connect(lambda: _active_jobs.remove(job) if job in _active_jobs else None)
     worker.start()
 
 

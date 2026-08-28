@@ -11,6 +11,8 @@
 
 import sys
 
+from loguru import logger
+
 _PREFIX = "marketplace-recommend."
 
 
@@ -32,11 +34,18 @@ def register_ui(registry):
         priority=0,
         metadata={"description": "随机推荐插件市场未安装的热门插件，点击直接安装"},
     )
-    for action, handler in ACTIONS.items():
-        registry.register_welcome_action(
-            plugin_name="marketplace-recommend",
-            action=action,
-            handler=handler,
+    if hasattr(registry, "register_welcome_action"):
+        for action, handler in ACTIONS.items():
+            registry.register_welcome_action(
+                plugin_name="marketplace-recommend",
+                action=action,
+                handler=handler,
+            )
+    else:
+        # 旧主程序无 welcome action 扩展点：页签可显示，点击安装/换一批不可用（需升级主程序）
+        logger.warning(
+            "[marketplace-recommend] 主程序缺少 register_welcome_action 扩展点，"
+            "点击安装/换一批不可用——请升级并重启 DriFox"
         )
     # 预热：注册后立即后台拉市场数据（首次打开欢迎卡片时大概率已就绪）
     from . import render
