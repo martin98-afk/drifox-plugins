@@ -6,7 +6,7 @@ def create_page(view, profile, new_page_callback=None, is_dark=True):
     """创建页面：左键在当前标签跳转，右键可显式在新标签打开。"""
     from PySide6.QtCore import Qt, QUrl
     from PySide6.QtWidgets import QApplication, QMenu
-    from PySide6.QtWebEngineWidgets import (
+    from PySide6.QtWebEngineCore import (
         QWebEnginePage,
         QWebEngineScript,
         QWebEngineSettings,

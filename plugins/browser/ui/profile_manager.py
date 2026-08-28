@@ -59,7 +59,7 @@ def get_browser_profile():
         except RuntimeError:
             _browser_profile = None
 
-    from PySide6.QtWebEngineWidgets import QWebEngineProfile
+    from PySide6.QtWebEngineCore import QWebEngineProfile
 
     _ensure_dirs()
 
@@ -86,7 +86,7 @@ def get_incognito_profile():
     Returns:
         全新 QWebEngineProfile 匿名实例（无 Cookie/Storage/ServiceWorker 持久化）
     """
-    from PySide6.QtWebEngineWidgets import QWebEngineProfile
+    from PySide6.QtWebEngineCore import QWebEngineProfile
 
     profile = QWebEngineProfile()  # 匿名 → OTR，无 storageName
     # OTR 三件套：禁持久 cookies + 内存缓存
@@ -113,7 +113,7 @@ def purge_incognito_profile(profile) -> None:
     if profile is None:
         return
     try:
-        from PySide6.QtWebEngineWidgets import QWebEngineProfile
+        from PySide6.QtWebEngineCore import QWebEngineProfile
 
         # 1) 清 cookie
         try:

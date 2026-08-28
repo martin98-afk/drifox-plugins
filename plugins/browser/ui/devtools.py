@@ -23,7 +23,8 @@ def open_devtools_for(owner) -> None:
         if view is None:
             return
 
-        from PySide6.QtWebEngineWidgets import QWebEnginePage, QWebEngineView
+        from PySide6.QtWebEngineCore import QWebEnginePage
+        from PySide6.QtWebEngineWidgets import QWebEngineView
 
         page = view.page()
 
