@@ -342,6 +342,12 @@ class CronScheduler(QObject):
         # 模型覆盖：任务指定模型 → 从主程序 _valid_configs 取完整配置传 override
         model_override = self._resolve_model_override(job)
 
+        # 无人值守轮数上限：模型陷入工具失败循环（如 websearch 无 key 反复失败）时
+        # 正常收尾（带已有内容），而非跑满执行超时（LoopPolicy default 读此键）
+        if model_override is None:
+            model_override = {}
+        model_override.setdefault("最大循环轮数", 15)
+
         # workdir 切换（执行完还原）
         self._prev_workdir = ""
         workdir = (job.workdir or "").strip()
