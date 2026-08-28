@@ -1,7 +1,7 @@
 {
     "name": "marketplace-recommend",
     "description": "欢迎卡片插件推荐页签 — 随机推荐市场未安装热门插件，点击直接安装",
-    "version": "0.2.1",
+    "version": "0.2.2",
     "icon": {
         "light": "icon.svg",
         "dark": "icon_dark.svg"

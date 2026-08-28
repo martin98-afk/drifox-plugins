@@ -61,7 +61,6 @@ class _InstallCoordinator(QObject):
     def on_ok(self, name: str):
         with _installing_lock:
             _installing.discard(name)
-        render.force_refresh()
         self._reshuffle()
         self._infobar("success", "插件已安装", f"{name} 安装完成，已自动启用")
 
@@ -128,8 +127,7 @@ def handle_install(content: str, ctx: Dict[str, Any]):
 
 
 def handle_shuffle(content: str, ctx: Dict[str, Any]):
-    """换一批：清缓存 + 强制重渲染"""
-    render.force_refresh()
+    """换一批：仅重新随机抽样 + 重渲染（数据复用市场缓存，不重新拉取）"""
     try:
         mw = ctx.get("main_widget")
         card = getattr(mw, "_welcome_card_cache", {}).get(ctx.get("window_id", ""))
