@@ -110,8 +110,16 @@ Get-Content ~/.drifox/logs/all.log -Tail 500 | Select-String 'showcase'   # 插�
 已补：triage 增加 **LOOP 检测**——扫尾部 `[ToolExecutor] Executing tool: <name>` 轨迹，
 同一工具短窗口连续出现 ≥8 次 → 报警。数据源现成。
 
-## 六、配合 evolution_journal operation=triage
+## 六、配合 evolution_log_query operation=triage
 
-journal 工具的 `triage` 操作会自动：扫日志尾部 ERROR → 提取涉及插件 → 关联该插件最近的 journal 动作 → 输出诊断报告。
-默认扫 `all.log`（全量兜底）；可通过参数针对性查单系统（如 `mcp` / `plugins`）。
-适合「上次进化改了 X 后出问题」的回溯排查。
+`evolution_log_query` 是自进化的统一日志查询入口，v0.9.0 起替代旧的 `evolution_journal.operation=triage`。
+四个 operation 覆盖排查全场景：
+
+| operation | 用途 |
+|---|---|
+| `list` | 列出 logs/ 下所有日志文件 + 大小 + 最后修改时间 |
+| `query` | 通用查询：按 subsystem/level/since/until/pattern 过滤，默认返回摘要避免爆 context |
+| `context` | 取某行前后 N 行深挖（line_no 是距文件末尾的行数，1=最后一行） |
+| `triage` | 自动诊断报告：扫 `all.log` ERROR + 检测工具调用 LOOP + 关联 journal 最近动作 |
+
+适合「上次进化改了 X 后出问题」的回溯排查——先用 `triage` 看全局，不够再 `query subsystem=<sub>` 深挖，仍需细看就 `context line_no=<N> n=50` 取上下文。
