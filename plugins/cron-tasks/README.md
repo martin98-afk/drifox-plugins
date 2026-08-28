@@ -18,13 +18,16 @@
 - 🔔 **执行通知**：任务开始/结束经主程序 InfoBar 通知
 - ✨ **模板快捷新建**：任务列表下方内置常见模板（早报/天气/周报/站会/清理/健康检查），一键预填编辑表单
 - ⏱ **调度常驻**：插件加载即启动调度器（30s tick），UI 卡片不开也按时执行
+- 🛠 **AI 工具 `cron_tasks`**：大模型可直接建/查/改/删/启停/立即运行定时任务（单工具多 action，无需打开 UI）
 
 ## 架构
 
 ```
 plugins/cron-tasks/
-├── .drifox-plugin/plugin.json      # manifest（ui 组件）
+├── .drifox-plugin/plugin.json      # manifest（ui + tools 组件）
 ├── icons/                          # 时钟图标（深/浅主题）
+├── tools/
+│   └── cron_tasks.py               # cron_tasks 工具（list/get/create/update/delete/toggle/run）
 ├── crontasks_core/                 # 核心逻辑（插件根注入 sys.path 自包含）
 │   ├── models.py                   # CronJob 数据模型 + cron 解析 + next_run + 人话描述
 │   ├── store.py                    # jobs.json 存储 + runs/<jobId>.jsonl 运行历史
@@ -59,7 +62,7 @@ plugins/cron-tasks/
 
 ## 使用方法
 
-1. 输入区点击 **🕐 时钟按钮**（或命令 `/cron-tasks:tasks`）打开任务中心
+1. 输入区点击 **🕐 时钟按钮**（位于「长期记忆」按钮左侧，或命令 `/cron-tasks:tasks`）打开任务中心
 2. 点「＋ 新建任务」：填任务名称 + 提示词（到期后让 AI 做什么）
 3. 选调度方式（6 种模式，实时预览人话描述）、执行智能体、可选工作目录
 4. 保存后任务进入调度；到期自动执行，结果写运行历史并弹通知
@@ -74,13 +77,33 @@ plugins/cron-tasks/
 | 每小时检查 | 每 1 小时 | 「检查 D:/work/logs 下最新错误日志并摘要」 |
 | 一次性延时 | 单次 `2026-09-01 09:00` | 「生成 9 月工作报告初稿」 |
 
+### AI 工具用法（`cron_tasks`）
+
+大模型经工具调用直接管理任务，`action` 一共 7 个：`list` / `get` / `create` / `update` / `delete` / `toggle` / `run`。
+
+| action | 必填参数 | 说明 |
+|---|---|---|
+| `list` | — | 列出全部任务（id/调度/状态/下次运行） |
+| `get` | `job_id` | 查看单个任务详情（含 prompt 全文） |
+| `create` | `type` + `schedule` + `prompt` | 新建任务；可选 `label`/`agent`/`model_key`/`workdir`/`notify`/`enabled` |
+| `update` | `job_id` | 修改任务（传哪些字段改哪些） |
+| `delete` | `job_id` | 删除任务 |
+| `toggle` | `job_id` | 启用/禁用切换 |
+| `run` | `job_id` | 立即执行一次 |
+
+`type` 三选一：`at`（schedule=ISO 本地时间 `"2026-09-01T09:00:00"`）、`every`（schedule=分钟数字符串 `"30"`）、`cron`（5 字段 `"30 9 * * 1-5"`）。
+
+数据通路：优先复用 UI 侧调度器单例（写操作即时生效 + 通知 + 卡片刷新）；任务中心未加载时回退 `CronStore` 磁盘直写，调度器下一轮 tick（≤30s）自动同步。
+
 ## 数据位置
 
 ```
-<app_data>/plugins/cron-tasks/
+<app_data>/plugin_data/cron-tasks/
 ├── jobs.json           # 任务列表（可手改，调度器每轮 reload 自愈）
-└── runs/<job_id>.jsonl # 运行历史（每任务最近 50 条）
+└── runs/<job_id>.jsonl # 运行历史（每任务保留上限见 store.py）
 ```
+
+> 独立于插件安装目录（v0.2.3 起）：插件更新/重装不丢任务数据。
 
 ## 依赖与运行要求
 

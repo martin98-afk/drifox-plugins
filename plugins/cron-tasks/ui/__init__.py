@@ -48,6 +48,7 @@ def register_ui(registry):
         icon_light_path=str(_light_icon) if _light_icon.exists() else "",
         tooltip="定时任务 — 可视化配置单次/间隔/Cron 定时执行",
         on_click=_on_input_button_clicked,
+        position="before:memory",  # 插到「长期记忆」按钮左边
     )
 
     # 卡片实例化时绑定 controller（经 widget_class 包装不可行 → 用卡片 showEvent 内
