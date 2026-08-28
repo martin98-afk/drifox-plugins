@@ -118,7 +118,7 @@
             "components": {
                 "providers": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "服务商"
             ],
@@ -441,7 +441,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "chinese",
                 "evolved",
@@ -704,6 +704,7 @@
                 "ui": true,
                 "tools": true
             },
+            "downloads": 6,
             "keywords": [
                 "cron",
                 "schedule",
@@ -1266,7 +1267,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 20,
+            "downloads": 21,
             "platforms": [
                 "windows",
                 "linux",
@@ -1376,7 +1377,7 @@
                 "gateways": true,
                 "tools": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -1488,7 +1489,7 @@
             "components": {
                 "hooks": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1581,7 +1582,7 @@
             "components": {
                 "providers": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "服务商"
             ],
@@ -2344,7 +2345,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "openhanako",
                 "hana",
@@ -2422,7 +2423,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 1,
+            "downloads": 4,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -2746,7 +2747,7 @@
                 "tools": true,
                 "skills": true
             },
-            "downloads": 9,
+            "downloads": 11,
             "keywords": [
                 "self-evolve",
                 "plugin",
@@ -2880,7 +2881,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "animation",
                 "communication",
@@ -2938,7 +2939,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 11,
+            "downloads": 12,
             "platforms": [
                 "windows",
                 "linux",
@@ -3560,7 +3561,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 17,
+            "downloads": 18,
             "keywords": [
                 "powershell",
                 "windows",
