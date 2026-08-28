@@ -433,6 +433,9 @@ class JobRowCard(QFrame):
         row1.setSpacing(8)
         self._title_label = StrongBodyLabel(self._job.display_label())
         self._title_label.setWordWrap(True)
+        self._title_label.setStyleSheet(
+            f"color: {Colors.TEXT_PRIMARY}; {font_size_css(14)} {FONT_CSS}; font-weight: 600;"
+        )
         row1.addWidget(self._title_label, 1)
         self._status_chip = Chip("未运行", color=Colors.TEXT_SECONDARY, bg="transparent")
         row1.addWidget(self._status_chip, 0, Qt.AlignVCenter)
