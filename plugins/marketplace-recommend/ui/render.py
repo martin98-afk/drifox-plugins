@@ -48,18 +48,27 @@ _state: Dict[str, Any] = {
 
 
 def _get_marketplace_data() -> List[Dict[str, Any]]:
-    """取市场全量插件列表（缓存优先；未就绪返回 []）
+    """取市场全量插件列表：内存缓存 → 市场缓存文件兜底 → 后台拉取
 
-    复用 plugin-marketplace 的 MarketplaceData：内部 1h 文件缓存 +
-    失败回退，本函数只做内存层缓存避免每次渲染重复 IO。
+    渲染路径永不因网络阻塞：内存未就绪时直读市场缓存文件（毫秒级）；
+    两者皆无才后台线程走 marketplace 正常链路拉取（fetching 去重）。
     """
     with _state_lock:
         if _state["plugins"] is not None and time.time() - _state["fetched_at"] < _DATA_TTL:
             return _state["plugins"]
+        # 内存未就绪：直读市场缓存文件兜底（零网络），不覆盖后台线程的新数据
+        if _state["plugins"] is None:
+            cached = mkt_bridge.read_cached_marketplace_plugins()
+            if cached:
+                _state["plugins"] = cached
+                _state["fetched_at"] = time.time()
+                return _state["plugins"]
+        # 无任何缓存：后台拉一次（fetching 进行中则不重复开线程）
+        if _state["fetching"]:
+            return []
+        _state["fetching"] = True
 
     def _fetch():
-        with _state_lock:
-            _state["fetching"] = True
         try:
             plugins = mkt_bridge.list_marketplace_plugins()
             if plugins:

@@ -57,7 +57,11 @@ def _ensure_bridge() -> bool:
 
 
 def list_marketplace_plugins() -> List[Dict[str, Any]]:
-    """市场全量插件列表（含 downloads / source / version）"""
+    """市场全量插件列表（含 downloads / source / version）
+
+    走 marketplace 正常拉取链路（1h 文件缓存命中秒回；超期则同步网络，
+    失败回退缓存文件）——**可能阻塞数十秒**，只允许在后台线程调用。
+    """
     try:
         if not _ensure_bridge():
             return []
@@ -65,6 +69,34 @@ def list_marketplace_plugins() -> List[Dict[str, Any]]:
         return data.get_marketplace().list_plugins()
     except Exception as e:
         logger.warning(f"[{_BRIDGE_PKG}] 市场数据获取失败: {e}")
+        return []
+
+
+def read_cached_marketplace_plugins() -> List[Dict[str, Any]]:
+    """直读市场缓存文件（合并所有市场源，零网络、毫秒级）
+
+    渲染兜底用：缓存文件由 marketplace 插件正常链路维护（打开市场面板 /
+    本模块后台刷新时更新）。无缓存返回 []。
+    """
+    import json
+
+    try:
+        if not _ensure_bridge():
+            return []
+        mgr_mod = importlib.import_module(f"{_BRIDGE_PKG}.marketplace_manager")
+        cache_dir = mgr_mod._drifox_dir() / "cache" / "marketplaces"
+        plugins: List[Dict[str, Any]] = []
+        for f in cache_dir.glob("*.json"):
+            try:
+                data = json.loads(f.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            # status.json 是 list，跳过；市场缓存是 dict
+            if isinstance(data, dict):
+                plugins.extend(data.get("plugins", []) or [])
+        return plugins
+    except Exception as e:
+        logger.warning(f"[{_BRIDGE_PKG}] 市场缓存读取失败: {e}")
         return []
 
 
