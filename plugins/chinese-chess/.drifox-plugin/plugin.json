@@ -1,70 +1,86 @@
 {
-    "name": "chinese-chess",
-    "description": "中国象棋 — 与大模型对弈的浮动卡片游戏",
-    "version": "0.2.1",
-    "author": {
-        "name": "马丁"
-    },
-    "license": "GPL-3.0-or-later",
-    "type": "game",
-    "drifox": {
-        "min_version": "0.5.0"
-    },
-    "keywords": [
-        "chinese",
-        "evolved",
-        "xiangqi",
-        "象棋"
-    ],
-    "components": {
-        "tools": false,
-        "commands": false,
-        "agents": false,
-        "skills": false,
-        "hooks": false,
-        "mcp": false,
-        "lsp": false,
-        "themes": false,
-        "ui": true,
-        "providers": false,
-        "team_templates": false,
-        "model_adapters": false,
-        "loop_policies": false,
-        "storages": false,
-        "serializers": false,
-        "gateways": false,
-        "engines": false
-    },
-    "config_schema": {
-        "title": "中国象棋",
-        "fields": [
-            {
-                "key": "red_control",
-                "label": "我方控制方式",
-                "type": "select",
-                "options": [
-                    {"value": "manual", "label": "手动操作"},
-                    {"value": "ai", "label": "AI 控制"}
-                ],
-                "default": "manual",
-                "description": "选择红方（我方）走子是手动点击还是 AI 自动"
-            },
-            {
-                "key": "red_model",
-                "label": "我方模型",
-                "type": "select",
-                "options": [],
-                "default": "",
-                "description": "我方 AI 使用的模型（启动时由 config_card.py 从主程序 LLM.SavedProviders 动态注入）"
-            },
-            {
-                "key": "black_model",
-                "label": "对方模型",
-                "type": "select",
-                "options": [],
-                "default": "",
-                "description": "对方 AI 使用的模型（启动时由 config_card.py 从主程序 LLM.SavedProviders 动态注入）"
-            }
-        ]
-    }
+  "name": "chinese-chess",
+  "description": "中国象棋 — 与大模型对弈的浮动卡片游戏",
+  "version": "0.2.2",
+  "author": {
+    "name": "马丁"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "game",
+  "drifox": {
+    "min_version": "0.5.0"
+  },
+  "keywords": [
+    "chinese",
+    "evolved",
+    "xiangqi",
+    "象棋"
+  ],
+  "components": {
+    "tools": false,
+    "commands": false,
+    "agents": false,
+    "skills": false,
+    "hooks": false,
+    "mcp": false,
+    "lsp": false,
+    "themes": false,
+    "ui": true,
+    "providers": false,
+    "team_templates": false,
+    "model_adapters": false,
+    "loop_policies": false,
+    "storages": false,
+    "serializers": false,
+    "gateways": false,
+    "engines": false
+  },
+  "config_schema": {
+    "title": "中国象棋",
+    "fields": [
+      {
+        "key": "red_control",
+        "label": "我方控制方式",
+        "type": "select",
+        "options": [
+          {
+            "value": "manual",
+            "label": "手动操作"
+          },
+          {
+            "value": "ai",
+            "label": "AI 控制"
+          }
+        ],
+        "default": "manual",
+        "description": "选择红方（我方）走子是手动点击还是 AI 自动"
+      },
+      {
+        "key": "red_model",
+        "label": "我方模型",
+        "type": "select",
+        "options": [
+          {
+            "value": "__default__",
+            "label": "默认（主程序当前模型）"
+          }
+        ],
+        "default": "",
+        "description": "我方 AI 使用的模型（启动时由 config_card.py 从主程序 LLM.SavedProviders 动态注入）"
+      },
+      {
+        "key": "black_model",
+        "label": "对方模型",
+        "type": "select",
+        "options": [
+          {
+            "value": "__default__",
+            "label": "默认（主程序当前模型）"
+          }
+        ],
+        "default": "",
+        "description": "对方 AI 使用的模型（启动时由 config_card.py 从主程序 LLM.SavedProviders 动态注入）"
+      }
+    ]
+  }
 }

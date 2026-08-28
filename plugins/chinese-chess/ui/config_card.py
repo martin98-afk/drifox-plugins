@@ -46,8 +46,6 @@ except Exception:  # noqa: BLE001
 PLUGIN_NAME = "chinese-chess"
 
 DEFAULT_RED_CONTROL = "manual"
-DEFAULT_RED_MODEL = ""
-DEFAULT_BLACK_MODEL = ""
 
 
 # ── 系统配置定位（参考 ip-switcher/ui/config.py:101 discover_system_providers）──
@@ -143,6 +141,9 @@ class _ChessConfigCard(_CardBase):
             except Exception:
                 pass
 
+        # 前置初始化：必须在任何信号连接/_echo 之前（_echo 可能触发 _save）
+        self._on_change_external: Optional[Callable[[dict], None]] = None
+
         self._providers = discover_system_providers()
         opts = format_model_options(self._providers)
 
@@ -219,8 +220,6 @@ class _ChessConfigCard(_CardBase):
 
         # 回显当前生效配置
         self._echo()
-        # 注册配置变更回调（外部 ChessCard 注入）
-        self._on_change_external: Optional[Callable[[dict], None]] = None
 
     def register_change_callback(self, cb: Callable[[dict], None]) -> None:
         """注册外部回调（ChessCard.update_config）。"""
@@ -232,19 +231,19 @@ class _ChessConfigCard(_CardBase):
             return
         try:
             store = PluginConfigStore()
-            v = store.get(PLUGIN_NAME, "red_control", DEFAULT_RED_CONTROL)
+            v = store.get(PLUGIN_NAME, "red_control")
             if v not in ("manual", "ai"):
                 v = DEFAULT_RED_CONTROL
             self._rb_manual.setChecked(v == "manual")
             self._rb_ai.setChecked(v == "ai")
 
-            red_model = str(store.get(PLUGIN_NAME, "red_model", DEFAULT_RED_MODEL) or "")
+            red_model = str(store.get(PLUGIN_NAME, "red_model") or "").replace("__default__", "")
             if red_model:
                 idx = self._red_model_combo.findText(red_model)
                 if idx >= 0:
                     self._red_model_combo.setCurrentIndex(idx)
 
-            black_model = str(store.get(PLUGIN_NAME, "black_model", DEFAULT_BLACK_MODEL) or "")
+            black_model = str(store.get(PLUGIN_NAME, "black_model") or "").replace("__default__", "")
             if black_model:
                 idx = self._black_model_combo.findText(black_model)
                 if idx >= 0:
