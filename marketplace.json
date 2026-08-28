@@ -3195,6 +3195,57 @@
             }
         },
         {
+            "name": "tencent-hunyuan",
+            "description": "腾讯混元 Hy 系列服务商接入插件：经腾讯云 TokenHub 开放，OpenAI 兼容协议（/v1/chat/completions），Bearer 鉴权，按量付费。Hy4 preview 当前在 WorkBuddy/CodeBuddy 限免两周（约 2026-09-11 止），Hy3 免费延至 2026-09-30。",
+            "version": "0.1.0",
+            "author": "self-evolver",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "provider"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/tencent-hunyuan",
+                "ref": "main"
+            },
+            "components": {
+                "tools": false,
+                "commands": false,
+                "agents": false,
+                "skills": false,
+                "hooks": false,
+                "mcp": false,
+                "lsp": false,
+                "themes": false,
+                "ui": false,
+                "providers": true,
+                "team_templates": false,
+                "model_adapters": false,
+                "loop_policies": false,
+                "storages": false,
+                "serializers": false,
+                "gateways": false,
+                "engines": false
+            },
+            "keywords": [
+                "tencent",
+                "hunyuan",
+                "hy4",
+                "hy3",
+                "tokenhub",
+                "混元",
+                "llm"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "test-scaffold",
             "description": "测试脚手架生成 — 自动生成测试用例骨架、分析覆盖率缺口、推荐边界测试场景，加速测试编写。",
             "version": "1.0.0",
