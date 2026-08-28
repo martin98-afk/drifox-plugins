@@ -687,7 +687,7 @@
         {
             "name": "cron-tasks",
             "description": "定时任务中心 — 可视化配置 UI 定时任务（单次/间隔/Cron），到期自动驱动对话执行 prompt，带运行历史（参考 openhanako desk cron 设计）",
-            "version": "0.2.7",
+            "version": "0.3.0",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [

@@ -10,7 +10,7 @@ import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, QSize, pyqtSignal
 from PyQt5.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -26,12 +26,15 @@ from PyQt5.QtWidgets import (
 )
 from qfluentwidgets import (
     BodyLabel,
+    CaptionLabel,
     CheckBox,
     ComboBox,
+    ElevatedCardWidget,
     FluentIcon,
     LineEdit,
     PrimaryPushButton,
     PushButton,
+    SimpleCardWidget,
     SpinBox,
     StrongBodyLabel,
     SwitchButton,
@@ -60,12 +63,80 @@ SCHEDULE_MODE_LABELS = {
 }
 STATUS_LABELS = {
     "": "未运行",
-    "success": "✅ 成功",
-    "error": "❌ 失败",
-    "cancelled": "🛑 已取消",
-    "timeout": "⏱ 超时",
-    "running": "▶ 运行中",
+    "success": "成功",
+    "error": "失败",
+    "cancelled": "已取消",
+    "timeout": "超时",
+    "running": "运行中",
 }
+
+# 状态对应颜色（用于 JobRowCard 状态行着色，按设计令牌统一）
+_STATUS_COLORS = {
+    "success": "SUCCESS",
+    "error": "ERROR",
+    "timeout": "WARNING",
+    "cancelled": "TEXT_SECONDARY",
+}
+
+# Chip 设计令牌（5 组件复用）：圆角 10px、字号 11px、内边距 2-8px、半透明背景 + 主色文字
+_CHIP_RADIUS = 10
+_CHIP_PADDING_V, _CHIP_PADDING_H = 2, 8
+_CHIP_BG_NEUTRAL = "rgba(138, 143, 156, 0.12)"
+_CHIP_BORDER_NEUTRAL = "rgba(138, 143, 156, 0.25)"
+
+
+class Chip(QLabel):
+    """统一风格 chip：圆角矩形 + 半透明背景 + 文字色，圆角/字号/内边距统一
+    用 QLabel 自定义以彻底控制样式（qfluentwidgets PillButton 自带主题色难覆盖）。
+    """
+
+    def __init__(
+        self,
+        text: str,
+        *,
+        color: str,
+        bg: str = "transparent",
+        border: Optional[str] = None,
+        parent=None,
+    ):
+        super().__init__(text, parent)
+        self.setAlignment(Qt.AlignCenter)
+        border_css = f"border: 1px solid {border};" if border else "border: none;"
+        self.setStyleSheet(
+            f"background: {bg}; color: {color}; {border_css} "
+            f"border-radius: {_CHIP_RADIUS}px; "
+            f"padding: {_CHIP_PADDING_V}px {_CHIP_PADDING_H}px; "
+            f"{font_size_css(11)} {FONT_CSS}"
+        )
+        self.setFixedHeight(22)
+
+
+def make_status_chip(status: str, label: Optional[str] = None) -> Chip:
+    """按 status 生成状态 chip：绿/红/橙/灰/蓝"""
+    color = getattr(Colors, _STATUS_COLORS.get(status, "TEXT_SECONDARY"), Colors.TEXT_SECONDARY)
+    # 半透明背景：取主色的 rgba（颜色推导为近似 alpha 12%）
+    bg_map = {
+        "success": "rgba(34, 197, 94, 0.14)",
+        "error": "rgba(239, 68, 68, 0.14)",
+        "timeout": "rgba(245, 158, 11, 0.14)",
+        "cancelled": _CHIP_BG_NEUTRAL,
+        "running": "rgba(59, 130, 246, 0.14)",
+        "": _CHIP_BG_NEUTRAL,
+    }
+    bg = bg_map.get(status, _CHIP_BG_NEUTRAL)
+    return Chip(label or STATUS_LABELS.get(status, status or "未知"), color=color, bg=bg)
+
+
+def make_meta_chip(text: str) -> Chip:
+    """元信息 chip（agent/model/schedule）：次要色 + 浅边框，视觉弱化"""
+    return Chip(text, color=Colors.TEXT_SECONDARY, bg=_CHIP_BG_NEUTRAL, border=_CHIP_BORDER_NEUTRAL)
+
+
+def make_section_card(margin: int = 14) -> ElevatedCardWidget:
+    """分组容器：圆角阴影卡片，统一边距（用于 EditPanel / HistoryPanel 分组）"""
+    card = ElevatedCardWidget()
+    card.setBorderRadius(12)
+    return card
 
 # 常见任务模板（点击 → 预填编辑表单，用户改完保存即可）
 # mode 取 SCHEDULE_MODES；time/interval/weekday/month_day/cron 按 mode 生效
@@ -115,6 +186,52 @@ JOB_TEMPLATES = [
         "interval_unit": 1,
         "prompt": "检查当前项目最近 git 提交与 TODO/FIXME 数量，输出一页健康简报。",
     },
+    {
+        "name": "每日 TODO 检查",
+        "label": "TODO 检查",
+        "mode": "daily",
+        "time": "18:00",
+        "prompt": "扫描当前工作目录代码，统计新增/已解决的 TODO 与 FIXME，列出未处理项的优先级。",
+    },
+    {
+        "name": "月度预算汇总",
+        "label": "预算汇总",
+        "mode": "monthly",
+        "time": "09:00",
+        "month_day": 1,
+        "prompt": "汇总上月开支记录（如果工作目录有记账文件），按类别输出占比与异常项。",
+    },
+    {
+        "name": "行业动态周报",
+        "label": "行业周报",
+        "mode": "weekly",
+        "time": "09:00",
+        "weekday": 1,
+        "prompt": "搜索本周 AI/科技行业重要动态，汇总 5 条要点（标题 + 一句话说明 + 来源链接）。",
+    },
+    {
+        "name": "月度新闻精选",
+        "label": "月度新闻",
+        "mode": "monthly",
+        "time": "10:00",
+        "month_day": 1,
+        "prompt": "搜索上月值得关注的新闻（科技/财经/国际），精选 8 条整理成月度回顾。",
+    },
+    {
+        "name": "磁盘空间检查",
+        "label": "磁盘检查",
+        "mode": "daily",
+        "time": "12:00",
+        "prompt": "检查系统主分区（Windows 看 C/D 盘，macOS 看 /，Linux 看 /home）剩余空间，低于 10GB 时告警并列出最大目录。",
+    },
+    {
+        "name": "临时文件清理",
+        "label": "临时清理",
+        "mode": "weekly",
+        "time": "14:00",
+        "weekday": 6,
+        "prompt": "扫描工作目录下超过 30 天未访问的 .log/.tmp/__pycache__，列出可清理项清单（不要直接删除）。",
+    },
 ]
 
 
@@ -125,6 +242,21 @@ def _fmt_dt(iso: str) -> str:
         return datetime.fromisoformat(iso).strftime("%m-%d %H:%M:%S")
     except ValueError:
         return iso
+
+
+# 调度模式 → FluentIcon 映射（顶部 hero + 模板区复用）
+_MODE_ICON_MAP = {
+    "interval": FluentIcon.SYNC,
+    "daily": FluentIcon.CALENDAR,
+    "weekly": FluentIcon.DATE_TIME,
+    "monthly": FluentIcon.CALENDAR,
+    "once": FluentIcon.PLAY,
+    "advanced": FluentIcon.SETTING,
+}
+
+
+def _tpl_icon_for_mode(mode: str):
+    return _MODE_ICON_MAP.get(mode, FluentIcon.CALENDAR)
 
 
 # ============================================================
@@ -236,7 +368,7 @@ class ScheduleDraft:
 
 
 class JobRowCard(QFrame):
-    """单个任务行：启用开关 + 信息区 + 操作按钮（运行中：运行钮变停止钮）"""
+    """单个任务行：现代化分组卡（圆角 + 左侧状态色条 + chip 元信息 + 图标化操作）"""
 
     toggleRequested = pyqtSignal(str)  # job_id
     editRequested = pyqtSignal(str)
@@ -251,70 +383,141 @@ class JobRowCard(QFrame):
         self._running = False
         self.setObjectName("cronJobRowCard")
         self._build_ui()
-        self._apply_style()
+        self._refresh_meta_chips()
+        self._refresh_status()
+        self._apply_card_accent()
 
     def _build_ui(self):
-        job = self._job
+        # QFrame + 自定义样式：圆角 12 + 浅背景 + 1px border + 4px 左侧状态色条（运行时绿色 accent）
         layout = QHBoxLayout(self)
-        layout.setContentsMargins(12, 8, 12, 8)
-        layout.setSpacing(10)
+        layout.setContentsMargins(14, 10, 14, 10)
+        layout.setSpacing(12)
 
         # 启用开关
         self._switch = SwitchButton()
-        self._switch.setChecked(job.enabled)
+        self._switch.setChecked(self._job.enabled)
         self._switch.checkedChanged.connect(lambda _v: self.toggleRequested.emit(self._job.id))
-        layout.addWidget(self._switch)
+        layout.addWidget(self._switch, 0, Qt.AlignVCenter)
 
-        # 信息区
+        # 信息区：三行（标题+状态chip / meta chips / 时间信息），用 widget 包装设 SizePolicy.Maximum 让高度不超内容
         info = QVBoxLayout()
-        info.setSpacing(2)
-        self._title_label = StrongBodyLabel(job.display_label())
-        info.addWidget(self._title_label)
+        info.setSpacing(6)
 
-        meta_parts = [f"⏱ {job.schedule_desc()}"]
-        if job.agent:
-            meta_parts.append(f"🤖 {job.agent}")
-        if job.model_key:
-            meta_parts.append(f"💠 {job.model_key}")
-        self._meta_label = BodyLabel(" · ".join(meta_parts))
-        info.addWidget(self._meta_label)
+        # Row 1: 标题 + 状态 chip
+        row1 = QHBoxLayout()
+        row1.setSpacing(8)
+        self._title_label = StrongBodyLabel(self._job.display_label())
+        self._title_label.setWordWrap(True)
+        row1.addWidget(self._title_label, 1)
+        self._status_chip = Chip("未运行", color=Colors.TEXT_SECONDARY, bg="transparent")
+        row1.addWidget(self._status_chip, 0, Qt.AlignVCenter)
+        info.addLayout(row1)
 
-        self._status_label = BodyLabel("")
-        info.addWidget(self._status_label)
-        layout.addLayout(info, 1)
+        # Row 2: 元信息 chips（schedule / agent / model，动态重建）
+        # 用 FlowLayout：chips 左对齐 + 自动换行（长 chip 串不会撑爆换行）
+        from qfluentwidgets import FlowLayout
+        self._meta_chips_row = FlowLayout(needAni=False)
+        self._meta_chips_row.setContentsMargins(0, 0, 0, 0)
+        self._meta_chips_row.setSpacing(6)
+        self._meta_chip_widgets: List[Chip] = []
+        info.addLayout(self._meta_chips_row)
 
-        # 操作按钮：运行/停止（动态） + 编辑 + 历史 + 删除
+        # Row 3: 时间信息行（上次 / 下次，弱化 CaptionLabel）
+        self._time_label = CaptionLabel("")
+        self._time_label.setWordWrap(True)
+        self._time_label.setStyleSheet(
+            f"color: {Colors.TEXT_MUTED}; {font_size_css(11)} {FONT_CSS}"
+        )
+        info.addWidget(self._time_label)
+        info.addStretch()  # 内容靠顶部对齐
+
+        # info 包成 widget 便于设 sizePolicy，强制高度不超过 actions 列
+        from PyQt5.QtWidgets import QSizePolicy as _SP
+        info_w = QWidget()
+        info_w.setLayout(info)
+        info_w.setSizePolicy(_SP.Expanding, _SP.Maximum)
+        layout.addWidget(info_w, 1)
+
+        # 操作按钮（2x2 网格：节省垂直空间，从 4×32=128px 降到 2×32=68px）
+        from PyQt5.QtWidgets import QGridLayout
+        actions = QGridLayout()
+        actions.setSpacing(4)
         self._run_btn = ToolButton(FluentIcon.PLAY)
         self._run_btn.setToolTip("立即运行")
-        self._run_btn.setFixedSize(30, 30)
+        self._run_btn.setFixedSize(32, 32)
         self._run_btn.clicked.connect(self._on_run_clicked)
-        layout.addWidget(self._run_btn)
+        actions.addWidget(self._run_btn, 0, 0, Qt.AlignCenter)
+        btn_edit = ToolButton(FluentIcon.EDIT)
+        btn_edit.setToolTip("编辑")
+        btn_edit.setFixedSize(32, 32)
+        btn_edit.clicked.connect(lambda _c: self.editRequested.emit(self._job.id))
+        actions.addWidget(btn_edit, 0, 1, Qt.AlignCenter)
+        btn_history = ToolButton(FluentIcon.HISTORY)
+        btn_history.setToolTip("运行历史")
+        btn_history.setFixedSize(32, 32)
+        btn_history.clicked.connect(lambda _c: self.historyRequested.emit(self._job.id))
+        actions.addWidget(btn_history, 1, 0, Qt.AlignCenter)
+        btn_del = ToolButton(FluentIcon.DELETE)
+        btn_del.setToolTip("删除")
+        btn_del.setFixedSize(32, 32)
+        btn_del.clicked.connect(lambda _c: self.deleteRequested.emit(self._job.id))
+        actions.addWidget(btn_del, 1, 1, Qt.AlignCenter)
+        layout.addLayout(actions)
 
-        for icon, tip, signal in (
-            (FluentIcon.EDIT, "编辑", self.editRequested),
-            (FluentIcon.HISTORY, "运行历史", self.historyRequested),
-            (FluentIcon.DELETE, "删除", self.deleteRequested),
-        ):
-            btn = ToolButton(icon)
-            btn.setToolTip(tip)
-            btn.setFixedSize(30, 30)
-            btn.clicked.connect(lambda _c, s=signal: s.emit(self._job.id))
-            layout.addWidget(btn)
-
-        # qfluentwidgets 组件字号跟随系统设置（BodyLabel 等自身 QSS 写死不随缩放）
-        apply_font_size_to_widget(self)
-        self._apply_status_style()
-
-    def _apply_status_style(self):
-        """运行状态行样式：运行中高亮醒目，否则次要色"""
+    def _refresh_status(self):
+        """刷新状态 chip + 时间信息行（按运行态/历史态切换）"""
+        bg_map = {
+            "success": "rgba(34, 197, 94, 0.14)",
+            "error": "rgba(239, 68, 68, 0.14)",
+            "timeout": "rgba(245, 158, 11, 0.14)",
+            "cancelled": _CHIP_BG_NEUTRAL,
+            "running": "rgba(59, 130, 246, 0.14)",
+            "": _CHIP_BG_NEUTRAL,
+        }
         if self._running:
-            self._status_label.setStyleSheet(
-                f"color: {Colors.REALTIME_SUCCESS}; font-weight: bold; {font_size_css(13)} {FONT_CSS}"
-            )
+            color = Colors.REALTIME_SUCCESS
+            bg = bg_map["running"]
+            text = "运行中"
+            elapsed = 0
+            if self._job.last_run_at:
+                try:
+                    elapsed = max(
+                        0,
+                        int(
+                            (
+                                datetime.now()
+                                - datetime.fromisoformat(self._job.last_run_at)
+                            ).total_seconds()
+                        ),
+                    )
+                except Exception:
+                    pass
+            time_text = f"正在执行 · 已运行 {elapsed}s"
         else:
-            self._status_label.setStyleSheet(
-                f"color: {Colors.TEXT_SECONDARY}; {font_size_css(12)} {FONT_CSS}"
-            )
+            status = self._job.last_status
+            color_attr = _STATUS_COLORS.get(status, "TEXT_SECONDARY")
+            color = getattr(Colors, color_attr, Colors.TEXT_SECONDARY)
+            bg = bg_map.get(status, _CHIP_BG_NEUTRAL)
+            text = STATUS_LABELS.get(status, status or "未运行")
+            parts = []
+            if status and self._job.last_run_at:
+                parts.append(f"上次 {_fmt_dt(self._job.last_run_at)}")
+            elif not status:
+                parts.append("尚未运行")
+            if self._job.enabled and self._job.next_run_at:
+                parts.append(f"下次 {_fmt_dt(self._job.next_run_at)}")
+            elif not self._job.enabled:
+                parts.append("已禁用")
+            time_text = "  ·  ".join(parts) if parts else "—"
+        # 状态 chip：保留实例动态改色
+        self._status_chip.setText(text)
+        self._status_chip.setStyleSheet(
+            f"background: {bg}; color: {color}; border: none; "
+            f"border-radius: {_CHIP_RADIUS}px; "
+            f"padding: {_CHIP_PADDING_V}px {_CHIP_PADDING_H}px; "
+            f"{font_size_css(11)} {FONT_CSS}"
+        )
+        self._time_label.setText(time_text)
 
     def _on_run_clicked(self):
         """运行钮：常态=立即运行；运行中=停止"""
@@ -332,58 +535,57 @@ class JobRowCard(QFrame):
             self._run_btn.setIcon(FluentIcon.PLAY)
             self._run_btn.setToolTip("立即运行")
 
+    def _refresh_meta_chips(self):
+        """重建 meta chips（schedule / agent / model）—— refresh 时调用（FlowLayout 天然左对齐+自动换行，无需 addStretch）"""
+        for chip in self._meta_chip_widgets:
+            self._meta_chips_row.removeWidget(chip)
+            chip.setParent(None)
+            chip.deleteLater()
+        self._meta_chip_widgets.clear()
+        job = self._job
+        self._add_meta_chip(job.schedule_desc())
+        if job.agent:
+            self._add_meta_chip(f"agent · {job.agent}")
+        if job.model_key:
+            model_disp = str(job.model_key).partition("||")[2] or job.model_key
+            self._add_meta_chip(f"model · {model_disp}")
+
+    def _add_meta_chip(self, text: str) -> Chip:
+        chip = make_meta_chip(text)
+        self._meta_chips_row.addWidget(chip)
+        self._meta_chip_widgets.append(chip)
+        return chip
+
+    def _apply_card_accent(self):
+        """按运行态切换左侧色条（绿色 accent）+ 卡片描边"""
+        Colors.refresh()
+        accent = Colors.REALTIME_SUCCESS if self._running else Colors.BORDER
+        border_w = 1
+        self.setStyleSheet(f"""
+            #cronJobRowCard {{
+                background: {Colors.CARD_BG_SOLID};
+                border: {border_w}px solid {Colors.BORDER};
+                border-left: 4px solid {accent};
+                border-radius: 12px;
+                {FONT_CSS}
+            }}
+            #cronJobRowCard:hover {{
+                border-color: {Colors.INPUT_FOCUS_BORDER};
+            }}
+        """)
+        self.setProperty("running", "true" if self._running else "false")
+
     def refresh(self, job: CronJob, running: bool = False):
         self._job = job
         was_running = self._running
         self._running = running
         self._apply_run_state()
-        if running != was_running:
-            # 运行态切换：刷新状态行颜色 + 卡片高亮边框（动态属性 + repolish）
-            self._apply_status_style()
-            self.setProperty("running", "true" if running else "false")
-            self.style().unpolish(self)
-            self.style().polish(self)
-        self._switch.setChecked(job.enabled)
+        self._refresh_meta_chips()
         self._title_label.setText(job.display_label())
-        meta_parts = [f"⏱ {job.schedule_desc()}"]
-        if job.agent:
-            meta_parts.append(f"🤖 {job.agent}")
-        if job.model_key:
-            meta_parts.append(f"💠 {job.model_key}")
-        self._meta_label.setText(" · ".join(meta_parts))
-        if running:
-            # 心跳：实时显示已运行秒数（5s 一刷）
-            elapsed = 0
-            if job.last_run_at:
-                try:
-                    elapsed = max(0, int((__import__("datetime").datetime.now() - __import__("datetime").datetime.fromisoformat(job.last_run_at)).total_seconds()))
-                except Exception:
-                    pass
-            base = f"▶ 正在执行 · 已运行 {elapsed}s"
-            nxt = "—"
-        else:
-            status = job.last_status
-            base = f"上次: {STATUS_LABELS.get(status, status)}"
-            if job.last_run_at:
-                base += f" · {_fmt_dt(job.last_run_at)}"
-            nxt = f"下次: {_fmt_dt(job.next_run_at)}" if job.enabled and job.next_run_at else ("已禁用" if not job.enabled else "—")
-        self._status_label.setText(f"{base} ｜ {nxt}")
-
-    def _apply_style(self):
-        Colors.refresh()
-        self.setStyleSheet(f"""
-            #cronJobRowCard {{
-                background: {Colors.CARD_BG_SOLID};
-                border: 1px solid {Colors.BORDER};
-                border-radius: 10px;
-                {FONT_CSS}
-            }}
-            #cronJobRowCard:hover {{ border: 1px solid {Colors.INPUT_FOCUS_BORDER}; }}
-            #cronJobRowCard[running="true"] {{
-                border: 1px solid {Colors.REALTIME_SUCCESS};
-                border-left: 4px solid {Colors.REALTIME_SUCCESS};
-            }}
-        """)
+        self._switch.setChecked(job.enabled)
+        self._refresh_status()
+        if running != was_running:
+            self._apply_card_accent()
 
 
 # ============================================================
@@ -406,58 +608,96 @@ class JobEditPanel(QWidget):
     # ---------- UI ----------
 
     def _build_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(4, 4, 4, 4)
-        layout.setSpacing(8)
+        # 外层：顶部 hero header + 滚动内容
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
 
-        # 顶部行：标题 + 右侧操作（保存/取消与标题同行，符合操作直觉）
-        header = QHBoxLayout()
+        # 顶部 hero header：图标 + 标题 + 取消/保存
+        header_w = QFrame()
+        header_w.setObjectName("editHeader")
+        h_layout = QHBoxLayout(header_w)
+        h_layout.setContentsMargins(20, 14, 16, 14)
+        h_layout.setSpacing(8)
+        icon_w = ToolButton(FluentIcon.EDIT)
+        icon_w.setIconSize(QSize(18, 18))
+        icon_w.setFixedSize(24, 24)
+        icon_w.setEnabled(False)
+        icon_w.setStyleSheet("background: transparent; border: none;")
+        h_layout.addWidget(icon_w, 0, Qt.AlignVCenter)
         self._title = StrongBodyLabel("新建任务")
-        header.addWidget(self._title)
-        header.addStretch()
+        self._title.setStyleSheet(f"color: {Colors.TEXT_PRIMARY}; {font_size_css(16)} {FONT_CSS}")
+        h_layout.addWidget(self._title, 1)
         self._cancel_btn = PushButton("取消")
         self._cancel_btn.clicked.connect(self.cancelRequested.emit)
-        header.addWidget(self._cancel_btn)
-        self._save_btn = PrimaryPushButton("保存")
+        h_layout.addWidget(self._cancel_btn)
+        self._save_btn = PrimaryPushButton(FluentIcon.SAVE, "保存")
         self._save_btn.clicked.connect(self._on_save)
-        header.addWidget(self._save_btn)
-        layout.addLayout(header)
+        h_layout.addWidget(self._save_btn)
+        outer.addWidget(header_w)
 
-        def _field(label_text: str, widget: QWidget, stretch: int = 1) -> QHBoxLayout:
-            row = QHBoxLayout()
-            lbl = BodyLabel(label_text)
-            lbl.setFixedWidth(90)
-            row.addWidget(lbl)
-            row.addWidget(widget, stretch)
-            return row
+        # 滚动内容区
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        content_w = QWidget()
+        scroll.setWidget(content_w)
+        outer.addWidget(scroll, 1)
 
-        # 标签
+        layout = QVBoxLayout(content_w)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(14)
+
+        # 局部助手：纵向 label + 控件（label 11px 次要色 + 控件占满）
+        def _labeled(label_text: str, widget: QWidget) -> QVBoxLayout:
+            v = QVBoxLayout()
+            v.setContentsMargins(0, 0, 0, 0)
+            v.setSpacing(4)
+            lbl = CaptionLabel(label_text)
+            lbl.setStyleSheet(
+                f"color: {Colors.TEXT_SECONDARY}; {font_size_css(11)} {FONT_CSS}; font-weight: 500;"
+            )
+            v.addWidget(lbl)
+            v.addWidget(widget)
+            return v
+
+        # 局部助手：分组卡片（标题 13px + 内层 VBox padding 16/14/16/14）
+        def _section(title_text: str):
+            card = ElevatedCardWidget()
+            card.setBorderRadius(12)
+            cl = QVBoxLayout(card)
+            cl.setContentsMargins(16, 14, 16, 14)
+            cl.setSpacing(10)
+            hl = StrongBodyLabel(title_text)
+            hl.setStyleSheet(f"color: {Colors.TEXT_PRIMARY}; {font_size_css(13)} {FONT_CSS}")
+            cl.addWidget(hl)
+            return card, cl
+
+        # === Section 1: 任务 ===
+        s1, s1l = _section("任务")
         self._label_edit = LineEdit()
         self._label_edit.setPlaceholderText("任务名称（可选，默认取提示词首行）")
-        layout.addLayout(_field("任务名称", self._label_edit))
-
-        # 提示词
+        s1l.addLayout(_labeled("名称", self._label_edit))
         self._prompt_edit = TextEdit()
-        self._prompt_edit.setPlaceholderText("📝 到期后要执行的提示词（如：检查 D:/work 目录下今日新增文件并汇总）...")
+        self._prompt_edit.setPlaceholderText(
+            "📝 到期后要执行的提示词（如：检查 D:/work 目录下今日新增文件并汇总）..."
+        )
         self._prompt_edit.setMinimumHeight(72)
-        layout.addWidget(self._prompt_edit)
+        s1l.addLayout(_labeled("提示词", self._prompt_edit))
+        layout.addWidget(s1)
 
-        # 执行模型（参考 prompt-enhancer：主程序 _valid_configs）
-        self._model_combo = ComboBox()
-        layout.addLayout(_field("执行模型", self._model_combo))
-
-        # 调度模式
+        # === Section 2: 调度与执行 ===
+        s2, s2l = _section("调度与执行")
         self._mode_combo = ComboBox()
         self._mode_combo.addItems([SCHEDULE_MODE_LABELS[m] for m in SCHEDULE_MODES])
         self._mode_combo.currentIndexChanged.connect(self._on_mode_changed)
-        layout.addLayout(_field("调度方式", self._mode_combo))
+        s2l.addLayout(_labeled("调度方式", self._mode_combo))
 
-        # 调度详情区：时间控件单实例，行内按模式显隐 weekday/monthday
-        # （Qt 单 parent 限制：同一控件不能同时挂多个布局）
+        # 调度详情区（保留 4 行控件供 _on_mode_changed 切换显隐）
         self._schedule_details = QWidget()
         sd_layout = QVBoxLayout(self._schedule_details)
         sd_layout.setContentsMargins(0, 0, 0, 0)
-        sd_layout.setSpacing(6)
+        sd_layout.setSpacing(8)
 
         # 间隔：数值 + 单位（interval 模式）
         self._interval_row = QWidget()
@@ -466,7 +706,7 @@ class JobEditPanel(QWidget):
         irow.setSpacing(6)
         self._interval_spin = SpinBox()
         self._interval_spin.setRange(1, 999)
-        self._interval_spin.setValue(30)
+        # setValue 延后到 signal connect 之后（见本方法末尾）
         self._interval_unit_combo = ComboBox()
         self._interval_unit_combo.addItems(["分钟", "小时", "天"])
         irow.addWidget(self._interval_spin)
@@ -474,19 +714,17 @@ class JobEditPanel(QWidget):
         irow.addStretch()
         sd_layout.addWidget(self._interval_row)
 
-        # 时间行：[星期多选(仅每周)] [时间(每天/每周/每月)] [几号(仅每月)]
+        # 时间行：[星期多选(仅每周)] [时间] [几号(仅每月)]
         self._time_row = QWidget()
         trow = QHBoxLayout(self._time_row)
         trow.setContentsMargins(0, 0, 0, 0)
         trow.setSpacing(6)
-        # 每周多选：标签顺序周一..周日 → cron dow [1..6,0]
         self._weekday_checks: List[QCheckBox] = []
         for _lbl, _dow in zip(("一", "二", "三", "四", "五", "六", "日"), (1, 2, 3, 4, 5, 6, 0)):
             cb = CheckBox(_lbl)
             cb.stateChanged.connect(self._refresh_preview)
             self._weekday_checks.append(cb)
             trow.addWidget(cb)
-        self._weekday_checks[0].setChecked(True)  # 默认周一
         self._time_edit = QTimeEdit()
         self._time_edit.setDisplayFormat("HH:mm")
         from PyQt5.QtCore import QTime
@@ -500,7 +738,7 @@ class JobEditPanel(QWidget):
         trow.addStretch()
         sd_layout.addWidget(self._time_row)
 
-        # 单次：日期时间（once 模式，日历弹窗选择，不再手输）
+        # 单次：日期时间
         from PyQt5.QtWidgets import QDateTimeEdit
 
         self._once_edit = QDateTimeEdit()
@@ -508,72 +746,87 @@ class JobEditPanel(QWidget):
         self._once_edit.setDisplayFormat("yyyy-MM-dd HH:mm")
         from PyQt5.QtCore import QDateTime as _QDT
 
-        self._once_edit.setDateTime(_QDT.currentDateTime().addDays(1))
         sd_layout.addWidget(self._once_edit)
 
-        # 高级 cron（advanced 模式）
+        # 高级 cron
         self._cron_edit = LineEdit()
         self._cron_edit.setPlaceholderText("分 时 日 月 周，如 0 9 * * 1-5")
         sd_layout.addWidget(self._cron_edit)
-        layout.addWidget(self._schedule_details)
+        s2l.addWidget(self._schedule_details)
 
-        # 预览
+        # 调度预览 chip（圆角边框 + 浅背景，更现代）
         self._preview_label = BodyLabel("")
-        self._preview_label.setStyleSheet(f"color: {Colors.TEXT_SECONDARY};")
-        layout.addWidget(self._preview_label)
+        self._preview_label.setWordWrap(True)
+        self._preview_label.setStyleSheet(
+            f"color: {Colors.TEXT_SECONDARY}; {font_size_css(12)} {FONT_CSS}; "
+            f"background: {Colors.CARD_BG_SOLID}; border: 1px solid {Colors.BORDER}; "
+            f"border-radius: 8px; padding: 8px 12px;"
+        )
+        s2l.addWidget(self._preview_label)
 
-        # 智能体 + 工作目录
+        # 执行模型 + 智能体（横向两列节省垂直空间）
+        self._model_combo = ComboBox()
         self._agent_combo = ComboBox()
-        layout.addLayout(_field("执行智能体", self._agent_combo))
+        exec_row = QHBoxLayout()
+        exec_row.setSpacing(10)
+        exec_row.addLayout(_labeled("执行模型", self._model_combo), 1)
+        exec_row.addLayout(_labeled("执行智能体", self._agent_combo), 1)
+        s2l.addLayout(exec_row)
+        layout.addWidget(s2)
 
-        # 完成通知方式
+        # === Section 3: 通知与目录 ===
+        s3, s3l = _section("通知与目录")
         self._notify_combo = ComboBox()
         self._notify_combo.addItems(["默认弹窗", "系统通知", "Gateway 消息"])
         self._notify_combo.currentIndexChanged.connect(self._on_notify_mode_changed)
-        layout.addLayout(_field("完成通知", self._notify_combo))
+        s3l.addLayout(_labeled("完成通知", self._notify_combo))
+
+        # notify_target_row（gateway 模式展开，纵向 label + combo）
         self._notify_target_row = QWidget()
-        nrow = QHBoxLayout(self._notify_target_row)
+        nrow = QVBoxLayout(self._notify_target_row)
         nrow.setContentsMargins(0, 0, 0, 0)
         nrow.setSpacing(4)
-        nlbl = BodyLabel("发送目标")
-        nlbl.setFixedWidth(90)
-        nrow.addWidget(nlbl)
-        # 直接对接主程序已连接 gateway：下拉列出机器人已知会话，免手填
+        target_lbl = CaptionLabel("发送目标")
+        target_lbl.setStyleSheet(
+            f"color: {Colors.TEXT_SECONDARY}; {font_size_css(11)} {FONT_CSS}; font-weight: 500;"
+        )
+        nrow.addWidget(target_lbl)
         self._notify_target_combo = ComboBox()
-        nrow.addWidget(self._notify_target_combo, 1)
+        nrow.addWidget(self._notify_target_combo)
         self._notify_target_row.setVisible(False)
-        layout.addWidget(self._notify_target_row)
+        s3l.addWidget(self._notify_target_row)
 
-        self._workdir_row = QWidget()
-        wdrow = QHBoxLayout(self._workdir_row)
-        wdrow.setContentsMargins(0, 0, 0, 0)
-        wdrow.setSpacing(4)
+        # 工作目录：行内 line + browse 按钮
         self._workdir_edit = LineEdit()
         self._workdir_edit.setPlaceholderText("留空 = 当前工作目录")
-        wdrow.addWidget(self._workdir_edit, 1)
         browse_btn = ToolButton(FluentIcon.FOLDER)
         browse_btn.setToolTip("选择目录")
-        browse_btn.setFixedSize(28, 28)
+        browse_btn.setFixedSize(32, 32)
         browse_btn.clicked.connect(self._browse_workdir)
-        wdrow.addWidget(browse_btn)
-        layout.addWidget(self._workdir_row)
-        # workdir 行带标签
-        wd_field = QHBoxLayout()
-        wd_lbl = BodyLabel("工作目录")
-        wd_lbl.setFixedWidth(90)
-        wd_field.addWidget(wd_lbl)
-        wd_field.addWidget(self._workdir_row)
-        layout.addLayout(wd_field)
+        wd_widget = QWidget()
+        wd_layout = QHBoxLayout(wd_widget)
+        wd_layout.setContentsMargins(0, 0, 0, 0)
+        wd_layout.setSpacing(6)
+        wd_layout.addWidget(self._workdir_edit, 1)
+        wd_layout.addWidget(browse_btn)
+        s3l.addLayout(_labeled("工作目录", wd_widget))
+        layout.addWidget(s3)
 
         layout.addStretch()
 
-        # 联动预览刷新
+        # 联动预览刷新（signal connect 必须在 setValue 之前）
         self._interval_spin.valueChanged.connect(self._refresh_preview)
         self._interval_unit_combo.currentIndexChanged.connect(self._refresh_preview)
         self._time_edit.timeChanged.connect(self._refresh_preview)
         self._monthday_spin.valueChanged.connect(self._refresh_preview)
         self._once_edit.dateTimeChanged.connect(self._refresh_preview)
         self._cron_edit.textChanged.connect(self._refresh_preview)
+
+        # 默认值统一在所有 signal 连接完成后设置（避免控件未建好就触发 refresh）
+        self._interval_spin.setValue(30)
+        self._weekday_checks[0].setChecked(True)  # 默认周一
+        self._once_edit.setDateTime(_QDT.currentDateTime().addDays(1))
+        self._refresh_preview()
 
     def _on_notify_mode_changed(self, index: int):
         # 仅 Gateway 模式需要目标：拉取主程序已连接 gateway 的已知会话
@@ -807,43 +1060,106 @@ class RunHistoryPanel(QWidget):
         self._build_ui()
 
     def _build_ui(self):
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(4, 4, 4, 4)
-        layout.setSpacing(8)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
 
-        header = QHBoxLayout()
+        # 顶部 hero header：图标 + 标题 + 返回按钮
+        header_w = QFrame()
+        header_w.setObjectName("historyHeader")
+        h_layout = QHBoxLayout(header_w)
+        h_layout.setContentsMargins(20, 14, 16, 14)
+        h_layout.setSpacing(8)
+        icon_w = ToolButton(FluentIcon.HISTORY)
+        icon_w.setIconSize(QSize(18, 18))
+        icon_w.setFixedSize(24, 24)
+        icon_w.setEnabled(False)
+        icon_w.setStyleSheet("background: transparent; border: none;")
+        h_layout.addWidget(icon_w, 0, Qt.AlignVCenter)
         self._title = StrongBodyLabel("运行历史")
-        header.addWidget(self._title)
-        header.addStretch()
-        back_btn = PushButton("← 返回")
+        self._title.setStyleSheet(f"color: {Colors.TEXT_PRIMARY}; {font_size_css(16)} {FONT_CSS}")
+        h_layout.addWidget(self._title, 1)
+        back_btn = PushButton("返回")
+        back_btn.setIcon(FluentIcon.RETURN)
         back_btn.clicked.connect(self.backRequested.emit)
-        header.addWidget(back_btn)
-        layout.addLayout(header)
+        h_layout.addWidget(back_btn)
+        outer.addWidget(header_w)
 
-        # 任务上下文摘要（智能体/模型/调度）
+        # 内容容器
+        content = QWidget()
+        content_layout = QVBoxLayout(content)
+        content_layout.setContentsMargins(16, 12, 16, 16)
+        content_layout.setSpacing(10)
+
+        # 任务上下文摘要（次要色 12px）
         self._ctx_label = BodyLabel("")
         self._ctx_label.setWordWrap(True)
-        layout.addWidget(self._ctx_label)
+        self._ctx_label.setStyleSheet(
+            f"color: {Colors.TEXT_MUTED}; {font_size_css(12)} {FONT_CSS}"
+        )
+        content_layout.addWidget(self._ctx_label)
 
+        # 左右双栏：左侧时间线列表 + 右侧详情卡
         body = QHBoxLayout()
+        body.setSpacing(12)
+
+        # 左：时间线列表（圆角卡片样式 + 选中态高亮）
         self._list = QListWidget()
-        self._list.setMinimumWidth(230)
-        self._list.setStyleSheet(f"QListWidget {{ {font_size_css(13)} {FONT_CSS} }}")
+        self._list.setMinimumWidth(240)
+        self._list.setMaximumWidth(320)
+        self._list.setStyleSheet(
+            f"QListWidget {{ background: {Colors.CARD_BG_SOLID}; "
+            f"border: 1px solid {Colors.BORDER}; border-radius: 12px; "
+            f"padding: 6px; {font_size_css(13)} {FONT_CSS} }} "
+            f"QListWidget::item {{ padding: 8px 10px; border-radius: 8px; "
+            f"margin: 2px 0; }} "
+            f"QListWidget::item:hover {{ background: rgba(125, 211, 252, 0.08); }} "
+            f"QListWidget::item:selected {{ background: rgba(125, 211, 252, 0.15); "
+            f"color: {Colors.TEXT_PRIMARY}; }}"
+        )
         self._list.itemClicked.connect(self._on_item_clicked)
         body.addWidget(self._list, 3)
 
-        detail_wrap = QVBoxLayout()
+        # 右：详情卡（ElevatedCardWidget + 字段网格 + 响应全文）
+        self._detail_card = ElevatedCardWidget()
+        self._detail_card.setBorderRadius(12)
+        detail_layout = QVBoxLayout(self._detail_card)
+        detail_layout.setContentsMargins(16, 14, 16, 14)
+        detail_layout.setSpacing(10)
+
+        # 详情字段区（运行状态/耗时/智能体/模型/错误 等网格）
+        self._fields_layout = QVBoxLayout()
+        self._fields_layout.setSpacing(6)
+        detail_layout.addLayout(self._fields_layout)
+
+        # 分隔线
+        sep = QFrame()
+        sep.setFrameShape(QFrame.HLine)
+        sep.setStyleSheet(
+            f"background: {Colors.BORDER}; max-height: 1px; border: none;"
+        )
+        detail_layout.addWidget(sep)
+
+        # 响应全文区
+        response_header = CaptionLabel("响应全文")
+        response_header.setStyleSheet(
+            f"color: {Colors.TEXT_SECONDARY}; {font_size_css(11)} {FONT_CSS}; font-weight: 500;"
+        )
+        detail_layout.addWidget(response_header)
+
         self._detail = QTextEdit()
         self._detail.setReadOnly(True)
         self._detail.setLineWrapMode(QTextEdit.WidgetWidth)
-        self._detail.setStyleSheet(f"QTextEdit {{ {font_size_css(13)} {FONT_CSS} }}")
-        detail_wrap.addWidget(self._detail, 1)
-        body.addLayout(detail_wrap, 5)
-        layout.addLayout(body, 1)
-
-        self._ctx_label.setStyleSheet(
-            f"color: {Colors.TEXT_SECONDARY}; {font_size_css(12)} {FONT_CSS}"
+        self._detail.setStyleSheet(
+            f"QTextEdit {{ background: {Colors.CARD_BG_SOLID}; "
+            f"border: 1px solid {Colors.BORDER}; border-radius: 8px; "
+            f"padding: 10px 12px; {font_size_css(13)} {FONT_CSS} }}"
         )
+        detail_layout.addWidget(self._detail, 1)
+        body.addWidget(self._detail_card, 5)
+        content_layout.addLayout(body, 1)
+        outer.addWidget(content, 1)
+
         # qfluentwidgets 组件字号跟随系统设置
         apply_font_size_to_widget(self)
 
@@ -1003,28 +1319,42 @@ class CronTasksCard(QFrame):
 
     def _build_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(6)
+        layout.setContentsMargins(16, 14, 16, 12)
+        layout.setSpacing(10)
 
-        # 标题栏
-        title_layout = QHBoxLayout()
-        title_layout.addWidget(self._build_title_icon(26))
-        title_layout.addSpacing(4)
-        title = StrongBodyLabel("定时任务")
-        title_layout.addWidget(title)
-        self._subtitle = BodyLabel("")
-        title_layout.addWidget(self._subtitle)
-        title_layout.addStretch()
+        # Hero header：图标 + 大标题 + 实时统计副标题 + 操作按钮
+        hero = QHBoxLayout()
+        hero.setSpacing(12)
+        icon_w = ToolButton(FluentIcon.STOP_WATCH)
+        icon_w.setIconSize(QSize(20, 20))
+        icon_w.setFixedSize(26, 26)
+        icon_w.setEnabled(False)
+        icon_w.setStyleSheet("background: transparent; border: none;")
+        hero.addWidget(icon_w, 0, Qt.AlignVCenter)
 
-        self._new_btn = PrimaryPushButton("新建任务")
+        title_box = QVBoxLayout()
+        title_box.setSpacing(2)
+        self._title_label = StrongBodyLabel("定时任务")
+        self._title_label.setStyleSheet(
+            f"color: {Colors.TEXT_PRIMARY}; {font_size_css(18)} {FONT_CSS}"
+        )
+        title_box.addWidget(self._title_label)
+        self._subtitle = CaptionLabel("")  # 实时统计：共 N 个 · X 启用 · Y 运行中
+        self._subtitle.setStyleSheet(
+            f"color: {Colors.TEXT_MUTED}; {font_size_css(12)} {FONT_CSS}"
+        )
+        title_box.addWidget(self._subtitle)
+        hero.addLayout(title_box, 1)
+
+        self._new_btn = PrimaryPushButton(FluentIcon.ADD, "新建任务")
         self._new_btn.clicked.connect(self._on_new)
-        title_layout.addWidget(self._new_btn)
+        hero.addWidget(self._new_btn, 0, Qt.AlignVCenter)
 
         close_btn = TransparentToolButton(FluentIcon.CLOSE)
-        close_btn.setFixedSize(24, 24)
+        close_btn.setFixedSize(32, 32)
         close_btn.clicked.connect(self._on_close)
-        title_layout.addWidget(close_btn)
-        layout.addLayout(title_layout)
+        hero.addWidget(close_btn, 0, Qt.AlignVCenter)
+        layout.addLayout(hero)
         layout.addWidget(CardSeparator())
 
         # 三页栈
@@ -1070,20 +1400,23 @@ class CronTasksCard(QFrame):
         plo_layout.setSpacing(0)
         plo_layout.addWidget(self._list_stack, 1)
 
-        # 模板区（常驻）：Flow 布局快捷模板按钮
+        # 模板区（常驻）：Flow 布局快捷模板按钮（带模式图标）
         from qfluentwidgets import FlowLayout
 
         tpl_wrap = QWidget()
         tpl_layout = QVBoxLayout(tpl_wrap)
-        tpl_layout.setContentsMargins(0, 8, 0, 0)
-        tpl_layout.setSpacing(6)
-        tpl_header = BodyLabel("常见任务模板")
-        tpl_header.setStyleSheet(f"color: {Colors.TEXT_SECONDARY}; {font_size_css(12)}")
+        tpl_layout.setContentsMargins(0, 12, 0, 0)
+        tpl_layout.setSpacing(8)
+        tpl_header = BodyLabel("常见任务模板 · 点击预填")
+        tpl_header.setStyleSheet(
+            f"color: {Colors.TEXT_SECONDARY}; {font_size_css(12)} {FONT_CSS}; font-weight: 500;"
+        )
         tpl_layout.addWidget(tpl_header)
         self._tpl_flow = FlowLayout(needAni=False)
         self._tpl_flow.setContentsMargins(0, 0, 0, 0)
         for tpl in JOB_TEMPLATES:
             btn = PushButton(tpl["name"])
+            btn.setIcon(_tpl_icon_for_mode(tpl.get("mode", "daily")))
             btn.clicked.connect(lambda _c, t=tpl: self._on_template_clicked(t))
             self._tpl_flow.addWidget(btn)
         tpl_layout.addLayout(self._tpl_flow)
