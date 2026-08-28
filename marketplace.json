@@ -1943,6 +1943,48 @@
             }
         },
         {
+            "name": "marketplace-recommend",
+            "description": "欢迎卡片插件推荐页签 — 随机推荐市场未安装热门插件，点击直接安装",
+            "version": "0.2.0",
+            "author": "self-evolver",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/marketplace-recommend",
+                "ref": "main"
+            },
+            "components": {
+                "tools": false,
+                "commands": false,
+                "agents": false,
+                "skills": false,
+                "hooks": false,
+                "mcp": false,
+                "lsp": false,
+                "themes": false,
+                "ui": true,
+                "providers": false,
+                "team_templates": false,
+                "model_adapters": false,
+                "loop_policies": false,
+                "storages": false,
+                "serializers": false,
+                "gateways": false,
+                "engines": false
+            },
+            "keywords": [
+                "marketplace",
+                "evolved"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            }
+        },
+        {
             "name": "mcp-builder",
             "description": "MCP 服务器构建助手 — 教用户从零创建 MCP（Model Context Protocol）服务器，连接任意工具/数据源到 DriFox / Claude Code / Cursor。",
             "version": "1.0.0",
