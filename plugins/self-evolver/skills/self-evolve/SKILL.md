@@ -16,7 +16,8 @@ DriFox 的工具/插件全部可热重载（user 根 `~/.drifox/plugins/` 保存
 | `evolution_validate` | 插件结构校验（准入门槛） | `plugin_name` `deep`(bool，改工具逻辑/发布前 true，隔离实跑) |
 | `evolution_inspect` | 扫描已装插件/深查结构/TODO 定位 | `plugin_name` 或 `list_all=true` |
 | `evolution_mcp` | 读写 .mcp.json 管理 MCP 服务器 | `operation`(add/remove/enable/disable/list) `plugin_name` `server_name` `command`/`url` `args` `env`/`headers` |
-| `evolution_journal` | 进化审计日志（每次动作必记） | `operation`(log/list/stats/triage) `action`(create/optimize/fix/rollback/mcp/note) `plugin_name` `summary` `status`(ok/failed/pending) `limit` `lines` |
+| `evolution_journal` | 进化审计日志（每次动作必记） | `operation`(log/list/stats) `action`(create/optimize/fix/rollback/mcp/note) `plugin_name` `summary` `status`(ok/failed/pending) `limit` |
+| `evolution_log_query` | 系统日志查询/诊断（v0.9.0+） | `operation`(list/query/context/triage) `subsystem` `level` `since`/`until` `pattern` `head`/`tail`/`max_hits` `line_no`/`n` `lines` `plugin_name` |
 | `evolution_publish` | 发布到市场仓库 | `plugin_name` `mode`(local/direct/fork) `fork_remote` `push`(bool) `commit_type` `message` |
 
 ## 标准工作流
@@ -177,6 +178,6 @@ for k in stale:
 | `references/storage_engine.md` | 用户要做"存储替换插件/会话换格式/xlsx/jsonl/csv 存会话"等；接口对齐 `system/storages/sqlite.py` |
 | `references/troubleshooting.md` | **任何报错/异常/不生效时**：日志拆分（`all.log` 兜底 + `llm`/`mcp`/`lsp`/`plugins`/`gateway`/`tools`/`team`/`store`/`ui` 分文件）的位置与按场景查询命令、Windows python 命令 9009 坑、MCP 排障实例 |
 
-> 排障第一反射：`evolution_journal operation=triage`（扫日志 ERROR + 关联进化动作），细节见 troubleshooting.md。
+> 排障第一反射：`evolution_log_query operation=triage`（扫日志 ERROR + 检测工具调用 LOOP + 关联 journal 动作），细节见 troubleshooting.md。
 
 > 经验沉淀原则：每完成一个 runtime 组件或踩到一个反复出现的坑，把"症状+根因+正确写法"补到对应 reference，并 journal 记录"优化自进化系统"。
