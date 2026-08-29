@@ -296,7 +296,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 34,
+            "downloads": 35,
             "keywords": [
                 "browser",
                 "web",
@@ -753,7 +753,7 @@
                 "ui": true,
                 "tools": true
             },
-            "downloads": 8,
+            "downloads": 9,
             "keywords": [
                 "cron",
                 "schedule",
@@ -790,7 +790,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 14,
+            "downloads": 15,
             "keywords": [
                 "desktop",
                 "automation",
@@ -1052,7 +1052,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "theme",
                 "fire-emblem",
@@ -1316,7 +1316,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 21,
+            "downloads": 22,
             "platforms": [
                 "windows",
                 "linux",
@@ -1507,7 +1507,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 28,
+            "downloads": 29,
             "keywords": [
                 "git",
                 "source-control",
@@ -2209,7 +2209,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 9,
+            "downloads": 10,
             "keywords": [
                 "skill",
                 "agents",
@@ -2601,7 +2601,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 11,
+            "downloads": 12,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -2626,7 +2626,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 20,
+            "downloads": 21,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -2796,7 +2796,7 @@
                 "tools": true,
                 "skills": true
             },
-            "downloads": 11,
+            "downloads": 12,
             "keywords": [
                 "self-evolve",
                 "plugin",
@@ -3661,7 +3661,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 18,
+            "downloads": 19,
             "keywords": [
                 "powershell",
                 "windows",
