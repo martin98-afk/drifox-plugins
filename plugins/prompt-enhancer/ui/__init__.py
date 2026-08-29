@@ -234,10 +234,13 @@ class _EnhanceConfigCard(_ConfigCardBase):
 
     def _echo(self) -> None:
         """回显当前生效值（默认兜底可见）；阻断 textChanged 循环。"""
+        # PySide6：disconnect() 无连接时返回 False（不抛异常）；PyQt5 抛 TypeError。
+        # 旧代码仅捕获 TypeError → PySide6 下 while True 永不退出 → 打开设置即主线程死循环卡死。
         while True:
             try:
-                self._edit.textChanged.disconnect()
-            except TypeError:
+                if not self._edit.textChanged.disconnect():
+                    break
+            except (TypeError, RuntimeError):
                 break
         val = PluginConfigStore().get(PLUGIN_NAME, "enhance_prompt")
         text = str(val) if val else DEFAULT_ENHANCE_PROMPT
