@@ -301,7 +301,7 @@ class _CalTooltip(QWidget):
         self._text = text
         fm = QFontMetrics(self._font)
         lines = text.split("\n")
-        max_w = max((fm.width(l) for l in lines), default=0)
+        max_w = max((fm.horizontalAdvance(l) for l in lines), default=0)
         line_h = fm.lineSpacing()
         w = max_w + self._padding_h * 2
         h = line_h * len(lines) + self._padding_v * 2
@@ -556,7 +556,7 @@ class _CalendarWidget(QWidget):
         painter.setFont(QFont(self._font_family, 9))
         painter.setPen(colors["cal_label"])
         for i, label in enumerate(day_labels):
-            lx = ox + i * step + (cs - painter.fontMetrics().width(label)) / 2
+            lx = ox + i * step + (cs - painter.fontMetrics().horizontalAdvance(label)) / 2
             painter.drawText(QPointF(lx, oy - 6), label)
 
         if not self._daily or not self._cell_map:
@@ -723,7 +723,7 @@ class _CommitListWidget(QWidget):
         if not msg:
             return 1
         fm = QFontMetrics(QFont(self._font_family, 11))
-        msg_w = fm.width(msg)
+        msg_w = fm.horizontalAdvance(msg)
         line_w = avail_w - 48
         if line_w <= 0 or msg_w <= line_w:
             return 1
@@ -792,7 +792,7 @@ class _CommitListWidget(QWidget):
                 painter.setFont(hash_font)
                 painter.setPen(colors["accent"])
                 painter.drawText(QPointF(pad + 26, y + 5 + hash_fm.ascent()), hash_part)
-                hash_w = pad + 26 + hash_fm.width(hash_part) + 10
+                hash_w = pad + 26 + hash_fm.horizontalAdvance(hash_part) + 10
 
                 # 提交信息
                 painter.setFont(list_font)
