@@ -753,7 +753,7 @@
                 "ui": true,
                 "tools": true
             },
-            "downloads": 10,
+            "downloads": 11,
             "keywords": [
                 "cron",
                 "schedule",
@@ -859,6 +859,7 @@
                 "skills": true,
                 "commands": true
             },
+            "downloads": 1,
             "keywords": [
                 "deepseek",
                 "dsh",
@@ -2427,7 +2428,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "openhanako",
                 "hana",
@@ -2661,7 +2662,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 23,
+            "downloads": 24,
             "keywords": [
                 "prompt",
                 "enhance",
