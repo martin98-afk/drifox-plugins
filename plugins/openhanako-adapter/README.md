@@ -8,14 +8,16 @@ openhanako（HanaAgent）能力适配插件：把其内置技能、智能体人�
 | 命令 | 说明 |
 |---|---|
 | `/diary` | 写今天的日记：collect 当天全部会话 → 第一人称日记 → 落盘 `OH-Works/日记/YYYY-MM-DD.md` |
+| `/recall` | 翻会话记事本：搜索过去的对话、读具体内容，为日记/总结/回忆取材 |
 | `/xing` | 会话转技能：把刚教完的事提炼成 SKILL.md 并安装（热重载生效） |
 
 ### 工具
 | 工具 | 说明 |
 |---|---|
+| `sessions` | DriFox 会话库检索（只读）：list 最近会话 / search 关键词全文搜索（含命中片段）/ read 按 id 读对话正文；自动解压 zstd 存储的 messages，剥离注入块与推理过程 |
 | `jimeng` | 即梦 CLI 透传：submit 提交生图/生视频任务；query 轮询并下载成品 |
 
-（/diary、/xing 不需要专用工具：命令 prompt 直接驱动模型，模型用 powershell/read/write 自主完成 IO）
+（/diary、/recall、/xing 不需要专用数据库外工具：sessions 负责取材，写作/提炼由命令 prompt 驱动模型完成）
 
 ### 智能体（人格底座）
 `hanako`（温暖·文学，MOOD 块）、`butter`（共情·洞察，PULSE 块）、`ming`（克制·深刻，沉思块）、`kong`（极简·工具，无独白）——openhanako 四 yuan 底座原样移植。
