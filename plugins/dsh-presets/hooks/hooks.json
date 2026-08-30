@@ -1,0 +1,31 @@
+{
+    "description": "dsh-presets Hook — DSH preset 路由：BuildSystemPrompt 注入 preset 声明，UserPromptSubmit 检测 /dsh-mode 切换指令并落盘状态",
+    "hooks": {
+        "BuildSystemPrompt": [
+            {
+                "hooks": [
+                    {
+                        "type": "python",
+                        "function": ".dsh_presets_hook:hook_build_system_prompt",
+                        "timeout": 5,
+                        "enabled": true,
+                        "id": "dsh-presets-0001-4000-8000-000000000001"
+                    }
+                ]
+            }
+        ],
+        "UserPromptSubmit": [
+            {
+                "hooks": [
+                    {
+                        "type": "python",
+                        "function": ".dsh_presets_hook:hook_user_prompt_submit",
+                        "timeout": 5,
+                        "enabled": true,
+                        "id": "dsh-presets-0002-4000-8000-000000000002"
+                    }
+                ]
+            }
+        ]
+    }
+}

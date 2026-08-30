@@ -839,6 +839,38 @@
             }
         },
         {
+            "name": "dsh-presets",
+            "description": "DeepSeek Harness 三种 agent preset（standard/code/cordis）的 DriFox 适配 — 三个 Agent + 模式路由 hook + 切换/状态命令。",
+            "version": "1.0.0",
+            "author": "DriFox 社区",
+            "license": "MIT",
+            "categories": [
+                "agent"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/dsh-presets",
+                "ref": "main"
+            },
+            "components": {
+                "agents": true,
+                "hooks": true,
+                "skills": true,
+                "commands": true
+            },
+            "keywords": [
+                "deepseek",
+                "dsh",
+                "agent-preset",
+                "cordis",
+                "mode-router"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            }
+        },
+        {
             "name": "dsh-router",
             "description": "dsh-routing-suite 路由预设的 DriFox 翻译版 — 确定性自动路由：关键词分类（build→react / fix→spec / 模糊→weak）+ persona 注入 + 每轮近场引导（实测 P1-P23 收敛提升）。",
             "version": "1.0.0",

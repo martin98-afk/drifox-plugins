@@ -1,0 +1,26 @@
+{
+    "name": "dsh-presets",
+    "description": "DeepSeek Harness 三种 agent preset（standard/code/cordis）的 DriFox 适配 — 三个 Agent + 模式路由 hook + 切换/状态命令。",
+    "version": "1.0.0",
+    "author": {
+        "name": "DriFox 社区"
+    },
+    "license": "MIT",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "deepseek",
+        "dsh",
+        "agent-preset",
+        "cordis",
+        "mode-router"
+    ],
+    "components": {
+        "agents": true,
+        "hooks": true,
+        "skills": true,
+        "commands": true
+    }
+}
