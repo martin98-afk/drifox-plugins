@@ -21,22 +21,26 @@
 自包含：纯标准库实现（subprocess/base64），不依赖主程序 services。
 """
 import base64
+import functools
 import re
 import shutil
 import subprocess
 import sys
-from html import escape
 
 from app.tools.registry import make_summarize_from_preview
 from app.tools.result import ToolResult
 
 
 # ── PowerShell 解释器自动检测（优先 PowerShell 7 pwsh，回退 Windows PowerShell 5.1）──
+@functools.lru_cache(maxsize=1)
 def _detect_powershell() -> str:
     """返回可用的 PowerShell 可执行文件名。
 
     Windows 必定有 powershell.exe（5.1，系统自带）。
     若装了 PowerShell 7（pwsh.exe，UTF-8/跨平台更好）则优先用。
+
+    结果进程级缓存：shutil.which 要遍历 PATH 逐个 stat，工具高频调用时是纯浪费
+    （PATH 里的解释器不会在一次会话中途出现/消失）。
     """
     for exe in ("pwsh", "powershell"):
         if shutil.which(exe):
@@ -218,19 +222,34 @@ _SCHEMA = {
             "properties": {
                 "command": {"type": "string", "description": "命令"},
                 "timeout": {"type": "integer", "description": "超时秒数"},
+                "description": {
+                    "type": "string",
+                    "description": (
+                        "必填。一句话自然语言描述这条命令在做什么（展示给用户看，替代原始命令），"
+                        "例如命令为 'Get-ChildItem -Path X -Recurse -File' 时填"
+                        " '遍历插件市场目录结构'。写意图，不要复述命令本身。"
+                    ),
+                },
             },
-            "required": ["command"],
+            "required": ["command", "description"],
         },
     },
 }
 
 
 def _preview(args: dict) -> str:
-    script = (args or {}).get("command", "")
-    first_line = (
-        str(script).strip().splitlines()[0] if str(script).strip() else ""
-    )
-    return f"PowerShell: {escape(first_line)[:60]}"
+    """折叠卡预览：优先展示大模型填写的 description，无则回退命令首行。
+
+    ⚠️ 不要在这里 escape：主程序三处消费方（折叠头 / inline 卡 / 流式块）都会
+    统一 escape，这里再转一次会变成 &amp;amp; 的双重转义（命令含 & > < 时可见）。
+    """
+    args = args or {}
+    desc = str(args.get("description") or "").strip()
+    if desc:
+        return desc
+    script = str(args.get("command", "")).strip()
+    first_line = script.splitlines()[0] if script else ""
+    return f"PowerShell: {first_line[:60]}" if first_line else "PowerShell 执行"
 
 
 def register(registry):
