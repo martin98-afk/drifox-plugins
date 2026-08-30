@@ -1,6 +1,6 @@
 {
     "name": "prompt-enhancer",
-    "version": "0.2.3",
+    "version": "0.2.4",
     "description": "输入框按钮：一键用 LLM 优化当前输入框的提示词，增强指令可在系统配置中多行编辑。优化中按钮圆环转圈动画，复用主程序模型配置，「提示词增强模型」选择可持久化（关闭再打开保留），闭包实现（不修改主程序）。",
     "author": {
         "name": "DriFox Contributors"
