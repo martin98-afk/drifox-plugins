@@ -57,21 +57,26 @@ class CronScheduler(QObject):
         if self._timer.isActive():
             return
         self._reload()
-        # 存量任务补算 next_run_at（禁用/单次已过期除外）；复位上次异常退出
-        # 遗留的 lastStatus=running（无 executor 在跑却显示运行中的假状态）
+        # 存量任务补算 next_run_at（空 / 已过期均重算，含上次 tick 后关软件残留的过期时间）；
+        # 复位上次异常退出遗留的 lastStatus=running
+        # （无 executor 在跑却显示运行中的假状态）
+        # —— 仅在 next_run_at 为空时重算不够：若磁盘残留过期时间戳，
+        # _tick() 第一次扫描就会把过期任务当到期任务立刻触发。
         changed = False
         now = datetime.now()
         for job in self._jobs:
             if job.last_status == "running":
                 job.last_status = ""
                 changed = True
-            if job.enabled and not job.next_run_at:
-                if not job.recompute_next_run(now):
-                    if job.type == "at":
-                        job.enabled = False  # 过期单次任务自动禁用
-                        changed = True
+            if job.enabled:
+                nxt = job.next_run_dt()
+                if nxt is None or nxt <= now:
+                    if not job.recompute_next_run(now):
+                        if job.type == "at":
+                            job.enabled = False  # 过期单次任务自动禁用
+                            changed = True
                         continue
-                changed = True
+                    changed = True
         if changed:
             self._store.save_jobs(self._jobs)
         self._timer.start()
