@@ -617,7 +617,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "command-code",
                 "commandcode",
@@ -753,7 +753,7 @@
                 "ui": true,
                 "tools": true
             },
-            "downloads": 13,
+            "downloads": 14,
             "keywords": [
                 "cron",
                 "schedule",
@@ -1123,7 +1123,7 @@
                 "commands": true,
                 "agents": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "development",
                 "architecture",
@@ -2428,7 +2428,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 10,
+            "downloads": 11,
             "keywords": [
                 "openhanako",
                 "hana",
@@ -2662,7 +2662,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 26,
+            "downloads": 27,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -3424,7 +3424,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 8,
+            "downloads": 9,
             "keywords": [
                 "twin",
                 "dual",
@@ -3697,7 +3697,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 21,
+            "downloads": 22,
             "keywords": [
                 "powershell",
                 "windows",
