@@ -617,7 +617,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "command-code",
                 "commandcode",
@@ -753,7 +753,7 @@
                 "ui": true,
                 "tools": true
             },
-            "downloads": 11,
+            "downloads": 13,
             "keywords": [
                 "cron",
                 "schedule",
@@ -1389,7 +1389,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -1459,7 +1459,7 @@
                 "gateways": true,
                 "tools": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -2428,7 +2428,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 6,
+            "downloads": 10,
             "keywords": [
                 "openhanako",
                 "hana",
@@ -2662,7 +2662,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 24,
+            "downloads": 26,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -2832,7 +2832,7 @@
                 "tools": true,
                 "skills": true
             },
-            "downloads": 12,
+            "downloads": 13,
             "keywords": [
                 "self-evolve",
                 "plugin",
@@ -3697,7 +3697,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 19,
+            "downloads": 21,
             "keywords": [
                 "powershell",
                 "windows",
