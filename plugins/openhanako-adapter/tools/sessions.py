@@ -20,6 +20,7 @@ from pathlib import Path
 from app.tools.result import ToolResult
 
 ROLES = ("user", "assistant")
+_title_cache: dict = {}
 
 
 # ── 数据库定位 ────────────────────────────────────────────
@@ -358,12 +359,49 @@ _SCHEMA = {
 }
 
 
+def _session_title(session_id: str) -> str:
+    """按 id/前缀查会话标题，供 preview 显示；失败返回空串。"""
+    sid = (session_id or "").strip()
+    if not sid:
+        return ""
+    cached = _title_cache.get(sid)
+    if cached is not None:
+        return cached
+    title = ""
+    p = _db_path({})
+    try:
+        if p.exists():
+            conn = sqlite3.connect(f"file:{p}?mode=ro", uri=True, timeout=3)
+            try:
+                row = conn.execute(
+                    "SELECT title FROM sessions WHERE session_id = ?", (sid,)
+                ).fetchone()
+                if row is None:
+                    row = conn.execute(
+                        "SELECT title FROM sessions WHERE session_id LIKE ? LIMIT 1",
+                        (sid + "%",),
+                    ).fetchone()
+                title = str(row[0] or "") if row else ""
+            finally:
+                conn.close()
+    except Exception:
+        title = ""
+    if len(_title_cache) > 64:
+        _title_cache.clear()
+    _title_cache[sid] = title
+    return title
+
+
 def _preview(args: dict) -> str:
     action = (args or {}).get("action", "")
     if action == "search":
         return f"搜索会话「{str((args or {}).get('query', ''))[:30]}」"
     if action == "read":
-        return f"读取会话 {str((args or {}).get('session_id', ''))[:16]}"
+        sid = str((args or {}).get("session_id", ""))
+        title = _session_title(sid)
+        if title:
+            return f"读取会话「{title[:30]}」"
+        return f"读取会话 {sid[:16]}"
     days = (args or {}).get("days")
     return f"最近会话（{days}天）" if days else "最近会话"
 
