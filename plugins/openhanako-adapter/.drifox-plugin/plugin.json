@@ -1,7 +1,7 @@
 {
     "name": "openhanako-adapter",
     "description": "openhanako（HanaAgent）能力适配插件：内置技能、智能体人格、beautify HTML 美学、日记（/diary）、会话检索（/recall + sessions 工具）、会话转技能（/xing）、即梦 CLI 生图",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "author": {
         "name": "mading"
     },
