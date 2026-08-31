@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1788186973.639181,
+  "fetched_at": 1788208166.8195686,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 0,
@@ -19,7 +19,7 @@
     "code-reviewer": 1,
     "code-simplifier": 1,
     "codegraph-tools": 8,
-    "command-code": 4,
+    "command-code": 5,
     "context-stats": 17,
     "context-usage-stats": 0,
     "context7": 4,
@@ -80,7 +80,7 @@
     "ponytail": 9,
     "project-dashboard": 18,
     "project-side-rail": 12,
-    "prompt-enhancer": 27,
+    "prompt-enhancer": 28,
     "python-pro": 1,
     "rdr2": 4,
     "react-pro": 1,
