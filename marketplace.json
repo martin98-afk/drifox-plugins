@@ -53,6 +53,7 @@
             "components": {
                 "commands": true
             },
+            "downloads": 1,
             "keywords": [
                 "video-generation",
                 "multimodal",
@@ -196,7 +197,7 @@
                 "ui": true,
                 "agents": true
             },
-            "downloads": 8,
+            "downloads": 10,
             "keywords": [
                 "autoloop",
                 "loop",
@@ -269,7 +270,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -328,7 +329,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 17,
+            "downloads": 18,
             "keywords": [
                 "calendar",
                 "date",
@@ -651,7 +652,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 17,
+            "downloads": 18,
             "keywords": [
                 "welcome",
                 "stats",
@@ -1020,7 +1021,7 @@
                 "lsp": true,
                 "ui": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "example",
                 "template",
@@ -1509,7 +1510,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 11,
+            "downloads": 12,
             "keywords": [
                 "git",
                 "dashboard",
@@ -1821,7 +1822,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "proxy",
                 "network",
@@ -2125,7 +2126,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2185,7 +2186,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2601,7 +2602,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 18,
+            "downloads": 20,
             "keywords": [
                 "dashboard",
                 "stats",
@@ -2637,7 +2638,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 12,
+            "downloads": 13,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -2662,7 +2663,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 28,
+            "downloads": 29,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -2832,7 +2833,7 @@
                 "tools": true,
                 "skills": true
             },
-            "downloads": 13,
+            "downloads": 14,
             "keywords": [
                 "self-evolve",
                 "plugin",
@@ -2902,7 +2903,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "session",
                 "history",
@@ -3000,7 +3001,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -3178,7 +3179,7 @@
                 "ui": true,
                 "agents": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "taskboard",
                 "kanban",
@@ -3335,7 +3336,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -3462,7 +3463,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "animation",
                 "motion",
