@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1788392469.0099645,
+  "fetched_at": 1788401145.041645,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 1,
@@ -19,7 +19,7 @@
     "code-reviewer": 1,
     "code-simplifier": 1,
     "codegraph-tools": 8,
-    "command-code": 5,
+    "command-code": 6,
     "context-stats": 18,
     "context-usage-stats": 0,
     "context7": 4,
