@@ -754,7 +754,7 @@
                 "ui": true,
                 "tools": true
             },
-            "downloads": 14,
+            "downloads": 15,
             "keywords": [
                 "cron",
                 "schedule",
@@ -2663,7 +2663,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 29,
+            "downloads": 30,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -2744,6 +2744,7 @@
                 "gateways": false,
                 "engines": false
             },
+            "downloads": 3,
             "keywords": [
                 "screenshot",
                 "clipboard",
@@ -2882,7 +2883,7 @@
                 "tools": true,
                 "skills": true
             },
-            "downloads": 14,
+            "downloads": 15,
             "keywords": [
                 "self-evolve",
                 "plugin",
