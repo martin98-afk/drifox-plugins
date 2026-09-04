@@ -1,0 +1,43 @@
+{
+    "name": "quick-screenshot",
+    "version": "0.1.0",
+    "description": "输入框工具栏一键选区截图：点按钮拖框选取屏幕区域，松手自动复制到系统剪贴板，Ctrl+V 进输入框即可作为附件发送",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "license": "MIT",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "screenshot",
+        "clipboard",
+        "input-button",
+        "selection",
+        "选区截图"
+    ],
+    "components": {
+        "tools": false,
+        "commands": false,
+        "agents": false,
+        "skills": false,
+        "hooks": false,
+        "mcp": false,
+        "lsp": false,
+        "themes": false,
+        "ui": true,
+        "providers": false,
+        "team_templates": false,
+        "model_adapters": false,
+        "loop_policies": false,
+        "storages": false,
+        "serializers": false,
+        "gateways": false,
+        "engines": false
+    }
+}
