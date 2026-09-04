@@ -192,6 +192,23 @@ def _start_hidden_capture(context: Dict[str, Any], window) -> None:
         QToolTip.showText(QCursor.pos(), f"截图失败：{e}")
 
 
+def _on_screenshot_command(args: str = "") -> None:
+    """命令入口（/quick-screenshot 或自定义快捷键触发）。
+
+    无按钮点击上下文：从 window_registry 取首个存活窗口作 InfoBar parent 兜底。
+    """
+    main_widget = None
+    try:
+        from app.core.window_registry import alive_window_instances
+
+        wins = alive_window_instances()
+        if wins:
+            main_widget = wins[0]
+    except Exception as e:  # noqa: BLE001 — 取不到宿主窗口不阻塞截图
+        logger.debug(f"[quick-screenshot] 命令触发未取到宿主窗口: {e}")
+    _on_screenshot_clicked({"main_widget": main_widget})
+
+
 def register_ui(registry) -> None:
     """注册输入框按钮。热重载时主程序重新调用本函数。"""
     # 热重载兼容：清理旧子模块缓存（避免 Python 用旧 sys.modules 引用）
@@ -222,3 +239,13 @@ def register_ui(registry) -> None:
         "[quick-screenshot] 输入框按钮已注册（新建会话左侧）"
         + ("，右键=隐藏窗口截图" if supports_right else "，旧主程序无右键能力")
     )
+
+    # 命令 handler：commands/quick-screenshot.md 注册的 FUNCTION 命令（命令名 = 文件名）
+    # 挂全局处理器后，快捷键触发走 _execute_command → FunctionCommandHandlers 直达截图。
+    # dict 覆盖式注册，热重载重复调用幂等。
+    try:
+        from app.core.builtin_commands import FunctionCommandHandlers
+
+        FunctionCommandHandlers.register(PLUGIN_NAME, _on_screenshot_command)
+    except Exception as e:  # noqa: BLE001 — 宿主无该 API 时退化为仅按钮入口
+        logger.warning(f"[quick-screenshot] 命令处理器注册失败（快捷键入口不可用）: {e}")
