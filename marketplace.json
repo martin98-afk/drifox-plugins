@@ -2711,6 +2711,55 @@
             }
         },
         {
+            "name": "quick-screenshot",
+            "description": "输入框工具栏一键选区截图：点按钮拖框选取屏幕区域，松手自动复制到系统剪贴板，Ctrl+V 进输入框即可作为附件发送",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/quick-screenshot",
+                "ref": "main"
+            },
+            "components": {
+                "tools": false,
+                "commands": false,
+                "agents": false,
+                "skills": false,
+                "hooks": false,
+                "mcp": false,
+                "lsp": false,
+                "themes": false,
+                "ui": true,
+                "providers": false,
+                "team_templates": false,
+                "model_adapters": false,
+                "loop_policies": false,
+                "storages": false,
+                "serializers": false,
+                "gateways": false,
+                "engines": false
+            },
+            "keywords": [
+                "screenshot",
+                "clipboard",
+                "input-button",
+                "selection",
+                "选区截图"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "rdr2",
             "description": "荒野大镖客主题 — Red Dead Redemption 2 灵感深色主题，血红主调、荒漠暖金点缀。",
             "version": "1.0.0",
