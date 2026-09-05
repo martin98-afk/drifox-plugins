@@ -2712,8 +2712,8 @@
         },
         {
             "name": "quick-screenshot",
-            "description": "输入框工具栏一键选区截图：点按钮拖框选取屏幕区域，松手自动复制到系统剪贴板，Ctrl+V 进输入框即可作为附件发送",
-            "version": "0.1.0",
+            "description": "输入框工具栏一键选区截图：左键点按钮拖框选取屏幕区域，松手自动复制到系统剪贴板，Ctrl+V 进输入框即可作为附件发送；右键按钮先隐藏 DriFox 主窗再截图，可截身后的画面",
+            "version": "0.2.0",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
