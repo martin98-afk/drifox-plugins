@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.8.6 (2026-09-05)
+### ✨ quick-screenshot 右键隐藏主窗截图（v0.2.0）
+- **右键按钮隐藏截图**：右键点工具栏截图按钮 → DriFox 主窗 `hide()` → 等 280ms DWM 合成刷新后 `grabWindow` 冻结底图 → 选区复制剪贴板 → 主窗自动恢复并抢回前台（`show`+`raise_`+`activateWindow`）→ InfoBar 提示；Esc/右键取消同样恢复，任何失败路径强制恢复主窗不留黑屏
+- **主程序接口扩展**：`register_input_button` 新增 `on_right_click` 参数（同款 context），按钮右键走 `CustomContextMenu`+`customContextMenuRequested` 派发，不再弹系统菜单；插件侧 `inspect.signature` 检测降级，旧主程序自动回纯左键模式（tooltip 同步切换）
+- **左键行为不变**：快速截图仍含 DriFox 窗口，遮罩内右键仍是取消选区
+
 ## 2.8.5 (2026-08-28)
 ### ✨ 新增 command-code 服务商插件（v0.1.0）
 - **Command Code 聚合网关接入**：`providers/command_code.py` 注册 `Command Code` 服务商，走 OpenAI 兼容协议（`https://api.commandcode.ai/provider/v1`），Bearer 鉴权，把 Claude / GPT / Gemini / DeepSeek / Kimi / GLM / MiniMax 等主流与开源模型统一接入 DriFox 模型选择器
