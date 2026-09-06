@@ -68,8 +68,6 @@ _DRIFOX_BUILTIN_TOOLS: list[dict] = [
     # 子代理
     {"name": "subagent_para", "cn_name": "并行子代理", "description": "并行派发多个子代理",
      "danger": "safe", "aliases": []},
-    {"name": "subagent_dag", "cn_name": "DAG 子代理", "description": "DAG 工作流派发子代理",
-     "danger": "safe", "aliases": []},
     {"name": "subagent_status", "cn_name": "子代理状态", "description": "查询后台子代理进度",
      "danger": "safe", "aliases": []},
     {"name": "team_send_message", "cn_name": "团队消息", "description": "向团队成员发消息",

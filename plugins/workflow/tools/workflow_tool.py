@@ -718,7 +718,7 @@ def _workflow_description(subagent_names: list) -> str:
     """
     base = (
         "运行受限 Python 编排脚本，扇出子智能体。适合大规模多智能体编排（审计/迁移/多角度研究/对抗验证）；"
-        "一两个委派用 subagent_para，固定依赖图用 subagent_dag。\n\n"
+        "一两个委派用 subagent_para。\n\n"
         "脚本是同步 Python，顶层直接执行，最终结果赋给 result 变量（未赋则为 null）。\n\n"
         "钩子（def 定义，签名严格）：\n"
         "- agent(prompt, agent=角色, phase=分组, label=标签, model=别名, schema=JSONSchema) -> str|None："
