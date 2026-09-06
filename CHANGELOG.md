@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.9.0 (2026-09-06)
+### ✨ voice-input 识别引擎双后端：Whisper 优先，SAPI5 自动兜底（v0.2.0）
+- **准确率瓶颈根治**：旧版全程走 SAPI5 dictation（Vista 时代离线引擎，中文听写字准确率仅 ~60–75%、无标点），属引擎天花板；新增 `ui/whisper_recognizer.py` faster-whisper 后端（CPU int8、固定 zh、VAD 裁剪、`initial_prompt` 引导简体中文与标点、关前文条件依赖防长音频幻觉），中文准确率提升至 ~90%+
+- **双引擎自动切换不破会话**：`ui/__init__.py` 停止录音后按可用性探测（轻量 `find_spec`，不卡 UI）选择后端；Whisper 依赖缺失 / 模型下载失败 / 识别异常任一环节自动回退 SAPI5 并 InfoBar 提示，插件永不失效；浮窗新增 `set_status` 实时反馈「下载模型… / 识别中…」阶段
+- **自包含依赖安装**：`tools/install_whisper.py` 一键把 faster-whisper 装进插件自带 `deps/`（desktop-automation 同款 `sys.path` 注入），pip 按宿主解释器自动挑选编译轮子 —— ctranslate2 4.8.2（cp314）/ av（abi3）/ tokenizers（abi3）/ numpy 2.5.2 实测解析通过；装完隔离子进程验证 import，卸载删 `deps/` 即可
+- **模型首次自动下载 + 档位可配**：默认 small（≈460MB，CPU 实时率良好），缓存 `~/.cache/drifox-voice-input/`；`DRIFOX_VOICE_MODEL` 可切 tiny/base/medium，`DRIFOX_VOICE_WHISPER_DIR` 可改缓存目录；国内网络可设 `HF_ENDPOINT=https://hf-mirror.com`
+- README / plugin.json 同步更新（v0.1.0 → v0.2.0）
+
 ## 2.8.6 (2026-09-05)
 ### ✨ quick-screenshot 右键隐藏主窗截图（v0.2.0）
 - **右键按钮隐藏截图**：右键点工具栏截图按钮 → DriFox 主窗 `hide()` → 等 280ms DWM 合成刷新后 `grabWindow` 冻结底图 → 选区复制剪贴板 → 主窗自动恢复并抢回前台（`show`+`raise_`+`activateWindow`）→ InfoBar 提示；Esc/右键取消同样恢复，任何失败路径强制恢复主窗不留黑屏

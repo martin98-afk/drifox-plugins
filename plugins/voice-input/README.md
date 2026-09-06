@@ -1,6 +1,8 @@
 # Voice Input - 输入框语音听写
 
-输入框工具栏麦克风按钮：点击开始录音，再次点击结束并把识别文字插入输入框光标处（不自动发送，可继续编辑）。使用 Windows 自带离线语音识别（SAPI5 中文引擎），**零第三方依赖**。
+输入框工具栏麦克风按钮：点击开始录音，再次点击结束并把识别文字插入输入框光标处（不自动发送，可继续编辑）。
+
+**识别引擎双后端**：默认自动选择 —— 本地 Whisper（faster-whisper，中文准确率 ~90%+）优先；未安装时自动回退 Windows 自带离线识别（SAPI5 中文引擎），插件始终可用。
 
 ## 使用
 
@@ -10,11 +12,53 @@
 4. 识别文字插入输入框光标处，InfoBar 提示结果
 5. 取消：点浮窗「取消」键，丢弃本次录音
 
-## 依赖
+## 引擎选择与准确率
 
-**无需安装任何依赖。** 录音走 winmm（`mciSendStringW`，ctypes 标准库调用），识别走 SAPI5（`win32com`，随 DriFox 运行环境自带）。
+| 后端 | 中文准确率 | 依赖 | 说明 |
+|------|-----------|------|------|
+| **Whisper（优先）** | ~90%+，带标点 | faster-whisper + 一次模型下载 | 离线、免费、隐私好；默认 small 档（约 460MB） |
+| SAPI5（自动回退） | ~60–75%，无标点 | 零 | Windows 传统离线引擎，仅作兜底 |
 
-### 引擎要求
+> 为什么准确率差？旧版全程走 SAPI5 dictation（Windows Vista/7 时代的离线听写引擎），
+> 中文同音字错误多、无标点，这是引擎天花板，录音/调用方式无法弥补。
+
+## 安装 faster-whisper（推荐，提升明显）
+
+### 方式一：一键脚本（装进插件自带 deps/，自包含）
+
+用 **DriFox 宿主的同一个 Python 解释器**执行：
+
+```bash
+<DriFox-python> plugins/voice-input/tools/install_whisper.py
+```
+
+脚本会把 faster-whisper 及编译依赖（ctranslate2 / av / tokenizers 等）装到
+`plugins/voice-input/deps/`，并按宿主解释器自动挑选匹配的编译轮子（cp314/abi3 均可），
+装完自动验证 import。卸载：删除 `deps/` 目录即可（插件自动回退 SAPI5）。
+
+### 方式二：直接装进宿主环境
+
+```bash
+<DriFox-python> -m pip install faster-whisper
+```
+
+## 首次使用：自动下载模型
+
+Whisper 首次识别会自动从 HuggingFace 下载中文模型（默认 **small** ≈460MB，仅一次，
+缓存于 `~/.cache/drifox-voice-input/`），浮窗会显示「下载模型…」进度文案，完成后自动识别。
+
+配置（环境变量）：
+
+| 变量 | 作用 | 取值 |
+|------|------|------|
+| `DRIFOX_VOICE_MODEL` | 模型档位 | `tiny`(≈75MB) / `base`(≈145MB) / `small`(460MB, 默认) / `medium`(≈1.5GB) |
+| `DRIFOX_VOICE_WHISPER_DIR` | 模型缓存目录 | 任意绝对路径 |
+
+- 想最省流量先试效果：`DRIFOX_VOICE_MODEL=tiny`
+- 追求更高准确率且机器性能够：`DRIFOX_VOICE_MODEL=medium`
+- 国内网络下载模型失败时：设 `HF_ENDPOINT=https://hf-mirror.com`（HuggingFace 镜像）
+
+## SAPI5 引擎要求（仅回退路径需要）
 
 Windows 系统需带中文语音识别引擎（zh-CN）。验证：
 
@@ -29,16 +73,19 @@ $cat.EnumerateTokens() | ForEach-Object { "$($_.GetAttribute('Language')) :: $($
 
 ## 已知上限
 
-- SAPI5 引擎为 Windows 传统识别引擎，中文听写同音字错误多于现代 ASR（如 faster-whisper）；本插件先验证链路，后续可扩展本地 whisper 引擎
-- 仅支持普通话（zh-CN），英文等语言引擎检测与切换在计划中
+- 仅支持普通话（zh-CN）；英文等语言识别在计划中
+- Whisper 为 CPU int8 离线推理：small 档录音后约 1–3 秒出结果，medium 更慢
 - 录音为按需瞬时采集，仅在录音期间读取麦克风，结束即释放
 
 ## 工作原理
 
 ```
-点按钮 → winmm 录 16kHz 单声道 WAV（%TEMP%）→ SAPI5 SpInprocRecognizer
-+ zh-CN token + dictation 语法识别（QThread，CoInitialize）→ 文本回主线程
-→ input_area 光标处 insertText → 删除临时 WAV
+点按钮 → winmm 录 16kHz/16bit/mono WAV（%TEMP%）
+        → 引擎探测：faster-whisper 可用? ── 是 → Whisper CPU(int8) + VAD + 固定 zh
+        │                              └─ 否 → SAPI5 SpInprocRecognizer + dictation
+        → 文本回主线程 → input_area 光标处 insertText → 删除临时 WAV
 ```
 
-按钮位置锚定 `after:quick-screenshot`（未安装该插件时降级到工具栏末尾）。
+引擎探测只做轻量 `find_spec`（不卡 UI）；真正的 import / 模型下载 / 识别都在
+QThread 内完成，任一环节失败自动回退另一引擎。按钮位置锚定
+`after:quick-screenshot`（未安装该插件时降级到工具栏末尾）。
