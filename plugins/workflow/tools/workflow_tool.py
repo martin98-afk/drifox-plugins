@@ -1850,4 +1850,8 @@ def register(registry):
         render=_render_workflow_body,
         summarize=make_summarize_from_preview(_preview_workflow),
         keep_in_content=True,
+        # 动态描述构造器挂 registry metadata：主程序 get_builtin_tools_schema
+        # 从这里拿函数注入角色列表。不许主程序 import 本模块（打包环境
+        # plugins/ 不可作为包导入）。
+        metadata={"description_builder": _workflow_description},
     )
