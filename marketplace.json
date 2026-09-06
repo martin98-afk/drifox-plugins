@@ -3566,6 +3566,56 @@
             }
         },
         {
+            "name": "voice-input",
+            "description": "输入框工具栏语音听写按钮：点击开始录音，再次点击结束并把识别文字插入输入框光标处。使用 Windows 自带离线语音识别（SAPI5 中文引擎），零第三方依赖",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/voice-input",
+                "ref": "main"
+            },
+            "components": {
+                "tools": false,
+                "commands": false,
+                "agents": false,
+                "skills": false,
+                "hooks": false,
+                "mcp": false,
+                "lsp": false,
+                "themes": false,
+                "ui": true,
+                "providers": false,
+                "team_templates": false,
+                "model_adapters": false,
+                "loop_policies": false,
+                "storages": false,
+                "serializers": false,
+                "gateways": false,
+                "engines": false
+            },
+            "keywords": [
+                "voice",
+                "dictation",
+                "speech-recognition",
+                "input-button",
+                "语音输入",
+                "听写"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "voice-reply",
             "description": "将 AI 回复转为语音播放（Windows SAPI5 离线 TTS，零依赖）",
             "version": "1.1.0",
@@ -3794,6 +3844,58 @@
                 "提示词注入",
                 "记忆",
                 "产物面板"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "workflow",
+            "description": "受限 Python 脚本编排子智能体：条件/循环/并行扇出，默认后台立即返回 run_id，对话流实时卡片可见进度；支持 save/list/load/resume",
+            "version": "0.2.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/workflow",
+                "ref": "main"
+            },
+            "components": {
+                "tools": true,
+                "commands": false,
+                "agents": false,
+                "skills": false,
+                "hooks": false,
+                "mcp": false,
+                "lsp": false,
+                "themes": false,
+                "ui": false,
+                "providers": false,
+                "team_templates": false,
+                "model_adapters": false,
+                "loop_policies": false,
+                "storages": false,
+                "serializers": false,
+                "gateways": false,
+                "engines": false
+            },
+            "keywords": [
+                "workflow",
+                "orchestration",
+                "subagent",
+                "parallel",
+                "pipeline",
+                "编排",
+                "子智能体",
+                "并行"
             ],
             "drifox": {
                 "min_version": "0.5.0"
