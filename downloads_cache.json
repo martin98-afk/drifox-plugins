@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1788653280.3217707,
+  "fetched_at": 1788670433.5386987,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 1,
@@ -106,12 +106,14 @@
     "twin-chat": 9,
     "ui-motion-skills": 4,
     "voice-clone": 1,
+    "voice-input": 0,
     "voice-reply": 6,
     "weather-query": 0,
     "web-artifacts-builder": 2,
     "web-design-skills": 2,
     "webapp-testing": 2,
     "win-powershell": 22,
-    "workbuddy": 7
+    "workbuddy": 7,
+    "workflow": 0
   }
 }
