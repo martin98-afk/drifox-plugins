@@ -110,6 +110,11 @@ class RecordingOverlay(QWidget):
         self._status_label.setText("识别中…")
         self._cancel_btn.setEnabled(False)
 
+    def set_status(self, text: str) -> None:
+        """识别期间更新状态文案（如「下载模型中…」），识别态之外忽略。"""
+        if self._recognizing:
+            self._status_label.setText(text)
+
     # ── 定时器槽 ──
 
     def _on_tick(self) -> None:
