@@ -3857,7 +3857,7 @@
             "name": "workflow",
             "description": "受限 Python 脚本编排子智能体：条件/循环/并行扇出，默认后台立即返回 run_id，对话流实时卡片可见进度；支持 save/list/load/resume",
             "version": "0.2.0",
-            "author": "DriFox Contributors",
+            "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [
                 "tool"
@@ -3869,40 +3869,7 @@
                 "ref": "main"
             },
             "components": {
-                "tools": true,
-                "commands": false,
-                "agents": false,
-                "skills": false,
-                "hooks": false,
-                "mcp": false,
-                "lsp": false,
-                "themes": false,
-                "ui": false,
-                "providers": false,
-                "team_templates": false,
-                "model_adapters": false,
-                "loop_policies": false,
-                "storages": false,
-                "serializers": false,
-                "gateways": false,
-                "engines": false
-            },
-            "keywords": [
-                "workflow",
-                "orchestration",
-                "subagent",
-                "parallel",
-                "pipeline",
-                "编排",
-                "子智能体",
-                "并行"
-            ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
-            "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "tools": true
             }
         }
     ]
