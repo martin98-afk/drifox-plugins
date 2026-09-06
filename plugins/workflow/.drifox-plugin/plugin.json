@@ -6,6 +6,10 @@
     "name": "DriFoxx Team"
   },
   "license": "MIT",
+  "icon": {
+    "light": "icon.svg",
+    "dark": "icon_dark.svg"
+  },
   "components": {
     "tools": true
   },
