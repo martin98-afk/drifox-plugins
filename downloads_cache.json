@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1788757466.7735665,
+  "fetched_at": 1788769546.1752174,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 1,
@@ -10,7 +10,7 @@
     "autoloop": 12,
     "beautiful-article-skills": 3,
     "breakout": 6,
-    "browser": 40,
+    "browser": 41,
     "calendar": 21,
     "canvas-design": 1,
     "caveman": 6,
@@ -21,7 +21,7 @@
     "codegraph-tools": 9,
     "command-code": 6,
     "context-stats": 21,
-    "context-usage-stats": 2,
+    "context-usage-stats": 3,
     "context7": 4,
     "cron-tasks": 17,
     "desktop-automation": 15,
@@ -82,7 +82,7 @@
     "project-side-rail": 13,
     "prompt-enhancer": 31,
     "python-pro": 1,
-    "quick-screenshot": 9,
+    "quick-screenshot": 11,
     "rdr2": 4,
     "react-pro": 1,
     "security-guidance": 2,
@@ -92,7 +92,7 @@
     "skill-creator": 2,
     "slack-gif-creator": 2,
     "snake": 5,
-    "ssh-toolkit": 13,
+    "ssh-toolkit": 14,
     "superclaude": 2,
     "superpowers": 3,
     "tailwind-pro": 0,
@@ -114,6 +114,6 @@
     "webapp-testing": 2,
     "win-powershell": 23,
     "workbuddy": 7,
-    "workflow": 2
+    "workflow": 3
   }
 }
