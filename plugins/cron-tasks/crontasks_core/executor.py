@@ -56,6 +56,7 @@ class CronExecutor(QThread):
         self._system_prompt: str = ""
         self._tools: Optional[List[Dict]] = None
         self._model_override: Optional[Dict[str, Any]] = None
+        self._timeout_seconds: int = 0  # 0 = 默认（EXECUTION_TIMEOUT_SECONDS）
         self._session: Any = None
         self._cancelled = False
         self._last_result: Optional[dict] = None  # run() 结束时保存（停止收尾用）
@@ -67,12 +68,14 @@ class CronExecutor(QThread):
         system_prompt: str = "",
         tools: Optional[List[Dict]] = None,
         model_config_override: Optional[Dict[str, Any]] = None,
+        timeout_seconds: int = 0,
     ):
         self._job = job
         self._services = services
         self._system_prompt = system_prompt
         self._tools = tools
         self._model_override = model_config_override
+        self._timeout_seconds = timeout_seconds or 0
 
     def cancel(self):
         """非阻塞取消：置标志 + 唤醒 session.cancel()"""
@@ -116,12 +119,13 @@ class CronExecutor(QThread):
                     system=(self._system_prompt or None),
                     user=job.prompt,
                     tools=self._tools or [],
-                    timeout=EXECUTION_TIMEOUT_SECONDS,
+                    timeout=self._timeout_seconds or EXECUTION_TIMEOUT_SECONDS,
                 )
                 if getattr(result, "cancelled", False) or self._cancelled:
                     holder["cancelled"] = True
                 elif getattr(result, "timed_out", False):
-                    holder["timeout"] = f"执行超时（>{EXECUTION_TIMEOUT_SECONDS // 60} 分钟）"
+                    _secs = self._timeout_seconds or EXECUTION_TIMEOUT_SECONDS
+                    holder["timeout"] = f"执行超时（>{_secs // 60} 分钟）"
                 else:
                     err = getattr(result, "error", None)
                     if err:
