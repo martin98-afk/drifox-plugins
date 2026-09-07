@@ -197,7 +197,7 @@
                 "ui": true,
                 "agents": true
             },
-            "downloads": 11,
+            "downloads": 12,
             "keywords": [
                 "autoloop",
                 "loop",
@@ -270,7 +270,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -297,7 +297,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 38,
+            "downloads": 40,
             "keywords": [
                 "browser",
                 "web",
@@ -329,7 +329,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 20,
+            "downloads": 21,
             "keywords": [
                 "calendar",
                 "date",
@@ -652,7 +652,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 20,
+            "downloads": 21,
             "keywords": [
                 "welcome",
                 "stats",
@@ -692,7 +692,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -755,7 +755,7 @@
                 "ui": true,
                 "tools": true
             },
-            "downloads": 16,
+            "downloads": 17,
             "keywords": [
                 "cron",
                 "schedule",
@@ -1022,7 +1022,7 @@
                 "lsp": true,
                 "ui": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "example",
                 "template",
@@ -1229,7 +1229,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1511,7 +1511,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 12,
+            "downloads": 13,
             "keywords": [
                 "git",
                 "dashboard",
@@ -1542,7 +1542,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 33,
+            "downloads": 34,
             "keywords": [
                 "git",
                 "source-control",
@@ -1696,7 +1696,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "ppt",
                 "presentation",
@@ -2010,7 +2010,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "theme",
                 "laputa",
@@ -2664,7 +2664,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 30,
+            "downloads": 31,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -2745,7 +2745,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 6,
+            "downloads": 9,
             "keywords": [
                 "screenshot",
                 "clipboard",
@@ -3800,7 +3800,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 22,
+            "downloads": 23,
             "keywords": [
                 "powershell",
                 "windows",
@@ -3873,7 +3873,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
