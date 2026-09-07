@@ -2728,7 +2728,7 @@
             },
             "components": {
                 "tools": false,
-                "commands": false,
+                "commands": true,
                 "agents": false,
                 "skills": false,
                 "hooks": false,
