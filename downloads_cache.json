@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1788777231.3849187,
+  "fetched_at": 1788797556.6038232,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 1,
@@ -24,7 +24,7 @@
     "context-usage-stats": 3,
     "context7": 4,
     "cron-tasks": 17,
-    "desktop-automation": 15,
+    "desktop-automation": 16,
     "doc-coauthoring": 1,
     "dsh-presets": 1,
     "dsh-router": 1,
@@ -94,7 +94,7 @@
     "snake": 5,
     "ssh-toolkit": 14,
     "superclaude": 2,
-    "superpowers": 3,
+    "superpowers": 4,
     "tailwind-pro": 0,
     "taskboard": 3,
     "teach": 1,
