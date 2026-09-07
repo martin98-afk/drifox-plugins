@@ -792,7 +792,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 15,
+            "downloads": 16,
             "keywords": [
                 "desktop",
                 "automation",
@@ -3158,7 +3158,7 @@
                 "skills": true,
                 "hooks": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "skills",
                 "tdd",
