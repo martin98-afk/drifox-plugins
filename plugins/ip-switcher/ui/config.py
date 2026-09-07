@@ -18,7 +18,7 @@ import json
 import shutil
 import threading
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from loguru import logger
 
