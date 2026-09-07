@@ -898,6 +898,23 @@ class JobEditPanel(QWidget):
         wd_layout.addWidget(browse_btn)
         s3l.addLayout(_labeled("工作目录", wd_widget))
 
+        # 轮数上限 + 超时（并排）：0 语义由调度层兜底（0=默认 60 / 1200s）
+        self._max_rounds_spin = SpinBox()
+        self._max_rounds_spin.setRange(1, 1000)
+        self._max_rounds_spin.setValue(60)
+        self._max_rounds_spin.setToolTip("单次执行的最大循环轮数（API 调用次数）；默认 60，防工具失败死循环")
+        self._timeout_spin = SpinBox()
+        self._timeout_spin.setRange(1, 36000)
+        self._timeout_spin.setValue(1200)
+        self._timeout_spin.setToolTip("单次执行超时秒数；默认 1200（20 分钟）")
+        lim_widget = QWidget()
+        lim_layout = QHBoxLayout(lim_widget)
+        lim_layout.setContentsMargins(0, 0, 0, 0)
+        lim_layout.setSpacing(6)
+        lim_layout.addWidget(self._max_rounds_spin, 1)
+        lim_layout.addWidget(self._timeout_spin, 1)
+        s3l.addLayout(_labeled("轮数上限 / 超时(秒)", lim_widget))
+
         # 响应式主体：窄=单列纵排；宽(≥720px)=左(任务) 右上(调度) 右下(通知) 双列
         body = _ResponsiveFormBody(s1, s2, s3)
         layout.addWidget(body, 1)  # 拉满内容区，消除纵向空白/滚动条
@@ -1078,6 +1095,8 @@ class JobEditPanel(QWidget):
         if midx >= 0:
             self._model_combo.setCurrentIndex(midx)
         self._workdir_edit.setText(default_workdir)
+        self._max_rounds_spin.setValue(60)
+        self._timeout_spin.setValue(1200)
         self._refresh_preview()
 
     def begin_create_with_template(self, tpl: dict, default_workdir: str = ""):
@@ -1116,6 +1135,8 @@ class JobEditPanel(QWidget):
         midx = self._model_combo.findData(job.model_key)
         self._model_combo.setCurrentIndex(midx if midx >= 0 else 0)
         self._workdir_edit.setText(job.workdir or "")
+        self._max_rounds_spin.setValue(job.max_rounds or 60)
+        self._timeout_spin.setValue(job.timeout_seconds or 1200)
         # 完成通知回填：""=默认 / system / gateway:平台:chat_id
         n = job.notify or ""
         if n.startswith("gateway:"):
@@ -1185,6 +1206,8 @@ class JobEditPanel(QWidget):
         job.agent = self._agent_combo.currentData() or ""
         job.model_key = self._model_combo.currentData() or ""
         job.workdir = self._workdir_edit.text().strip()
+        job.max_rounds = self._max_rounds_spin.value()
+        job.timeout_seconds = self._timeout_spin.value()
         ni = self._notify_combo.currentIndex()
         if ni == 2:
             target = str(self._notify_target_combo.currentData() or "")
