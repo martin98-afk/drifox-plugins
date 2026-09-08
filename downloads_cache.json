@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1788828592.9811938,
+  "fetched_at": 1788845440.062775,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 1,
@@ -72,7 +72,7 @@
     "office-docs": 1,
     "ollama": 2,
     "omml-docx": 9,
-    "openai": 2,
+    "openai": 3,
     "openhanako-adapter": 12,
     "openrouter-provider": 2,
     "pixel-team-studio": 6,
