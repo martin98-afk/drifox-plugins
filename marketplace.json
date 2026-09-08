@@ -1943,7 +1943,7 @@
                 "hooks": true,
                 "skills": true
             },
-            "downloads": 7,
+            "downloads": 8,
             "keywords": [
                 "prompt",
                 "optimizer",
@@ -2383,7 +2383,7 @@
             "components": {
                 "providers": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "服务商"
             ],
