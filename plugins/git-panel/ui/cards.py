@@ -2988,7 +2988,9 @@ class GitPanelCard(QWidget):
 
     def _on_ai_generate(self):
         """根据暂存区 diff 由 AI 生成提交描述（异步，回填输入框）"""
-        if not self._repo_path or self._is_loading:
+        # 不以 _is_loading 拦截：AI 生成自行读取 git diff，与面板刷新无冲突；
+        # 此前刷新窗口期点击会被静默丢弃，表现为「第一次点没反应」
+        if not self._repo_path:
             return
         if getattr(self, "_ai_task_running", False):
             return
