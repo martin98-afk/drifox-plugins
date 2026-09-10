@@ -364,20 +364,47 @@ class GitRepo:
     # ── 日志 ──
 
     def log(self, n: int = 30, graph: bool = False) -> List[dict]:
-        """提交历史 [{"hash", "author", "date", "subject", "refs", "graph"}]"""
-        fmt = "--format=%h%x1f%an%x1f%ai%x1f%s%x1f%D"
-        args = ["log", f"-n{n}", fmt, "--all"]
+        """提交历史，含每 commit 文件统计（--numstat）
+
+        [{"hash", "author", "date", "date_iso", "subject", "refs", "parents",
+          "graph", "stat_files": [{path, add, del}], "stat_add", "stat_del"}]
+        """
+        fmt = "--format=%h%x1f%an%x1f%ai%x1f%s%x1f%D%x1f%p"
+        args = ["log", f"-n{n}", fmt, "--numstat", "--all"]
         if graph:
             args.insert(1, "--graph")
         res = self._run(*args)
         if not res.ok or not res.stdout:
             return []
-        result = []
+        result: List[dict] = []
         for line in res.stdout.splitlines():
-            item = self._parse_log_line(line, graph)
-            if item:
-                result.append(item)
+            if "\x1f" in line:
+                item = self._parse_log_line(line, graph)
+                if item:
+                    result.append(item)
+            elif "\t" in line and result:
+                self._append_numstat(result[-1], line)
         return result
+
+    @staticmethod
+    def _append_numstat(item: dict, line: str) -> None:
+        """把 --numstat 行归入当前 commit（add/del，二进制计 0）"""
+        parts = line.split("\t")
+        if len(parts) < 3:
+            return
+        try:
+            add = int(parts[0])
+        except ValueError:
+            add = 0
+        try:
+            dele = int(parts[1])
+        except ValueError:
+            dele = 0
+        item["stat_files"].append(
+            {"path": "\t".join(parts[2:]), "add": add, "del": dele}
+        )
+        item["stat_add"] += add
+        item["stat_del"] += dele
 
     @staticmethod
     def _parse_log_line(line: str, graph: bool) -> Optional[dict]:
@@ -394,20 +421,31 @@ class GitRepo:
             return None
         hash_, author, date_raw, subject = parts[0], parts[1], parts[2], parts[3]
         refs = parts[4] if len(parts) > 4 else ""
+        parents = parts[5].split() if len(parts) > 5 else []
         date = date_raw[:10] if date_raw and len(date_raw) >= 10 else date_raw
         return {
             "hash": hash_,
             "author": author,
             "date": date,
+            "date_iso": date_raw or "",
             "subject": subject,
             "refs": refs,
+            "parents": parents,
             "graph": graph_prefix,
+            "stat_files": [],
+            "stat_add": 0,
+            "stat_del": 0,
         }
 
     # ── Diff ──
 
     def diff(self, path: str, staged: bool = False) -> str:
         return _get_diff(self.cwd, path, staged)
+
+    def diff_staged(self) -> str:
+        """获取暂存区全量 diff（AI 生成提交描述用）"""
+        stdout, _, _ = _run_git(self.cwd, "diff", "--cached")
+        return stdout
 
     def file_content(self, path: str) -> str:
         """读取工作区文件内容（未跟踪文件预览用）。
@@ -424,6 +462,10 @@ class GitRepo:
     def show_commit(self, hash_: str) -> GitResult:
         """查看单个 commit 的完整信息与 diff（git show --format=fuller）"""
         return self._run("show", "--format=fuller", hash_)
+
+    def show_commit_file(self, hash_: str, path: str) -> GitResult:
+        """查看单个 commit 中单个文件的 diff"""
+        return self._run("show", "--format=", hash_, "--", path)
 
     # ── 冲突解决 ──
 

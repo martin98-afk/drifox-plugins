@@ -394,16 +394,19 @@ class _EnhanceConfigCard(_ConfigCardBase):
         self._reset_btn.clicked.connect(self._on_reset)
         self.viewLayout.addWidget(self._reset_btn)
 
-        # 修复配置卡展开时 view 下方未被利用的空白：
-        # ExpandSettingCard._adjustViewSize 把 spaceWidget 高度设为 viewLayout.sizeHint().height()，
-        # 与 view 等高的滚动占位空间在内容不足时会显示为下方空白。
-        # 这里把 spaceWidget 高度置 0，使卡片高度紧贴内容；同时维持 _adjustViewSize 行为兼容。
+        self._echo()
+
+    def _adjustViewSize(self):
+        """空白占位归零：qfluentwidgets 的 setExpand 会先调 _adjustViewSize 把
+        spaceWidget 重设为内容等高，导致展开高度 = 内容 + 等高空白；
+        覆写本方法强制占位为 0，展开高度只算实际内容。"""
+        h = self.viewLayout.sizeHint().height()
         try:
             self.spaceWidget.setFixedHeight(0)
         except Exception:  # noqa: BLE001
             pass
-
-        self._echo()
+        if self.isExpand:
+            self.setFixedHeight(self.card.height() + h)
 
     def _echo(self) -> None:
         """回显当前生效值（默认兜底可见）；阻断信号循环。"""

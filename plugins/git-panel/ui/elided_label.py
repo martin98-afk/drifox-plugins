@@ -16,9 +16,10 @@ from PyQt5.QtWidgets import QLabel, QSizePolicy
 class _ElidedLabel(QLabel):
     """自动根据可用宽度省略文本的 QLabel（中间省略），完整文本放 tooltip"""
 
-    def __init__(self, text: str = "", parent=None):
+    def __init__(self, text: str = "", parent=None, elide_mode=Qt.ElideMiddle):
         super().__init__(text, parent)
         self._full_text = text
+        self._elide_mode = elide_mode
         self.setToolTip(text)
         # 宽度交给父布局决定，防止长文本把布局撑宽
         self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
@@ -41,7 +42,7 @@ class _ElidedLabel(QLabel):
                 super().setText(self._full_text)
             return
         fm = self.fontMetrics()
-        elided = fm.elidedText(self._full_text, Qt.ElideMiddle, w)
+        elided = fm.elidedText(self._full_text, self._elide_mode, w)
         self.setTextFormat(Qt.PlainText)
         if self.text() != elided:
             super().setText(elided)
