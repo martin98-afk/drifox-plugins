@@ -1452,34 +1452,40 @@ class _GraphColumnWidget(QWidget):
         p.setRenderHint(QPainter.Antialiasing)
         h, mid, w = self.height(), self.height() // 2, _LANE_W
         dot_x = info["_lane"] * w + w // 2
-        in_xs = {j * w + w // 2: QColor(cl) for j, cl in lane_in}
-        out_xs = {j * w + w // 2: QColor(cl) for j, cl in lane_out}
+        # lane 0 = 当前分支主线：加粗醒目；其余分支线较细弱化
+        in_xs = {j: (j * w + w // 2, cl) for j, cl in lane_in}
+        out_xs = {j: (j * w + w // 2, cl) for j, cl in lane_out}
 
-        p.setPen(QPen(QColor(info["_color"]), 1.5))
-        for x in in_xs:
+        def _pen(lane: int, color: str) -> QPen:
+            return QPen(QColor(color), 2.0 if lane == 0 else 1.3)
+
+        for j, (x, cl) in in_xs.items():
+            p.setPen(_pen(j, cl))
             p.drawLine(x, 0, x, mid)
-        for x in out_xs:
+        for j, (x, cl) in out_xs.items():
+            p.setPen(_pen(j, cl))
             p.drawLine(x, mid, x, h)
-        for x, cl in in_xs.items():
-            if x not in out_xs and x != dot_x:  # 汇合
-                p.setPen(QPen(cl, 1.5))
+        for j, (x, cl) in in_xs.items():
+            if x not in [v[0] for v in out_xs.values()] and x != dot_x:  # 汇合
+                p.setPen(_pen(j, cl))
                 p.drawLine(x, mid, dot_x, mid)
-        for x, cl in out_xs.items():
-            if x not in in_xs and x != dot_x:  # 分叉
-                p.setPen(QPen(cl, 1.5))
+        for j, (x, cl) in out_xs.items():
+            if x not in [v[0] for v in in_xs.values()] and x != dot_x:  # 分叉
+                p.setPen(_pen(j, cl))
                 p.drawLine(dot_x, mid, x, mid)
 
         p.setPen(Qt.NoPen)
         if info.get("_head"):
+            # HEAD：大空心圆（背景色填充 + 主题色描边）
             p.setBrush(QColor("#1e1e1e") if isDarkTheme() else QColor("#ffffff"))
-            p.drawEllipse(QPoint(dot_x, mid), 4, 4)
-            p.setPen(QPen(QColor(info["_color"]), 1.5))
+            p.drawEllipse(QPoint(dot_x, mid), 5, 5)
+            p.setPen(QPen(QColor(info["_color"]), 1.8))
             p.setBrush(Qt.NoBrush)
-            p.drawEllipse(QPoint(dot_x, mid), 4, 4)
+            p.drawEllipse(QPoint(dot_x, mid), 5, 5)
         else:
             # 未推送提交用暖橙实心醒目区分
             p.setBrush(QColor("#e2c08d") if info.get("_unpushed") else QColor(info["_color"]))
-            p.drawEllipse(QPoint(dot_x, mid), 3, 3)
+            p.drawEllipse(QPoint(dot_x, mid), 4.5, 4.5)
 
 
 class _CommitFileRow(QLabel):
@@ -2935,6 +2941,14 @@ class GitPanelCard(QWidget):
         ll = QVBoxLayout(log_content)
         ll.setContentsMargins(0, 0, 0, 0)
         ll.setSpacing(0)
+
+        # 图例常驻折叠区标题右侧（keepColor 保留自身次要色小字号，不被 retheme 重涂）
+        legend_lb = QLabel("蓝粗线 = 当前分支 · 橙点 = 未推送", self)
+        legend_lb.setProperty("keepColor", True)
+        legend_lb.setStyleSheet(
+            f"background: transparent; color: {self._cached_tcs}; font-size: 10px;"
+        )
+        log_section.add_action_button(legend_lb)
 
         if log:
             max_lanes = _compute_lanes(log, branch_name=data.get("branch", ""))
