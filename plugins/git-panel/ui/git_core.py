@@ -478,8 +478,8 @@ class GitRepo:
         return self._run("show", "--format=fuller", hash_)
 
     def show_commit_file(self, hash_: str, path: str) -> GitResult:
-        """查看单个 commit 中单个文件的 diff"""
-        return self._run("show", "--format=", hash_, "--", path)
+        """查看单个 commit 中单个文件的 diff（fuller 格式：含作者/日期/描述元信息）"""
+        return self._run("show", "--format=fuller", hash_, "--", path)
 
     # ── 冲突解决 ──
 

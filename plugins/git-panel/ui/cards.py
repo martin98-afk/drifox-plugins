@@ -640,12 +640,14 @@ class _DiffDialog(MaskDialogBase):
     """Diff 预览对话框（宿主 MaskDialogBase 风格）"""
 
     def __init__(self, repo_path: str, file_path: str, staged: bool,
-                 status: str = "", parent=None):
+                 status: str = "", parent=None, ff: str = "", fs: int = 0):
         super().__init__(_dialog_parent(parent))
         self._repo_path = repo_path
         self._file_path = file_path
         self._staged = staged
         self._status = status  # git 状态码（"??" 未跟踪等），决定 diff 获取方式
+        self._ff = ff
+        self._fs = fs
         self.setShadowEffect(60, (0, 10), QColor(0, 0, 0, 100))
         self.setClosableOnMaskClicked(True)
         self.setDraggable(True)
@@ -670,6 +672,9 @@ class _DiffDialog(MaskDialogBase):
         hl.setContentsMargins(0, 0, 0, 0)
 
         title = StrongBodyLabel(self._file_path, hdr)
+        title.setStyleSheet(
+            f"background: transparent; font-family: '{ff}'; font-size: {max(fs - 1, 11)}px;"
+        )
         hl.addWidget(title)
         hl.addStretch(1)
 
@@ -686,7 +691,7 @@ class _DiffDialog(MaskDialogBase):
         self._diff_area.setStyleSheet(
             "QTextEdit { background: " + _diff_area_bg() + "; border: 1px solid rgba(128,128,128,0.15); "
             "border-radius: 6px; padding: 8px; font-family: 'Consolas', 'Courier New', monospace; "
-            f"color: {_text_color()}; font-size: 13px; }}"
+            f"color: {_text_color()}; font-size: {max(self._fs - 1, 11)}px; }}"
         )
         ly.addWidget(hdr)
         ly.addWidget(self._diff_area, 1)
@@ -1214,7 +1219,7 @@ class _BranchRowWidget(QWidget):
     switch_requested = pyqtSignal(str)  # branch_name
     delete_requested = pyqtSignal(str)  # branch_name
 
-    def __init__(self, branch_info: dict, parent=None):
+    def __init__(self, branch_info: dict, parent=None, ff: str = "", fs: int = 0):
         super().__init__(parent)
         self._info = branch_info
         self.setMinimumHeight(28)
@@ -1244,14 +1249,16 @@ class _BranchRowWidget(QWidget):
             text += " (其他工作树)"
         name_lb = QLabel(text, self)
         name_lb.setWordWrap(True)
+        name_lb.setProperty("keepColor", True)  # 字号已随系统字体显式指定，避免 retheme 重涂
         if branch_info["current"]:
-            name_lb.setProperty("keepColor", True)
             name_lb.setStyleSheet(
-                "background: transparent; color: #50e3c2; font-size: 12px; font-weight: 600;"
+                f"background: transparent; color: #50e3c2; font-family: '{ff}'; "
+                f"font-size: {max(fs - 1, 11)}px; font-weight: 600;"
             )
         else:
             name_lb.setStyleSheet(
-                f"background: transparent; color: {_text_color()}; font-size: 12px;"
+                f"background: transparent; color: {_text_color()}; font-family: '{ff}'; "
+                f"font-size: {max(fs - 1, 11)}px;"
             )
         name_lb.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         ly.addWidget(name_lb)
@@ -1493,7 +1500,7 @@ class _CommitFileRow(QLabel):
 
     clicked = pyqtSignal(str)  # path
 
-    def __init__(self, hash_: str, f: dict, parent=None):
+    def __init__(self, hash_: str, f: dict, parent=None, ff: str = "", fs: int = 0):
         super().__init__(parent)
         self._hash = hash_
         self._path = f["path"]
@@ -1508,9 +1515,10 @@ class _CommitFileRow(QLabel):
         self.setCursor(Qt.PointingHandCursor)
         self.setToolTip(f"查看 {f['path']} 的 diff")
         self.setObjectName("CommitFileRow")
+        font_part = f"font-family: '{ff}'; font-size: {max(fs - 1, 11)}px;" if ff else ""
         self.setStyleSheet(
             "#CommitFileRow { background: transparent; border-radius: 4px; "
-            f"color: {_text_color()}; font-size: 13px; padding: 2px 8px; }} "
+            f"color: {_text_color()}; {font_part} padding: 2px 8px; }} "
             "#CommitFileRow:hover { background: rgba(128,128,128,0.08); }"
         )
 
@@ -1519,11 +1527,6 @@ class _CommitFileRow(QLabel):
             self.clicked.emit(self._path)
         super().mousePressEvent(event)
 
-
-class _CommitFilesWidget(QWidget):
-    """提交行展开的文件列表（最多显示 20 个）"""
-
-    file_requested = pyqtSignal(str, str)  # (hash, path)
 
 class _CommitFilesWidget(QWidget):
     """提交行展开的文件列表（最多显示 20 个）；左侧延续 graph 竖线保持连续"""
@@ -1544,7 +1547,7 @@ class _CommitFilesWidget(QWidget):
             x = j * _LANE_W + _LANE_W // 2
             p.drawLine(x, 0, x, h)
 
-    def __init__(self, info: dict, parent=None):
+    def __init__(self, info: dict, parent=None, ff: str = "", fs: int = 0):
         super().__init__(parent)
         self._info = info
         ly = QVBoxLayout(self)
@@ -1554,18 +1557,20 @@ class _CommitFilesWidget(QWidget):
         if not files:
             empty = QLabel("（无文件变更 / merge commit）", self)
             empty.setStyleSheet(
-                f"color: {_text_color(secondary=True)}; font-size: 11px; padding: 2px 6px;"
+                f"color: {_text_color(secondary=True)}; font-family: '{ff}'; "
+                f"font-size: {max(fs - 2, 10)}px; padding: 2px 6px;"
             )
             ly.addWidget(empty)
             return
         for f in files[:20]:
-            row = _CommitFileRow(info["hash"], f, self)
+            row = _CommitFileRow(info["hash"], f, self, ff=ff, fs=fs)
             row.clicked.connect(lambda p, h=info["hash"]: self.file_requested.emit(h, p))
             ly.addWidget(row)
         if len(files) > 20:
             more = QLabel(f"… 其余 {len(files) - 20} 个文件（双击行查看完整 diff）", self)
             more.setStyleSheet(
-                f"color: {_text_color(secondary=True)}; font-size: 11px; padding: 2px 6px;"
+                f"color: {_text_color(secondary=True)}; font-family: '{ff}'; "
+                f"font-size: {max(fs - 2, 10)}px; padding: 2px 6px;"
             )
             ly.addWidget(more)
 
@@ -1736,11 +1741,13 @@ class _CommitDetailDialog(MaskDialogBase):
     """Commit 详情对话框：元信息条 + 完整 diff（词级高亮）"""
 
     def __init__(self, repo_path: str, hash_: str, parent=None,
-                 file_path: str = ""):
+                 file_path: str = "", ff: str = "", fs: int = 0):
         super().__init__(_dialog_parent(parent))
         self._repo_path = repo_path
         self._hash = hash_
         self._file_path = file_path
+        self._ff = ff
+        self._fs = fs
         self.setShadowEffect(60, (0, 10), QColor(0, 0, 0, 100))
         self.setClosableOnMaskClicked(True)
         self.setDraggable(True)
@@ -1767,7 +1774,8 @@ class _CommitDetailDialog(MaskDialogBase):
 
         self._hash_lb = QLabel(self._hash, hdr)
         self._hash_lb.setStyleSheet(
-            "background: transparent; color: #62a0ea; font-size: 13px; "
+            "background: transparent; color: #62a0ea; "
+            f"font-size: {max(self._fs - 1, 11)}px; "
             "font-family: 'Consolas', monospace;"
         )
         self._hash_lb.setCursor(Qt.PointingHandCursor)
@@ -1778,7 +1786,8 @@ class _CommitDetailDialog(MaskDialogBase):
             path_lb = QLabel(self._file_path, hdr)
             path_lb.setStyleSheet(
                 "background: rgba(128,128,128,0.10); border-radius: 4px; padding: 2px 8px; "
-                f"color: {_text_color(secondary=True)}; font-size: 12px;"
+                f"color: {_text_color(secondary=True)}; font-family: '{self._ff}'; "
+                f"font-size: {max(self._fs - 2, 10)}px;"
             )
             path_lb.setToolTip(self._file_path)
             hl.addWidget(path_lb)
@@ -1794,14 +1803,16 @@ class _CommitDetailDialog(MaskDialogBase):
 
         self._meta_lb = QLabel("加载中…", self.widget)
         self._meta_lb.setStyleSheet(
-            f"background: transparent; color: {_text_color(secondary=True)}; font-size: 12px;"
+            f"background: transparent; color: {_text_color(secondary=True)}; "
+            f"font-family: '{self._ff}'; font-size: {max(self._fs - 2, 10)}px;"
         )
         ly.addWidget(self._meta_lb)
 
         self._msg_lb = QLabel("", self.widget)
         self._msg_lb.setWordWrap(True)
         self._msg_lb.setStyleSheet(
-            f"background: transparent; color: {_text_color()}; font-size: 13px;"
+            f"background: transparent; color: {_text_color()}; "
+            f"font-family: '{self._ff}'; font-size: {max(self._fs - 1, 11)}px;"
         )
         ly.addWidget(self._msg_lb)
 
@@ -1811,11 +1822,11 @@ class _CommitDetailDialog(MaskDialogBase):
         self._diff_area.setStyleSheet(
             "QTextEdit { background: " + _diff_area_bg() + "; border: 1px solid rgba(128,128,128,0.15); "
             "border-radius: 6px; padding: 8px; font-family: 'Consolas', 'Courier New', monospace; "
-            f"color: {_text_color()}; font-size: 13px; }}"
+            f"color: {_text_color()}; font-size: {max(self._fs - 1, 11)}px; }}"
         )
         ly.addWidget(self._diff_area, 1)
 
-        self.widget.setFixedSize(820, 560)
+        self.widget.setFixedSize(820, 700)
         self._center_widget()
 
     def _center_widget(self):
@@ -1903,8 +1914,8 @@ class _CommitDetailDialog(MaskDialogBase):
             self._hash_lb.setText(info["hash"])
             self._hash = info["hash"]
         meta = " · ".join(x for x in (info["author"], info["date"]) if x)
-        if meta:
-            self._meta_lb.setText(meta)
+        # 单文件 diff 无元信息时清掉「加载中…」残留
+        self._meta_lb.setText(meta)
         if info["message"]:
             self._msg_lb.setText(info["message"])
 
@@ -1943,10 +1954,12 @@ class _CommitDetailDialog(MaskDialogBase):
 class _StashDetailDialog(MaskDialogBase):
     """Stash 详情对话框：完整 diff（git stash show -p）"""
 
-    def __init__(self, repo_path: str, ref: str, parent=None):
+    def __init__(self, repo_path: str, ref: str, parent=None, ff: str = "", fs: int = 0):
         super().__init__(_dialog_parent(parent))
         self._repo_path = repo_path
         self._ref = ref
+        self._ff = ff
+        self._fs = fs
         self.setShadowEffect(60, (0, 10), QColor(0, 0, 0, 100))
         self.setClosableOnMaskClicked(True)
         self.setDraggable(True)
@@ -1990,7 +2003,7 @@ class _StashDetailDialog(MaskDialogBase):
         self._diff_area.setStyleSheet(
             "QTextEdit { background: " + _diff_area_bg() + "; border: 1px solid rgba(128,128,128,0.15); "
             "border-radius: 6px; padding: 8px; font-family: 'Consolas', 'Courier New', monospace; "
-            f"color: {_text_color()}; font-size: 13px; }}"
+            f"color: {_text_color()}; font-size: {max(self._fs - 1, 11)}px; }}"
         )
         ly.addWidget(self._diff_area, 1)
 
@@ -2914,7 +2927,7 @@ class GitPanelCard(QWidget):
 
         if branches:
             for item in branches:
-                row = _BranchRowWidget(item)
+                row = _BranchRowWidget(item, ff=self._cached_ff, fs=self._cached_fs)
                 row.switch_requested.connect(self._on_switch_branch)
                 row.delete_requested.connect(self._on_delete_branch)
                 bl.addWidget(row)
@@ -2946,7 +2959,8 @@ class GitPanelCard(QWidget):
         legend_lb = QLabel("蓝粗线 = 当前分支 · 橙点 = 未推送", self)
         legend_lb.setProperty("keepColor", True)
         legend_lb.setStyleSheet(
-            f"background: transparent; color: {self._cached_tcs}; font-size: 10px;"
+            f"background: transparent; color: {self._cached_tcs}; "
+            f"font-family: '{self._cached_ff}'; font-size: {max(self._cached_fs - 2, 10)}px;"
         )
         log_section.add_action_button(legend_lb)
 
@@ -3088,7 +3102,8 @@ class GitPanelCard(QWidget):
         if action == "view":
             if not self._repo_path:
                 return
-            dialog = _StashDetailDialog(self._repo_path, ref, self)
+            dialog = _StashDetailDialog(self._repo_path, ref, self,
+                                        ff=self._cached_ff, fs=self._cached_fs)
             dialog.exec_()
             return
         if action == "drop":
@@ -3178,14 +3193,16 @@ class GitPanelCard(QWidget):
 
     def _on_diff_request(self, path: str, staged: bool, status: str):
         """打开 Diff 预览对话框"""
-        dialog = _DiffDialog(self._repo_path, path, staged, status, self)
+        dialog = _DiffDialog(self._repo_path, path, staged, status, self,
+                             ff=self._cached_ff, fs=self._cached_fs)
         dialog.exec_()
 
     def _on_commit_detail(self, hash_: str):
         """双击提交行：打开 Commit 详情对话框（完整 diff）"""
         if not self._repo_path:
             return
-        dialog = _CommitDetailDialog(self._repo_path, hash_, self)
+        dialog = _CommitDetailDialog(self._repo_path, hash_, self,
+                                     ff=self._cached_ff, fs=self._cached_fs)
         dialog.exec_()
 
     def _on_commit_row_expand(self, row):
@@ -3198,7 +3215,7 @@ class GitPanelCard(QWidget):
             row.collapse()
             self._expanded_row = None
         else:
-            files = _CommitFilesWidget(row.info())
+            files = _CommitFilesWidget(row.info(), ff=self._cached_ff, fs=self._cached_fs)
             files.file_requested.connect(self._on_commit_file_diff)
             row.expand(files)
             self._expanded_row = row
@@ -3207,7 +3224,8 @@ class GitPanelCard(QWidget):
         """点击展开列表中的文件：打开单文件 diff"""
         if not self._repo_path:
             return
-        dialog = _CommitDetailDialog(self._repo_path, hash_, self, file_path=path)
+        dialog = _CommitDetailDialog(self._repo_path, hash_, self, file_path=path,
+                                     ff=self._cached_ff, fs=self._cached_fs)
         dialog.exec_()
 
     def _on_commit_row_action(self, action: str, hash_: str):
