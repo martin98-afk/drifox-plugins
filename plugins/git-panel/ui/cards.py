@@ -32,7 +32,7 @@ from .llm_config import (
     strip_thinking,
 )
 
-from PyQt5.QtCore import QObject, QPoint, QRunnable, QRectF, QSize, QThread, Qt, QTimer, QThreadPool, pyqtSignal
+from PyQt5.QtCore import QEvent, QObject, QPoint, QRunnable, QRectF, QSize, QThread, Qt, QTimer, QThreadPool, pyqtSignal
 from PyQt5.QtGui import QBrush, QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
 from PyQt5.QtWidgets import (
     QFrame,
@@ -45,6 +45,7 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QTextEdit,
+    QToolTip,
     QVBoxLayout,
     QWidget,
 )
@@ -187,6 +188,23 @@ class _InfoBarStack:
 
     def count(self) -> int:
         return len(self._bars)
+
+
+class _NativeTooltipFilter(QObject):
+    """拦截 ToolTip 事件改走系统原生 tooltip。
+
+    主程序将 QWidget.setToolTip 全局 patch 为自绘气泡（SimpleHoverTooltip），
+    直接调 QToolTip.showText() 不受影响；本过滤器在事件层抢先把
+    ToolTip 事件转给原生 QToolTip，绕过自绘气泡。
+    """
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.ToolTip:
+            tip = obj.toolTip()
+            if tip:
+                QToolTip.showText(event.globalPos(), tip, obj)
+            return True
+        return False
 
 
 # ========================================================================
@@ -1551,6 +1569,7 @@ class _CommitRowWidget(QWidget):
 
     expand_toggled = pyqtSignal(object)  # self
     detail_requested = pyqtSignal(str)   # hash（双击，保留）
+    commit_action = pyqtSignal(str, str)  # (action, hash) 右键菜单动作
 
     def __init__(self, commit_info: dict, graph_lanes: int = 2, parent=None):
         super().__init__(parent)
@@ -1661,7 +1680,39 @@ class _CommitRowWidget(QWidget):
     def _on_main_press(self, event):
         if event.button() == Qt.LeftButton:
             self.expand_toggled.emit(self)
+        elif event.button() == Qt.RightButton:
+            self._show_context_menu(event.globalPos())
         QWidget.mousePressEvent(self._main, event)
+
+    def _show_context_menu(self, global_pos):
+        """提交历史右键菜单（VSCode 风格：复制/检出/还原/重置）"""
+        from PyQt5.QtWidgets import QApplication
+
+        info = self._info
+        h = info["hash"]
+
+        def _act(text, handler):
+            a = Action(text)
+            a.triggered.connect(handler)
+            return a
+
+        menu = RoundMenu(parent=self)
+        menu.addAction(_act("复制提交哈希", lambda: QApplication.clipboard().setText(h)))
+        menu.addAction(_act("复制提交描述", lambda: QApplication.clipboard().setText(info["subject"])))
+        menu.addSeparator()
+        menu.addAction(_act("检出此提交", lambda: self.commit_action.emit("checkout", h)))
+        menu.addAction(_act("还原此提交", lambda: self.commit_action.emit("revert", h)))
+        reset_menu = RoundMenu("重置分支到此提交", menu)
+        for label, mode in (
+            ("Soft（改动保留在暂存区）", "soft"),
+            ("Mixed（改动保留在工作区）", "mixed"),
+            ("Hard（丢弃后续全部改动）", "hard"),
+        ):
+            reset_menu.addAction(
+                _act(label, lambda checked=False, m=mode: self.commit_action.emit(f"reset:{m}", h))
+            )
+        menu.addMenu(reset_menu)
+        menu.exec(global_pos)
 
     def _on_main_double(self, event):
         self.detail_requested.emit(self._info["hash"])
@@ -2427,6 +2478,9 @@ class GitPanelCard(QWidget):
         self._commit_input = QPlainTextEdit(row2)
         self._commit_input.setPlaceholderText("提交描述...")
         self._commit_input.setToolTip("可点「AI 生成」根据暂存变更自动填写")
+        # tooltip 用系统原生样式（不走主程序自绘气泡）
+        self._commit_tip_filter = _NativeTooltipFilter(self._commit_input)
+        self._commit_input.installEventFilter(self._commit_tip_filter)
         self._commit_input.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._commit_input.textChanged.connect(self._adjust_input_height)
         self._commit_input.updateRequest.connect(self._on_input_update_request)
@@ -2566,8 +2620,16 @@ class GitPanelCard(QWidget):
 
     # ── 异步刷新 ──
 
-    def _async_refresh(self):
-        """后台获取所有 Git 数据"""
+    def _async_refresh(self, delay: int = 300):
+        """后台获取所有 Git 数据（300ms 去抖：连续触发合并为一次）"""
+        if getattr(self, "_refresh_debounce", None) is None:
+            self._refresh_debounce = QTimer(self)
+            self._refresh_debounce.setSingleShot(True)
+            self._refresh_debounce.timeout.connect(self._do_async_refresh)
+        self._refresh_debounce.start(delay)
+
+    def _do_async_refresh(self):
+        """去抖到期后真正执行的全量刷新"""
         self._set_loading(True)
         self._cleanup_worker()
 
@@ -2704,7 +2766,8 @@ class GitPanelCard(QWidget):
         self._pull_btn.setToolTip(f"拉取远程更新（远程领先 {behind} 个提交）")
         self._fetch_btn.setToolTip("获取远程所有分支更新（fetch --all --prune）")
 
-        self._commit_input.setPlainText("")
+        # 描述框内容保留：刷新/重开面板不清空用户已输入的描述
+        # （提交成功后由 _on_commit_done 清空，AI 生成直接覆盖）
 
         # ── 1. 文件变更 ──
         status_items = data.get("status", [])
@@ -2879,6 +2942,7 @@ class GitPanelCard(QWidget):
                 row = _CommitRowWidget(item, graph_lanes=max_lanes)
                 row.expand_toggled.connect(self._on_commit_row_expand)
                 row.detail_requested.connect(self._on_commit_detail)
+                row.commit_action.connect(self._on_commit_row_action)
                 ll.addWidget(row)
         else:
             no_log = QLabel("  无提交记录", log_content)
@@ -2991,7 +3055,7 @@ class GitPanelCard(QWidget):
                 return
         else:
             self._set_status_text("提交成功")
-        self._commit_input.setText("")
+        self._commit_input.setPlainText("")
         QTimer.singleShot(1000, self._async_refresh)
 
     def _on_stash(self):
@@ -3132,6 +3196,56 @@ class GitPanelCard(QWidget):
         dialog = _CommitDetailDialog(self._repo_path, hash_, self, file_path=path)
         dialog.exec_()
 
+    def _on_commit_row_action(self, action: str, hash_: str):
+        """提交历史右键动作（checkout / revert / reset:soft|mixed|hard）"""
+        if not self._repo_path or self._is_loading:
+            return
+        short = hash_[:7]
+        g = GitRepo(self._repo_path)
+
+        if action == "checkout":
+            if not _confirm_ask(
+                "检出此提交",
+                f"确定检出 {short} 吗？\n将进入 detached HEAD 状态；切回分支用「分支」区的分支名即可。",
+                self,
+            ):
+                return
+            self._set_status_text("检出中…")
+            self._run_git_async(
+                lambda: g.checkout_commit(hash_),
+                lambda r: self._on_op_done(f"已检出 {short}（detached HEAD）", r),
+            )
+        elif action == "revert":
+            if not _confirm_ask(
+                "还原此提交",
+                f"确定还原 {short} 吗？\n将生成一条逆向提交（自动提交，不需手动输入信息）。",
+                self,
+            ):
+                return
+            self._set_status_text("还原中…")
+            self._run_git_async(
+                lambda: g.revert_commit(hash_),
+                lambda r: self._on_op_done(f"已还原 {short}", r),
+            )
+        elif action.startswith("reset:"):
+            mode = action.split(":", 1)[1]
+            warn = {
+                "soft": "之后的改动将全部保留在暂存区",
+                "mixed": "之后的改动将全部保留在工作区（未暂存）",
+                "hard": "之后的全部改动将被丢弃，不可恢复！",
+            }[mode]
+            if not _confirm_ask(
+                "重置分支到此提交",
+                f"确定把当前分支重置到 {short} 吗？（--{mode}）\n{warn}",
+                self,
+            ):
+                return
+            self._set_status_text("重置中…")
+            self._run_git_async(
+                lambda: g.reset_commit(hash_, mode),
+                lambda r: self._on_op_done(f"已重置到 {short}（--{mode}）", r),
+            )
+
     def _do_push(self):
         """推送本地提交到远程（无 upstream 时自动 --set-upstream）"""
         if not self._repo_path:
@@ -3214,10 +3328,10 @@ class GitPanelCard(QWidget):
         try:
             host = _dialog_parent(self)
             if kind == "success":
-                bar = InfoBar.success(title, content, parent=host, duration=3000,
+                bar = InfoBar.success(title, content, parent=host, duration=6000,
                                       position=InfoBarPosition.TOP)
             elif kind == "error":
-                bar = InfoBar.error(title, content, parent=host, duration=5000,
+                bar = InfoBar.error(title, content, parent=host, duration=8000,
                                     position=InfoBarPosition.TOP)
             else:
                 bar = InfoBar.info(title, content, parent=host, duration=0,
