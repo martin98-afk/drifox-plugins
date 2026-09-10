@@ -655,7 +655,8 @@ class _DiffDialog(MaskDialogBase):
 
         title = StrongBodyLabel(self._file_path, hdr)
         title.setStyleSheet(
-            f"background: transparent; font-family: '{ff}'; font-size: {max(fs - 1, 11)}px;"
+            f"background: transparent; font-family: '{self._ff}'; "
+            f"font-size: {max(self._fs - 1, 11)}px;"
         )
         hl.addWidget(title)
         hl.addStretch(1)
@@ -700,15 +701,25 @@ class _DiffDialog(MaskDialogBase):
         t.started.connect(w.run)
         w.finished.connect(self._on_diff_loaded)
         w.error.connect(self._on_diff_error)
-        w.finished.connect(t.quit)
-        w.error.connect(t.quit)
-        w.finished.connect(w.deleteLater)
-        w.error.connect(w.deleteLater)
-        t.finished.connect(t.deleteLater)
         # 保存引用防止 _Worker 被 GC（无 parent，仅靠局部变量会被立即回收）
         self._diff_worker = w
         self._diff_thread = t
         t.start()
+
+    def _finish_diff_load(self):
+        """结果到达后同步收尾线程：running 状态下销毁对话框/QThread 会 0xC0000005"""
+        t = getattr(self, "_diff_thread", None)
+        if t is None:
+            return
+        t.quit()
+        t.wait()
+        self._diff_thread = None
+        self._diff_worker = None
+
+    def done(self, r):
+        """所有关闭路径（accept/reject/遮罩点击）的汇聚点：先等线程真正结束再关"""
+        self._finish_diff_load()
+        super().done(r)
 
     def _fetch_diff(self) -> str:
         g = GitRepo(self._repo_path)
@@ -725,6 +736,7 @@ class _DiffDialog(MaskDialogBase):
         return g.diff(self._file_path, self._staged)
 
     def _on_diff_loaded(self, stdout: str):
+        self._finish_diff_load()
         if not stdout:
             self._diff_area.setPlainText("(空文件)" if self._status == "??" else "(无差异)")
             return
@@ -741,6 +753,7 @@ class _DiffDialog(MaskDialogBase):
             self._diff_area.setPlainText(f"加载 diff 失败: {e}")
 
     def _on_diff_error(self, err: str):
+        self._finish_diff_load()
         self._diff_area.setPlainText(f"加载 diff 失败: {err}")
 
 
@@ -1480,8 +1493,8 @@ class _GraphColumnWidget(QWidget):
             p.drawEllipse(QPoint(dot_x, mid), 4.5, 4.5)
 
 
-class _CommitFileRow(QLabel):
-    """展开列表中的单文件行：+N −M 路径，点击查看该文件 diff"""
+class _CommitFileRow(QWidget):
+    """展开列表中的单文件行：+N −M 路径（路径可省略），点击查看该文件 diff"""
 
     clicked = pyqtSignal(str)  # path
 
@@ -1489,14 +1502,6 @@ class _CommitFileRow(QLabel):
         super().__init__(parent)
         self._hash = hash_
         self._path = f["path"]
-        if f["add"] == 0 and f["del"] == 0:
-            body = f"bin  {f['path']}"
-        else:
-            body = (
-                f"<span style='color:#50e3c2'>+{f['add']}</span> "
-                f"<span style='color:#f14c4c'>−{f['del']}</span>  {f['path']}"
-            )
-        self.setText(body)
         self.setCursor(Qt.PointingHandCursor)
         self.setToolTip(f"查看 {f['path']} 的 diff")
         self.setObjectName("CommitFileRow")
@@ -1506,6 +1511,29 @@ class _CommitFileRow(QLabel):
             f"color: {_text_color()}; {font_part} padding: 2px 8px; }} "
             "#CommitFileRow:hover { background: rgba(128,128,128,0.08); }"
         )
+
+        ly = QHBoxLayout(self)
+        ly.setContentsMargins(0, 0, 0, 0)
+        ly.setSpacing(6)
+
+        # +N −M 统计（bin 文件无增删行数）
+        stat_lb = QLabel(self)
+        if f["add"] == 0 and f["del"] == 0:
+            stat_lb.setText("bin")
+        else:
+            stat_lb.setTextFormat(Qt.RichText)
+            stat_lb.setText(
+                f"<span style='color:#50e3c2'>+{f['add']}</span> "
+                f"<span style='color:#f14c4c'>−{f['del']}</span>"
+            )
+        stat_lb.setStyleSheet("background: transparent;")
+        ly.addWidget(stat_lb)
+
+        # 文件路径（可省略 label：超长中间省略，tooltip 完整路径）
+        path_lb = _ElidedLabel(f["path"], self)
+        path_lb.setStyleSheet("background: transparent;")
+        path_lb.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+        ly.addWidget(path_lb, 1)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -1843,14 +1871,25 @@ class _CommitDetailDialog(MaskDialogBase):
         t.started.connect(w.run)
         w.finished.connect(self._on_loaded)
         w.error.connect(self._on_error)
-        w.finished.connect(t.quit)
-        w.error.connect(t.quit)
-        w.finished.connect(w.deleteLater)
-        w.error.connect(w.deleteLater)
-        t.finished.connect(t.deleteLater)
         self._detail_worker = w
         self._detail_thread = t
         t.start()
+
+    def _finish_detail_load(self):
+        """结果到达后同步收尾线程：running 状态下销毁对话框/QThread 会 0xC0000005"""
+        t = getattr(self, "_detail_thread", None)
+        if t is None:
+            return
+        t.quit()
+        t.wait()
+        self._detail_thread = None
+        self._detail_worker = None
+
+    def done(self, r):
+        """所有关闭路径（accept/reject/遮罩点击）的汇聚点：先等线程真正结束再关"""
+        print("[dbg] CommitDetailDialog.done called", flush=True)
+        self._finish_detail_load()
+        super().done(r)
 
     @staticmethod
     def _parse_show_output(text: str) -> dict:
@@ -1891,6 +1930,7 @@ class _CommitDetailDialog(MaskDialogBase):
         return result
 
     def _on_loaded(self, res: GitResult):
+        self._finish_detail_load()
         if not res.ok:
             self._diff_area.setPlainText(f"加载 commit 失败: {res.error_message}")
             return
@@ -1928,6 +1968,7 @@ class _CommitDetailDialog(MaskDialogBase):
             self._diff_area.setPlainText(f"渲染失败: {e}")
 
     def _on_error(self, err: str):
+        self._finish_detail_load()
         self._diff_area.setPlainText(f"加载 commit 失败: {err}")
 
 
@@ -2434,9 +2475,8 @@ class GitPanelCard(QWidget):
             "font-family: 'Consolas', 'Courier New', monospace;"
         )
         self._branch_lb.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
-        # 自适应内容宽（不拉伸填满半行），窄面板压缩时由 _ElidedLabel 自动中间省略
+        # 自适应内容宽（不拉伸填满半行、不限最大宽度），窄面板压缩时由 _ElidedLabel 自动中间省略
         self._branch_lb.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
-        self._branch_lb.setMaximumWidth(150)
         r1.addWidget(self._branch_lb)
         r1.addStretch(1)
 
