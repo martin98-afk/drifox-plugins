@@ -21,15 +21,25 @@ import subprocess
 import sys
 import traceback
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 from typing import Callable, List, Optional, Tuple
 
-from PyQt5.QtCore import QObject, QPoint, QRectF, QSize, QThread, Qt, QTimer, pyqtSignal
+from .llm_config import (
+    DEFAULT_COMMIT_PROMPT,
+    get_llm_config,
+    load_plugin_text_config,
+    resolve_model,
+    strip_thinking,
+)
+
+from PyQt5.QtCore import QObject, QPoint, QRunnable, QRectF, QSize, QThread, Qt, QTimer, QThreadPool, pyqtSignal
 from PyQt5.QtGui import QBrush, QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
 from PyQt5.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QPlainTextEdit,
     QListWidget,
     QListWidgetItem,
     QPushButton,
@@ -217,7 +227,7 @@ class _FileRowWidget(QWidget):
         self._setup_ui()
 
     def _setup_ui(self):
-        self.setMinimumHeight(32)
+        self.setMinimumHeight(28)
         self.setStyleSheet(
             "#FileRow { background: transparent; }"
             "#FileRow:hover { background: rgba(128,128,128,0.06); border-radius: 4px; }"
@@ -734,12 +744,28 @@ class _DiffDialog(MaskDialogBase):
 # ========================================================================
 
 
+def _dialog_font(parent) -> tuple:
+    """从调用方（卡片）取系统字体家族与弹窗字号（px），兜底微软雅黑 13"""
+    ff = getattr(parent, "_cached_ff", "") or "Microsoft YaHei"
+    try:
+        fs = int(getattr(parent, "_cached_fs", 14) or 14)
+    except (TypeError, ValueError):
+        fs = 14
+    return ff, max(11, fs - 1)
+
+
 class _ConfirmDialog(MaskDialogBase):
     """Fluent 风格确认弹窗（宿主 MaskDialogBase 风格）"""
 
     def __init__(self, title: str, message: str, parent=None):
         super().__init__(_dialog_parent(parent))
         self._confirmed = False
+        self._caller = parent
+        if parent is not None:  # 继承调用方（卡片）的系统字体与字号
+            try:
+                self.setFont(parent.font())
+            except RuntimeError:
+                pass
         self.setShadowEffect(60, (0, 10), QColor(0, 0, 0, 100))
         self.setClosableOnMaskClicked(True)
         self.setDraggable(True)
@@ -756,7 +782,7 @@ class _ConfirmDialog(MaskDialogBase):
         tc = colors.get("text_primary", _text_color())
         tcs = colors.get("text_secondary", _text_color(secondary=True))
         border = colors.get("border", "rgba(128,128,128,0.15)")
-
+        ff, fpx = _dialog_font(self._caller)
         self.widget.setObjectName("confirmWidget")
         self.widget.setStyleSheet(f"""
             #confirmWidget {{
@@ -773,7 +799,7 @@ class _ConfirmDialog(MaskDialogBase):
         # 标题
         title_lb = QLabel(title, self.widget)
         title_lb.setStyleSheet(
-            f"color: {tc}; font-size: 15px; font-weight: 600; background: transparent;"
+            f"color: {tc}; font-family: '{ff}'; font-size: {fpx + 2}px; font-weight: 600; background: transparent;"
         )
         cl.addWidget(title_lb)
 
@@ -781,7 +807,7 @@ class _ConfirmDialog(MaskDialogBase):
         msg_lb = QLabel(message, self.widget)
         msg_lb.setWordWrap(True)
         msg_lb.setStyleSheet(
-            f"color: {tcs}; font-size: 13px; background: transparent;"
+            f"color: {tcs}; font-family: '{ff}'; font-size: {fpx}px; background: transparent;"
         )
         cl.addWidget(msg_lb, 1)
 
@@ -793,7 +819,7 @@ class _ConfirmDialog(MaskDialogBase):
         cancel_btn.setFixedSize(80, 32)
         cancel_btn.setStyleSheet(
             f"QPushButton {{ background: rgba(128,128,128,0.12); border: none; border-radius: 6px; "
-            f"color: {tc}; font-size: 13px; }}"
+            f"color: {tc}; font-family: '{ff}'; font-size: {fpx}px; }}"
             "QPushButton:hover { background: rgba(128,128,128,0.22); }"
         )
         cancel_btn.clicked.connect(self.reject)
@@ -803,7 +829,7 @@ class _ConfirmDialog(MaskDialogBase):
         confirm_btn.setFixedSize(80, 32)
         confirm_btn.setStyleSheet(
             "QPushButton { background: rgba(98,160,234,0.2); border: none; border-radius: 6px; "
-            f"color: #62a0ea; font-size: 13px; font-weight: 600; }}"
+            f"color: #62a0ea; font-family: '{ff}'; font-size: {fpx}px; font-weight: 600; }}"
             "QPushButton:hover { background: rgba(98,160,234,0.35); }"
         )
         confirm_btn.clicked.connect(self._on_confirm)
@@ -853,6 +879,12 @@ class _InputDialog(MaskDialogBase):
                  cancel_text: str = "取消", parent=None):
         super().__init__(_dialog_parent(parent))
         self._hint = hint
+        self._caller = parent
+        if parent is not None:  # 继承调用方（卡片）的系统字体与字号
+            try:
+                self.setFont(parent.font())
+            except RuntimeError:
+                pass
         self.setShadowEffect(60, (0, 10), QColor(0, 0, 0, 100))
         self.setClosableOnMaskClicked(True)
         self.setDraggable(True)
@@ -869,6 +901,7 @@ class _InputDialog(MaskDialogBase):
         tc = colors.get("text_primary", _text_color())
         tcs = colors.get("text_secondary", _text_color(secondary=True))
         border = colors.get("border", "rgba(128,128,128,0.15)")
+        ff, fpx = _dialog_font(self._caller)
 
         self.widget.setObjectName("inputWidget")
         self.widget.setStyleSheet(f"""
@@ -884,7 +917,7 @@ class _InputDialog(MaskDialogBase):
 
         title_lb = QLabel(title, self.widget)
         title_lb.setStyleSheet(
-            f"color: {tc}; font-size: 15px; font-weight: 600; background: transparent;"
+            f"color: {tc}; font-family: '{ff}'; font-size: {fpx + 2}px; font-weight: 600; background: transparent;"
         )
         cl.addWidget(title_lb)
 
@@ -892,7 +925,7 @@ class _InputDialog(MaskDialogBase):
         self._input.setPlaceholderText(self._hint)
         self._input.setStyleSheet(
             f"QLineEdit {{ background: rgba(128,128,128,0.08); border: 1px solid {border}; "
-            f"border-radius: 6px; padding: 7px 10px; color: {tc}; font-size: 13px; }}"
+            f"border-radius: 6px; padding: 7px 10px; color: {tc}; font-family: '{ff}'; font-size: {fpx}px; }}"
             "QLineEdit:focus { border-color: #62a0ea; }"
         )
         self._input.returnPressed.connect(self._on_confirm)
@@ -904,7 +937,7 @@ class _InputDialog(MaskDialogBase):
         cancel_btn.setFixedSize(80, 32)
         cancel_btn.setStyleSheet(
             f"QPushButton {{ background: rgba(128,128,128,0.12); border: none; border-radius: 6px; "
-            f"color: {tc}; font-size: 13px; }}"
+            f"color: {tc}; font-family: '{ff}'; font-size: {fpx}px; }}"
             "QPushButton:hover { background: rgba(128,128,128,0.22); }"
         )
         cancel_btn.clicked.connect(self.reject)
@@ -914,7 +947,7 @@ class _InputDialog(MaskDialogBase):
         confirm_btn.setFixedSize(80, 32)
         confirm_btn.setStyleSheet(
             "QPushButton { background: rgba(98,160,234,0.2); border: none; border-radius: 6px; "
-            f"color: #62a0ea; font-size: 13px; font-weight: 600; }}"
+            f"color: #62a0ea; font-family: '{ff}'; font-size: {fpx}px; font-weight: 600; }}"
             "QPushButton:hover { background: rgba(98,160,234,0.35); }"
         )
         confirm_btn.clicked.connect(self._on_confirm)
@@ -974,6 +1007,11 @@ def _input_ask(title: str, hint: str = "", parent=None,
 
         d = SingleInputDialog(title=title, hint=hint, confirm_text=confirm_text,
                               cancel_text=cancel_text, parent=_dialog_parent(parent))
+        if parent is not None:  # 继承调用方系统字体
+            try:
+                d.setFont(parent.font())
+            except RuntimeError:
+                pass
         d.confirmed.connect(_got)
         d.exec_()
         return holder["text"]
@@ -990,6 +1028,8 @@ def _input_ask(title: str, hint: str = "", parent=None,
 
 class _CollapsibleSection(QWidget):
     """可折叠的区块容器"""
+
+    toggled = pyqtSignal(str, bool)  # (title, collapsed)
 
     def __init__(self, title: str, count: int = 0, collapsed: bool = False, parent=None):
         super().__init__(parent)
@@ -1058,6 +1098,7 @@ class _CollapsibleSection(QWidget):
         self._collapsed = not self._collapsed
         self._arrow_lb.setText("▸" if self._collapsed else "▾")
         self._content_widget.setVisible(not self._collapsed)
+        self.toggled.emit(self._title, self._collapsed)
 
     def set_content(self, widget: QWidget):
         """设置内部内容控件"""
@@ -1088,7 +1129,7 @@ class _StashRowWidget(QWidget):
     def __init__(self, stash_info: dict, parent=None):
         super().__init__(parent)
         self._info = stash_info
-        self.setMinimumHeight(32)
+        self.setMinimumHeight(28)
         self.setObjectName("StashRow")
         self.setCursor(Qt.PointingHandCursor)
         self.setToolTip("双击查看搁置内容")
@@ -1158,7 +1199,7 @@ class _BranchRowWidget(QWidget):
     def __init__(self, branch_info: dict, parent=None):
         super().__init__(parent)
         self._info = branch_info
-        self.setMinimumHeight(30)
+        self.setMinimumHeight(28)
         self.setObjectName("BranchRow")
         self.setStyleSheet(
             "#BranchRow { background: transparent; }"
@@ -1239,66 +1280,392 @@ class _BranchRowWidget(QWidget):
 
 
 # ========================================================================
-# 9. 提交历史行控件
+# 9. 提交历史行控件（graph 视图）
 # ========================================================================
+
+_LANE_COLORS = ["#62a0ea", "#50e3c2", "#e2c08d", "#c586c0", "#f14c4c", "#89d185", "#dcb67a", "#4fc1ff"]
+_LANE_W = 14   # graph 每条分支列宽（px）
+_ROW_H = 28    # 提交行统一行高（px）
+
+
+def _relative_time(iso: str, now=None) -> str:
+    """ISO 时间 → 相对时间；解析失败回退日期部分。7 天内相对，更早显示日期。"""
+    try:
+        dt = datetime.fromisoformat(iso)
+    except (ValueError, TypeError):
+        return iso[:10] if iso else ""
+    if dt.tzinfo is None:
+        now = now or datetime.now()
+    else:
+        now = now or datetime.now(dt.tzinfo)
+    sec = max((now - dt).total_seconds(), 0.0)
+    if sec < 60:
+        return "刚刚"
+    if sec < 3600:
+        return f"{int(sec // 60)} 分钟前"
+    if sec < 86400:
+        return f"{int(sec // 3600)} 小时前"
+    if sec < 172800:
+        return "昨天"
+    if sec < 604800:
+        return f"{int(sec // 86400)} 天前"
+    if dt.year == now.year:
+        return dt.strftime("%m-%d")
+    return dt.strftime("%Y-%m-%d")
+
+
+def _parse_refs(refs: str) -> list:
+    """git %D → [(text, kind)]，kind: current / local / remote / tag"""
+    out = []
+    for part in (refs or "").split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if part.startswith("HEAD -> "):
+            out.append((part[len("HEAD -> "):], "current"))
+        elif part == "HEAD":
+            out.append(("HEAD", "current"))
+        elif part.startswith("tag: "):
+            out.append((part[len("tag: "):], "tag"))
+        elif "/" in part:
+            out.append((part, "remote"))
+        else:
+            out.append((part, "local"))
+    return out
+
+
+_BADGE_STYLES = {
+    # kind: (bg_rgba, fg)
+    "current": ("rgba(80,227,194,0.18)", "#50e3c2"),
+    "local":   ("rgba(80,227,194,0.12)", "#50e3c2"),
+    "remote":  ("rgba(98,160,234,0.16)", "#62a0ea"),
+    "tag":     ("rgba(226,192,141,0.16)", "#e2c08d"),
+    "dim":     (None, None),  # 渲染时用次级文字色
+}
+
+
+def _make_ref_badge(text: str, kind: str, parent) -> QLabel:
+    """分支/标签小徽章"""
+    bg, fg = _BADGE_STYLES.get(kind, _BADGE_STYLES["local"])
+    if bg is None:
+        fg = _text_color(secondary=True)
+        bg = "rgba(128,128,128,0.20)"
+    lb = QLabel(text, parent)
+    lb.setToolTip(text)
+    lb.setStyleSheet(
+        f"background: {bg}; color: {fg}; border-radius: 7px; "
+        "font-size: 10px; padding: 1px 6px;"
+    )
+    return lb
+
+
+def _compute_lanes(commits: list, branch_name: str = "") -> int:
+    """GitGraph 式并行分支列计算，就地附加 _lane/_color/_lane_in/_lane_out/_head/_unpushed。
+
+    git log 拓扑序保证 parent 在 child 之后出现；分叉插新列，
+    同 hash 多列保留最先（曲线以斜线衔接近似）。
+    未推送判定：当前分支的 origin/<branch> 指针之前的提交（多分支年轻提交可能误标，低概率）。
+    返回最大并行列数（下限 2）。
+    """
+    lanes: list = []  # [{hash, color}]
+    max_lanes = 2
+    remote_ref = f"origin/{branch_name}" if branch_name else ""
+    unpushed_from = None  # 第一个已推送 commit 的 index
+    for i, c in enumerate(commits):
+        if unpushed_from is None and remote_ref:
+            refs = {t for t, _ in _parse_refs(c.get("refs", ""))}
+            if remote_ref in refs:
+                unpushed_from = i
+    if unpushed_from is None:
+        unpushed_from = len(commits)  # 无远程指针 → 全部视为未推送
+    for i, c in enumerate(commits):
+        c["_unpushed"] = i < unpushed_from
+        hash_ = c["hash"]
+        c["_lane_in"] = [(j, ln["color"]) for j, ln in enumerate(lanes)]
+        idx = next((j for j, ln in enumerate(lanes) if ln["hash"] == hash_), None)
+        if idx is None:
+            color = _LANE_COLORS[len(lanes) % len(_LANE_COLORS)]
+            lanes.append({"hash": hash_, "color": color})
+            idx = len(lanes) - 1
+        else:
+            color = lanes[idx]["color"]
+        c["_lane"] = idx
+        c["_color"] = color
+        c["_head"] = i == 0
+        parents = c.get("parents") or []
+        if parents:
+            lanes[idx] = {"hash": parents[0], "color": color}
+            for pr in parents[1:]:
+                if all(ln["hash"] != pr for ln in lanes):
+                    lanes.append({"hash": pr,
+                                  "color": _LANE_COLORS[len(lanes) % len(_LANE_COLORS)]})
+        else:
+            lanes.pop(idx)
+        seen, dedup = set(), []
+        for ln in lanes:
+            if ln["hash"] not in seen:
+                seen.add(ln["hash"])
+                dedup.append(ln)
+        lanes = dedup
+        c["_lane_out"] = [(j, ln["color"]) for j, ln in enumerate(lanes)]
+        max_lanes = max(max_lanes, len(c["_lane_in"]), len(lanes), idx + 1)
+    return max_lanes
+
+
+class _GraphColumnWidget(QWidget):
+    """提交行左侧 graph 列：圆点 + 分支线。
+
+    跨行连续感由各行自绘拼接：同列竖线贯通中线，
+    分叉从圆点斜出、汇合经中线斜入圆点，HEAD 空心高亮。
+    """
+
+    def __init__(self, info: dict, lanes: int, parent=None):
+        super().__init__(parent)
+        self._info = info
+        self.setFixedWidth(lanes * _LANE_W)
+
+    def paintEvent(self, event):
+        info = self._info
+        lane_in = info.get("_lane_in") or []
+        lane_out = info.get("_lane_out") or []
+        if "_lane" not in info:
+            return
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        h, mid, w = self.height(), self.height() // 2, _LANE_W
+        dot_x = info["_lane"] * w + w // 2
+        in_xs = {j * w + w // 2: QColor(cl) for j, cl in lane_in}
+        out_xs = {j * w + w // 2: QColor(cl) for j, cl in lane_out}
+
+        p.setPen(QPen(QColor(info["_color"]), 1.5))
+        for x in in_xs:
+            p.drawLine(x, 0, x, mid)
+        for x in out_xs:
+            p.drawLine(x, mid, x, h)
+        for x, cl in in_xs.items():
+            if x not in out_xs and x != dot_x:  # 汇合
+                p.setPen(QPen(cl, 1.5))
+                p.drawLine(x, mid, dot_x, mid)
+        for x, cl in out_xs.items():
+            if x not in in_xs and x != dot_x:  # 分叉
+                p.setPen(QPen(cl, 1.5))
+                p.drawLine(dot_x, mid, x, mid)
+
+        p.setPen(Qt.NoPen)
+        if info.get("_head"):
+            p.setBrush(QColor("#1e1e1e") if isDarkTheme() else QColor("#ffffff"))
+            p.drawEllipse(QPoint(dot_x, mid), 4, 4)
+            p.setPen(QPen(QColor(info["_color"]), 1.5))
+            p.setBrush(Qt.NoBrush)
+            p.drawEllipse(QPoint(dot_x, mid), 4, 4)
+        else:
+            # 未推送提交用暖橙实心醒目区分
+            p.setBrush(QColor("#e2c08d") if info.get("_unpushed") else QColor(info["_color"]))
+            p.drawEllipse(QPoint(dot_x, mid), 3, 3)
+
+
+class _CommitFileRow(QLabel):
+    """展开列表中的单文件行：+N −M 路径，点击查看该文件 diff"""
+
+    clicked = pyqtSignal(str)  # path
+
+    def __init__(self, hash_: str, f: dict, parent=None):
+        super().__init__(parent)
+        self._hash = hash_
+        self._path = f["path"]
+        if f["add"] == 0 and f["del"] == 0:
+            body = f"bin  {f['path']}"
+        else:
+            body = (
+                f"<span style='color:#50e3c2'>+{f['add']}</span> "
+                f"<span style='color:#f14c4c'>−{f['del']}</span>  {f['path']}"
+            )
+        self.setText(body)
+        self.setCursor(Qt.PointingHandCursor)
+        self.setToolTip(f"查看 {f['path']} 的 diff")
+        self.setObjectName("CommitFileRow")
+        self.setStyleSheet(
+            "#CommitFileRow { background: transparent; border-radius: 4px; "
+            f"color: {_text_color()}; font-size: 13px; padding: 2px 8px; }} "
+            "#CommitFileRow:hover { background: rgba(128,128,128,0.08); }"
+        )
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.clicked.emit(self._path)
+        super().mousePressEvent(event)
+
+
+class _CommitFilesWidget(QWidget):
+    """提交行展开的文件列表（最多显示 20 个）"""
+
+    file_requested = pyqtSignal(str, str)  # (hash, path)
+
+class _CommitFilesWidget(QWidget):
+    """提交行展开的文件列表（最多显示 20 个）；左侧延续 graph 竖线保持连续"""
+
+    file_requested = pyqtSignal(str, str)  # (hash, path)
+
+    def paintEvent(self, event):
+        # 浅底圆角 + 延续主行 graph 竖线（当前 commit 出线的所有列），展开区不断线
+        p = QPainter(self)
+        p.setRenderHint(QPainter.Antialiasing)
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor(128, 128, 128, 12))
+        p.drawRoundedRect(self.rect(), 6, 6)
+        lane_out = self._info.get("_lane_out") or []
+        h = self.height()
+        for j, cl in lane_out:
+            p.setPen(QPen(QColor(cl), 1.5))
+            x = j * _LANE_W + _LANE_W // 2
+            p.drawLine(x, 0, x, h)
+
+    def __init__(self, info: dict, parent=None):
+        super().__init__(parent)
+        self._info = info
+        ly = QVBoxLayout(self)
+        ly.setContentsMargins(20, 4, 12, 6)
+        ly.setSpacing(0)
+        files = info.get("stat_files") or []
+        if not files:
+            empty = QLabel("（无文件变更 / merge commit）", self)
+            empty.setStyleSheet(
+                f"color: {_text_color(secondary=True)}; font-size: 11px; padding: 2px 6px;"
+            )
+            ly.addWidget(empty)
+            return
+        for f in files[:20]:
+            row = _CommitFileRow(info["hash"], f, self)
+            row.clicked.connect(lambda p, h=info["hash"]: self.file_requested.emit(h, p))
+            ly.addWidget(row)
+        if len(files) > 20:
+            more = QLabel(f"… 其余 {len(files) - 20} 个文件（双击行查看完整 diff）", self)
+            more.setStyleSheet(
+                f"color: {_text_color(secondary=True)}; font-size: 11px; padding: 2px 6px;"
+            )
+            ly.addWidget(more)
 
 
 class _CommitRowWidget(QWidget):
-    """单个提交行"""
+    """单个提交行（graph 视图）：悬停详情卡 tooltip，单击展开文件列表，双击完整 diff"""
 
-    detail_requested = pyqtSignal(str)  # hash
+    expand_toggled = pyqtSignal(object)  # self
+    detail_requested = pyqtSignal(str)   # hash（双击，保留）
 
-    def __init__(self, commit_info: dict, parent=None):
+    def __init__(self, commit_info: dict, graph_lanes: int = 2, parent=None):
         super().__init__(parent)
         self._info = commit_info
-        self.setMinimumHeight(26)
+        self._files_widget = None
         self.setObjectName("CommitRow")
         self.setCursor(Qt.PointingHandCursor)
-        self.setToolTip("双击查看提交详情")
-        self.setStyleSheet(
-            "#CommitRow { background: transparent; }"
-            "#CommitRow:hover { background: rgba(128,128,128,0.06); border-radius: 4px; }"
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(8, 0, 8, 0)
+        outer.setSpacing(0)
+
+        # 主行（固定 28px；hover 高亮与点击/双击都挂在它身上）
+        self._main = QWidget(self)
+        self._main.setObjectName("CommitRowMain")
+        self._main.setFixedHeight(_ROW_H)
+        self._main.setCursor(Qt.PointingHandCursor)
+        self._main.setToolTip(self._build_tooltip())
+        self._main.setStyleSheet(
+            "#CommitRowMain { background: transparent; }"
+            "#CommitRowMain:hover { background: rgba(128,128,128,0.06); border-radius: 4px; }"
         )
-        ly = QHBoxLayout(self)
-        ly.setContentsMargins(16, 1, 8, 1)
+        self._main.mousePressEvent = self._on_main_press
+        self._main.mouseDoubleClickEvent = self._on_main_double
+        outer.addWidget(self._main)
+
+        ly = QHBoxLayout(self._main)
+        ly.setContentsMargins(0, 0, 0, 0)
         ly.setSpacing(6)
 
-        # 点
-        dot = QLabel("●", self)
-        dot.setFixedWidth(12)
-        dot.setProperty("keepColor", True)
-        dot.setStyleSheet("background: transparent; color: #62a0ea; font-size: 10px;")
-        ly.addWidget(dot)
+        # graph 列（圆点 + 分支线）
+        ly.addWidget(_GraphColumnWidget(commit_info, max(2, graph_lanes), self._main))
 
-        # Hash
-        hash_lb = QLabel(commit_info["hash"], self)
+        # Hash（7 位惯例，省出宽度给描述）
+        hash_lb = QLabel(commit_info["hash"], self._main)
         hash_lb.setProperty("keepColor", True)
         hash_lb.setStyleSheet(
             "background: transparent; color: #62a0ea; font-size: 11px; font-family: 'Consolas', monospace;"
         )
-        hash_lb.setFixedWidth(80)
+        hash_lb.setFixedWidth(64)
         ly.addWidget(hash_lb)
 
-        # 日期
-        date_lb = QLabel(commit_info["date"], self)
+        # 相对时间
+        date_lb = QLabel(
+            _relative_time(commit_info.get("date_iso", "")) or commit_info["date"], self._main
+        )
         date_lb.setStyleSheet(
             f"background: transparent; color: {_text_color(secondary=True)}; font-size: 11px;"
         )
-        date_lb.setFixedWidth(110)
+        date_lb.setFixedWidth(74)
         ly.addWidget(date_lb)
 
-        # 提交信息
-        subject_lb = QLabel(commit_info["subject"], self)
-        subject_lb.setWordWrap(True)
+        # 行内不显示 refs 徽章（用户要求全去掉），refs 信息仅在 tooltip 语境可用
+        refs = _parse_refs(commit_info.get("refs", ""))
+        del refs
+
+        # 提交信息（尾部省略：窄空间下中间省略的头尾拼接观感差；tooltip 由主程序自绘气泡体系接管）
+        subject_lb = _ElidedLabel(
+            commit_info["subject"], self._main, elide_mode=Qt.ElideRight
+        )
         subject_lb.setStyleSheet(
             f"background: transparent; color: {_text_color()}; font-size: 12px;"
         )
-        subject_lb.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
-        ly.addWidget(subject_lb)
+        ly.addWidget(subject_lb, 1)
 
-    def mouseDoubleClickEvent(self, event):
+        # 主程序对 QWidget.setToolTip 有全局自绘气泡接管（simple_hover_tooltip）。
+        # HoverEnter 会沿 hover 链同时到达壳与所有子控件，每层各设文本会叠出
+        # 多个同内容气泡——因此气泡只挂壳一层，子控件显式清空（空文本不弹）。
+        tip = self._build_tooltip()
+        self.setToolTip(tip)
+        self._main.setToolTip("")
+        for child in self._main.findChildren(QWidget):
+            child.setToolTip("")
+
+    def _build_tooltip(self) -> str:
+        """VSCode 式悬停详情卡（纯文本多行：QToolTip 对富文本解析不可靠）"""
+        info = self._info
+        when_rel = _relative_time(info.get("date_iso", "")) or info["date"]
+        stat = info.get("stat_files") or []
+        lines = [
+            info["subject"],
+            f"{info.get('author', '')} · {when_rel}（{info.get('date_iso') or info['date']}）",
+        ]
+        if stat:
+            lines.append(
+                f"{len(stat)} files changed, +{info.get('stat_add', 0)} −{info.get('stat_del', 0)}"
+            )
+        else:
+            lines.append("无文件变更（merge）")
+        lines.append("单击展开文件列表 · 双击完整 diff")
+        return "\n".join(lines)
+
+    def info(self) -> dict:
+        return self._info
+
+    def is_expanded(self) -> bool:
+        return self._files_widget is not None
+
+    def expand(self, widget: QWidget) -> None:
+        self._files_widget = widget
+        self.layout().addWidget(widget)
+
+    def collapse(self) -> None:
+        if self._files_widget is not None:
+            self._files_widget.deleteLater()
+            self._files_widget = None
+
+    def _on_main_press(self, event):
+        if event.button() == Qt.LeftButton:
+            self.expand_toggled.emit(self)
+        QWidget.mousePressEvent(self._main, event)
+
+    def _on_main_double(self, event):
         self.detail_requested.emit(self._info["hash"])
-        super().mouseDoubleClickEvent(event)
+        QWidget.mouseDoubleClickEvent(self._main, event)
 
 
 # ========================================================================
@@ -1311,10 +1678,12 @@ _COMMIT_DIFF_LIMIT = 5000
 class _CommitDetailDialog(MaskDialogBase):
     """Commit 详情对话框：元信息条 + 完整 diff（词级高亮）"""
 
-    def __init__(self, repo_path: str, hash_: str, parent=None):
+    def __init__(self, repo_path: str, hash_: str, parent=None,
+                 file_path: str = ""):
         super().__init__(_dialog_parent(parent))
         self._repo_path = repo_path
         self._hash = hash_
+        self._file_path = file_path
         self.setShadowEffect(60, (0, 10), QColor(0, 0, 0, 100))
         self.setClosableOnMaskClicked(True)
         self.setDraggable(True)
@@ -1348,6 +1717,14 @@ class _CommitDetailDialog(MaskDialogBase):
         self._hash_lb.setToolTip("点击复制完整 hash")
         self._hash_lb.mousePressEvent = self._on_hash_click
         hl.addWidget(self._hash_lb)
+        if self._file_path:
+            path_lb = QLabel(self._file_path, hdr)
+            path_lb.setStyleSheet(
+                "background: rgba(128,128,128,0.10); border-radius: 4px; padding: 2px 8px; "
+                f"color: {_text_color(secondary=True)}; font-size: 12px;"
+            )
+            path_lb.setToolTip(self._file_path)
+            hl.addWidget(path_lb)
         hl.addStretch(1)
 
         close_btn = TransparentToolButton(FluentIcon.CLOSE, hdr)
@@ -1403,7 +1780,11 @@ class _CommitDetailDialog(MaskDialogBase):
     def _load(self):
         """异步加载 git show 输出"""
         self._diff_area.setPlainText("加载中…")
-        w = _Worker(lambda: GitRepo(self._repo_path).show_commit(self._hash))
+        if self._file_path:
+            w = _Worker(lambda: GitRepo(self._repo_path).show_commit_file(
+                self._hash, self._file_path))
+        else:
+            w = _Worker(lambda: GitRepo(self._repo_path).show_commit(self._hash))
         t = QThread(self)
         w.moveToThread(t)
         t.started.connect(w.run)
@@ -1617,6 +1998,46 @@ class _StashDetailDialog(MaskDialogBase):
 # ========================================================================
 
 
+class _AISignals(QObject):
+    done = pyqtSignal(str)
+    error = pyqtSignal(str)
+
+
+class _AIGenerateTask(QRunnable):
+    """后台调 LLM 根据暂存 diff 生成提交描述（一次性对话，同 prompt-enhancer 范式）"""
+
+    def __init__(self, system: str, user: str, llm_config: dict, signals):
+        super().__init__()
+        self._system = system
+        self._user = user
+        self._llm = llm_config
+        self._signals = signals
+        self.setAutoDelete(True)
+
+    def run(self):
+        try:
+            from app.utils.http_client import build_openai_client
+
+            client = build_openai_client(
+                api_key=self._llm.get("API_KEY", ""),
+                base_url=self._llm.get("API_URL"),
+            )
+            resp = client.chat.completions.create(
+                model=self._llm.get("模型名称", "gpt-4o"),
+                messages=[
+                    {"role": "system", "content": self._system},
+                    {"role": "user", "content": self._user},
+                ],
+                temperature=0.3,
+                max_tokens=500,
+            )
+            result = strip_thinking((resp.choices[0].message.content or "").strip())
+            self._signals.done.emit(result)
+        except Exception as e:
+            logger.error(f"[git-panel] AI 生成提交描述失败: {e}")
+            self._signals.error.emit(str(e))
+
+
 class GitPanelCard(QWidget):
     """Git 控制面板浮动卡片"""
 
@@ -1629,6 +2050,7 @@ class GitPanelCard(QWidget):
         self._is_loading = False
         self._worker_thread: Optional[QThread] = None
         self._worker: Optional[_Worker] = None
+        self._section_collapsed: dict = {}  # 区块标题 -> 折叠状态（跨刷新记忆）
 
         # 缓存上下文
         self._cached_tc = _text_color()
@@ -1749,6 +2171,13 @@ class GitPanelCard(QWidget):
             "QPushButton:pressed { background: rgba(98,160,234,0.4); }"
         )
 
+        # 提交描述框（正文与 placeholder 均跟随 widget 字体）
+        try:
+            self._commit_input.setFont(QFont(ff, max(10, fs - 2)))
+            self._adjust_input_height()
+        except RuntimeError:
+            pass
+
         # 搁置按钮
         btn_base = (
             f"QPushButton {{ background: rgba(128,128,128,0.1); border: none; border-radius: 5px; "
@@ -1760,7 +2189,7 @@ class GitPanelCard(QWidget):
             self._stash_btn.setStyleSheet(btn_base)
         if hasattr(self, '_new_branch_btn'):
             self._new_branch_btn.setStyleSheet(btn_base)
-        for name in ("_push_btn", "_pull_btn", "_fetch_btn"):
+        for name in ("_push_btn", "_pull_btn", "_fetch_btn", "_ai_btn"):
             if hasattr(self, name):
                 getattr(self, name).setStyleSheet(btn_base)
 
@@ -1983,45 +2412,73 @@ class GitPanelCard(QWidget):
         r1.addWidget(sync_widget)
         pl.addWidget(row1)
 
-        # ── 行 2：提交输入框 + 提交/搁置/新建分支 ──
+        # ── 行 2：提交描述（初始单行，随内容增高） + 底部按钮行 ──
         row2 = QWidget(panel)
         row2.setStyleSheet("background: transparent;")
-        r2 = QHBoxLayout(row2)
+        r2 = QVBoxLayout(row2)
         r2.setContentsMargins(0, 0, 0, 0)
-        r2.setSpacing(6)
+        r2.setSpacing(4)
 
-        # 提交消息输入
-        self._commit_input = QLineEdit(row2)
-        self._commit_input.setPlaceholderText("提交描述...")
-        self._commit_input.setMinimumHeight(30)
-        self._commit_input.returnPressed.connect(self._on_commit)
-        r2.addWidget(self._commit_input, 1)
+        # 提交描述（初始单行高度，输入/换行时自动增高，上限封顶）
+        self._commit_input = QPlainTextEdit(row2)
+        self._commit_input.setPlaceholderText("提交描述...（可点「AI 生成」根据暂存变更自动填写）")
+        self._commit_input.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._commit_input.textChanged.connect(self._adjust_input_height)
+        self._commit_input.setStyleSheet(
+            "QPlainTextEdit { background: rgba(128,128,128,0.06); border: 1px solid rgba(128,128,128,0.1); "
+            "border-radius: 6px; padding: 6px 8px; }"
+            "QPlainTextEdit:focus { border-color: rgba(98,160,234,0.6); }"
+        )
+        r2.addWidget(self._commit_input)
 
-        # 提交按钮（主操作）
-        self._commit_btn = PrimaryPushButton("提交", row2)
-        self._commit_btn.setFixedHeight(30)
-        self._commit_btn.clicked.connect(self._on_commit)
-        r2.addWidget(self._commit_btn)
+        # 底部按钮行：全部右对齐（AI 生成 / 搁置 / 提交）
+        btn_row = QHBoxLayout()
+        btn_row.setContentsMargins(0, 0, 0, 0)
+        btn_row.setSpacing(6)
+        btn_row.addStretch(1)
 
-        # 搁置按钮
+        self._ai_btn = QPushButton("AI 生成", row2)
+        self._ai_btn.setFixedHeight(26)
+        self._ai_btn.setCursor(Qt.PointingHandCursor)
+        self._ai_btn.setToolTip("根据暂存区变更由 AI 生成提交描述（模型可在系统设置配置）")
+        self._ai_btn.clicked.connect(self._on_ai_generate)
+        btn_row.addWidget(self._ai_btn)
+
         self._stash_btn = QPushButton("搁置", row2)
-        self._stash_btn.setFixedHeight(28)
+        self._stash_btn.setFixedHeight(26)
         self._stash_btn.setCursor(Qt.PointingHandCursor)
         self._stash_btn.setToolTip("保存当前工作进度")
         self._stash_btn.clicked.connect(self._on_stash)
-        r2.addWidget(self._stash_btn)
+        btn_row.addWidget(self._stash_btn)
 
-        # 新建分支按钮
-        self._new_branch_btn = QPushButton("新建分支", row2)
-        self._new_branch_btn.setFixedHeight(28)
-        self._new_branch_btn.setCursor(Qt.PointingHandCursor)
-        self._new_branch_btn.setToolTip("创建并切换到新分支")
-        self._new_branch_btn.clicked.connect(self._on_create_branch)
-        r2.addWidget(self._new_branch_btn)
+        self._commit_btn = PrimaryPushButton("提交", row2)
+        self._commit_btn.setFixedHeight(26)
+        self._commit_btn.clicked.connect(self._on_commit)
+        btn_row.addWidget(self._commit_btn)
+
+        r2.addLayout(btn_row)
+
+        # 初始单行高度（_retheme 提供 QSS 字体后由 _adjust_input_height 精调）
+        self._commit_input.setFixedHeight(34)
 
         pl.addWidget(row2)
 
+        # 新建分支按钮（挂到分支折叠区标题右侧，见 _render_content）
+        self._new_branch_btn = QPushButton("新建分支", self)
+        self._new_branch_btn.setFixedHeight(24)
+        self._new_branch_btn.setCursor(Qt.PointingHandCursor)
+        self._new_branch_btn.setToolTip("创建并切换到新分支")
+        self._new_branch_btn.clicked.connect(self._on_create_branch)
+
         root.addWidget(panel)
+
+    def _adjust_input_height(self):
+        """提交描述框随内容自动增高（单行起步，封顶 160px）"""
+        edit = self._commit_input
+        doc_h = int(edit.document().size().height())
+        fm_h = edit.fontMetrics().lineSpacing() + 14  # 单行兜底（含 padding）
+        target = max(34, min(max(doc_h + 12, fm_h), 160))
+        edit.setFixedHeight(target)
 
     def _set_status_text(self, text: str):
         """设置标题行状态文本（刷新按钮左侧）；空文本自动隐藏"""
@@ -2192,6 +2649,8 @@ class GitPanelCard(QWidget):
 
     def _render_content(self, data: dict):
         """渲染所有区块到内容区"""
+        # 旧行即将销毁，展开态引用作废
+        self._expanded_row = None
         # 断开旧行控件信号，避免回调进入即将销毁的对象（B2）
         for row in self.findChildren(_FileRowWidget):
             try:
@@ -2219,7 +2678,7 @@ class GitPanelCard(QWidget):
         self._pull_btn.setToolTip(f"拉取远程更新（远程领先 {behind} 个提交）")
         self._fetch_btn.setToolTip("获取远程所有分支更新（fetch --all --prune）")
 
-        self._commit_input.setText("")
+        self._commit_input.setPlainText("")
 
         # ── 1. 文件变更 ──
         status_items = data.get("status", [])
@@ -2227,8 +2686,8 @@ class GitPanelCard(QWidget):
         unstaged = [s for s in status_items if not s["staged"]]
         total_changes = len(staged) + len(unstaged)
 
-        changes_section = _CollapsibleSection(
-            "变更", count=total_changes, collapsed=False
+        changes_section = self._create_section(
+            "变更", count=total_changes, default_collapsed=False
         )
         changes_content = QWidget()
         changes_content.setStyleSheet("background: transparent;")
@@ -2286,8 +2745,8 @@ class GitPanelCard(QWidget):
 
         # ── 2. Stash ──
         stashes = data.get("stashes", [])
-        stash_section = _CollapsibleSection(
-            "搁置", count=len(stashes), collapsed=False
+        stash_section = self._create_section(
+            "搁置", count=len(stashes), default_collapsed=False
         )
         stash_content = QWidget()
         stash_content.setStyleSheet("background: transparent;")
@@ -2313,8 +2772,8 @@ class GitPanelCard(QWidget):
 
         # ── 3. 分支 ──
         branches = data.get("branches", [])
-        branch_section = _CollapsibleSection(
-            "分支", count=len(branches), collapsed=False
+        branch_section = self._create_section(
+            "分支", count=len(branches), default_collapsed=False
         )
         branch_content = QWidget()
         branch_content.setStyleSheet("background: transparent;")
@@ -2337,12 +2796,14 @@ class GitPanelCard(QWidget):
             bl.addWidget(no_branch)
 
         branch_section.set_content(branch_content)
+        # 新建分支按钮挂在区块标题右侧（每次重建时重新 reparent 到新 section）
+        branch_section.add_action_button(self._new_branch_btn)
         self._content_layout.addWidget(branch_section)
 
         # ── 4. 提交历史 ──
         log = data.get("log", [])
-        log_section = _CollapsibleSection(
-            "提交历史", count=len(log), collapsed=True
+        log_section = self._create_section(
+            "提交历史", count=len(log), default_collapsed=True
         )
         log_content = QWidget()
         log_content.setStyleSheet("background: transparent;")
@@ -2351,8 +2812,10 @@ class GitPanelCard(QWidget):
         ll.setSpacing(0)
 
         if log:
+            max_lanes = _compute_lanes(log, branch_name=data.get("branch", ""))
             for item in log:
-                row = _CommitRowWidget(item)
+                row = _CommitRowWidget(item, graph_lanes=max_lanes)
+                row.expand_toggled.connect(self._on_commit_row_expand)
                 row.detail_requested.connect(self._on_commit_detail)
                 ll.addWidget(row)
         else:
@@ -2371,6 +2834,19 @@ class GitPanelCard(QWidget):
 
         # 重建完成后恢复滚动位置
         self._restore_scroll_pos()
+
+    def _create_section(self, title: str, count: int,
+                        default_collapsed: bool) -> "_CollapsibleSection":
+        """创建区块：折叠状态跨刷新记忆（无记录时用默认值）"""
+        section = _CollapsibleSection(
+            title, count=count,
+            collapsed=self._section_collapsed.get(title, default_collapsed)
+        )
+        section.toggled.connect(self._on_section_toggled)
+        return section
+
+    def _on_section_toggled(self, title: str, collapsed: bool):
+        self._section_collapsed[title] = collapsed
 
     def _make_changes_action_bar(self, staged: list, unstaged: list) -> QWidget:
         """创建变更区域的操作栏"""
@@ -2419,11 +2895,67 @@ class GitPanelCard(QWidget):
         bl.addStretch(1)
         return bar
 
+    # ── AI 生成提交描述 ──
+
+    def _on_ai_generate(self):
+        """根据暂存区 diff 由 AI 生成提交描述（异步，回填输入框）"""
+        if not self._repo_path or self._is_loading:
+            return
+        if getattr(self, "_ai_task_running", False):
+            return
+        ctx = self._context_provider() if self._context_provider else {}
+        main_widget = ctx.get("main_widget")
+        if main_widget is None:
+            self._show_info_bar("info", "AI 生成", "需要宿主环境（无法获取模型配置）")
+            return
+        diff_text = (GitRepo(self._repo_path).diff_staged() or "").strip()
+        if not diff_text:
+            self._show_info_bar("info", "AI 生成", "暂存区为空，请先暂存要提交的文件")
+            return
+        override = resolve_model(load_plugin_text_config("commit_model", ""), main_widget)
+        llm = get_llm_config(
+            main_widget,
+            override_provider=override[0] if override else None,
+            override_model=override[1] if override else None,
+        )
+        if not llm:
+            self._show_info_bar("info", "AI 生成", "未找到模型配置，请先在系统设置配置模型")
+            return
+        system = load_plugin_text_config("commit_prompt", DEFAULT_COMMIT_PROMPT)
+        user = f"暂存变更 diff（超长时已截断）：\n{diff_text[:6000]}"
+        self._ai_task_running = True
+        self._ai_btn.setEnabled(False)
+        self._ai_btn.setText("生成中…")
+        self._show_info_bar("info", "AI 生成", "正在根据暂存变更生成提交描述…")
+
+        signals = _AISignals()
+        signals.done.connect(self._on_ai_done)
+        signals.error.connect(self._on_ai_error)
+        task = _AIGenerateTask(system, user, llm, signals)
+        pool = getattr(main_widget, "_gen_thread_pool", None) or QThreadPool.globalInstance()
+        pool.start(task)
+
+    def _on_ai_done(self, message: str):
+        self._ai_task_running = False
+        self._ai_btn.setEnabled(True)
+        self._ai_btn.setText("AI 生成")
+        if message:
+            self._commit_input.setPlainText(message)
+            self._show_info_bar("success", "AI 生成", "已生成提交描述，可编辑后提交")
+        else:
+            self._show_info_bar("info", "AI 生成", "模型返回为空")
+
+    def _on_ai_error(self, err: str):
+        self._ai_task_running = False
+        self._ai_btn.setEnabled(True)
+        self._ai_btn.setText("AI 生成")
+        self._show_info_bar("error", "AI 生成失败", (err or "")[:80])
+
     # ── Git 操作 ──
 
     def _on_commit(self):
         """执行提交"""
-        msg = self._commit_input.text().strip()
+        msg = self._commit_input.toPlainText().strip()
         if not msg:
             self._show_info_bar("info", "提交信息不能为空", "")
             return
@@ -2449,7 +2981,7 @@ class GitPanelCard(QWidget):
 
     def _on_stash(self):
         """创建搁置"""
-        msg = self._commit_input.text().strip() or "WIP"
+        msg = self._commit_input.toPlainText().strip() or "WIP"
         if not _confirm_ask("确认搁置", f"确定要搁置当前修改吗？\n消息: {msg}", self):
             return
         self._set_status_text("搁置中…")
@@ -2557,10 +3089,32 @@ class GitPanelCard(QWidget):
         dialog.exec_()
 
     def _on_commit_detail(self, hash_: str):
-        """双击提交行：打开 Commit 详情对话框"""
+        """双击提交行：打开 Commit 详情对话框（完整 diff）"""
         if not self._repo_path:
             return
         dialog = _CommitDetailDialog(self._repo_path, hash_, self)
+        dialog.exec_()
+
+    def _on_commit_row_expand(self, row):
+        """展开/收起提交的文件列表（同刻最多展开一行）"""
+        prev = getattr(self, "_expanded_row", None)
+        if prev is not None and prev is not row:
+            prev.collapse()
+            self._expanded_row = None
+        if row.is_expanded():
+            row.collapse()
+            self._expanded_row = None
+        else:
+            files = _CommitFilesWidget(row.info())
+            files.file_requested.connect(self._on_commit_file_diff)
+            row.expand(files)
+            self._expanded_row = row
+
+    def _on_commit_file_diff(self, hash_: str, path: str):
+        """点击展开列表中的文件：打开单文件 diff"""
+        if not self._repo_path:
+            return
+        dialog = _CommitDetailDialog(self._repo_path, hash_, self, file_path=path)
         dialog.exec_()
 
     def _do_push(self):

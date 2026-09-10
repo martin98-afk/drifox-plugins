@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""git-panel UI 组件入口 — Git 控制面板"""
+"""git-panel UI 组件入口 — Git 控制面板
+
+额外注册「Git 提交描述生成」设置卡（多行提示词编辑 + 模型下拉 + 恢复默认），
+覆盖主程序 E1 自动卡（text 字段单行不便编辑长提示词）。
+"""
 
 import sys
 from pathlib import Path
@@ -30,4 +34,26 @@ def register_ui(registry):
         default_visible=False,
     )
 
+    _register_config_card(registry)
+
     logger.info("[git-panel] UI components registered")
+
+
+def _register_config_card(registry):
+    """注册「Git 提交描述生成」设置卡（失败降级 E1 自动卡）。"""
+    try:
+        from .config_card import _CommitConfigCard
+
+        registry.register_settings_card(
+            "git-panel",
+            "git-panel-config",
+            "Git 提交描述生成",
+            _CommitConfigCard,
+            priority=1,
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"[git-panel] 设置卡注册失败（降级 E1 自动卡）: {e}")
+
+
+def unload_ui(registry):
+    """卸载钩子（当前无残留状态需要清理）"""
