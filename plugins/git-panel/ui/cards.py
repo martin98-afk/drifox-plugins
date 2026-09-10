@@ -2635,20 +2635,23 @@ class GitPanelCard(QWidget):
     # ── InfoBar 提示 ──
 
     def _show_info_bar(self, kind: str, title: str, content: str = ""):
-        """在卡片顶部显示悬浮 InfoBar（success 3s / error 5s / info 不自动消失）
+        """在主程序窗口顶部显示悬浮 InfoBar（success 3s / error 5s / info 不自动消失）
 
         InfoBar 不加入布局（避免占位），由 InfoBarManager 按 TOP 位置
-        悬浮定位在卡片顶部，带动画，自动/手动关闭后清理。
+        悬浮定位在父窗口顶部，带动画，自动/手动关闭后清理。
+        parent 经 _dialog_parent 挂到主程序窗口（TabManagerWindow），
+        无宿主环境（测试/独立运行）回退调用方顶层窗口。
         """
         try:
+            host = _dialog_parent(self)
             if kind == "success":
-                bar = InfoBar.success(title, content, parent=self, duration=3000,
+                bar = InfoBar.success(title, content, parent=host, duration=3000,
                                       position=InfoBarPosition.TOP)
             elif kind == "error":
-                bar = InfoBar.error(title, content, parent=self, duration=5000,
+                bar = InfoBar.error(title, content, parent=host, duration=5000,
                                     position=InfoBarPosition.TOP)
             else:
-                bar = InfoBar.info(title, content, parent=self, duration=0,
+                bar = InfoBar.info(title, content, parent=host, duration=0,
                                    position=InfoBarPosition.TOP)
             self._info_bar_layout.addWidget(bar)
             bar.closedSignal.connect(lambda: self._cleanup_info_bar(bar))
