@@ -21,6 +21,7 @@
             "components": {
                 "commands": true
             },
+            "downloads": 1,
             "keywords": [
                 "image-generation",
                 "prompt-engineering",
@@ -3053,7 +3054,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
