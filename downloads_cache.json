@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1789002870.4889565,
+  "fetched_at": 1789020885.4500725,
   "downloads": {
     "ai-image-gen": 0,
     "ai-video-gen": 1,
@@ -112,7 +112,7 @@
     "web-artifacts-builder": 2,
     "web-design-skills": 2,
     "webapp-testing": 2,
-    "win-powershell": 23,
+    "win-powershell": 24,
     "workbuddy": 7,
     "workflow": 3
   }
