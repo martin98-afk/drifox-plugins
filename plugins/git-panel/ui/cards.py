@@ -2650,8 +2650,7 @@ class GitPanelCard(QWidget):
     def _fetch_all_data(self) -> dict:
         """同步函数：后台线程执行，收集所有 Git 信息
 
-        6 个查询（分支/ahead/状态/stash/分支列表/日志）彼此独立，
-        用线程池并行执行（每个查询独立 git 子进程），
+        4 个查询（status_v2[分支/ahead/状态三合一]/stash/分支列表/日志）并行执行，
         总耗时从「串行求和」降到「最慢单个查询」。
         """
         repo = self._repo_path
@@ -2661,25 +2660,22 @@ class GitPanelCard(QWidget):
         if not g.is_git_repo():
             return {"error": "当前项目不是 Git 仓库"}
 
-        with ThreadPoolExecutor(max_workers=6) as ex:
-            f_branch = ex.submit(g.branch)
-            f_ab = ex.submit(g.ahead_behind)
-            f_status = ex.submit(g.status_items)
+        log_limit = getattr(self, "_log_limit", 30)
+        with ThreadPoolExecutor(max_workers=4) as ex:
+            f_sv2 = ex.submit(g.status_v2)
             f_stashes = ex.submit(g.stash_list)
             f_branches = ex.submit(g.branch_list)
-            f_log = ex.submit(g.log)
-            branch = f_branch.result()
-            ahead, behind = f_ab.result()
-            status = f_status.result()
+            f_log = ex.submit(g.log, log_limit)
+            sv2 = f_sv2.result()
             stashes = f_stashes.result()
             branches = f_branches.result()
             log = f_log.result()
 
         return {
-            "branch": branch,
-            "ahead": ahead,
-            "behind": behind,
-            "status": status,
+            "branch": sv2["branch"],
+            "ahead": sv2["ahead"],
+            "behind": sv2["behind"],
+            "status": sv2["items"],
             "stashes": stashes,
             "branches": branches,
             "log": log,
@@ -2954,6 +2950,19 @@ class GitPanelCard(QWidget):
                 row.detail_requested.connect(self._on_commit_detail)
                 row.commit_action.connect(self._on_commit_row_action)
                 ll.addWidget(row)
+            # 返回条数打满请求上限 → 可能还有更早提交，展示「加载更多」
+            if len(log) >= getattr(self, "_log_limit", 30):
+                more_btn = QPushButton(f"加载更多（已显示 {len(log)} 条）", self)
+                more_btn.setFixedHeight(26)
+                more_btn.setCursor(Qt.PointingHandCursor)
+                more_btn.setStyleSheet(
+                    f"QPushButton {{ background: rgba(128,128,128,0.08); border: none; border-radius: 4px; "
+                    f"color: {self._cached_tcs}; font-family: '{self._cached_ff}'; "
+                    f"font-size: {max(self._cached_fs - 2, 10)}px; }}"
+                    "QPushButton:hover { background: rgba(128,128,128,0.16); }"
+                )
+                more_btn.clicked.connect(self._on_load_more_commits)
+                ll.addWidget(more_btn)
         else:
             no_log = QLabel("  无提交记录", log_content)
             no_log.setStyleSheet(
@@ -3211,6 +3220,11 @@ class GitPanelCard(QWidget):
         dialog = _CommitDetailDialog(self._repo_path, hash_, self, file_path=path,
                                      ff=self._cached_ff, fs=self._cached_fs)
         dialog.exec_()
+
+    def _on_load_more_commits(self):
+        """提交图「加载更多」：请求上限 +30 后全量刷新"""
+        self._log_limit = getattr(self, "_log_limit", 30) + 30
+        self._async_refresh()
 
     def _on_commit_row_action(self, action: str, hash_: str):
         """提交历史右键动作（checkout / revert / reset:soft|mixed|hard）"""
