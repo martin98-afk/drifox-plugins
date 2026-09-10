@@ -1527,7 +1527,7 @@
         {
             "name": "git-panel",
             "description": "Git 控制面板 — 文件变更、暂存/取消暂存、提交、Stash、分支管理、提交历史、Diff 预览、AI 生成提交描述",
-            "version": "1.8.0",
+            "version": "2.0.0",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -2651,7 +2651,7 @@
         {
             "name": "prompt-enhancer",
             "description": "输入框按钮：一键用 LLM 优化当前输入框的提示词，增强指令可在系统配置中多行编辑。优化中按钮圆环转圈动画，复用主程序模型配置，「提示词增强模型」选择可持久化（关闭再打开保留），闭包实现（不修改主程序）。",
-            "version": "0.2.4",
+            "version": "0.2.5",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
