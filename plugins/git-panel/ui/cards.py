@@ -32,7 +32,7 @@ from .llm_config import (
     strip_thinking,
 )
 
-from PyQt5.QtCore import QEvent, QObject, QPoint, QRunnable, QRectF, QSize, QThread, Qt, QTimer, QThreadPool, pyqtSignal
+from PyQt5.QtCore import QObject, QPoint, QRunnable, QRectF, QSize, QThread, Qt, QTimer, QThreadPool, pyqtSignal
 from PyQt5.QtGui import QBrush, QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
 from PyQt5.QtWidgets import (
     QFrame,
@@ -45,7 +45,6 @@ from PyQt5.QtWidgets import (
     QPushButton,
     QSizePolicy,
     QTextEdit,
-    QToolTip,
     QVBoxLayout,
     QWidget,
 )
@@ -188,23 +187,6 @@ class _InfoBarStack:
 
     def count(self) -> int:
         return len(self._bars)
-
-
-class _NativeTooltipFilter(QObject):
-    """拦截 ToolTip 事件改走系统原生 tooltip。
-
-    主程序将 QWidget.setToolTip 全局 patch 为自绘气泡（SimpleHoverTooltip），
-    直接调 QToolTip.showText() 不受影响；本过滤器在事件层抢先把
-    ToolTip 事件转给原生 QToolTip，绕过自绘气泡。
-    """
-
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.ToolTip:
-            tip = obj.toolTip()
-            if tip:
-                QToolTip.showText(event.globalPos(), tip, obj)
-            return True
-        return False
 
 
 # ========================================================================
@@ -2499,10 +2481,6 @@ class GitPanelCard(QWidget):
         # 提交描述（初始单行高度，输入/换行时自动增高，上限封顶）
         self._commit_input = QPlainTextEdit(row2)
         self._commit_input.setPlaceholderText("提交描述...")
-        self._commit_input.setToolTip("可点「AI 生成」根据暂存变更自动填写")
-        # tooltip 用系统原生样式（不走主程序自绘气泡）
-        self._commit_tip_filter = _NativeTooltipFilter(self._commit_input)
-        self._commit_input.installEventFilter(self._commit_tip_filter)
         self._commit_input.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._commit_input.textChanged.connect(self._adjust_input_height)
         self._commit_input.updateRequest.connect(self._on_input_update_request)
