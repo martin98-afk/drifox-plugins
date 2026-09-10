@@ -1054,7 +1054,7 @@ class _CollapsibleSection(QWidget):
 
     toggled = pyqtSignal(str, bool)  # (title, collapsed)
 
-    def __init__(self, title: str, count: int = 0, collapsed: bool = False, parent=None):
+    def __init__(self, title: str, count: Optional[int] = 0, collapsed: bool = False, parent=None):
         super().__init__(parent)
         self._collapsed = collapsed
         self._title = title
@@ -1092,9 +1092,7 @@ class _CollapsibleSection(QWidget):
         )
         hl.addWidget(self._arrow_lb)
 
-        self._title_lb = StrongBodyLabel(
-            f"{self._title} ({self._count})", self._header
-        )
+        self._title_lb = StrongBodyLabel(self._title_text(), self._header)
         self._title_lb.setStyleSheet(f"color: {_text_color()}; background: transparent;")
         hl.addWidget(self._title_lb)
         hl.addStretch(1)
@@ -1128,9 +1126,13 @@ class _CollapsibleSection(QWidget):
         self._content = widget
         self._content_layout.addWidget(widget)
 
-    def set_count(self, count: int):
+    def _title_text(self) -> str:
+        """标题文本：count 为 None 时不显示计数（如提交历史的固定 30 条窗口）"""
+        return f"{self._title} ({self._count})" if self._count is not None else self._title
+
+    def set_count(self, count: Optional[int]):
         self._count = count
-        self._title_lb.setText(f"{self._title} ({count})")
+        self._title_lb.setText(self._title_text())
 
     def add_action_button(self, btn: QWidget):
         self._action_layout.addWidget(btn)
@@ -1483,12 +1485,13 @@ class _GraphColumnWidget(QWidget):
 
         p.setPen(Qt.NoPen)
         if info.get("_head"):
-            # HEAD：大空心圆（背景色填充 + 主题色描边）
-            p.setBrush(QColor("#1e1e1e") if isDarkTheme() else QColor("#ffffff"))
-            p.drawEllipse(QPoint(dot_x, mid), 5, 5)
-            p.setPen(QPen(QColor(info["_color"]), 1.8))
+            # HEAD：实心大圆 + 外环，标记当前所在提交；未推送时沿用橙色语义
+            c = QColor("#e2c08d") if info.get("_unpushed") else QColor(info["_color"])
+            p.setBrush(c)
+            p.drawEllipse(QPoint(dot_x, mid), 4.5, 4.5)
+            p.setPen(QPen(c, 1.5))
             p.setBrush(Qt.NoBrush)
-            p.drawEllipse(QPoint(dot_x, mid), 5, 5)
+            p.drawEllipse(QPoint(dot_x, mid), 6.5, 6.5)
         else:
             # 未推送提交用暖橙实心醒目区分
             p.setBrush(QColor("#e2c08d") if info.get("_unpushed") else QColor(info["_color"]))
@@ -2946,8 +2949,9 @@ class GitPanelCard(QWidget):
 
         # ── 4. 提交历史 ──
         log = data.get("log", [])
+        # 提交图：固定只显示最近 30 条，非真实总数 → 不显示计数
         log_section = self._create_section(
-            "提交历史", count=len(log), default_collapsed=True
+            "提交图", count=None, default_collapsed=True
         )
         log_content = QWidget()
         log_content.setStyleSheet("background: transparent;")
@@ -2956,11 +2960,11 @@ class GitPanelCard(QWidget):
         ll.setSpacing(0)
 
         # 图例常驻折叠区标题右侧（keepColor 保留自身次要色小字号，不被 retheme 重涂）
-        legend_lb = QLabel("蓝粗线 = 当前分支 · 橙点 = 未推送", self)
+        legend_lb = QLabel("蓝粗线=当前分支 · 橙点=未推送", self)
         legend_lb.setProperty("keepColor", True)
         legend_lb.setStyleSheet(
             f"background: transparent; color: {self._cached_tcs}; "
-            f"font-family: '{self._cached_ff}'; font-size: {max(self._cached_fs - 2, 10)}px;"
+            f"font-family: '{self._cached_ff}'; font-size: {max(self._cached_fs - 5, 8)}px;"
         )
         log_section.add_action_button(legend_lb)
 
@@ -2989,7 +2993,7 @@ class GitPanelCard(QWidget):
         # 重建完成后恢复滚动位置
         self._restore_scroll_pos()
 
-    def _create_section(self, title: str, count: int,
+    def _create_section(self, title: str, count: Optional[int],
                         default_collapsed: bool) -> "_CollapsibleSection":
         """创建区块：折叠状态跨刷新记忆（无记录时用默认值）"""
         section = _CollapsibleSection(
