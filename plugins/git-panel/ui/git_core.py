@@ -210,6 +210,68 @@ class GitRepo:
             result.append((path, f"{x}{y}"))
         return result
 
+    def status_v2(self) -> dict:
+        """git status --porcelain=v2 --branch：一次子进程拿齐
+
+        分支名 / ahead / behind / 文件变更列表，
+        将 branch + ahead_behind + status 三次子进程合并为一次（刷新提速）。
+        返回 {"branch", "ahead", "behind", "items"}，items 结构与 status_items 一致。
+        """
+        out = {"branch": "", "ahead": 0, "behind": 0, "items": []}
+        # strip=False：变更行 path 前后空白有语义，不能 strip
+        res = self._run("--no-optional-locks", "status", "--porcelain=v2", "--branch",
+                        strip=False)
+        if not res.ok:
+            return out
+        oid = ""
+        branch_head = ""
+        for line in res.stdout.splitlines():
+            if line.startswith("# branch.oid "):
+                oid = line[len("# branch.oid "):].strip()
+            elif line.startswith("# branch.head "):
+                branch_head = line[len("# branch.head "):].strip()
+            elif line.startswith("# branch.ab "):
+                parts = line.split()  # ['#', 'branch.ab', '+1', '-0']
+                if len(parts) == 4:
+                    try:
+                        out["ahead"] = int(parts[2].lstrip("+"))
+                        out["behind"] = int(parts[3].lstrip("-"))
+                    except ValueError:
+                        pass
+            elif line.startswith("1 "):
+                # 1 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <path>
+                f = line[2:].split(None, 7)
+                if len(f) == 8:
+                    self._append_v2_item(out["items"], f[0], f[7])
+            elif line.startswith("2 "):
+                # 2 <XY> ... <path>\t<origPath>（重命名/复制，取工作树新路径）
+                f = line[2:].split(None, 7)
+                if len(f) == 8:
+                    self._append_v2_item(out["items"], f[0], f[7].split("\t")[0])
+            elif line.startswith("u "):
+                # u <XY> <sub> <m1> <m2> <m3> <mW> <h1> <h2> <h3> <path>
+                f = line[2:].split(None, 9)
+                if len(f) == 10:
+                    out["items"].append(
+                        {"path": f[9], "status": f[0], "staged": False}
+                    )
+            elif line.startswith("? "):
+                out["items"].append({"path": line[2:], "status": "??", "staged": False})
+        if branch_head and branch_head != "(detached)":
+            out["branch"] = branch_head
+        elif branch_head == "(detached)":
+            out["branch"] = f"(detached @ {oid[:7]})" if oid else "(detached)"
+        return out
+
+    @staticmethod
+    def _append_v2_item(items: List[dict], xy: str, path: str):
+        """porcelain v2 的 XY 码 → 与 v1 status_items 同构的条目（. 表示无变更）"""
+        x, y = (xy[0], xy[1]) if len(xy) >= 2 else (".", ".")
+        if x != ".":
+            items.append({"path": path, "status": x, "staged": True})
+        if y != ".":
+            items.append({"path": path, "status": y, "staged": False})
+
     def status_items(self) -> List[dict]:
         """文件变更列表 [{"path", "status", "staged"}]（UI 渲染用）
 
@@ -377,16 +439,14 @@ class GitRepo:
 
     # ── 日志 ──
 
-    def log(self, n: int = 30, graph: bool = False) -> List[dict]:
-        """提交历史，含每 commit 文件统计（--numstat）
-
-        [{"hash", "author", "date", "date_iso", "subject", "refs", "parents",
-          "graph", "stat_files": [{path, add, del}], "stat_add", "stat_del"}]
-        """
+    def log(self, n: int = 30, graph: bool = False, skip: int = 0) -> List[dict]:
+        """提交历史，含每 commit 文件统计（--numstat）；skip 用于「加载更多」翻页"""
         fmt = "--format=%h%x1f%an%x1f%ai%x1f%s%x1f%D%x1f%p"
         args = ["log", f"-n{n}", fmt, "--numstat", "--all"]
         if graph:
             args.insert(1, "--graph")
+        if skip > 0:
+            args.insert(2, f"--skip={skip}")
         res = self._run(*args)
         if not res.ok or not res.stdout:
             return []
