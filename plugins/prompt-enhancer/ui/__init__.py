@@ -31,7 +31,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from loguru import logger
 from PyQt5.QtCore import QObject, QRectF, QRunnable, QThreadPool, QTimer, Qt, pyqtSignal
 from PyQt5.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
-from PyQt5.QtWidgets import QPlainTextEdit
+from PyQt5.QtWidgets import QApplication, QPlainTextEdit
 
 from app.plugins.managers.plugin_config_store import PluginConfigStore
 from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
@@ -398,8 +398,10 @@ class _EnhanceConfigCard(_ConfigCardBase):
 
     def _adjustViewSize(self):
         """空白占位归零：qfluentwidgets 的 setExpand 会先调 _adjustViewSize 把
-        spaceWidget 重设为内容等高，导致展开高度 = 内容 + 等高空白；
-        覆写本方法强制占位为 0，展开高度只算实际内容。"""
+        spaceWidget 重设为内容等高，导致展开高度 = 内容 + 等高空白。
+        与覆写的 setExpand 配套：spaceWidget 恒 0，高度直接在标题卡与
+        标题卡+内容之间切换（原版折叠动画依赖 spaceWidget 滚动余量，
+        强制归零后折叠动画失去参考高度，卡片收不回去）。"""
         h = self.viewLayout.sizeHint().height()
         try:
             self.spaceWidget.setFixedHeight(0)
@@ -407,6 +409,19 @@ class _EnhanceConfigCard(_ConfigCardBase):
             pass
         if self.isExpand:
             self.setFixedHeight(self.card.height() + h)
+        else:
+            self.setFixedHeight(self.card.height())
+
+    def setExpand(self, isExpand: bool):
+        """覆写：不用原版滚动动画（依赖 spaceWidget 占位，已归零），
+        直接按展开态切换卡片高度，保证可展开也可折叠。"""
+        if self.isExpand == isExpand:
+            return
+        self.isExpand = isExpand
+        self.setProperty("isExpand", isExpand)
+        self.setStyle(QApplication.style())
+        self.card.expandButton.setExpand(isExpand)
+        self._adjustViewSize()
 
     def _echo(self) -> None:
         """回显当前生效值（默认兜底可见）；阻断信号循环。"""

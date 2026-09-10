@@ -18,7 +18,8 @@ except Exception:  # noqa: BLE001
     ComboBox = None  # type: ignore
     TextEdit = None  # type: ignore
 
-from PyQt5.QtWidgets import QPlainTextEdit, QPushButton
+from PyQt5.QtCore import QEvent, QObject
+from PyQt5.QtWidgets import QApplication, QPlainTextEdit, QToolTip, QPushButton
 
 from .llm_config import (
     DEFAULT_COMMIT_PROMPT,
@@ -76,8 +77,10 @@ class _CommitConfigCard(_CONFIG_CARD_BASE):
 
     def _adjustViewSize(self):
         """空白占位归零：qfluentwidgets 的 setExpand 会先调 _adjustViewSize 把
-        spaceWidget 重设为内容等高，导致展开高度 = 内容 + 等高空白；
-        覆写本方法强制占位为 0，展开高度只算实际内容。"""
+        spaceWidget 重设为内容等高，导致展开高度 = 内容 + 等高空白。
+        与覆写的 setExpand 配套：spaceWidget 恒 0，高度直接在标题卡与
+        标题卡+内容之间切换（原版的折叠动画依赖 spaceWidget 滚动余量，
+        强制归零后折叠动画失去参考高度，卡片收不回去）。"""
         h = self.viewLayout.sizeHint().height()
         try:
             self.spaceWidget.setFixedHeight(0)
@@ -85,6 +88,19 @@ class _CommitConfigCard(_CONFIG_CARD_BASE):
             pass
         if self.isExpand:
             self.setFixedHeight(self.card.height() + h)
+        else:
+            self.setFixedHeight(self.card.height())
+
+    def setExpand(self, isExpand: bool):
+        """覆写：不用原版滚动动画（依赖 spaceWidget 占位，已归零），
+        直接按展开态切换卡片高度，保证可展开也可折叠。"""
+        if self.isExpand == isExpand:
+            return
+        self.isExpand = isExpand
+        self.setProperty("isExpand", isExpand)
+        self.setStyle(QApplication.style())
+        self.card.expandButton.setExpand(isExpand)
+        self._adjustViewSize()
 
     # ── 回显 / 保存 ──
 

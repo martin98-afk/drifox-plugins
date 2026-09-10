@@ -323,6 +323,20 @@ class GitRepo:
     def branch_delete(self, name: str) -> GitResult:
         return self._run("branch", "-d", name)
 
+    # ── 提交操作（提交历史右键） ──
+
+    def checkout_commit(self, hash_: str) -> GitResult:
+        """检出指定提交（detached HEAD）"""
+        return self._run("checkout", hash_)
+
+    def revert_commit(self, hash_: str) -> GitResult:
+        """还原指定提交（生成一条逆向提交，不经编辑器）"""
+        return self._run("revert", "--no-edit", hash_)
+
+    def reset_commit(self, hash_: str, mode: str = "mixed") -> GitResult:
+        """重置当前分支到指定提交（mode: soft / mixed / hard）"""
+        return self._run("reset", f"--{mode}", hash_)
+
     # ── 同步（push / pull / fetch，网络超时 60s） ──
 
     def push(self) -> GitResult:
