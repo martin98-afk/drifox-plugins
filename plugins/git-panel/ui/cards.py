@@ -2155,12 +2155,12 @@ class GitPanelCard(QWidget):
             f"background: transparent; color: {tcs}; font-family: '{ff}'; font-size: {fs - 2}px;"
         )
 
-        # 提交输入框
+        # 提交描述框（QPlainTextEdit，选择器须匹配；跟随主题字体字号）
         self._commit_input.setStyleSheet(
-            "QLineEdit { background: rgba(128,128,128,0.08); border: 1px solid rgba(128,128,128,0.15); "
-            "border-radius: 6px; padding: 7px 10px; "
-            f"color: {tc}; font-family: '{ff}'; font-size: {fs - 1}px; }}"
-            "QLineEdit:focus { border-color: #62a0ea; }"
+            "QPlainTextEdit { background: rgba(128,128,128,0.06); border: 1px solid rgba(128,128,128,0.1); "
+            "border-radius: 6px; padding: 6px 8px; "
+            f"color: {tc}; font-family: '{ff}'; font-size: {fs - 2}px; }}"
+            "QPlainTextEdit:focus { border-color: rgba(98,160,234,0.6); }"
         )
 
         # 提交按钮
@@ -2181,7 +2181,7 @@ class GitPanelCard(QWidget):
         # 搁置按钮
         btn_base = (
             f"QPushButton {{ background: rgba(128,128,128,0.1); border: none; border-radius: 5px; "
-            f"color: {tc}; font-family: '{ff}'; font-size: {fs - 3}px; padding: 4px 10px; }}"
+            f"color: {tc}; font-family: '{ff}'; font-size: {fs - 2}px; padding: 4px 10px; }}"
             "QPushButton:hover { background: rgba(128,128,128,0.2); }"
             "QPushButton:pressed { background: rgba(128,128,128,0.3); }"
         )
@@ -2379,14 +2379,18 @@ class GitPanelCard(QWidget):
             "font-family: 'Consolas', 'Courier New', monospace;"
         )
         self._branch_lb.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
-        r1.addWidget(self._branch_lb, 1)
+        # 自适应内容宽（不拉伸填满半行），窄面板压缩时由 _ElidedLabel 自动中间省略
+        self._branch_lb.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        self._branch_lb.setMaximumWidth(150)
+        r1.addWidget(self._branch_lb)
+        r1.addStretch(1)
 
         # 同步按钮组（固定宽度，避免 sizeHint 挤占分支徽章）
         sync_widget = QWidget(row1)
         sync_widget.setStyleSheet("background: transparent;")
         sl = QHBoxLayout(sync_widget)
         sl.setContentsMargins(0, 0, 0, 0)
-        sl.setSpacing(4)
+        sl.setSpacing(6)
 
         self._push_btn = QPushButton("推送", sync_widget)
         self._push_btn.setFixedSize(60, 24)
@@ -2412,18 +2416,20 @@ class GitPanelCard(QWidget):
         r1.addWidget(sync_widget)
         pl.addWidget(row1)
 
-        # ── 行 2：提交描述（初始单行，随内容增高） + 底部按钮行 ──
+        # ── 行 2：提交描述（随内容增高） + 底部按钮行 ──
         row2 = QWidget(panel)
         row2.setStyleSheet("background: transparent;")
         r2 = QVBoxLayout(row2)
         r2.setContentsMargins(0, 0, 0, 0)
-        r2.setSpacing(4)
+        r2.setSpacing(6)
 
         # 提交描述（初始单行高度，输入/换行时自动增高，上限封顶）
         self._commit_input = QPlainTextEdit(row2)
-        self._commit_input.setPlaceholderText("提交描述...（可点「AI 生成」根据暂存变更自动填写）")
+        self._commit_input.setPlaceholderText("提交描述...")
+        self._commit_input.setToolTip("可点「AI 生成」根据暂存变更自动填写")
         self._commit_input.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._commit_input.textChanged.connect(self._adjust_input_height)
+        self._commit_input.updateRequest.connect(self._on_input_update_request)
         self._commit_input.setStyleSheet(
             "QPlainTextEdit { background: rgba(128,128,128,0.06); border: 1px solid rgba(128,128,128,0.1); "
             "border-radius: 6px; padding: 6px 8px; }"
@@ -2439,6 +2445,7 @@ class GitPanelCard(QWidget):
 
         self._ai_btn = QPushButton("AI 生成", row2)
         self._ai_btn.setFixedHeight(26)
+        self._ai_btn.setMinimumWidth(72)  # 「生成中…」变宽时不跳动
         self._ai_btn.setCursor(Qt.PointingHandCursor)
         self._ai_btn.setToolTip("根据暂存区变更由 AI 生成提交描述（模型可在系统设置配置）")
         self._ai_btn.clicked.connect(self._on_ai_generate)
@@ -2459,7 +2466,7 @@ class GitPanelCard(QWidget):
         r2.addLayout(btn_row)
 
         # 初始单行高度（_retheme 提供 QSS 字体后由 _adjust_input_height 精调）
-        self._commit_input.setFixedHeight(34)
+        QTimer.singleShot(0, self._adjust_input_height)
 
         pl.addWidget(row2)
 
@@ -2472,13 +2479,32 @@ class GitPanelCard(QWidget):
 
         root.addWidget(panel)
 
+    def _on_input_update_request(self, _rect=None, _dy=0):
+        """换行/布局变化时也驱动高度自适应（textChanged 在换行时不可靠）"""
+        self._adjust_input_height()
+
     def _adjust_input_height(self):
-        """提交描述框随内容自动增高（单行起步，封顶 160px）"""
+        """提交描述框随内容自动增高（单行起步，封顶 160px）
+
+        注意：QPlainTextEdit 下 document().size().height() 是行数不是像素，
+        必须按「估算行数 × lineSpacing + 垂直 chrome」计算；
+        软折行（无 \n 的长段落）按 viewport 宽度估算。已用 PyQt5 实测验证。
+        """
         edit = self._commit_input
-        doc_h = int(edit.document().size().height())
-        fm_h = edit.fontMetrics().lineSpacing() + 14  # 单行兜底（含 padding）
-        target = max(34, min(max(doc_h + 12, fm_h), 160))
-        edit.setFixedHeight(target)
+        fm = edit.fontMetrics()
+        # 估算总行数：逐 block 显式行 + 长段按宽度软折行
+        avail = max(40, edit.viewport().width() - 16)
+        lines = 0
+        blk = edit.document().firstBlock()
+        while blk.isValid():
+            w = fm.horizontalAdvance(blk.text())
+            lines += max(1, int(w / avail) + (1 if w % avail else 0))
+            blk = blk.next()
+        lines = max(1, lines)
+        # 垂直附加：QSS padding 6×2 + border 1×2 + documentMargin 4×2 + 余量（实测标定）
+        target = max(36, min(lines * fm.lineSpacing() + 24, 160))
+        if edit.height() != target:
+            edit.setFixedHeight(target)
 
     def _set_status_text(self, text: str):
         """设置标题行状态文本（刷新按钮左侧）；空文本自动隐藏"""
@@ -2689,16 +2715,52 @@ class GitPanelCard(QWidget):
         changes_section = self._create_section(
             "变更", count=total_changes, default_collapsed=False
         )
+        # 暂存/放弃/取消暂存按钮挂折叠区标题右侧（同「新建分支」模式）
+        if unstaged:
+            stage_all_btn = QPushButton("暂存", self)
+            stage_all_btn.setFixedHeight(24)
+            stage_all_btn.setCursor(Qt.PointingHandCursor)
+            stage_all_btn.setToolTip("暂存所有修改")
+            stage_all_btn.setStyleSheet(
+                "QPushButton { background: rgba(80,227,194,0.12); border: none; border-radius: 4px; "
+                f"color: {self._cached_tc}; font-size: 11px; padding: 0 10px; }}"
+                "QPushButton:hover { background: rgba(80,227,194,0.25); }"
+            )
+            stage_all_btn.clicked.connect(self._on_stage_all)
+            changes_section.add_action_button(stage_all_btn)
+
+            discard_btn = QPushButton("放弃", self)
+            discard_btn.setFixedHeight(24)
+            discard_btn.setCursor(Qt.PointingHandCursor)
+            discard_btn.setToolTip(
+                "放弃所有未暂存修改：已跟踪文件恢复原状，未跟踪文件将被删除（已暂存内容不受影响）"
+            )
+            discard_btn.setStyleSheet(
+                "QPushButton { background: rgba(241,76,76,0.08); border: none; border-radius: 4px; "
+                f"color: {self._cached_tcs}; font-size: 11px; padding: 0 10px; }}"
+                "QPushButton:hover { background: rgba(241,76,76,0.2); }"
+            )
+            discard_btn.clicked.connect(self._on_discard_unstaged_all)
+            changes_section.add_action_button(discard_btn)
+
+        if staged:
+            unstage_all_btn = QPushButton("取消暂存", self)
+            unstage_all_btn.setFixedHeight(24)
+            unstage_all_btn.setCursor(Qt.PointingHandCursor)
+            unstage_all_btn.setToolTip("取消暂存所有文件")
+            unstage_all_btn.setStyleSheet(
+                "QPushButton { background: rgba(241,76,76,0.12); border: none; border-radius: 4px; "
+                f"color: {self._cached_tc}; font-size: 11px; padding: 0 10px; }}"
+                "QPushButton:hover { background: rgba(241,76,76,0.25); }"
+            )
+            unstage_all_btn.clicked.connect(self._on_unstage_all)
+            changes_section.add_action_button(unstage_all_btn)
+
         changes_content = QWidget()
         changes_content.setStyleSheet("background: transparent;")
         cl = QVBoxLayout(changes_content)
         cl.setContentsMargins(0, 0, 0, 0)
         cl.setSpacing(0)
-
-        # 全部暂存/全部取消暂存按钮
-        if total_changes > 0:
-            action_bar = self._make_changes_action_bar(staged, unstaged)
-            cl.addWidget(action_bar)
 
         # 已暂存标题
         if staged:
@@ -2847,53 +2909,6 @@ class GitPanelCard(QWidget):
 
     def _on_section_toggled(self, title: str, collapsed: bool):
         self._section_collapsed[title] = collapsed
-
-    def _make_changes_action_bar(self, staged: list, unstaged: list) -> QWidget:
-        """创建变更区域的操作栏"""
-        bar = QWidget()
-        bar.setStyleSheet("background: transparent;")
-        bl = QHBoxLayout(bar)
-        bl.setContentsMargins(12, 4, 8, 4)
-        bl.setSpacing(6)
-
-        if unstaged:
-            stage_all_btn = QPushButton("全部暂存", bar)
-            stage_all_btn.setFixedHeight(24)
-            stage_all_btn.setStyleSheet(
-                "QPushButton { background: rgba(80,227,194,0.12); border: none; border-radius: 4px; "
-                f"color: {self._cached_tc}; font-size: 11px; padding: 0 10px; }}"
-                "QPushButton:hover { background: rgba(80,227,194,0.25); }"
-            )
-            stage_all_btn.clicked.connect(self._on_stage_all)
-            bl.addWidget(stage_all_btn)
-
-            # 放弃所有未暂存修改（常驻：有未暂存修改即显示）
-            discard_unstaged_btn = QPushButton("放弃未暂存修改", bar)
-            discard_unstaged_btn.setFixedHeight(24)
-            discard_unstaged_btn.setToolTip(
-                "放弃所有未暂存修改：已跟踪文件恢复原状，未跟踪文件将被删除（已暂存内容不受影响）"
-            )
-            discard_unstaged_btn.setStyleSheet(
-                "QPushButton { background: rgba(241,76,76,0.08); border: none; border-radius: 4px; "
-                f"color: {self._cached_tcs}; font-size: 11px; padding: 0 10px; }}"
-                "QPushButton:hover { background: rgba(241,76,76,0.2); }"
-            )
-            discard_unstaged_btn.clicked.connect(self._on_discard_unstaged_all)
-            bl.addWidget(discard_unstaged_btn)
-
-        if staged:
-            unstage_all_btn = QPushButton("全部取消暂存", bar)
-            unstage_all_btn.setFixedHeight(24)
-            unstage_all_btn.setStyleSheet(
-                "QPushButton { background: rgba(241,76,76,0.12); border: none; border-radius: 4px; "
-                f"color: {self._cached_tc}; font-size: 11px; padding: 0 10px; }}"
-                "QPushButton:hover { background: rgba(241,76,76,0.25); }"
-            )
-            unstage_all_btn.clicked.connect(self._on_unstage_all)
-            bl.addWidget(unstage_all_btn)
-
-        bl.addStretch(1)
-        return bar
 
     # ── AI 生成提交描述 ──
 
