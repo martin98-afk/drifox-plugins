@@ -756,7 +756,7 @@
                 "ui": true,
                 "tools": true
             },
-            "downloads": 17,
+            "downloads": 18,
             "keywords": [
                 "cron",
                 "schedule",
@@ -1543,7 +1543,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 34,
+            "downloads": 36,
             "keywords": [
                 "git",
                 "source-control",
@@ -2063,7 +2063,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "marketplace",
                 "evolved"
@@ -2666,7 +2666,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 31,
+            "downloads": 33,
             "keywords": [
                 "prompt",
                 "enhance",
