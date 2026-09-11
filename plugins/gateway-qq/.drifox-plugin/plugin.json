@@ -45,6 +45,13 @@
                 "type": "text",
                 "default": "wss://api.sgroup.qq.com/websocket",
                 "placeholder": "wss://api.sgroup.qq.com/websocket"
+            },
+            {
+                "key": "create_bot",
+                "label": "创建机器人",
+                "type": "link",
+                "url": "https://q.qq.com/",
+                "placeholder": "前往 QQ 机器人开放平台创建"
             }
         ]
     }
