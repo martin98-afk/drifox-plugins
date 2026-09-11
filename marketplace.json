@@ -792,7 +792,7 @@
                 "tools": true,
                 "hook_policies": true
             },
-            "downloads": 22,
+            "downloads": 26,
             "keywords": [
                 "cron",
                 "schedule",
@@ -1388,7 +1388,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 24,
+            "downloads": 26,
             "platforms": [
                 "windows",
                 "linux",
@@ -1428,7 +1428,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 4,
+            "downloads": 6,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
