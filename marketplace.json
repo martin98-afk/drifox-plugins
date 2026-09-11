@@ -739,7 +739,7 @@
         {
             "name": "cron-tasks",
             "description": "定时任务中心 — 可视化配置 UI 定时任务（单次/间隔/Cron），到期自动驱动对话执行 prompt，带运行历史（参考 openhanako desk cron 设计）",
-            "version": "0.5.0",
+            "version": "0.5.2",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -767,7 +767,7 @@
                 "自动化"
             ],
             "drifox": {
-                "min_version": "0.5.0"
+                "min_version": "0.5.10"
             },
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
