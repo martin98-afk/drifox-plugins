@@ -133,6 +133,40 @@
             }
         },
         {
+            "name": "anything2explainer",
+            "description": "把任意主题做成一条黑底 MG 风格、有配音字幕与章节进度条的科普讲解视频（中文/英文，Remotion 代码动画）。含可编译模板、图元库、TTS/分镜/渲染工具、风格与动效规范、多 agent 分工协议与 QC 判据，以及《RAG 与知识库》完整样片作为质量标尺。",
+            "version": "1.0.0",
+            "author": "Vincentwei1021",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/anything2explainer",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "video",
+                "explainer",
+                "remotion",
+                "tts",
+                "motion-graphics",
+                "education"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "archify",
             "description": "把代码库/系统描述/纯语言需求/Mermaid 转成自包含交互式架构图 HTML（architecture/workflow/sequence/dataflow/lifecycle），内置 tt-a1i/archify 运行时，开箱即用。",
             "version": "0.1.0",
