@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from loguru import logger
-from PyQt5.QtCore import Qt, QSize, pyqtSignal
+from PyQt5.QtCore import Qt, QSize, QTimer, pyqtSignal
 from PyQt5.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -1494,6 +1494,12 @@ class CronTasksCard(QFrame):
         self._ctx_provider = None
         self._last_ctx: Dict[str, Any] = {}
         self._rows: Dict[str, JobRowCard] = {}
+        # 自保底轮询：热重载清 sys.modules 后旧卡片持有旧类单例，信号推送链
+        # （job_started/jobs_changed → controller → 卡片）会断在两套实例之间，
+        # 表现为完成/开始事件到不了卡片、行卡冻结在旧状态。卡片可见时自行
+        # 检测运行态翻转，翻转才全量刷（不闪），不依赖任何信号链。
+        self._poll_timer: Optional[QTimer] = None
+        self._last_poll_running: Optional[bool] = None
         self._build_ui()
         # qfluentwidgets 组件字号跟随系统设置
         apply_font_size_to_widget(self)
@@ -1559,6 +1565,7 @@ class CronTasksCard(QFrame):
         ctrl.ensure_started(self._last_ctx)
         ctrl.bind_card(self)  # 注册卡片实例，调度器变化时刷新
         self.refresh_jobs()
+        self._start_poll()
         # 2) 下拉数据源（每步独立容错，失败仅影响对应下拉）
         try:
             self._load_agents()
@@ -1821,6 +1828,38 @@ class CronTasksCard(QFrame):
 
     # ---------- 刷新 ----------
 
+    def _start_poll(self):
+        """卡片可见期间启动运行态轮询（hideEvent 停止）"""
+        if self._poll_timer is None:
+            self._poll_timer = QTimer(self)
+            self._poll_timer.setInterval(5000)
+            self._poll_timer.timeout.connect(self._poll_tick)
+        self._last_poll_running = None  # 首拍强制建基线
+        self._poll_timer.start()
+
+    def _stop_poll(self):
+        if self._poll_timer is not None:
+            self._poll_timer.stop()
+
+    def _poll_tick(self):
+        """运行态翻转检测：翻转才全量刷新（平时不重建、不闪）"""
+        try:
+            from .controller import CronTasksController
+
+            ctrl = CronTasksController.get_instance()
+            running = bool(ctrl.scheduler.is_running_job())
+            if running != self._last_poll_running:
+                self._last_poll_running = running
+                self.refresh_jobs()
+        except RuntimeError:
+            self._stop_poll()
+        except Exception as e:
+            logger.warning(f"[cron-tasks] poll_tick: {e}")
+
+    def hideEvent(self, event):
+        super().hideEvent(event)
+        self._stop_poll()
+
     def refresh_jobs(self):
         """从 controller 拉最新任务列表重建行卡片"""
         from .controller import CronTasksController
@@ -1870,6 +1909,10 @@ class CronTasksCard(QFrame):
 
         ctrl = CronTasksController.get_instance()
         if not ctrl.scheduler.is_running_job():
+            # 自愈：实际没在跑但行卡还挂着「运行中」（完成事件在热重载脱钩时
+            # 丢失）→ 全量刷一次复位；无残留时不动（避免每次心跳无谓重建）
+            if any(getattr(r, "_running", False) for r in self._rows.values()):
+                self.refresh_jobs()
             return
         ex = ctrl.scheduler._executor
         if not ex or not ex._job:

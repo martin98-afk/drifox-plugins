@@ -142,7 +142,12 @@ class CronExecutor(QThread):
         t = threading.Thread(target=_turn_worker, daemon=True, name="cron-turn")
         t.start()
 
-        # QThread 主体：轮询等待（可随时被取消打断）
+        # 硬看门狗：不信任 turn() 内部超时。实测（2026-09-11）daemon 线程场景下
+        # 流式读取挂死后，turn 内部 adapter.wait(timeout) 的超时收尾整链未发生
+        # （两个 20min 超时点均无落盘/通知），任务状态/串行锁/gateway 通知全部卡死。
+        # 故由 QThread 主体自查运行时长：超时+缓冲仍无结果 → 强制取消并收尾。
+        hard_timeout = self._timeout_seconds or EXECUTION_TIMEOUT_SECONDS
+        hard_deadline = started + hard_timeout + 60.0  # 缓冲 60s 让 turn 内部超时先行
         while not done.wait(0.2):
             if self._cancelled:
                 # 唤醒 session 取消，再给宽限期
@@ -158,6 +163,26 @@ class CronExecutor(QThread):
                         "job_id": job.id,
                         "status": "cancelled",
                         "error": "已手动停止",
+                        "response_text": "",
+                        "head": "",
+                        "duration_ms": duration_ms,
+                        "tool_calls": 0,
+                    }
+                )
+                return
+            if time.monotonic() > hard_deadline:
+                self.cancel()  # 尽力下发取消
+                if done.wait(CANCEL_GRACE_SECONDS):
+                    break  # turn 恰在此间返回，走正常收尾（holder 应为 timeout/error）
+                duration_ms = int((time.monotonic() - started) * 1000)
+                logger.warning(
+                    f"[cron-tasks] turn 超时 {hard_timeout}s+60s 缓冲仍未返回，执行器强制收尾"
+                )
+                self._emit(
+                    {
+                        "job_id": job.id,
+                        "status": "timeout",
+                        "error": f"执行超时（>{hard_timeout // 60} 分钟，强制收尾）",
                         "response_text": "",
                         "head": "",
                         "duration_ms": duration_ms,

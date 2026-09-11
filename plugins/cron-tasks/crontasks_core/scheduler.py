@@ -507,9 +507,13 @@ class CronScheduler(QObject):
         if notify_mode == "system":
             self._notify_system(text)
         elif notify_mode.startswith("gateway:"):
-            self._notify_gateway(job_id, label, status, summary, notify_mode, icon)
+            self._notify_gateway(job_id, label, status, summary, notify_mode, icon, response_text)
         else:
             self.notify_requested.emit("定时任务", text)
+        # 完成收尾统一发信号（此前只在 gateway 分支发，system/默认模式下
+        # UI 永远停在「运行中」且心跳停不下来）
+        self.job_finished.emit(job_id, label, status, summary)
+        self.jobs_changed.emit()
 
     def _notify_system(self, text: str):
         """系统托盘弹窗（失败回退本地 InfoBar）"""
@@ -521,7 +525,7 @@ class CronScheduler(QObject):
             logger.warning(f"[cron-tasks] 系统通知失败，回退本地: {e}")
             self.notify_requested.emit("定时任务", text)
 
-    def _notify_gateway(self, job_id: str, label: str, status: str, summary: str, notify_mode: str, icon: str):
+    def _notify_gateway(self, job_id: str, label: str, status: str, summary: str, notify_mode: str, icon: str, response_text: str = ""):
         """gateway:平台:chat_id → 后台线程异步发送（失败仅记日志，不阻塞收尾）
 
         走主程序注入的 `services["send_to_platform"]`，不自行 import
@@ -531,7 +535,12 @@ class CronScheduler(QObject):
         parts = notify_mode.split(":", 2)
         platform_name = parts[1] if len(parts) > 1 else ""
         chat_id = parts[2] if len(parts) > 2 else ""
-        text = f"{icon}「{label}」{summary[:300]}"
+        # 成功时发完整响应（此前只发 200 字摘要，飞书侧收到的内容不完整）；
+        # 失败/超时只有 error 短文本，维持原样
+        if status == "success" and response_text.strip():
+            text = f"{icon}「{label}」执行完成\n\n{response_text}"
+        else:
+            text = f"{icon}「{label}」{summary[:300]}"
 
         def _worker():
             try:
@@ -551,8 +560,6 @@ class CronScheduler(QObject):
                 logger.warning(f"[cron-tasks] gateway 通知发送异常: {e}")
 
         threading.Thread(target=_worker, daemon=True, name="cron-gw-notify").start()
-        self.job_finished.emit(job_id, label, status, summary)
-        self.jobs_changed.emit()
 
     def load_runs(self, job_id: str, limit: int = 20) -> List[dict]:
         return self._store.load_runs(job_id, limit)
