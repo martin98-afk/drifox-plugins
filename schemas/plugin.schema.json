@@ -105,6 +105,7 @@
         { "required": ["engines"] },
         { "required": ["gateways"] },
         { "required": ["loop_policies"] },
+        { "required": ["hook_policies"] },
         { "required": ["model_adapters"] },
         { "required": ["team_templates"] }
       ],
@@ -168,6 +169,10 @@
         "loop_policies": {
           "type": "boolean",
           "description": "启用 loop_policies/*.py 循环策略"
+        },
+        "hook_policies": {
+          "type": "boolean",
+          "description": "启用 hook_policies/*.py hook 触发策略（每个文件暴露 register(registry)，注册 HookPolicy 策略对象）"
         },
         "model_adapters": {
           "type": "boolean",
