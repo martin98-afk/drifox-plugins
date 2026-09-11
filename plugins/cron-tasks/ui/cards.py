@@ -1059,7 +1059,7 @@ class JobEditPanel(QWidget):
         else:
             logger.warning("[cron-tasks] 主程序未提供 list_platform_sessions 服务")
         if not sessions:
-            combo.addItem(self._empty_target_hint(), "")
+            combo.addItem(self._empty_target_hint(), userData="")
         else:
             sessions = sorted(sessions, key=lambda s: s.last_active, reverse=True)
             # 去重：同一 platform:chat_id 只保留最近活跃的一条
@@ -1070,7 +1070,7 @@ class JobEditPanel(QWidget):
                 if key in seen:
                     continue
                 seen.add(key)
-                combo.addItem(s.display_name, key)
+                combo.addItem(s.display_name, userData=key)
         if current:
             cidx = combo.findData(current)
             if cidx >= 0:
@@ -1204,7 +1204,8 @@ class JobEditPanel(QWidget):
             self._notify_combo.setCurrentIndex(2)
             self._notify_target_combo.clear()
             self._notify_target_combo.addItem(
-                f"（原配置）{':'.join(n.split(':', 2)[1:])}", ":".join(n.split(':', 2)[1:])
+                f"（原配置）{':'.join(n.split(':', 2)[1:])}",
+                userData=":".join(n.split(':', 2)[1:]),
             )
         elif n == "system":
             self._notify_combo.setCurrentIndex(1)
