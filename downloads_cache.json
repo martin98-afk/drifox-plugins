@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1789107793.1632738,
+  "fetched_at": 1789126617.258726,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -24,7 +24,7 @@
     "context-stats": 21,
     "context-usage-stats": 4,
     "context7": 4,
-    "cron-tasks": 22,
+    "cron-tasks": 26,
     "desktop-automation": 16,
     "doc-coauthoring": 1,
     "dsh-presets": 1,
@@ -41,8 +41,8 @@
     "game2048": 5,
     "gateway-dingtalk": 1,
     "gateway-discord": 1,
-    "gateway-feishu": 24,
-    "gateway-qq": 4,
+    "gateway-feishu": 26,
+    "gateway-qq": 6,
     "gateway-slack": 0,
     "gateway-telegram": 0,
     "gateway-wechat": 7,
