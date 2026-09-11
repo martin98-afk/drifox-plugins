@@ -106,10 +106,19 @@ class CronExecutor(QThread):
                 if not callable(create_session):
                     holder["error"] = "主程序未提供 create_engine_session 服务"
                     return
+                # hook_policy_id="cron_selective"：hook 节点白名单可配置
+                # （<app_data>/plugin_data/cron-tasks/hook_policy.json，
+                # 默认 SessionStart+PreToolUse+PostToolUse）。策略实现见本插件
+                # hook_policies/cron_selective.py；SessionStart 触发需主程序
+                # EngineSession 支持（app/core/conversation/engine_session.py）。
                 session = (
-                    create_session("cron-tasks", model_config_override=self._model_override)
+                    create_session(
+                        "cron-tasks",
+                        model_config_override=self._model_override,
+                        hook_policy_id="cron_selective",
+                    )
                     if self._model_override
-                    else create_session("cron-tasks")
+                    else create_session("cron-tasks", hook_policy_id="cron_selective")
                 )
                 if self._cancelled:
                     holder["cancelled"] = True
