@@ -3037,6 +3037,39 @@
             }
         },
         {
+            "name": "skillhub",
+            "description": "SkillHub 技能工作流 — 内网技能注册中心（registry）的批量发布、搜索与安装。内置限流重试、断点续传与发布失败分类处理。",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/skillhub",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "skillhub",
+                "publish",
+                "registry",
+                "skill",
+                "install"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "slack-gif-creator",
             "description": "动画 GIF 生成 — 面向 Slack 尺寸的动图制作，含约束校验与动画概念工具。",
             "version": "1.0.0",
