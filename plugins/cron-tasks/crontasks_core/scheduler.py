@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import threading
+import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -44,6 +45,7 @@ class CronScheduler(QObject):
         self._services: Dict[str, Any] = {}  # controller 注入的缓存
         self._main_widget: Any = None  # 活跃窗口 main_widget（模型列表/覆盖用）
         self._prev_workdir: str = ""  # 执行前的工作目录（结束后还原）
+        self._job_workdir: str = ""  # 本任务设置的目录（判断用户是否中途切走）
         self._timer = QTimer(self)
         self._timer.setInterval(TICK_INTERVAL_MS)
         self._timer.timeout.connect(self._tick)
@@ -103,9 +105,12 @@ class CronScheduler(QObject):
     def stop(self):
         """停止调度并取消运行中的任务（插件卸载/热重载/应用退出）
 
-        先 disconnect（孤儿防写盘），再 cancel + 有限等待；
-        等待期内正常返回的同步手动收尾落盘，卡死不返回的放弃收尾
-        （热重载属开发场景，新代调度器 start() 时 _reload 自愈磁盘状态）。
+        先 disconnect（孤儿防写盘），再 cancel + 有限等待；之后无论 executor
+        是否按期收尾，都保证落一条运行记录：
+        - 已收尾 → 用 _last_result（真实 status）
+        - 卡死不返回 → 补写 cancelled，避免 lastStatus 永久悬挂在 running
+          （悬挂会让 UI 一直显示“运行中”，下次启动的复位逻辑又会静默抹掉）
+        另外 workdir 此处兜底还原（正常路径由 _on_executor_done 还原并清空）。
         """
         self._timer.stop()
         ex = self._executor
@@ -116,17 +121,63 @@ class CronScheduler(QObject):
                 ex.wait(8000)
             except Exception:
                 pass
-            if not ex.isRunning():
-                res = getattr(ex, "_last_result", None)
-                if isinstance(res, dict):
-                    try:
-                        self._on_executor_done(res)
-                    except Exception as e:
-                        logger.warning(f"[cron-tasks] stop 收尾失败: {e}")
+            res = getattr(ex, "_last_result", None)
+            if not isinstance(res, dict):
+                job = getattr(ex, "_job", None)
+                if job is not None:
+                    started_at = float(getattr(ex, "_started_at", 0.0) or 0.0)
+                    duration_ms = int((time.monotonic() - started_at) * 1000) if started_at else 0
+                    res = {
+                        "job_id": job.id,
+                        "status": "cancelled",
+                        "error": "插件重载/停止时任务被中断",
+                        "response_text": "",
+                        "head": "",
+                        "duration_ms": max(0, duration_ms),
+                        "tool_calls": 0,
+                    }
+                    logger.warning("[cron-tasks] stop: executor 未在等待期内收尾，补写中断记录")
+                else:
+                    res = None
+            if isinstance(res, dict):
+                try:
+                    self._on_executor_done(res)
+                except Exception as e:
+                    logger.warning(f"[cron-tasks] stop 收尾失败: {e}")
         elif ex is not None:
             self._detach_executor(ex)
         self._executor = None
+        # workdir 兜底还原（正常路径已在 _on_executor_done 还原并清空）
+        self._restore_workdir()
         logger.info("[cron-tasks] scheduler stopped")
+
+    def _restore_workdir(self):
+        """还原执行前的工作目录（stop / 正常收尾 / 卡死兜底共用）
+
+        仅当当前目录仍是本任务设置的目录时才还原：执行期间用户可能主动
+        切换项目（实测发生），此时还原会把用户的选择覆盖回旧值。
+        get_workdir 不可用时降级为直接还原（保持旧语义）。
+        """
+        prev = self._prev_workdir
+        if not prev:
+            return
+        job_workdir = self._job_workdir
+        self._prev_workdir = ""
+        self._job_workdir = ""
+        try:
+            services = self._services or {}
+            set_workdir = services.get("set_workdir")
+            if not callable(set_workdir):
+                return
+            get_workdir = services.get("get_workdir")
+            if job_workdir and callable(get_workdir):
+                cur = get_workdir() or ""
+                if cur and cur != job_workdir:
+                    # 执行期间用户切走了项目 → 保留用户选择，不覆盖
+                    return
+            set_workdir(prev)
+        except Exception:
+            pass
 
     def cancel_job(self, job_id: str) -> bool:
         """手动停止指定任务（UI 停止按钮）。立即断开信号 + 置 None 释放串行锁
@@ -358,12 +409,14 @@ class CronScheduler(QObject):
 
         # workdir 切换（执行完还原）
         self._prev_workdir = ""
+        self._job_workdir = ""
         workdir = (job.workdir or "").strip()
         get_workdir = services.get("get_workdir")
         set_workdir = services.get("set_workdir")
         if workdir and callable(set_workdir):
             if callable(get_workdir):
                 self._prev_workdir = get_workdir() or ""
+            self._job_workdir = workdir
             set_workdir(workdir)
 
         # 标记运行状态
@@ -478,15 +531,8 @@ class CronScheduler(QObject):
             },
         )
 
-        # 还原工作目录
-        if self._prev_workdir:
-            try:
-                set_workdir = (self._services or {}).get("set_workdir")
-                if callable(set_workdir):
-                    set_workdir(self._prev_workdir)
-            except Exception:
-                pass
-            self._prev_workdir = ""
+        # 还原工作目录（用户中途切过项目则不覆盖）
+        self._restore_workdir()
 
         # 清理 executor（延迟 deleteLater 避免 QThread Destroyed-while-running）
         ex = self._executor

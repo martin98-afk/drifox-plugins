@@ -16,17 +16,140 @@ from PyQt5.QtCore import QTimer
 
 PLUGIN_ID = "cron-tasks"
 
+# 单例锚点：挂在 sys 模块上，跨插件模块重载存活。
+# 热重载会清 sys.modules["ui_plugin_cron_tasks.*"] 并生成新一代类对象；
+# 若单例只存类属性（cls._instance），新一代会另建实例，上一代的 QTimer/调度器
+# 在进程内再无任何可达路径（unload_ui 也只对新模块可见）。实测（2026-09-11）：
+# 一次热重载后进程内并存 3 套调度器，状态错位 + 任务卡死后只能重启软件。
+_SINGLETON_ANCHOR = "_drifox_cron_tasks_controller"
+
+
+def _read_anchor():
+    import sys
+
+    return getattr(sys, _SINGLETON_ANCHOR, None)
+
+
+def _write_anchor(inst):
+    import sys
+
+    if inst is None:
+        try:
+            delattr(sys, _SINGLETON_ANCHOR)
+        except AttributeError:
+            pass
+    else:
+        setattr(sys, _SINGLETON_ANCHOR, inst)
+
+
+def _silence_stale(obj) -> bool:
+    """快速静默一个遗留 controller 实例（不阻塞）
+
+    只做两件事：停掉仍在 tick 的 QTimer（调度器 tick + 心跳）、异步下发
+    executor 取消。不走完整 shutdown_all——遗留实例的 executor 可能卡死，
+    等它收尾会把加载路径堵住。
+    """
+    touched = False
+    try:
+        sched = getattr(obj, "scheduler", None)
+        if sched is not None:
+            timer = getattr(sched, "_timer", None)
+            if timer is not None and timer.isActive():
+                timer.stop()
+                touched = True
+            ex = getattr(sched, "_executor", None)
+            if ex is not None and ex.isRunning():
+                cancel = getattr(ex, "cancel", None)
+                if callable(cancel):
+                    cancel()  # 内部异步下发，立即返回
+    except Exception:
+        pass
+    try:
+        hb = getattr(obj, "_heartbeat", None)
+        if hb is not None and hb.isActive():
+            hb.stop()
+            touched = True
+    except Exception:
+        pass
+    return touched
+
+
+def _sweep_stale_generations(keep, exclude=None) -> int:
+    """清扫进程内其他世代的 controller 实例（热重载遗留）
+
+    旧版本单例存类属性（cls._instance）不写锚点，热重载后既无锚点也无模块
+    入口可寻，只能按类名从 gc 里找。仅在接棒时执行一次，代价远低于多套
+    调度器并存（共写同一份 jobs.json、串行锁失效、状态错位）。
+    """
+    import gc
+
+    killed = 0
+    for obj in gc.get_objects():
+        try:
+            if obj is keep or obj is exclude or type(obj).__name__ != "CronTasksController":
+                continue
+        except Exception:
+            continue
+        if _silence_stale(obj):
+            killed += 1
+    return killed
+
 
 class CronTasksController:
-    """cron-tasks 插件控制器（进程级单例）"""
-
-    _instance: Optional["CronTasksController"] = None
+    """cron-tasks 插件控制器（进程级单例，锚定 sys 模块跨热重载存活）"""
 
     @classmethod
     def get_instance(cls) -> "CronTasksController":
-        if cls._instance is None:
-            cls._instance = cls()
-        return cls._instance
+        inst = _read_anchor()
+        if inst is None:
+            inst = cls()
+            _write_anchor(inst)
+        return inst
+
+    @classmethod
+    def takeover(cls) -> "CronTasksController":
+        """新一代接棒：停掉上一代实例并新建当前代实例（register_ui 专用）
+
+        热重载后上一代实例只被旧类引用、unload_ui 又不可达，本方法是进程内
+        唯一还够得着它的入口。漏停会留下仍在 tick 的 QTimer 与可能运行中的
+        executor，多套调度器共写同一份 jobs.json。
+        """
+        old = _read_anchor()
+        if old is not None:
+            stopped = False
+            try:
+                old.shutdown_all()
+                stopped = True
+                logger.info("[cron-tasks] 热重载接棒：上一代调度器已停止")
+            except Exception as e:
+                logger.warning(f"[cron-tasks] 上一代实例停止失败: {e}")
+            if not stopped:
+                # 兜底：shutdown_all 缺失（上一代代码无此方法）或中途异常时，
+                # 直接停调度器与心跳，确保旧 QTimer 一定不再 tick
+                try:
+                    sched = getattr(old, "scheduler", None)
+                    if sched is not None:
+                        sched.stop()
+                except Exception:
+                    pass
+                try:
+                    hb = getattr(old, "_heartbeat", None)
+                    if hb is not None:
+                        hb.stop()
+                except Exception:
+                    pass
+            _write_anchor(None)
+        inst = cls()
+        _write_anchor(inst)
+        # 清扫其他世代：旧版本单例存类属性、不写锚点，锚点路径够不着它们。
+        # 已漏多套实例的进程里，这一步能把多余调度器静默，无需重启软件。
+        try:
+            killed = _sweep_stale_generations(inst, exclude=old)
+            if killed:
+                logger.info(f"[cron-tasks] 热重载接棒：已静默 {killed} 个遗留实例")
+        except Exception as e:
+            logger.warning(f"[cron-tasks] 遗留实例清扫失败: {e}")
+        return inst
 
     def __init__(self):
         from crontasks_core.scheduler import CronScheduler

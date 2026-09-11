@@ -59,15 +59,20 @@ def register_ui(registry):
 
 
 def _patch_card_binding():
-    """为卡片类挂 on_created 钩子式绑定：实例化后向 controller 注册
+    """新一代接棒 + 启动调度器
 
     UIPluginRegistry 创建卡片实例后调用 set_context_provider；
-    我们在卡片第一次 showEvent 时经 ensure_started 完成绑定（见 cards.py），
-    这里只需保证调度器先启动（无 services 时 tick 自动推迟到期任务）。
+    我们在卡片第一次 showEvent 时经 ensure_started 完成绑定（见 cards.py）。
+    此处提前启动调度器，保证 UI 未打开时任务也按时执行。
+
+    必须用 takeover() 而非 get_instance()：热重载场景下锚点里可能还挂着
+    上一代实例，它在进程内已无其他入口可停（unload_ui 只对新模块可见），
+    漏停会留下仍在 tick 的 QTimer + 运行中的 executor（多套调度器并存，
+    状态错位、任务卡死后只能重启软件）。
     """
     from .controller import CronTasksController
 
-    ctrl = CronTasksController.get_instance()
+    ctrl = CronTasksController.takeover()
     ctrl.ensure_started()
 
 
@@ -81,13 +86,13 @@ def _on_input_button_clicked(context):
 
 
 def unload_ui(registry):
-    """卸载回调：停调度器 + 取消运行中任务 + 单例归零"""
+    """卸载回调：停调度器 + 取消运行中任务 + 清单例锚点"""
     try:
-        from .controller import CronTasksController
+        from .controller import CronTasksController, _write_anchor
 
         ctrl = CronTasksController.get_instance()
         ctrl.shutdown_all()
-        CronTasksController._instance = None
+        _write_anchor(None)
         logger.info("[cron-tasks] unload_ui: 调度器已停止，单例已归零")
     except Exception as e:
         logger.warning(f"[cron-tasks] unload_ui 清理失败: {e}")

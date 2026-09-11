@@ -59,6 +59,8 @@ class CronExecutor(QThread):
         self._timeout_seconds: int = 0  # 0 = 默认（EXECUTION_TIMEOUT_SECONDS）
         self._session: Any = None
         self._cancelled = False
+        self._cancel_dispatched = False  # session.cancel 是否已异步下发（防重复起线程）
+        self._started_at: float = 0.0  # run() 起始时刻（stop 兜底记录算时长用）
         self._last_result: Optional[dict] = None  # run() 结束时保存（停止收尾用）
 
     def configure(
@@ -78,20 +80,43 @@ class CronExecutor(QThread):
         self._timeout_seconds = timeout_seconds or 0
 
     def cancel(self):
-        """非阻塞取消：置标志 + 唤醒 session.cancel()"""
+        """非阻塞取消：置标志 + 异步唤醒 session.cancel()
+
+        session.cancel() 链路（EngineSession → ConversationExecutor.cancel_worker）
+        内部持锁并逐个断开 worker 信号，实测存在长时间阻塞的可能：同步调用会
+        连累调用方——scheduler.stop 卡主线程、看门狗卡在强制收尾之前（2026-09-11
+        实测：超时点后无任何收尾日志与落盘，任务永久悬挂）。故改旁路 daemon
+        线程下发，cancel() 本身立即返回。
+        """
         self._cancelled = True
         session = self._session
-        if session is not None:
-            try:
-                session.cancel()
-            except RuntimeError:
-                pass  # C++ 对象已销毁
+        if session is None or self._cancel_dispatched:
+            return
+        self._cancel_dispatched = True
+        try:
+            threading.Thread(
+                target=self._send_session_cancel,
+                args=(session,),
+                daemon=True,
+                name="cron-session-cancel",
+            ).start()
+        except Exception:
+            pass
+
+    @staticmethod
+    def _send_session_cancel(session):
+        """旁路线程：真正的 session.cancel()，异常丢弃不冒泡"""
+        try:
+            session.cancel()
+        except Exception:
+            pass
 
     # ---------------------------------------------------------------
 
     def run(self):  # noqa: C901
         job = self._job
         started = time.monotonic()
+        self._started_at = started
         if job is None or not self._services:
             self._emit({"job_id": "", "status": "error", "error": "executor 未配置"})
             return
