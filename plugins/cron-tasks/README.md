@@ -50,6 +50,9 @@ plugins/cron-tasks/
 | `get_agent_prompt` / `get_tools_schema` | 组装任务执行上下文（指定 agent 的提示词 + 工具集） |
 | `get_workdir` / `set_workdir` | 任务工作目录切换与还原 |
 | `notify` | InfoBar 执行通知 |
+| `send_to_platform` | 向已连接通讯平台会话主动发消息（`(platform, chat_id, content)` → `SendResult`）；gateway 模式通知走此通道 |
+| `list_platform_sessions` | 已知 gateway 会话列表（`GatewaySession`：platform/chat_id/display_name），供「完成通知 → Gateway 消息」下拉选择投递目标 |
+| `list_platforms` | 已注册通讯平台及连接状态（`{id, enabled, connected, available, error}`）；用于区分「没配平台」「配了没连接」「连了但没会话」三种空状态 |
 
 调度器每次 tick 经 `UIPluginRegistry` 活跃窗口 provider 拉最新 services（多窗口自适应），
 拉不到时退回 controller 缓存；无可用 services 时任务推迟到下一轮 tick（不丢任务）。
@@ -111,7 +114,7 @@ plugins/cron-tasks/
 
 | 依赖 | 说明 |
 |------|------|
-| DriFox ≥ 0.5.0 | 需支持 `create_engine_session` 服务（EP3 契约）+ `register_input_button` |
+| DriFox ≥ 0.5.10 | 需支持 `create_engine_session` 服务（EP3 契约）+ `register_input_button` + `send_to_platform` / `list_platforms` / `list_platform_sessions`（Gateway 主动投递服务面） |
 | PyQt5 / qfluentwidgets / loguru | UI 与日志 |
 
 ## 已知限制
