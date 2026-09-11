@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.9.1 (2026-09-11)
+### 🔧 网关消息分片自包含化 + loguru 日志占位符修正（qq v1.1.2 / wecom v1.0.1 / feishu v1.2.2 / slack v1.0.1 / dingtalk v1.0.1）
+- **QQ/WeCom 发送崩于已下线的宿主基类方法**：主程序 `b6136c7a` 死代码剪枝移除了 `BasePlatformAdapter.truncate_message`（主仓库内无引用，调用方在插件仓库故未被识别），`QqAdapter._send_plain_chunks` 与 `WeComAdapter.send` 一调用即抛 `AttributeError`，QQ 群聊消息全量发不出去；现各网关自带 `_split_message`（优先按空行切段、单段超限硬切，与 feishu/slack 同名同风格），不再依赖宿主基类方法
+- **日志占位符统一改 `{}`**：loguru 走 `str.format`，`%s` 不会被替换且参数被静默丢弃，真实异常与 HTTP 状态码全部丢失（如 `[QQ] replace flush failed: HTTP %s code=%s`）；本轮修正 qq 17 处、wecom 9 处、feishu 14 处、slack 5 处、dingtalk 2 处；dingtalk 保留的 2 处 `self.logger` 属 dingtalk_stream SDK 自带标准 logging，`%s` 是正确写法
+- **验证**：桩 http client 端到端跑通 QQ 群聊长文本（10548 字 → 6 片 `[1772,1781,1774,1774,1774,1663]`，msg_seq 递增）与单聊超长兜底（`[1800,1800,1400]`）；10 组分片边界用例（空串 / 恰好上限 / 纯超长段 / markdown 代码块）满足不超限且不丢字；`ruff check` 通过
+
 ## 2.9.0 (2026-09-06)
 ### ✨ voice-input 识别引擎双后端：Whisper 优先，SAPI5 自动兜底（v0.2.0）
 - **准确率瓶颈根治**：旧版全程走 SAPI5 dictation（Vista 时代离线引擎，中文听写字准确率仅 ~60–75%、无标点），属引擎天花板；新增 `ui/whisper_recognizer.py` faster-whisper 后端（CPU int8、固定 zh、VAD 裁剪、`initial_prompt` 引导简体中文与标点、关前文条件依赖防长音频幻觉），中文准确率提升至 ~90%+

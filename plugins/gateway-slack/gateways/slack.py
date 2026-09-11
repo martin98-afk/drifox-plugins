@@ -68,7 +68,7 @@ class SlackAdapter(BasePlatformAdapter):
             return True
 
         except Exception as e:
-            logger.error("[Slack] Failed to connect: %s", e)
+            logger.error("[Slack] Failed to connect: {}", e)
             return False
 
     async def disconnect(self) -> None:
@@ -79,7 +79,7 @@ class SlackAdapter(BasePlatformAdapter):
                     # 清理资源
                     pass
             except Exception as e:
-                logger.warning("[Slack] Error during disconnect: %s", e)
+                logger.warning("[Slack] Error during disconnect: {}", e)
 
         self._connected = False
         logger.info("[Slack] Disconnected")
@@ -126,7 +126,7 @@ class SlackAdapter(BasePlatformAdapter):
             )
 
         except Exception as e:
-            logger.error("[Slack] Send failed: %s", e)
+            logger.error("[Slack] Send failed: {}", e)
             return SendResult(success=False, error=str(e))
 
     def _format_slack_text(self, content: str) -> str:
@@ -216,7 +216,7 @@ class SlackAdapter(BasePlatformAdapter):
                 )
 
         except Exception as e:
-            logger.error("[Slack] Send image failed: %s", e)
+            logger.error("[Slack] Send image failed: {}", e)
             return SendResult(success=False, error=str(e))
 
     async def send_typing(self, chat_id: str, metadata: Optional[Dict[str, Any]] = None) -> None:
@@ -245,7 +245,7 @@ class SlackAdapter(BasePlatformAdapter):
                 "type": "dm" if channel.get("is_im") else "group",
             }
         except Exception as e:
-            logger.error("[Slack] get_chat_info failed: %s", e)
+            logger.error("[Slack] get_chat_info failed: {}", e)
             return {"name": str(chat_id), "type": "dm"}
 
 
