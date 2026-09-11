@@ -10,6 +10,7 @@ import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
+from loguru import logger
 from PyQt5.QtCore import Qt, QSize, pyqtSignal
 from PyQt5.QtWidgets import (
     QFrame,
@@ -52,6 +53,35 @@ from app.utils.utils import get_font_family_css
 from crontasks_core.models import CronJob, WEEKDAY_CN
 
 FONT_CSS = get_font_family_css()
+
+
+def resolve_ui_service(name: str):
+    """从 controller 缓存取宿主服务；缓存未就绪时从活跃窗口上下文兜底拉。
+
+    与 controller._on_notify 同一范式：卡片可能先于 services 注入被构造，
+    故不能只依赖构造期捕获。
+    """
+    try:
+        from .controller import CronTasksController
+
+        svc = (CronTasksController.get_instance()._services or {}).get(name)
+        if callable(svc):
+            return svc
+    except Exception:
+        pass
+    try:
+        from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
+
+        reg = UIPluginRegistry.get_instance()
+        provider = reg._resolve_active_window_provider() or reg._context_provider
+        if provider is not None:
+            ctx = provider() or {}
+            svc = (ctx.get("services") or {}).get(name)
+            if callable(svc):
+                return svc
+    except Exception:
+        pass
+    return None
 
 
 def _panel_title_css() -> str:
@@ -1010,21 +1040,26 @@ class JobEditPanel(QWidget):
             self._load_gateway_sessions()
 
     def _load_gateway_sessions(self):
-        """从主程序 PlatformManager 拉取已知会话（platform:chat_id 免手填）"""
+        """拉取主程序已知 gateway 会话（platform:chat_id 免手填）
+
+        走注入的 `services["list_platform_sessions"]`。不自行 import
+        `app.gateway.get_platform_manager()`——该模块级单例只由
+        GatewayService 赋值，插件侧恒为 None，会导致下拉框永远为空。
+        """
         combo = self._notify_target_combo
         current = combo.currentData()
         combo.clear()
         sessions = []
-        try:
-            from app.gateway import get_platform_manager
-
-            mgr = get_platform_manager()
-            if mgr is not None:
-                sessions = mgr.get_sessions() or []
-        except Exception as e:
-            logger.warning(f"[cron-tasks] 拉取 gateway 会话失败: {e}")
+        lister = resolve_ui_service("list_platform_sessions")
+        if callable(lister):
+            try:
+                sessions = lister() or []
+            except Exception as e:
+                logger.warning(f"[cron-tasks] 拉取 gateway 会话失败: {e}")
+        else:
+            logger.warning("[cron-tasks] 主程序未提供 list_platform_sessions 服务")
         if not sessions:
-            combo.addItem("（暂无会话——先给机器人发条消息）", "")
+            combo.addItem(self._empty_target_hint(), "")
         else:
             sessions = sorted(sessions, key=lambda s: s.last_active, reverse=True)
             # 去重：同一 platform:chat_id 只保留最近活跃的一条
@@ -1043,6 +1078,32 @@ class JobEditPanel(QWidget):
             else:
                 combo.addItem(f"（原配置）{current}", current)
                 combo.setCurrentIndex(combo.count() - 1)
+
+    @staticmethod
+    def _empty_target_hint() -> str:
+        """会话为空时的提示文案——区分「没连平台」与「连了但没收到过消息」
+
+        session 由入站消息被动创建，平台已连接但用户从未给机器人发过消息时
+        会话列表同样为空。笼统提示「暂无会话」会让用户分不清该去配平台还是
+        该去发消息，故按平台连接状态给不同指引。
+        """
+        lister = resolve_ui_service("list_platforms")
+        if not callable(lister):
+            return "（暂无会话——先给机器人发条消息）"
+        try:
+            platforms = lister() or []
+        except Exception as e:
+            logger.warning(f"[cron-tasks] 拉取 gateway 平台失败: {e}")
+            return "（暂无会话——先给机器人发条消息）"
+        connected = [p for p in platforms if p.get("connected")]
+        if connected:
+            names = "、".join(str(p.get("id")) for p in connected)
+            return f"（{names} 已连接但无会话——先给机器人发条消息）"
+        enabled = [p for p in platforms if p.get("enabled")]
+        if enabled:
+            names = "、".join(str(p.get("id")) for p in enabled)
+            return f"（{names} 已启用但未连接——检查平台配置或插件开关）"
+        return "（未启用任何 Gateway 平台——先在设置里启用并配置）"
 
     def _browse_workdir(self):
         from PyQt5.QtWidgets import QFileDialog
