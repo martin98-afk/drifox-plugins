@@ -1,0 +1,7 @@
+# anything2explainer 插件：examples/contrast 反例/正例帧为可重建的二进制资源
+# 不入仓，避免污染仓库体积；用户按需从源仓库下载。
+# 源仓库地址见 README.md 与顶层 ../README.md
+#
+# 排除模式：01_xx.jpg ~ 06_xx.jpg（6 组反例/正例对照帧）
+# 保留：contrast_sheet.jpg（关键对照表，400KB）、README.md（说明文档）
+[0-9][0-9]_*.jpg

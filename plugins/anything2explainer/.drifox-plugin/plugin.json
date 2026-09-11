@@ -1,0 +1,29 @@
+{
+    "name": "anything2explainer",
+    "description": "把任意主题做成一条黑底 MG 风格、有配音字幕与章节进度条的科普讲解视频（中文/英文，Remotion 代码动画）。含可编译模板、图元库、TTS/分镜/渲染工具、风格与动效规范、多 agent 分工协议与 QC 判据，以及《RAG 与知识库》完整样片作为质量标尺。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "1.0.0",
+    "author": {
+        "name": "Vincentwei1021",
+        "url": "https://github.com/Vincentwei1021/anything2explainer"
+    },
+    "license": "MIT",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "video",
+        "explainer",
+        "remotion",
+        "tts",
+        "motion-graphics",
+        "education"
+    ],
+    "components": {
+        "skills": true
+    }
+}
