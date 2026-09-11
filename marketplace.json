@@ -150,6 +150,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "video",
                 "explainer",
@@ -791,7 +792,7 @@
                 "tools": true,
                 "hook_policies": true
             },
-            "downloads": 19,
+            "downloads": 22,
             "keywords": [
                 "cron",
                 "schedule",
@@ -1387,7 +1388,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 22,
+            "downloads": 24,
             "platforms": [
                 "windows",
                 "linux",
