@@ -365,7 +365,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 21,
+            "downloads": 22,
             "keywords": [
                 "calendar",
                 "date",
@@ -792,7 +792,7 @@
                 "tools": true,
                 "hook_policies": true
             },
-            "downloads": 26,
+            "downloads": 28,
             "keywords": [
                 "cron",
                 "schedule",
@@ -1388,7 +1388,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 26,
+            "downloads": 27,
             "platforms": [
                 "windows",
                 "linux",
@@ -1521,7 +1521,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -2548,7 +2548,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 7,
+            "downloads": 9,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -2641,7 +2641,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 22,
+            "downloads": 24,
             "keywords": [
                 "dashboard",
                 "stats",
