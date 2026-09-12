@@ -3639,8 +3639,8 @@
         },
         {
             "name": "voice-input",
-            "description": "输入框工具栏语音听写按钮：点击开始录音，再次点击结束并把识别文字插入输入框光标处。识别双后端：默认本地 Whisper（faster-whisper，中文准确率 ~90%+，可一键安装），未安装时自动回退 Windows 自带离线识别（SAPI5 中文引擎）",
-            "version": "0.2.0",
+            "description": "输入框工具栏语音听写按钮：点击开始录音，再次点击结束并把识别文字插入输入框光标处。识别后端可配置：MiniMax 云端识别（asr-1.0，准确率高带标点）/ 本地 Whisper（faster-whisper，可一键安装）/ Windows 自带离线识别（SAPI5 中文引擎），云端失败自动回退本地",
+            "version": "0.3.0",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
