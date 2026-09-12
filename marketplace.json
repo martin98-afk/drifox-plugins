@@ -3639,8 +3639,8 @@
         },
         {
             "name": "voice-input",
-            "description": "输入框工具栏语音听写按钮：点击开始录音，再次点击结束并把识别文字插入输入框光标处。识别后端可配置：MiniMax 云端识别（asr-1.0，准确率高带标点）/ 本地 Whisper（faster-whisper，可一键安装）/ Windows 自带离线识别（SAPI5 中文引擎），云端失败自动回退本地",
-            "version": "0.3.0",
+            "description": "输入框工具栏语音听写按钮：点击开始录音，再次点击结束并把识别文字插入输入框光标处。纯云端识别：硅基流动（免费模型，默认）与 MiniMax 双引擎可配，云端失败自动互为备用",
+            "version": "0.4.0",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
