@@ -179,8 +179,7 @@ class CronTasksController:
             self._heartbeat_active = True
 
     def _on_job_finished_for_heartbeat(self, *_a):
-        """任务结束 → 全量刷一次（更新状态文字）+ 停心跳"""
-        self._refresh_card()
+        """任务结束 → 停心跳（刷新交给紧随其后的 jobs_changed，避免同帧双刷整表）"""
         if not self.scheduler.is_running_job():
             self._heartbeat.stop()
             self._heartbeat_active = False

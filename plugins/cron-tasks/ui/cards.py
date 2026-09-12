@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 
 from loguru import logger
 from PyQt5.QtCore import Qt, QSize, QTimer, pyqtSignal
+from PyQt5.QtGui import QFontMetrics
 from PyQt5.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -701,6 +702,34 @@ class _ResponsiveFormBody(QWidget):
             self._grid.setRowStretch(3, 0)
 
 
+class ElidedComboBox(ComboBox):
+    """长文本自动中间省略的下拉框：按钮宽度封顶，不挤压双列布局的另一列
+
+    qfluentwidgets 的 ComboBox 是 QPushButton 系，sizeHint/minimumSizeHint
+    随当前文本宽度暴涨（gateway 会话名、模型名等长文本会把编辑面板左列
+    的任务卡挤窄）。此处在文本入口统一 QFontMetrics 中间省略；下拉菜单
+    仍按 items 原文渲染，选中项全文可在菜单里查看。
+    """
+
+    ELIDE_WIDTH = 200  # 按钮文本宽度上限(px)
+    HINT_MAX_EXTRA = 40  # 文本宽度之外的余量（padding + 右侧箭头区）
+
+    def setText(self, text: str | None):
+        if not text:
+            super().setText("")
+            return
+        fm = QFontMetrics(self.font())
+        super().setText(fm.elidedText(text, Qt.ElideMiddle, self.ELIDE_WIDTH))
+
+    def sizeHint(self) -> QSize:
+        sh = super().sizeHint()
+        return QSize(min(sh.width(), self.ELIDE_WIDTH + self.HINT_MAX_EXTRA), sh.height())
+
+    def minimumSizeHint(self) -> QSize:
+        msh = super().minimumSizeHint()
+        return QSize(min(msh.width(), self.ELIDE_WIDTH + self.HINT_MAX_EXTRA), msh.height())
+
+
 class JobEditPanel(QWidget):
     """新建/编辑任务表单"""
 
@@ -883,8 +912,8 @@ class JobEditPanel(QWidget):
         s2l.addWidget(self._preview_label)
 
         # 执行模型 + 智能体（横向两列节省垂直空间）
-        self._model_combo = ComboBox()
-        self._agent_combo = ComboBox()
+        self._model_combo = ElidedComboBox()
+        self._agent_combo = ElidedComboBox()
         exec_row = QHBoxLayout()
         exec_row.setSpacing(10)
         exec_row.addLayout(_labeled("执行模型", self._model_combo), 1)
@@ -908,7 +937,7 @@ class JobEditPanel(QWidget):
         target_lbl.setStyleSheet(_field_label_css())
         self._field_labels.append(target_lbl)
         nrow.addWidget(target_lbl)
-        self._notify_target_combo = ComboBox()
+        self._notify_target_combo = ElidedComboBox()
         nrow.addWidget(self._notify_target_combo)
         self._notify_target_row.setVisible(False)
         s3l.addWidget(self._notify_target_row)
