@@ -1,7 +1,7 @@
 {
     "name": "voice-input",
-    "version": "0.3.0",
-    "description": "输入框工具栏语音听写按钮：点击开始录音，再次点击结束并把识别文字插入输入框光标处。识别后端可配置：MiniMax 云端识别（asr-1.0，准确率高带标点）/ 本地 Whisper（faster-whisper，可一键安装）/ Windows 自带离线识别（SAPI5 中文引擎），云端失败自动回退本地",
+    "version": "0.4.0",
+    "description": "输入框工具栏语音听写按钮：点击开始录音，再次点击结束并把识别文字插入输入框光标处。纯云端识别：硅基流动（免费模型，默认）与 MiniMax 双引擎可配，云端失败自动互为备用",
     "icon": {
         "light": "icon.svg",
         "dark": "icon_dark.svg"
@@ -31,11 +31,33 @@
                 "type": "select",
                 "default": "auto",
                 "options": [
-                    {"value": "auto", "label": "自动（云端优先）"},
-                    {"value": "minimax", "label": "MiniMax 云端"},
-                    {"value": "sapi5", "label": "系统本地（SAPI5）"}
+                    {"value": "auto", "label": "自动（硅基流动优先，失败转 MiniMax）"},
+                    {"value": "siliconflow", "label": "仅硅基流动（免费）"},
+                    {"value": "minimax", "label": "仅 MiniMax"}
                 ],
-                "description": "自动：配了 MiniMax Key 走云端，失败回退本地；云端失败自动回退 SAPI5"
+                "description": "自动：优先硅基流动免费模型，失败自动转 MiniMax"
+            },
+            {
+                "key": "siliconflow_api_key",
+                "label": "硅基流动 API Key",
+                "type": "password",
+                "default": "",
+                "env": "SILICONFLOW_API_KEY",
+                "placeholder": "免费模型不消耗余额"
+            },
+            {
+                "key": "siliconflow_model",
+                "label": "硅基流动模型",
+                "type": "text",
+                "default": "Qwen/Qwen3-ASR-1.7B",
+                "placeholder": "免费可选：SenseVoiceSmall / XingChenASR-V3.2 等"
+            },
+            {
+                "key": "siliconflow_console",
+                "label": "获取硅基流动 Key",
+                "type": "link",
+                "url": "https://cloud.siliconflow.cn/account/ak",
+                "placeholder": "前往硅基流动创建 API Key"
             },
             {
                 "key": "minimax_api_key",
@@ -43,11 +65,11 @@
                 "type": "password",
                 "default": "",
                 "env": "MINIMAX_API_KEY",
-                "placeholder": "platform.minimax.cn 获取，留空用本地引擎"
+                "placeholder": "自动模式下作为备用引擎"
             },
             {
                 "key": "minimax_console",
-                "label": "获取 API Key",
+                "label": "获取 MiniMax Key",
                 "type": "link",
                 "url": "https://platform.minimaxi.com/user-center/basic-information",
                 "placeholder": "前往 MiniMax 开放平台创建 API Key"
