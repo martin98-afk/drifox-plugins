@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1789192857.4843447,
+  "fetched_at": 1789210821.16728,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -24,7 +24,7 @@
     "context-stats": 21,
     "context-usage-stats": 4,
     "context7": 4,
-    "cron-tasks": 28,
+    "cron-tasks": 30,
     "desktop-automation": 16,
     "doc-coauthoring": 1,
     "dsh-presets": 1,
