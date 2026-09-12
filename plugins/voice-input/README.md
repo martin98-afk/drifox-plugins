@@ -18,7 +18,7 @@
 |------|------|------|
 | 识别引擎 | select | `auto`（默认，硅基流动优先，失败转 MiniMax）/ `siliconflow`（仅硅基流动）/ `minimax`（仅 MiniMax） |
 | 硅基流动 API Key | password | [硅基流动](https://cloud.siliconflow.cn/account/ak) 获取；免费模型不消耗余额 |
-| 硅基流动模型 | text | 默认 `Qwen/Qwen3-ASR-1.7B`；免费档还可换 `FunAudioLLM/SenseVoiceSmall`、`XingChenAGI/XingChenASR-V3.2` 等 |
+| 硅基流动模型 | select | 免费模型下拉：Qwen3-ASR（默认）/ SenseVoice-Small / 星尘 ASR 系列，均为免费档 |
 | MiniMax API Key | password | [MiniMax 开放平台](https://platform.minimaxi.com/user-center/basic-information) 获取；¥2.50/小时 |
 
 > 两把 Key 均支持环境变量覆盖（`SILICONFLOW_API_KEY` / `MINIMAX_API_KEY`，优先级高于设置页）。推荐至少配硅基流动 Key（免费）；两把都配才能互为备用。
