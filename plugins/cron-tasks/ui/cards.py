@@ -1523,6 +1523,7 @@ class CronTasksCard(QFrame):
         self._ctx_provider = None
         self._last_ctx: Dict[str, Any] = {}
         self._rows: Dict[str, JobRowCard] = {}
+        self._row_states: Dict[str, tuple] = {}  # 行卡展示要素快照（增量 diff 用）
         # 自保底轮询：热重载清 sys.modules 后旧卡片持有旧类单例，信号推送链
         # （job_started/jobs_changed → controller → 卡片）会断在两套实例之间，
         # 表现为完成/开始事件到不了卡片、行卡冻结在旧状态。卡片可见时自行
@@ -1889,8 +1890,27 @@ class CronTasksCard(QFrame):
         super().hideEvent(event)
         self._stop_poll()
 
-    def refresh_jobs(self):
-        """从 controller 拉最新任务列表重建行卡片"""
+    @staticmethod
+    def _row_snapshot(job: CronJob, running: bool) -> tuple:
+        """行卡展示要素快照：与上次渲染比对，字段变化才碰那一行"""
+        return (
+            job.display_label(),
+            job.schedule_desc(),
+            job.enabled,
+            job.last_status,
+            job.last_run_at,
+            job.agent,
+            job.model_key,
+            running,
+        )
+
+    def refresh_jobs(self, force: bool = False):
+        """刷新任务列表
+
+        默认增量：与上次渲染快照比对，无变化的行完全不碰
+        （开关/执行等单行变化不再牵连整表重建、其他行开关不再闪）。
+        force=True 全量重建（主题切换等需要行卡重取样式的场景）。
+        """
         from .controller import CronTasksController
 
         # 热重载边界防御：多次 reload 后残留的旧实例可能属性不全，跳过避免崩
@@ -1900,14 +1920,48 @@ class CronTasksCard(QFrame):
         ctrl = CronTasksController.get_instance()
         jobs = ctrl.scheduler.get_jobs()
         running_id = ctrl.scheduler.is_running_job() and ctrl.scheduler._executor._job.id or ""
+        enabled_cnt = sum(1 for j in jobs if j.enabled)
+        sub = f"· {len(jobs)} 个任务 / {enabled_cnt} 启用" + (
+            " · 任务执行中…" if running_id else ""
+        )
 
-        # 重建（任务数量小，简单粗暴即可）
+        if not force:
+            new_ids = {j.id for j in jobs}
+            for jid in [k for k in self._rows if k not in new_ids]:
+                w = self._rows.pop(jid)
+                self._row_states.pop(jid, None)
+                self._jobs_layout.removeWidget(w)
+                w.deleteLater()
+            for job in jobs:
+                state = self._row_snapshot(job, job.id == running_id)
+                row = self._rows.get(job.id)
+                if row is not None and self._row_states.get(job.id) == state:
+                    continue  # 无变化：不碰（开关不闪、不重 connect）
+                if row is None:
+                    row = JobRowCard(job)
+                    row.toggleRequested.connect(ctrl.toggle_job)
+                    row.editRequested.connect(self._on_edit)
+                    row.historyRequested.connect(self._on_history)
+                    row.deleteRequested.connect(ctrl.delete_job)
+                    row.runNowRequested.connect(ctrl.run_now)
+                    row.stopRequested.connect(ctrl.stop_job)
+                    self._jobs_layout.insertWidget(self._jobs_layout.count() - 1, row)
+                    self._rows[job.id] = row
+                row.refresh(job, running=(job.id == running_id))
+                self._row_states[job.id] = state
+            if self._subtitle.text() != sub:
+                self._subtitle.setText(sub)
+            self._list_stack.setCurrentIndex(0 if not jobs else 1)
+            return
+
+        # 全量重建（任务数量小，简单粗暴即可）
         while self._jobs_layout.count() > 1:
             item = self._jobs_layout.takeAt(0)
             w = item.widget()
             if w is not None:
                 w.deleteLater()
         self._rows.clear()
+        self._row_states.clear()
 
         for job in jobs:
             row = JobRowCard(job)
@@ -1920,9 +1974,9 @@ class CronTasksCard(QFrame):
             row.refresh(job, running=(job.id == running_id))
             self._jobs_layout.insertWidget(self._jobs_layout.count() - 1, row)
             self._rows[job.id] = row
+            self._row_states[job.id] = self._row_snapshot(job, job.id == running_id)
 
-        enabled_cnt = sum(1 for j in jobs if j.enabled)
-        self._subtitle.setText(f"· {len(jobs)} 个任务 / {enabled_cnt} 启用" + (" · 任务执行中…" if running_id else ""))
+        self._subtitle.setText(sub)
         self._list_stack.setCurrentIndex(0 if not jobs else 1)
 
     def update_running_row_elapsed(self):
@@ -1973,7 +2027,7 @@ class CronTasksCard(QFrame):
         self._edit_panel.refresh_theme()
         self._history_panel.refresh_theme()
         try:
-            self.refresh_jobs()  # 行卡按新主题重建
+            self.refresh_jobs(force=True)  # 行卡按新主题重建
         except Exception:
             pass
         # 同步刷新标记：让 showEvent 不再重复刷
