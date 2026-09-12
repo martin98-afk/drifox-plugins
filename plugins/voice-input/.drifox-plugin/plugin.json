@@ -1,7 +1,7 @@
 {
     "name": "voice-input",
-    "version": "0.2.0",
-    "description": "输入框工具栏语音听写按钮：点击开始录音，再次点击结束并把识别文字插入输入框光标处。识别双后端：默认本地 Whisper（faster-whisper，中文准确率 ~90%+，可一键安装），未安装时自动回退 Windows 自带离线识别（SAPI5 中文引擎）",
+    "version": "0.3.0",
+    "description": "输入框工具栏语音听写按钮：点击开始录音，再次点击结束并把识别文字插入输入框光标处。识别后端可配置：MiniMax 云端识别（asr-1.0，准确率高带标点）/ 本地 Whisper（faster-whisper，可一键安装）/ Windows 自带离线识别（SAPI5 中文引擎），云端失败自动回退本地",
     "icon": {
         "light": "icon.svg",
         "dark": "icon_dark.svg"
@@ -22,6 +22,38 @@
         "语音输入",
         "听写"
     ],
+    "config_schema": {
+        "title": "语音听写配置",
+        "fields": [
+            {
+                "key": "provider",
+                "label": "识别引擎",
+                "type": "select",
+                "default": "auto",
+                "options": [
+                    {"value": "auto", "label": "自动（云端优先）"},
+                    {"value": "minimax", "label": "MiniMax 云端"},
+                    {"value": "sapi5", "label": "系统本地（SAPI5）"}
+                ],
+                "description": "自动：配了 MiniMax Key 走云端，失败回退本地；云端失败自动回退 SAPI5"
+            },
+            {
+                "key": "minimax_api_key",
+                "label": "MiniMax API Key",
+                "type": "password",
+                "default": "",
+                "env": "MINIMAX_API_KEY",
+                "placeholder": "platform.minimax.cn 获取，留空用本地引擎"
+            },
+            {
+                "key": "minimax_console",
+                "label": "获取 API Key",
+                "type": "link",
+                "url": "https://platform.minimaxi.com/user-center/basic-information",
+                "placeholder": "前往 MiniMax 开放平台创建 API Key"
+            }
+        ]
+    },
     "components": {
         "tools": false,
         "commands": false,

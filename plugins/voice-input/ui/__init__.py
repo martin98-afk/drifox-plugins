@@ -5,8 +5,9 @@
 input_area 光标处（不自动发送）。浮窗取消 / Esc 丢弃录音。单实例状态机：
 idle → recording → recognizing → idle，识别中再点只提示不叠加。
 
-识别引擎：默认自动选择 —— 优先本地 Whisper（faster-whisper，准确率高），
-依赖缺失或失败时自动回退 Windows SAPI5（recognizer.py），插件永不失效。
+识别引擎（设置 → 语音听写配置 可选）：MiniMax 云端（asr-1.0，准确率高带标点，
+需配置 API Key）→ 本地 Whisper（faster-whisper）→ Windows SAPI5（recognizer.py）。
+自动模式下配了 Key 走云端优先，云端失败自动回退本地链，插件永不失效。
 """
 
 from __future__ import annotations
@@ -29,7 +30,7 @@ _MAX_RECORD_SEC = 60
 _state = "idle"  # idle | recording | recognizing
 _recorder = None  # VoiceRecorder
 _overlay = None  # RecordingOverlay
-_worker = None  # RecognizeWorker
+_worker = None  # SAPI5 / Whisper / MiniMax 识别 worker
 _wav_path = ""
 _token_id = ""
 _max_timer = None  # QTimer，60 秒自动停
@@ -61,6 +62,23 @@ def _notify(main_widget, kind: str, title: str, msg: str) -> None:
         )
     except Exception as e:  # noqa: BLE001 — 提示失败不影响主流程
         logger.warning(f"[voice-input] InfoBar 提示失败: {e}")
+
+
+def _read_config() -> tuple[str, str]:
+    """读插件配置 → (provider, minimax_api_key)。
+
+    主程序未注入配置系统/读取失败时按默认（auto，无 key）走本地链。
+    """
+    try:
+        from app.plugins.managers.plugin_config_store import PluginConfigStore
+
+        store = PluginConfigStore()
+        provider = str(store.get(PLUGIN_NAME, "provider") or "auto")
+        api_key = str(store.get(PLUGIN_NAME, "minimax_api_key") or "").strip()
+        return provider, api_key
+    except Exception as e:  # noqa: BLE001 — 配置不可用不阻断录音，走本地链
+        logger.warning(f"[voice-input] 读取插件配置失败，按默认（auto/无 key）: {e}")
+        return "auto", ""
 
 
 def _cleanup_wav() -> None:
@@ -122,7 +140,7 @@ def _on_button_clicked(context: Dict[str, Any]) -> None:
 
 
 def _start_recording(context: Dict[str, Any]) -> None:
-    """开始录音：检测中文引擎 → winmm 录音 → 弹浮窗 + 超时看门狗。"""
+    """开始录音：读配置判可用性 → winmm 录音 → 弹浮窗 + 超时看门狗。"""
     global _state, _recorder, _overlay, _wav_path, _token_id, _max_timer
     main_widget = context.get("main_widget")
     try:
@@ -134,17 +152,19 @@ def _start_recording(context: Dict[str, Any]) -> None:
         return
 
     try:
-        token_id = find_zh_recognizer_id()
-        if not token_id:
-            logger.error("[voice-input] 未找到中文语音识别引擎")
+        provider, api_key = _read_config()
+        # 本地引擎缺失不再一票否决：纯云端模式（MiniMax）无需本地引擎
+        _token_id = find_zh_recognizer_id() or ""
+        cloud_ready = bool(api_key) and provider in ("auto", "minimax")
+        if not _token_id and not cloud_ready:
+            logger.error("[voice-input] 未找到中文语音识别引擎且未配置云端识别")
             _notify(
                 main_widget,
                 "error",
                 "语音听写",
-                "系统未安装中文语音识别引擎（zh-CN），无法使用",
+                "系统未安装中文识别引擎（zh-CN），且未配置 MiniMax Key，无法使用",
             )
             return
-        _token_id = token_id
 
         fd, wav_path = tempfile.mkstemp(suffix=".wav", prefix="drifox_voice_")
         os.close(fd)
@@ -184,7 +204,7 @@ def _start_recording(context: Dict[str, Any]) -> None:
 
 
 def _stop_and_recognize(context: Dict[str, Any]) -> None:
-    """停止录音 → 保存 WAV → 按引擎可用性启动识别，浮窗转识别态。"""
+    """停止录音 → 保存 WAV → 按配置选引擎启动识别，浮窗转识别态。"""
     global _state
     if _state != "recording":
         return
@@ -203,6 +223,24 @@ def _stop_and_recognize(context: Dict[str, Any]) -> None:
         _overlay.enter_recognizing()
     _state = "recognizing"
 
+    # 引擎选择：显式 minimax / 显式 sapi5 / auto（配了 key 即云端优先，失败回退本地链）
+    provider, api_key = _read_config()
+    if api_key and provider in ("auto", "minimax"):
+        _start_minimax_worker(context, api_key)
+        return
+    if provider == "minimax":
+        _notify(
+            main_widget,
+            "warning",
+            "语音听写",
+            "已选 MiniMax 云端识别但未配置 API Key，本次回退本地引擎",
+        )
+    _start_whisper_or_sapi5(context)
+
+
+def _start_whisper_or_sapi5(context: Dict[str, Any]) -> None:
+    """本地链：Whisper 可用则优先（含首次下载提示），否则回退 SAPI5。"""
+    main_widget = context.get("main_widget")
     try:
         from .whisper_recognizer import (
             WhisperRecognizeWorker,
@@ -233,7 +271,7 @@ def _stop_and_recognize(context: Dict[str, Any]) -> None:
     worker.finished_ok.connect(lambda text: _on_recognized(context, text))
     worker.failed.connect(lambda err: _on_failed(context, err))
     worker.unavailable.connect(lambda msg: _on_whisper_unavailable(context, msg))
-    worker.status.connect(_on_whisper_status)
+    worker.status.connect(_on_worker_status)
     worker.start()
     _set_worker(worker)
 
@@ -261,6 +299,33 @@ def _start_sapi5_worker(context: Dict[str, Any]) -> None:
         _notify(main_widget, "error", "语音听写", f"识别启动失败：{e}")
 
 
+def _start_minimax_worker(context: Dict[str, Any], api_key: str) -> None:
+    """MiniMax 云端识别当前 _wav_path；失败自动回退本地引擎（会话不中断）。"""
+    main_widget = context.get("main_widget")
+    try:
+        from .minimax_recognizer import MiniMaxRecognizeWorker
+
+        worker = MiniMaxRecognizeWorker(_wav_path, api_key)
+        worker.finished_ok.connect(lambda text: _on_recognized(context, text))
+        worker.failed.connect(lambda err: _on_minimax_failed(context, err))
+        worker.status.connect(_on_worker_status)
+        worker.start()
+        _set_worker(worker)
+    except Exception as e:  # noqa: BLE001 — 启动失败回滚整个会话
+        logger.error(f"[voice-input] MiniMax 识别启动失败: {e}")
+        _close_overlay()
+        _reset_state()
+        _notify(main_widget, "error", "语音听写", f"识别启动失败：{e}")
+
+
+def _on_minimax_failed(context: Dict[str, Any], err: str) -> None:
+    """云端失败 → 自动回退本地引擎，本次录音不丢（_wav_path 仍有效）。"""
+    main_widget = context.get("main_widget")
+    logger.warning(f"[voice-input] MiniMax 失败，回退本地引擎: {err}")
+    _notify(main_widget, "warning", "语音听写", f"云端识别失败（{err}），回退本地引擎")
+    _start_whisper_or_sapi5(context)
+
+
 def _set_worker(worker) -> None:
     global _worker
     _worker = worker
@@ -274,8 +339,8 @@ def _on_whisper_unavailable(context: Dict[str, Any], msg: str) -> None:
     _start_sapi5_worker(context)
 
 
-def _on_whisper_status(text: str) -> None:
-    """Whisper worker 阶段文案 → 浮窗状态标签（下载模型/识别中…）。"""
+def _on_worker_status(text: str) -> None:
+    """识别 worker 阶段文案 → 浮窗状态标签（云端识别中/下载模型…）。"""
     if _overlay is not None:
         _overlay.set_status(text)
 

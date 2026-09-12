@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.10.0 (2026-09-12)
+### ✨ voice-input 接入 MiniMax 云端识别，引擎设置可选（v0.3.0）
+- **MiniMax 云端识别后端**：新增 `ui/minimax_recognizer.py`，上传 16kHz WAV 至 `POST https://api.minimaxi.com/v1/speech_to_text`（`asr-1.0`），带标点中文秒级返回；纯标准库 urllib 手写 multipart（宿主 PyInstaller 未收集 requests，插件零第三方依赖）；30s 超时兜底，网络/HTTP/JSON 错误全链路人话化
+- **声明式配置卡**：plugin.json 声明 `config_schema`，设置页自动生成「语音听写配置」卡 —— 识别引擎 select（自动/MiniMax 云端/SAPI5）、API Key password（支持 `MINIMAX_API_KEY` 环境变量覆盖）、获取 Key 外链；配置走主程序 PluginConfigStore（`plugin_data/voice-input/config.json`），主程序零改动
+- **引擎链重排**：`auto`（默认）配了 Key 即云端优先，失败（网络/401/额度不足）自动回退本地链（Whisper → SAPI5），本次录音不丢；`minimax` 强制云端（Key 缺失提示后回退）；`sapi5` 强制本地；纯云端模式不再强检本地 zh 识别引擎，无 SAPI5 中文引擎的机器也可用
+- **验证**：真实代码路径 `transcribe_wav` 识别 TTS 中文音频 39 字全对带标点；无效 key → HTTP 401 → `RuntimeError` → 回退分支确认；plugin.json 合法、py_compile / ruff 全过
+
 ## 2.9.1 (2026-09-11)
 ### 🔧 网关消息分片自包含化 + loguru 日志占位符修正（qq v1.1.2 / wecom v1.0.1 / feishu v1.2.2 / slack v1.0.1 / dingtalk v1.0.1）
 - **QQ/WeCom 发送崩于已下线的宿主基类方法**：主程序 `b6136c7a` 死代码剪枝移除了 `BasePlatformAdapter.truncate_message`（主仓库内无引用，调用方在插件仓库故未被识别），`QqAdapter._send_plain_chunks` 与 `WeComAdapter.send` 一调用即抛 `AttributeError`，QQ 群聊消息全量发不出去；现各网关自带 `_split_message`（优先按空行切段、单段超限硬切，与 feishu/slack 同名同风格），不再依赖宿主基类方法
