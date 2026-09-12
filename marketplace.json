@@ -1803,7 +1803,7 @@
                 "skills": true,
                 "hooks": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
