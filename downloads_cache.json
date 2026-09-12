@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1789175889.9569733,
+  "fetched_at": 1789192857.4843447,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -55,7 +55,7 @@
     "groq": 3,
     "guizang-ppt-skill": 6,
     "hashline-edit": 7,
-    "hookify": 1,
+    "hookify": 2,
     "internal-comms": 1,
     "ip-switcher": 3,
     "j-space": 3,
