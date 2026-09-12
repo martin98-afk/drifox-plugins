@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
-"""voice-input UI 插件：输入框按钮 → 录音 → 离线识别 → 文本插入输入框光标处。
+"""voice-input UI 插件：输入框按钮 → 录音 → 云端识别 → 文本插入输入框光标处。
 
 交互流：点按钮开始录音（右下角浮窗反馈）→ 再点结束 → 识别 → 文本插入
 input_area 光标处（不自动发送）。浮窗取消 / Esc 丢弃录音。单实例状态机：
 idle → recording → recognizing → idle，识别中再点只提示不叠加。
 
-识别引擎（设置 → 语音听写配置 可选）：MiniMax 云端（asr-1.0，准确率高带标点，
-需配置 API Key）→ 本地 Whisper（faster-whisper）→ Windows SAPI5（recognizer.py）。
-自动模式下配了 Key 走云端优先，云端失败自动回退本地链，插件永不失效。
+识别引擎（设置 → 语音听写配置 可选）：纯云端双链 ——
+- 硅基流动（默认优先）：免费 ASR 模型（Qwen3-ASR 等），国内直连
+- MiniMax：asr-1.0，按量计费
+自动模式下硅基流动失败（限流/超时/key 无效）自动转 MiniMax，两个都配才互为备用；
+仅选单引擎时失败即报错。云端全部失败不落本地识别。
 """
 
 from __future__ import annotations
@@ -26,13 +28,18 @@ _TOOLTIP = "语音听写（点击开始，再点结束，文字插入输入框�
 # 单次录音上限（秒），超时自动结束并识别
 _MAX_RECORD_SEC = 60
 
+# 云端引擎端点（协议同构：multipart 上传 + Bearer + {"text": ...}）
+_SILICONFLOW_URL = "https://api.siliconflow.cn/v1/audio/transcriptions"
+_MINIMAX_URL = "https://api.minimaxi.com/v1/speech_to_text"
+_MINIMAX_MODEL = "asr-1.0"
+_SILICONFLOW_DEFAULT_MODEL = "Qwen/Qwen3-ASR-1.7B"
+
 # 状态机
 _state = "idle"  # idle | recording | recognizing
 _recorder = None  # VoiceRecorder
 _overlay = None  # RecordingOverlay
-_worker = None  # SAPI5 / Whisper / MiniMax 识别 worker
+_worker = None  # CloudRecognizeWorker
 _wav_path = ""
-_token_id = ""
 _max_timer = None  # QTimer，60 秒自动停
 
 
@@ -64,23 +71,6 @@ def _notify(main_widget, kind: str, title: str, msg: str) -> None:
         logger.warning(f"[voice-input] InfoBar 提示失败: {e}")
 
 
-def _read_config() -> tuple[str, str]:
-    """读插件配置 → (provider, minimax_api_key)。
-
-    主程序未注入配置系统/读取失败时按默认（auto，无 key）走本地链。
-    """
-    try:
-        from app.plugins.managers.plugin_config_store import PluginConfigStore
-
-        store = PluginConfigStore()
-        provider = str(store.get(PLUGIN_NAME, "provider") or "auto")
-        api_key = str(store.get(PLUGIN_NAME, "minimax_api_key") or "").strip()
-        return provider, api_key
-    except Exception as e:  # noqa: BLE001 — 配置不可用不阻断录音，走本地链
-        logger.warning(f"[voice-input] 读取插件配置失败，按默认（auto/无 key）: {e}")
-        return "auto", ""
-
-
 def _cleanup_wav() -> None:
     """删除临时 WAV（失败忽略：%TEMP% 文件系统会兜底清理）。"""
     global _wav_path
@@ -90,6 +80,39 @@ def _cleanup_wav() -> None:
         except OSError as e:
             logger.warning(f"[voice-input] 临时 WAV 删除失败（忽略）: {e}")
     _wav_path = ""
+
+
+def _read_config() -> Dict[str, str]:
+    """读插件配置。主程序未注入配置系统/读取失败时返回空 dict（调用方拦截并提示）。"""
+    try:
+        from app.plugins.managers.plugin_config_store import PluginConfigStore
+
+        store = PluginConfigStore()
+        return {
+            "provider": str(store.get(PLUGIN_NAME, "provider") or "auto"),
+            "sf_key": str(store.get(PLUGIN_NAME, "siliconflow_api_key") or "").strip(),
+            "sf_model": str(store.get(PLUGIN_NAME, "siliconflow_model") or "").strip()
+            or _SILICONFLOW_DEFAULT_MODEL,
+            "mm_key": str(store.get(PLUGIN_NAME, "minimax_api_key") or "").strip(),
+        }
+    except Exception as e:  # noqa: BLE001 — 配置不可用不崩，交给调用方提示
+        logger.warning(f"[voice-input] 读取插件配置失败: {e}")
+        return {}
+
+
+def _build_chain(cfg: Dict[str, str]) -> list:
+    """按引擎选择生成识别链 [(url, model, key, 名称), ...]，头部优先。
+
+    - auto：硅基流动优先，MiniMax（配了 key）作备用；
+    - siliconflow / minimax：仅用对应单引擎。
+    """
+    p = cfg.get("provider", "auto")
+    chain: list = []
+    if p in ("auto", "siliconflow") and cfg.get("sf_key"):
+        chain.append((_SILICONFLOW_URL, cfg["sf_model"], cfg["sf_key"], "硅基流动"))
+    if p in ("auto", "minimax") and cfg.get("mm_key"):
+        chain.append((_MINIMAX_URL, _MINIMAX_MODEL, cfg["mm_key"], "MiniMax"))
+    return chain
 
 
 def _reset_state() -> None:
@@ -141,10 +164,9 @@ def _on_button_clicked(context: Dict[str, Any]) -> None:
 
 def _start_recording(context: Dict[str, Any]) -> None:
     """开始录音：读配置判可用性 → winmm 录音 → 弹浮窗 + 超时看门狗。"""
-    global _state, _recorder, _overlay, _wav_path, _token_id, _max_timer
+    global _state, _recorder, _overlay, _wav_path, _max_timer
     main_widget = context.get("main_widget")
     try:
-        from .recognizer import find_zh_recognizer_id
         from .recorder import VoiceRecorder
         from .overlay import RecordingOverlay
     except Exception as e:  # noqa: BLE001 — 子模块加载失败（热重载竞态等）
@@ -152,17 +174,14 @@ def _start_recording(context: Dict[str, Any]) -> None:
         return
 
     try:
-        provider, api_key = _read_config()
-        # 本地引擎缺失不再一票否决：纯云端模式（MiniMax）无需本地引擎
-        _token_id = find_zh_recognizer_id() or ""
-        cloud_ready = bool(api_key) and provider in ("auto", "minimax")
-        if not _token_id and not cloud_ready:
-            logger.error("[voice-input] 未找到中文语音识别引擎且未配置云端识别")
+        chain = _build_chain(_read_config())
+        if not chain:
+            logger.warning("[voice-input] 未配置任何云端识别 Key，无法使用")
             _notify(
                 main_widget,
                 "error",
                 "语音听写",
-                "系统未安装中文识别引擎（zh-CN），且未配置 MiniMax Key，无法使用",
+                "请先到 设置 → 语音听写配置 填写云端识别 API Key",
             )
             return
 
@@ -196,7 +215,7 @@ def _start_recording(context: Dict[str, Any]) -> None:
         if _recorder is not None:
             try:
                 _recorder.close()
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001 — 设备已坏也要走完清理
                 pass
         _close_overlay()
         _reset_state()
@@ -204,7 +223,7 @@ def _start_recording(context: Dict[str, Any]) -> None:
 
 
 def _stop_and_recognize(context: Dict[str, Any]) -> None:
-    """停止录音 → 保存 WAV → 按配置选引擎启动识别，浮窗转识别态。"""
+    """停止录音 → 保存 WAV → 按识别链启动云端识别，浮窗转识别态。"""
     global _state
     if _state != "recording":
         return
@@ -219,111 +238,53 @@ def _stop_and_recognize(context: Dict[str, Any]) -> None:
         _notify(main_widget, "error", "语音听写", f"识别启动失败：{e}")
         return
 
+    chain = _build_chain(_read_config())
+    if not chain:
+        _close_overlay()
+        _reset_state()
+        _notify(main_widget, "error", "语音听写", "未配置云端识别 API Key")
+        return
+
     if _overlay is not None:
         _overlay.enter_recognizing()
     _state = "recognizing"
-
-    # 引擎选择：显式 minimax / 显式 sapi5 / auto（配了 key 即云端优先，失败回退本地链）
-    provider, api_key = _read_config()
-    if api_key and provider in ("auto", "minimax"):
-        _start_minimax_worker(context, api_key)
-        return
-    if provider == "minimax":
-        _notify(
-            main_widget,
-            "warning",
-            "语音听写",
-            "已选 MiniMax 云端识别但未配置 API Key，本次回退本地引擎",
-        )
-    _start_whisper_or_sapi5(context)
+    _start_cloud(context, chain)
 
 
-def _start_whisper_or_sapi5(context: Dict[str, Any]) -> None:
-    """本地链：Whisper 可用则优先（含首次下载提示），否则回退 SAPI5。"""
+def _start_cloud(context: Dict[str, Any], chain: list) -> None:
+    """启动识别链头部引擎；失败时 _on_cloud_failed 自动转后续引擎。"""
     main_widget = context.get("main_widget")
+    url, model, key, name = chain[0]
     try:
-        from .whisper_recognizer import (
-            WhisperRecognizeWorker,
-            faster_whisper_available,
-            is_model_present,
-            model_hint_mb,
-        )
-    except Exception as e:  # noqa: BLE001 — Whisper 模块自身异常则走 SAPI5
-        logger.warning(f"[voice-input] Whisper 模块加载失败，回退 SAPI5: {e}")
-        _start_sapi5_worker(context)
-        return
+        from .cloud_recognizer import CloudRecognizeWorker
 
-    if not faster_whisper_available():
-        _start_sapi5_worker(context)
-        return
-
-    # Whisper 可用：首次识别前提示将自动下载模型
-    if not is_model_present():
-        _notify(
-            main_widget,
-            "info",
-            "语音听写",
-            f"首次使用高精度识别：需先下载语音模型（约 {model_hint_mb()}MB），"
-            "仅此一次，下载完成后自动识别",
-        )
-
-    worker = WhisperRecognizeWorker(_wav_path)
-    worker.finished_ok.connect(lambda text: _on_recognized(context, text))
-    worker.failed.connect(lambda err: _on_failed(context, err))
-    worker.unavailable.connect(lambda msg: _on_whisper_unavailable(context, msg))
-    worker.status.connect(_on_worker_status)
-    worker.start()
-    _set_worker(worker)
-
-
-def _start_sapi5_worker(context: Dict[str, Any]) -> None:
-    """用 SAPI5 识别当前 _wav_path（默认路径 / Whisper 回退路径）。"""
-    main_widget = context.get("main_widget")
-    try:
-        from .recognizer import RecognizeWorker
-
-        if not _token_id:
-            _notify(main_widget, "error", "语音听写", "系统中文识别引擎不可用")
-            _close_overlay()
-            _reset_state()
-            return
-        worker = RecognizeWorker(_wav_path, _token_id)
+        worker = CloudRecognizeWorker(_wav_path, url, model, key)
         worker.finished_ok.connect(lambda text: _on_recognized(context, text))
-        worker.failed.connect(lambda err: _on_failed(context, err))
-        worker.start()
-        _set_worker(worker)
-    except Exception as e:  # noqa: BLE001 — 兜底：回滚整个会话
-        logger.error(f"[voice-input] SAPI5 识别启动失败: {e}")
-        _close_overlay()
-        _reset_state()
-        _notify(main_widget, "error", "语音听写", f"识别启动失败：{e}")
-
-
-def _start_minimax_worker(context: Dict[str, Any], api_key: str) -> None:
-    """MiniMax 云端识别当前 _wav_path；失败自动回退本地引擎（会话不中断）。"""
-    main_widget = context.get("main_widget")
-    try:
-        from .minimax_recognizer import MiniMaxRecognizeWorker
-
-        worker = MiniMaxRecognizeWorker(_wav_path, api_key)
-        worker.finished_ok.connect(lambda text: _on_recognized(context, text))
-        worker.failed.connect(lambda err: _on_minimax_failed(context, err))
+        worker.failed.connect(
+            lambda err, rest=chain[1:], n=name: _on_cloud_failed(context, err, rest, n)
+        )
         worker.status.connect(_on_worker_status)
         worker.start()
         _set_worker(worker)
     except Exception as e:  # noqa: BLE001 — 启动失败回滚整个会话
-        logger.error(f"[voice-input] MiniMax 识别启动失败: {e}")
+        logger.error(f"[voice-input] 云端识别启动失败: {e}")
         _close_overlay()
         _reset_state()
         _notify(main_widget, "error", "语音听写", f"识别启动失败：{e}")
 
 
-def _on_minimax_failed(context: Dict[str, Any], err: str) -> None:
-    """云端失败 → 自动回退本地引擎，本次录音不丢（_wav_path 仍有效）。"""
+def _on_cloud_failed(context: Dict[str, Any], err: str, rest: list, tried: str) -> None:
+    """链内引擎失败：有备用自动转（本次录音不丢），否则报错收场。"""
     main_widget = context.get("main_widget")
-    logger.warning(f"[voice-input] MiniMax 失败，回退本地引擎: {err}")
-    _notify(main_widget, "warning", "语音听写", f"云端识别失败（{err}），回退本地引擎")
-    _start_whisper_or_sapi5(context)
+    logger.warning(f"[voice-input] {tried} 识别失败: {err}")
+    if rest:
+        fallback_name = rest[0][3]
+        _notify(main_widget, "warning", "语音听写", f"{tried}识别失败，转用{fallback_name}")
+        _start_cloud(context, rest)
+        return
+    _close_overlay()
+    _reset_state()
+    _notify(main_widget, "error", "语音听写", f"云端识别失败：{err}")
 
 
 def _set_worker(worker) -> None:
@@ -331,18 +292,24 @@ def _set_worker(worker) -> None:
     _worker = worker
 
 
-def _on_whisper_unavailable(context: Dict[str, Any], msg: str) -> None:
-    """Whisper 依赖/模型缺失 → 自动回退 SAPI5，会话不中断。"""
-    main_widget = context.get("main_widget")
-    logger.warning(f"[voice-input] Whisper 不可用，回退 SAPI5: {msg}")
-    _notify(main_widget, "warning", "语音听写", msg)
-    _start_sapi5_worker(context)
-
-
 def _on_worker_status(text: str) -> None:
-    """识别 worker 阶段文案 → 浮窗状态标签（云端识别中/下载模型…）。"""
+    """识别 worker 阶段文案 → 浮窗状态标签。"""
     if _overlay is not None:
         _overlay.set_status(text)
+
+
+def _on_cancelled() -> None:
+    """浮窗取消 / Esc：丢弃录音，不留临时文件。"""
+    global _recorder
+    if _recorder is not None:
+        try:
+            _recorder.close()
+        except Exception:  # noqa: BLE001 — 设备已坏也要走完清理
+            pass
+        _recorder = None
+    _close_overlay()
+    _reset_state()
+    logger.info("[voice-input] 语音听写已取消")
 
 
 def _on_recognized(context: Dict[str, Any], text: str) -> None:
@@ -360,27 +327,6 @@ def _on_recognized(context: Dict[str, Any], text: str) -> None:
         _notify(main_widget, "success", "语音听写", f"已插入：{preview}")
     else:
         _notify(main_widget, "error", "语音听写", "当前窗口不支持插入文本")
-
-
-def _on_failed(context: Dict[str, Any], err: str) -> None:
-    main_widget = context.get("main_widget")
-    _close_overlay()
-    _reset_state()
-    _notify(main_widget, "error", "语音听写", f"识别失败：{err}")
-
-
-def _on_cancelled() -> None:
-    """浮窗取消 / Esc：丢弃录音，不留临时文件。"""
-    global _recorder
-    if _recorder is not None:
-        try:
-            _recorder.close()
-        except Exception:  # noqa: BLE001 — 设备已坏也要走完清理
-            pass
-        _recorder = None
-    _close_overlay()
-    _reset_state()
-    logger.info("[voice-input] 语音听写已取消")
 
 
 def register_ui(registry) -> None:

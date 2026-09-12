@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.11.0 (2026-09-13)
+### ✨ voice-input 转纯云端双链：硅基流动免费优先 + MiniMax 备用，砍本地引擎（v0.4.0）
+- **硅基流动接入（免费）**：实测 `Qwen/Qwen3-ASR-1.7B` 免费且中文识别带标点（官方定价页确认 Qwen3-ASR / XingChenASR 系列 / TeleSpeechASR / SenseVoiceSmall 全部免费）；`FunAudioLLM/SenseVoiceSmall` 免费通道当前限流严重（请求挂起不响应），模型名做成配置项默认 Qwen3-ASR 可随时换
+- **worker 通用化**：`ui/minimax_recognizer.py` 重构为 `ui/cloud_recognizer.py` —— 硅基流动（OpenAI 兼容）与 MiniMax 专有接口协议同构（multipart 上传 + Bearer + `{"text"}`），差异仅 URL/模型名/Key，统一 `CloudRecognizeWorker` + `transcribe_wav` 纯函数；仍纯标准库 urllib 零第三方依赖，超时错误细分为「响应超时（可能限流）」
+- **识别链架构**：`auto`（默认）按配置生成引擎链，头部失败自动转备用、本次录音不丢；`siliconflow`/`minimax` 单引擎失败即报错；配置 key 全缺时录音入口直接拦截提示
+- **删除本地识别**：SAPI5（recognizer.py）与 Whisper（whisper_recognizer.py + tools/install_whisper.py）整体移除，zh 引擎强检逻辑随之删除，插件不再依赖任何本地组件
+- **配置卡**：识别引擎三选项（自动/仅硅基流动/仅 MiniMax）+ 双 Key（`SILICONFLOW_API_KEY`/`MINIMAX_API_KEY` 环境变量可覆盖）+ 硅基流动模型名可配 + 两个获取 Key 外链
+- **验证**：真实 key 走 `transcribe_wav` 全链路（硅基流动 Qwen3-ASR 返回带标点文本一字不差）；MiniMax 链路协议未变沿用 0.3.0 实测结论；plugin.json 合法、py_compile / ruff 过
+
 ## 2.10.0 (2026-09-12)
 ### ✨ voice-input 接入 MiniMax 云端识别，引擎设置可选（v0.3.0）
 - **MiniMax 云端识别后端**：新增 `ui/minimax_recognizer.py`，上传 16kHz WAV 至 `POST https://api.minimaxi.com/v1/speech_to_text`（`asr-1.0`），带标点中文秒级返回；纯标准库 urllib 手写 multipart（宿主 PyInstaller 未收集 requests，插件零第三方依赖）；30s 超时兜底，网络/HTTP/JSON 错误全链路人话化
