@@ -150,7 +150,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "video",
                 "explainer",
@@ -792,7 +792,7 @@
                 "tools": true,
                 "hook_policies": true
             },
-            "downloads": 30,
+            "downloads": 31,
             "keywords": [
                 "cron",
                 "schedule",
@@ -3671,7 +3671,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "voice",
                 "dictation",
