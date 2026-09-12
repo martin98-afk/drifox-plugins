@@ -48,9 +48,16 @@
             {
                 "key": "siliconflow_model",
                 "label": "硅基流动模型",
-                "type": "text",
+                "type": "select",
                 "default": "Qwen/Qwen3-ASR-1.7B",
-                "placeholder": "免费可选：SenseVoiceSmall / XingChenASR-V3.2 等"
+                "options": [
+                    {"value": "Qwen/Qwen3-ASR-1.7B", "label": "Qwen3-ASR（推荐）"},
+                    {"value": "FunAudioLLM/SenseVoiceSmall", "label": "SenseVoice-Small"},
+                    {"value": "XingChenAGI/XingChenASR-V3.2", "label": "星尘 ASR V3.2"},
+                    {"value": "XingChenAGI/XingChenASR-V3.2-Ultra", "label": "星尘 ASR V3.2 Ultra"},
+                    {"value": "XingChenAGI/XingChenASR-Diarize-V3.0", "label": "星尘 ASR 说话人分离"}
+                ],
+                "description": "以上均为硅基流动免费模型，不消耗余额"
             },
             {
                 "key": "siliconflow_console",
