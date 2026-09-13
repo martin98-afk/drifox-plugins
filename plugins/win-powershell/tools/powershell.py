@@ -93,6 +93,25 @@ def _strip_clixml(text: str) -> str:
     return _CLIXML_RE.sub("", text).strip()
 
 
+def _kill_tree(pid: int) -> None:
+    """Windows 下终止整棵进程树（含 powershell 启动的全部子孙进程）。
+
+    taskkill /T 沿进程树连杀，/F 强制。树内进程死光后 stdout 管道写端
+    全部释放，父进程 communicate() 的 EOF 等待立即达成。
+    本插件 Windows 专用；taskkill 失败时上层 communicate 超时后 proc.kill() 兜底。
+    """
+    try:
+        subprocess.run(
+            ["taskkill", "/F", "/T", "/PID", str(pid)],
+            capture_output=True,
+            timeout=10,
+            check=False,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def _decode_output(raw: bytes) -> str:
     """智能解码 PowerShell 输出:先 BOM 嗅探,再严格 UTF-8,再 GBK,最后 UTF-8 replace。
 
@@ -168,30 +187,44 @@ def _powershell_impl(tool_ctx, **kwargs):
         startupinfo.wShowWindow = subprocess.SW_HIDE
         creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
+    # 超时必须杀整棵进程树（_kill_tree）。原因（死锁实录 2026-09-13）：
+    # subprocess.run 的超时分支在 Windows 上是 kill 直接子进程后再次
+    # communicate() 等管道 EOF（CPython subprocess.py「exc.stdout, exc.stderr =
+    # process.communicate()」）。而 PowerShell 启动 native exe 时句柄继承泄漏，
+    # 孙进程（如 .venv python trampoline → 真解释器）会持有 stdout 管道写端；
+    # 若孙进程安静不退出（起 UI/长任务不写输出），powershell 被 kill 后 EOF
+    # 永不到达 → communicate() 永久阻塞 → TimeoutExpired 抛不出来 → 工具线程
+    # 死锁、AI 端转圈不返回。杀树后句柄全部释放，EOF 立即达成。
     try:
-        proc = subprocess.run(
+        proc = subprocess.Popen(
             cmd,
             cwd=cwd,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            timeout=timeout,
-            check=False,
             startupinfo=startupinfo,
             creationflags=creationflags,
         )
-    except subprocess.TimeoutExpired:
-        return ToolResult(False, error=f"PowerShell 执行超时（>{timeout}s 已终止）")
     except FileNotFoundError:
         return ToolResult(False, error=f"未找到 PowerShell 可执行文件：{exe}")
+    except Exception as e:  # noqa: BLE001
+        return ToolResult(False, error=f"执行失败：{e}")
+
+    try:
+        stdout_raw, stderr_raw = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        _kill_tree(proc.pid)
+        try:
+            proc.communicate(timeout=10)  # 树已死，EOF 必达；收尾防极端残留
+        except Exception:  # noqa: BLE001
+            proc.kill()
+        return ToolResult(False, error=f"PowerShell 执行超时（>{timeout}s 已终止进程树）")
     except Exception as e:  # noqa: BLE001
         return ToolResult(False, error=f"执行失败：{e}")
 
     # 关键修复:合并 stdout/stderr 字节流后统一解码。
     # 原实现分别解码再拼接,会在 PS 5.1 下产生"半 GBK 半 UTF-8"编码错位,
     # 触发条件是 stderr(GBK)与 stdout(可能 UTF-8)同时存在时——典型"部分乱码"场景。
-    stdout_raw = proc.stdout or b""
-    stderr_raw = proc.stderr or b""
-    merged_raw = stdout_raw
+    merged_raw = stdout_raw or b""
     if stderr_raw:
         if merged_raw and not merged_raw.endswith(b"\n"):
             merged_raw += b"\n"
