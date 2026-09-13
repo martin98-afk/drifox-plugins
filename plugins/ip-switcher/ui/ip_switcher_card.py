@@ -581,9 +581,9 @@ class IPSwitcherCard(QWidget):
     def _refresh_all(self):
         # Qt 生命周期防护：卡片已被销毁时控件可能已 C++ 删除
         try:
-            import sip
+            from shiboken6 import isValid
 
-            if sip.isdeleted(self._badge_label):
+            if not isValid(self._badge_label):
                 return
         except Exception:
             pass
@@ -648,9 +648,9 @@ class IPSwitcherCard(QWidget):
     def _apply_pool_size(self, pool_stats):
         self._stats_fetching = False
         try:
-            import sip
+            from shiboken6 import isValid
 
-            if sip.isdeleted(self._stat_labels["pool_size"]):
+            if not isValid(self._stat_labels["pool_size"]):
                 return
             pool_size = pool_stats.get("pool_size", "-") if pool_stats else "-"
             self._stat_labels["pool_size"].setText(str(pool_size))
