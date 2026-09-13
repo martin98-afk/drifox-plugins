@@ -3854,6 +3854,45 @@
             }
         },
         {
+            "name": "webdav-backup",
+            "description": "WebDAV 备份 — 将 DriFox 数据（会话/配置/插件数据）全量备份到坚果云、Nextcloud 等 WebDAV 网盘，支持定时自动备份、可选 AES-256 加密、历史版本管理与一键恢复",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui",
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/webdav-backup",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true,
+                "tools": true
+            },
+            "keywords": [
+                "webdav",
+                "backup",
+                "坚果云",
+                "jianguoyun",
+                "nextcloud",
+                "备份",
+                "恢复",
+                "同步"
+            ],
+            "drifox": {
+                "min_version": "0.5.10"
+            },
+            "homepage": "https://github.com/martin98-afk/drifox-plugins",
+            "icon": {
+                "light": "icons/webdav.svg",
+                "dark": "icons/webdav_light.svg"
+            }
+        },
+        {
             "name": "win-powershell",
             "description": "专用 Windows PowerShell 执行工具——强制走 PowerShell 原生入口运行 PS 脚本/命令（cmdlet、管道对象、ConvertTo-Json），自动处理 UTF-8 编码与超时，区别于通用 bash 工具。",
             "version": "1.0.7",

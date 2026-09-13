@@ -1,0 +1,111 @@
+{
+    "icon": {
+        "light": "icons/webdav.svg",
+        "dark": "icons/webdav_light.svg"
+    },
+    "name": "webdav-backup",
+    "description": "WebDAV 备份 — 将 DriFox 数据（会话/配置/插件数据）全量备份到坚果云、Nextcloud 等 WebDAV 网盘，支持定时自动备份、可选 AES-256 加密、历史版本管理与一键恢复",
+    "version": "0.1.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "homepage": "https://github.com/martin98-afk/drifox-plugins",
+    "license": "MIT",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.10"
+    },
+    "keywords": [
+        "webdav",
+        "backup",
+        "坚果云",
+        "jianguoyun",
+        "nextcloud",
+        "备份",
+        "恢复",
+        "同步"
+    ],
+    "components": {
+        "ui": true,
+        "tools": true
+    },
+    "config_schema": {
+        "title": "WebDAV 备份",
+        "fields": [
+            {
+                "key": "server_url",
+                "label": "服务器地址",
+                "type": "text",
+                "default": "https://dav.jianguoyun.com/dav/",
+                "placeholder": "https://dav.jianguoyun.com/dav/",
+                "description": "坚果云填 https://dav.jianguoyun.com/dav/；Nextcloud 填 https://你的域名/remote.php/dav/files/你的用户名/"
+            },
+            {
+                "key": "username",
+                "label": "账号",
+                "type": "text",
+                "default": "",
+                "placeholder": "登录邮箱或用户名",
+                "description": "坚果云填注册邮箱"
+            },
+            {
+                "key": "password",
+                "label": "密码",
+                "type": "password",
+                "default": "",
+                "description": "坚果云必须使用「应用密码」：网页端 账户信息 → 安全选项 → 添加应用密码；Nextcloud 填账号密码或应用专用密码"
+            },
+            {
+                "key": "remote_dir",
+                "label": "远端目录",
+                "type": "text",
+                "default": "drifox-backup",
+                "placeholder": "drifox-backup",
+                "description": "备份包在网盘里的存放目录（不存在会自动创建），支持多级如 a/b/c"
+            },
+            {
+                "key": "auto_backup",
+                "label": "自动备份",
+                "type": "bool",
+                "default": true,
+                "description": "按下方间隔自动备份（DriFox 运行期间）"
+            },
+            {
+                "key": "interval_hours",
+                "label": "备份间隔（小时）",
+                "type": "number",
+                "default": 24,
+                "min": 1,
+                "max": 168,
+                "description": "距上次成功备份超过该时长则自动备份"
+            },
+            {
+                "key": "keep_versions",
+                "label": "保留份数",
+                "type": "number",
+                "default": 10,
+                "min": 1,
+                "max": 100,
+                "description": "远端最多保留的备份包数量，超出自动删除最旧的"
+            },
+            {
+                "key": "encryption_password",
+                "label": "备份加密密码",
+                "type": "password",
+                "default": "",
+                "description": "留空则上传普通 zip（可用任意解压工具打开）；设置后备份包经 AES-256-GCM 加密（扩展名 .dvp），恢复时需输入同一密码"
+            },
+            {
+                "key": "test_connection",
+                "label": "测试连接",
+                "type": "action",
+                "action": {
+                    "tool": "webdav_backup",
+                    "args": {
+                        "action": "test"
+                    }
+                }
+            }
+        ]
+    }
+}
