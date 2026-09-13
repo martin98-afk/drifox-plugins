@@ -56,16 +56,16 @@ _STATE_LOCK = threading.Lock()
 
 
 def _plugin_data_dir() -> Path:
-    from app.utils.utils import get_app_data_dir
+    from webdavbackup_core import host_compat
 
-    return Path(get_app_data_dir()) / "plugin_data" / PLUGIN_NAME
+    return host_compat.get_app_data_dir() / "plugin_data" / PLUGIN_NAME
 
 
 def get_app_data_root() -> Path:
     """DriFox 数据根目录（备份对象）"""
-    from app.utils.utils import get_app_data_dir
+    from webdavbackup_core import host_compat
 
-    return Path(get_app_data_dir())
+    return host_compat.get_app_data_dir()
 
 
 def _to_bool(v: Any, default: bool = False) -> bool:
@@ -87,9 +87,9 @@ def _to_int(v: Any, default: int) -> int:
 
 def load_config() -> Dict[str, Any]:
     """读取插件配置（三级链兜底），字段已归一化"""
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+    from webdavbackup_core import host_compat
 
-    store = PluginConfigStore()
+    store = host_compat.get_config_store()
 
     def g(key: str, default: str = "") -> str:
         v = store.get(PLUGIN_NAME, key)
@@ -119,6 +119,10 @@ def load_config() -> Dict[str, Any]:
         for seg in re.split(r"[\n,，]", str(raw_extra))
     ]
     include_extra = [ln for ln in include_extra if ln]
+    # 外部绝对路径（数据目录之外的自定义备份目标），每行/逗号一个
+    raw_paths = store.get(PLUGIN_NAME, "include_paths") or ""
+    include_paths = [seg.strip() for seg in re.split(r"[\n,，]", str(raw_paths))]
+    include_paths = [seg for seg in include_paths if seg]
     return {
         "server_url": g("server_url", schema_defaults["server_url"]).strip(),
         "username": g("username", "").strip(),
@@ -130,6 +134,7 @@ def load_config() -> Dict[str, Any]:
         "encryption_password": g("encryption_password", ""),
         "include_dirs": include_dirs,
         "include_extra": include_extra,
+        "include_paths": include_paths,
     }
 
 

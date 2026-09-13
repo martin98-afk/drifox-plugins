@@ -31,11 +31,32 @@ from qfluentwidgets import (
 )
 from qfluentwidgets.components.widgets.card_widget import CardSeparator
 
-from app.utils.design_tokens import Colors, font_size_css
-from app.utils.utils import get_font_family_css
-
 from webdavbackup_core import config as cfg_mod
 from webdavbackup_core import engine
+
+# 主程序设计令牌缺失时回退到硬编码主题色（插件自包含保证）
+try:
+    from app.utils.design_tokens import Colors, font_size_css
+except Exception:
+    Colors = None
+
+    def font_size_css(px: int) -> str:  # type: ignore[misc]
+        return f"font-size: {px}px;"
+
+
+try:
+    from app.utils.utils import get_font_family_css
+except Exception:
+    def get_font_family_css() -> str:  # type: ignore[misc]
+        return "font-family: 'Microsoft YaHei';"
+
+
+def _color(name: str, light: str, dark: str = "") -> str:
+    """取设计令牌色；不可用时按当前主题返回硬编码色"""
+    if Colors is not None:
+        return getattr(Colors, name)
+    return dark if (dark and isDarkTheme()) else light
+
 
 FONT_CSS = get_font_family_css()
 
@@ -46,19 +67,19 @@ FONT_CSS = get_font_family_css()
 
 
 def _hero_title_css() -> str:
-    return f"color: {Colors.TEXT_PRIMARY}; {font_size_css(20)} {FONT_CSS}; font-weight: 600;"
+    return f"color: {_color('TEXT_PRIMARY', 'rgba(0,0,0,0.9)', 'rgba(255,255,255,0.9)')}; {font_size_css(20)} {FONT_CSS}; font-weight: 600;"
 
 
 def _section_title_css() -> str:
-    return f"color: {Colors.TEXT_PRIMARY}; {font_size_css(13)} {FONT_CSS}; font-weight: 600;"
+    return f"color: {_color('TEXT_PRIMARY', 'rgba(0,0,0,0.9)', 'rgba(255,255,255,0.9)')}; {font_size_css(13)} {FONT_CSS}; font-weight: 600;"
 
 
 def _caption_css() -> str:
-    return f"color: {Colors.TEXT_SECONDARY}; {font_size_css(12)} {FONT_CSS};"
+    return f"color: {_color('TEXT_SECONDARY', 'rgba(0,0,0,0.55)', 'rgba(255,255,255,0.6)')}; {font_size_css(12)} {FONT_CSS};"
 
 
 def _name_css() -> str:
-    return f"color: {Colors.TEXT_PRIMARY}; {font_size_css(13)} {FONT_CSS};"
+    return f"color: {_color('TEXT_PRIMARY', 'rgba(0,0,0,0.9)', 'rgba(255,255,255,0.9)')}; {font_size_css(13)} {FONT_CSS};"
 
 
 def _make_section_card() -> ElevatedCardWidget:
@@ -181,7 +202,7 @@ class CloudFileRow(QFrame):
         self._restore_btn.setEnabled(False)
         self._delete_btn.setToolTip("再次点击确认删除")
         self._delete_btn.setStyleSheet(
-            f"TransparentToolButton {{ background: {Colors.ERROR}; border-radius: 4px; }}"
+            f"TransparentToolButton {{ background: {_color('ERROR', '#ef4444', '#ef4444')}; border-radius: 4px; }}"
         )
         self._confirm_timer.start(self._CONFIRM_MS)
 
@@ -446,11 +467,11 @@ class WebDavBackupCard(QFrame):
     def _on_scope_changed(self, *args):
         """勾选/额外项变更：合并写存储（只落范围键，不碰账号密码）"""
         try:
-            from app.plugins.managers.plugin_config_store import PluginConfigStore
+            from webdavbackup_core.host_compat import get_config_store
 
             values = {f: cb.isChecked() for f, (cb, _) in self._scope_checks.items()}
             values["include_extra"] = self._scope_extra.text().strip()
-            PluginConfigStore().set_values(cfg_mod.PLUGIN_NAME, values)
+            get_config_store().set_values(cfg_mod.PLUGIN_NAME, values)
             from datetime import datetime
 
             self._scope_hint.setText(f"已保存 {datetime.now().strftime('%H:%M:%S')}")
@@ -656,12 +677,13 @@ class WebDavBackupCard(QFrame):
             row.set_busy(not enabled)
 
     def _on_restart(self):
-        """走主程序重启逻辑（app_restart：剥离渲染环境变量 + 优雅退出）"""
+        """重启：优先主程序官方逻辑，主程序不可用时自包含拉起新进程"""
         try:
-            from app.utils.app_restart import restart_application
+            from webdavbackup_core.host_compat import restart_app
 
-            if not restart_application():
-                self._set_status("重启失败：请手动退出后重新打开 DriFox")
+            ok, err = restart_app()
+            if not ok:
+                self._set_status(f"重启失败：{err}（请手动退出后重新打开 DriFox）")
         except Exception as e:
             self._set_status(f"重启失败: {e}（请手动重启）")
 
