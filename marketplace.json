@@ -145,7 +145,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/anything2explainer",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true
@@ -890,7 +890,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/dsh-presets",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "agents": true,
@@ -1563,7 +1563,7 @@
         {
             "name": "git-panel",
             "description": "Git 控制面板 — 文件变更、暂存/取消暂存、提交、Stash、分支管理、提交历史、Diff 预览、AI 生成提交描述",
-            "version": "2.0.0",
+            "version": "2.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -2762,7 +2762,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/quick-screenshot",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": false,
@@ -3051,7 +3051,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/skillhub",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "skills": true
@@ -3640,7 +3640,7 @@
         {
             "name": "voice-input",
             "description": "输入框工具栏语音听写按钮：点击开始录音，再次点击结束并把识别文字插入输入框光标处。纯云端识别：硅基流动（免费模型，默认）与 MiniMax 双引擎可配，云端失败自动互为备用",
-            "version": "0.4.0",
+            "version": "0.4.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -3650,7 +3650,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/voice-input",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": false,
@@ -3939,7 +3939,7 @@
                 "type": "git-subdir",
                 "url": "https://github.com/martin98-afk/drifox-plugins",
                 "path": "plugins/workflow",
-                "ref": "main"
+                "ref": "pyside6"
             },
             "components": {
                 "tools": true
