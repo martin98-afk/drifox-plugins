@@ -333,7 +333,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 42,
+            "downloads": 46,
             "keywords": [
                 "browser",
                 "web",
@@ -365,7 +365,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 22,
+            "downloads": 23,
             "keywords": [
                 "calendar",
                 "date",
@@ -688,7 +688,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 21,
+            "downloads": 22,
             "keywords": [
                 "welcome",
                 "stats",
@@ -728,7 +728,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -792,7 +792,7 @@
                 "tools": true,
                 "hook_policies": true
             },
-            "downloads": 32,
+            "downloads": 35,
             "keywords": [
                 "cron",
                 "schedule",
@@ -1388,7 +1388,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 28,
+            "downloads": 29,
             "platforms": [
                 "windows",
                 "linux",
@@ -1548,7 +1548,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 13,
+            "downloads": 15,
             "keywords": [
                 "git",
                 "dashboard",
@@ -1579,7 +1579,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 40,
+            "downloads": 44,
             "keywords": [
                 "git",
                 "source-control",
@@ -2548,7 +2548,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 9,
+            "downloads": 11,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -2641,7 +2641,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 24,
+            "downloads": 26,
             "keywords": [
                 "dashboard",
                 "stats",
@@ -2702,7 +2702,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 35,
+            "downloads": 39,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -2783,7 +2783,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 13,
+            "downloads": 18,
             "keywords": [
                 "screenshot",
                 "clipboard",
@@ -3671,7 +3671,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 4,
+            "downloads": 6,
             "keywords": [
                 "voice",
                 "dictation",
@@ -3871,7 +3871,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 24,
+            "downloads": 26,
             "keywords": [
                 "powershell",
                 "windows",
