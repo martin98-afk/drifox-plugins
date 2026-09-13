@@ -67,7 +67,7 @@ plugins/cron-tasks/
 
 ## 使用方法
 
-1. 输入区点击 **🕐 时钟按钮**（位于「长期记忆」按钮左侧，或命令 `/cron-tasks:tasks`）打开任务中心
+1. 左侧边栏插件列表点击 **定时任务**（或命令 `/cron-tasks:tasks`）打开任务中心（full 覆盖对话区）
 2. 点「＋ 新建任务」：填任务名称 + 提示词（到期后让 AI 做什么）
 3. 选调度方式（6 种模式，实时预览人话描述）、执行智能体、可选工作目录
 4. 保存后任务进入调度；到期自动执行，结果写运行历史并弹通知
@@ -114,7 +114,7 @@ plugins/cron-tasks/
 
 | 依赖 | 说明 |
 |------|------|
-| DriFox ≥ 0.5.10 | 需支持 `create_engine_session` 服务（EP3 契约）+ `register_input_button` + `send_to_platform` / `list_platforms` / `list_platform_sessions`（Gateway 主动投递服务面） |
+| DriFox ≥ 0.5.10 | 需支持 `create_engine_session` 服务（EP3 契约）+ full 浮动卡注册 + `send_to_platform` / `list_platforms` / `list_platform_sessions`（Gateway 主动投递服务面） |
 | PySide6 / qfluentwidgets / loguru | UI 与日志 |
 
 ## 已知限制
@@ -132,7 +132,7 @@ xcopy plugins\cron-tasks %USERPROFILE%\.drifox\plugins\cron-tasks /E /I /Y
 cp -r plugins/cron-tasks ~/.drifox/plugins/cron-tasks
 ```
 
-启动 DriFox 自动加载；输入区出现 🕐 按钮即安装成功。
+启动 DriFox 自动加载；左侧边栏插件列表出现「定时任务」即安装成功。
 
 ## 许可证
 
