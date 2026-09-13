@@ -386,6 +386,7 @@ class WebDavBackupCard(QFrame):
                 parts.append(f"每 {cfg.get('interval_hours', 24)} 小时")
                 parts.append(f"保留 {cfg.get('keep_versions', 10)} 份")
                 parts.append("已启用加密" if (cfg.get("encryption_password") or "").strip() else "未加密")
+                parts.append(f"范围：{cfg_mod.describe_scope(cfg)}")
                 last_at = state.get("last_backup_at", "")
                 if last_at:
                     status = state.get("last_backup_status", "")

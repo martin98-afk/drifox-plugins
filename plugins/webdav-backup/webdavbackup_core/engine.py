@@ -34,16 +34,29 @@ def _now_str() -> str:
     return datetime.now().strftime("%Y%m%d-%H%M%S")
 
 
-def _collect_files(app_data: Path) -> tuple:
-    """返回 (files, skipped)；排除自身插件数据目录防递归"""
+def _collect_files(app_data: Path, include_dirs: set, include_extra: list) -> tuple:
+    """白名单收集：选中目录 + 额外路径 + 顶层散文件；排除规则优先生效
+
+    返回 (files, skipped)。
+    """
     files: List[Path] = []
     skipped: List[str] = []
     self_dir = (app_data / "plugin_data" / cfg_mod.PLUGIN_NAME).resolve()
+    extra = {e.strip("/") for e in include_extra if e.strip()}
+
+    def in_extra(rel_posix: str) -> bool:
+        return any(rel_posix == e or rel_posix.startswith(e + "/") for e in extra)
+
     for p in sorted(app_data.rglob("*")):
         if not p.is_file():
             continue
-        parts = set(p.relative_to(app_data).parts)
-        if parts & EXCLUDE_DIR_NAMES:
+        rel = p.relative_to(app_data)
+        parts = rel.parts
+        rel_posix = rel.as_posix()
+        if parts[0] in EXCLUDE_DIR_NAMES or (set(parts) & EXCLUDE_DIR_NAMES):
+            continue
+        # 白名单：顶层散文件始终收集；目录内容须命中白名单目录或额外路径
+        if len(parts) > 1 and parts[0] not in include_dirs and not in_extra(rel_posix):
             continue
         try:
             if self_dir == p.resolve() or self_dir in p.resolve().parents:
@@ -136,7 +149,7 @@ def run_backup() -> Dict[str, Any]:
     skipped: List[str] = []
     try:
         app_data = cfg_mod.get_app_data_root()
-        files, skipped = _collect_files(app_data)
+        files, skipped = _collect_files(app_data, c.get("include_dirs", set()), c.get("include_extra", []))
         if not files:
             return {"ok": False, "message": f"未收集到可备份文件（数据目录: {app_data}）", "skipped": skipped}
 
