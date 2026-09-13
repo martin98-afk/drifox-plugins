@@ -310,6 +310,13 @@ class WebDavBackupCard(QFrame):
         self._test_result.setStyleSheet(_caption_css())
         btn_row.addWidget(self._test_result)
 
+        # 恢复完成后显示（走主程序重启逻辑：拉起新进程 + 优雅退出）
+        self._restart_btn = PrimaryPushButton(FluentIcon.SYNC, "重启 DriFox")
+        self._restart_btn.setFixedHeight(34)
+        self._restart_btn.clicked.connect(self._on_restart)
+        self._restart_btn.hide()
+        btn_row.addWidget(self._restart_btn)
+
         self._refresh_btn = PushButton(FluentIcon.SYNC, "刷新列表")
         self._refresh_btn.setFixedHeight(34)
         self._refresh_btn.clicked.connect(self.refresh_all)
@@ -608,6 +615,8 @@ class WebDavBackupCard(QFrame):
         if ok and rb:
             msg += f" 回滚副本：{rb}"
         self._set_status(msg)
+        if ok:
+            self._restart_btn.show()
 
     def _on_delete(self, name: str):
         self._set_status(f"正在删除 {name}…")
@@ -645,6 +654,16 @@ class WebDavBackupCard(QFrame):
             b.setEnabled(enabled)
         for row in self._rows:
             row.set_busy(not enabled)
+
+    def _on_restart(self):
+        """走主程序重启逻辑（app_restart：剥离渲染环境变量 + 优雅退出）"""
+        try:
+            from app.utils.app_restart import restart_application
+
+            if not restart_application():
+                self._set_status("重启失败：请手动退出后重新打开 DriFox")
+        except Exception as e:
+            self._set_status(f"重启失败: {e}（请手动重启）")
 
     def _set_status(self, text: str):
         self._status_label.setText(text)

@@ -3856,7 +3856,7 @@
         {
             "name": "webdav-backup",
             "description": "WebDAV 备份 — 将 DriFox 数据（会话/配置/插件数据）全量备份到坚果云、Nextcloud 等 WebDAV 网盘，支持定时自动备份、可选 AES-256 加密、历史版本管理与一键恢复",
-            "version": "0.4.1",
+            "version": "0.5.0",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -3884,7 +3884,7 @@
                 "同步"
             ],
             "drifox": {
-                "min_version": "0.5.10"
+                "min_version": "0.5.12"
             },
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
