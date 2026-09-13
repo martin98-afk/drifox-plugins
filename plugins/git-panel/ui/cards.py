@@ -3424,7 +3424,16 @@ class GitPanelCard(QWidget):
             self._set_status_text("")
 
     def _run_git_async(self, fn, on_done):
-        """在后台线程执行一个 git 操作"""
+        """在后台线程执行一个 git 操作
+
+        【PySide6 卡死修复】此前 on_done 直接 connect 到 worker.finished，
+        receiver 是普通 lambda/闭包（无 thread affinity）→ 回调在 worker
+        线程执行 → _show_info_bar 在 worker 线程创建并 show InfoBar
+        （native 窗口线程亲和），随后 worker 线程 event loop 退出、消息泵
+        死亡 → 主线程对该窗口的同步消息等待永久阻塞 → 整窗卡死。
+        现改 connect 到 self（QWidget，主线程 affinity）→ queued 归位
+        主线程后再派发 on_done。
+        """
         if self._is_loading:
             # 刷新进行中不静默丢弃：提示用户稍候
             self._set_status_text("正在刷新，请稍候…")
@@ -3436,7 +3445,8 @@ class GitPanelCard(QWidget):
         t = QThread(self)
         w.moveToThread(t)
         t.started.connect(w.run)
-        w.finished.connect(on_done)
+        self._pending_on_done = on_done
+        w.finished.connect(self._dispatch_done)
         w.error.connect(self._on_worker_error)
         w.finished.connect(t.quit)
         w.error.connect(t.quit)
@@ -3446,8 +3456,16 @@ class GitPanelCard(QWidget):
         self._worker, self._worker_thread = w, t
         t.start()
 
+    def _dispatch_done(self, result):
+        """worker 结果的 queued 中转（主线程执行）：取出并派发本次操作的回调"""
+        cb = getattr(self, "_pending_on_done", None)
+        self._pending_on_done = None
+        if cb is not None:
+            cb(result)
+
     def _on_worker_error(self, err: str):
         """后台任务异常（非 GitResult 路径）：恢复同步按钮并反馈"""
+        self._pending_on_done = None
         self._set_sync_busy(False)
         logger.error(f"[git-panel] 后台操作异常: {err}")
         self._show_info_bar("error", "操作异常", err[:200])
@@ -3462,6 +3480,7 @@ class GitPanelCard(QWidget):
 
     def _cleanup_worker(self):
         """清理卡片级后台线程引用（非阻塞，线程结束后由 finished 链自行销毁）"""
+        self._pending_on_done = None
         if self._worker_thread is not None:
             try:
                 self._worker_thread.quit()
