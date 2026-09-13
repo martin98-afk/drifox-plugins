@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """webdav_backup — WebDAV 备份管理工具（webdav-backup 插件 tools 组件）
 
-action 分发：test（测试连接）/ list（列出云端备份）/ backup（立即备份）
+action 分发：test（测试连接）/ list（列出云端备份）/ backup（立即备份）/ inspect（查看备份包内容清单）
 全部为只读或追加型操作（上传不影响本地数据），safe。
 """
 from __future__ import annotations
@@ -16,10 +16,10 @@ if str(_PLUGIN_ROOT) not in sys.path:
 
 from webdavbackup_core.host_compat import make_tool_result as ToolResult  # noqa: E402  自包含收口：主程序 ToolResult 缺失时降级为 str
 
-_ACTIONS = ("test", "list", "backup")
+_ACTIONS = ("test", "list", "backup", "inspect")
 
 
-def _impl(tool_ctx, action: str = "test", **kwargs):
+def _impl(tool_ctx, action: str = "test", backup_name: str = "", **kwargs):
     action = (action or "test").strip().lower()
     if action not in _ACTIONS:
         return ToolResult(False, content=f"未知 action: {action!r}，可选: {', '.join(_ACTIONS)}")
@@ -30,6 +30,8 @@ def _impl(tool_ctx, action: str = "test", **kwargs):
         r = engine.run_test()
     elif action == "list":
         r = engine.run_list()
+    elif action == "inspect":
+        r = engine.run_inspect(backup_name)
     else:
         r = engine.run_backup()
 
@@ -55,7 +57,7 @@ def register(registry):
             "type": "function",
             "function": {
                 "name": "webdav_backup",
-                "description": "WebDAV 备份管理：测试连接（test）、列出云端备份（list）、立即执行全量备份（backup）。备份内容为 DriFox 数据目录（会话/配置/插件数据）",
+                "description": "WebDAV 备份管理：测试连接（test）、列出云端备份（list）、查看某备份包内容清单（inspect，需 backup_name）、立即执行全量备份（backup）。备份内容为 DriFox 数据目录及配置的外部路径",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -63,7 +65,11 @@ def register(registry):
                             "type": "string",
                             "enum": list(_ACTIONS),
                             "description": "要执行的动作，默认 test",
-                        }
+                        },
+                        "backup_name": {
+                            "type": "string",
+                            "description": "inspect 时必填：备份文件名，如 drifox-backup-20260914-120000.zip",
+                        },
                     },
                 },
             },
