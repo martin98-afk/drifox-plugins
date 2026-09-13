@@ -21,6 +21,7 @@
             "components": {
                 "commands": true
             },
+            "downloads": 1,
             "keywords": [
                 "image-generation",
                 "prompt-engineering",
@@ -53,6 +54,7 @@
             "components": {
                 "commands": true
             },
+            "downloads": 1,
             "keywords": [
                 "video-generation",
                 "multimodal",
@@ -131,6 +133,41 @@
             }
         },
         {
+            "name": "anything2explainer",
+            "description": "把任意主题做成一条黑底 MG 风格、有配音字幕与章节进度条的科普讲解视频（中文/英文，Remotion 代码动画）。含可编译模板、图元库、TTS/分镜/渲染工具、风格与动效规范、多 agent 分工协议与 QC 判据，以及《RAG 与知识库》完整样片作为质量标尺。",
+            "version": "1.0.0",
+            "author": "Vincentwei1021",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/anything2explainer",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "downloads": 2,
+            "keywords": [
+                "video",
+                "explainer",
+                "remotion",
+                "tts",
+                "motion-graphics",
+                "education"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "archify",
             "description": "把代码库/系统描述/纯语言需求/Mermaid 转成自包含交互式架构图 HTML（architecture/workflow/sequence/dataflow/lifecycle），内置 tt-a1i/archify 运行时，开箱即用。",
             "version": "0.1.0",
@@ -164,7 +201,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "archify"
             ],
@@ -196,7 +233,7 @@
                 "ui": true,
                 "agents": true
             },
-            "downloads": 7,
+            "downloads": 12,
             "keywords": [
                 "autoloop",
                 "loop",
@@ -269,7 +306,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 3,
+            "downloads": 6,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -296,7 +333,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 31,
+            "downloads": 41,
             "keywords": [
                 "browser",
                 "web",
@@ -328,7 +365,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 15,
+            "downloads": 22,
             "keywords": [
                 "calendar",
                 "date",
@@ -392,7 +429,7 @@
                 "skills": true,
                 "agents": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "productivity",
                 "communication",
@@ -576,7 +613,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 8,
+            "downloads": 9,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -617,6 +654,7 @@
                 "gateways": false,
                 "engines": false
             },
+            "downloads": 6,
             "keywords": [
                 "command-code",
                 "commandcode",
@@ -650,7 +688,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 16,
+            "downloads": 21,
             "keywords": [
                 "welcome",
                 "stats",
@@ -675,7 +713,7 @@
         {
             "name": "context-usage-stats",
             "description": "对话上下文用量统计 — 展示最近对话的 token 用量、消息数量趋势、会话活跃度图表",
-            "version": "0.1.0",
+            "version": "0.2.0",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -690,6 +728,7 @@
             "components": {
                 "ui": true
             },
+            "downloads": 4,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -734,8 +773,8 @@
         },
         {
             "name": "cron-tasks",
-            "description": "定时任务中心 — 可视化配置 UI 定时任务（单次/间隔/Cron），到期自动驱动对话执行 prompt，带运行历史（参考 openhanako desk cron 设计）",
-            "version": "0.4.1",
+            "description": "定时任务中心 — 可视化配置 UI 定时任务（单次/间隔/Cron），到期自动驱动对话执行 prompt，带运行历史与可配置 hook 参与面（参考 openhanako desk cron 设计）",
+            "version": "0.5.5",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -750,9 +789,10 @@
             },
             "components": {
                 "ui": true,
-                "tools": true
+                "tools": true,
+                "hook_policies": true
             },
-            "downloads": 6,
+            "downloads": 31,
             "keywords": [
                 "cron",
                 "schedule",
@@ -763,7 +803,7 @@
                 "自动化"
             ],
             "drifox": {
-                "min_version": "0.5.0"
+                "min_version": "0.5.10"
             },
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
@@ -789,7 +829,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 14,
+            "downloads": 16,
             "keywords": [
                 "desktop",
                 "automation",
@@ -835,6 +875,39 @@
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "dsh-presets",
+            "description": "DeepSeek Harness 三种 agent preset（standard/code/cordis）的 DriFox 适配 — 三个 Agent + 模式路由 hook + 切换/状态命令。",
+            "version": "1.0.0",
+            "author": "DriFox 社区",
+            "license": "MIT",
+            "categories": [
+                "agent"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/dsh-presets",
+                "ref": "main"
+            },
+            "components": {
+                "agents": true,
+                "hooks": true,
+                "skills": true,
+                "commands": true
+            },
+            "downloads": 1,
+            "keywords": [
+                "deepseek",
+                "dsh",
+                "agent-preset",
+                "cordis",
+                "mode-router"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
             }
         },
         {
@@ -986,7 +1059,7 @@
                 "lsp": true,
                 "ui": true
             },
-            "downloads": 1,
+            "downloads": 3,
             "keywords": [
                 "example",
                 "template",
@@ -1051,7 +1124,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "theme",
                 "fire-emblem",
@@ -1089,7 +1162,7 @@
                 "commands": true,
                 "agents": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "development",
                 "architecture",
@@ -1193,7 +1266,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 2,
+            "downloads": 5,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1202,7 +1275,7 @@
         {
             "name": "gateway-dingtalk",
             "description": "钉钉 (DingTalk) Stream 模式适配器（社区插件，万物即插件 Phase E）：实时消息收发，支持群/单聊/媒体；基于 dingtalk-stream SDK。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [],
@@ -1302,7 +1375,7 @@
         {
             "name": "gateway-feishu",
             "description": "飞书 (Feishu/Lark) WebSocket 模式适配器（社区插件，万物即插件 Phase E）：实时消息收发，基于 lark-oapi SDK。",
-            "version": "1.2.1",
+            "version": "1.2.2",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [],
@@ -1315,7 +1388,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 21,
+            "downloads": 27,
             "platforms": [
                 "windows",
                 "linux",
@@ -1342,7 +1415,7 @@
         {
             "name": "gateway-qq",
             "description": "QQ 机器人适配器（QQ 开放平台）：WebSocket 长连接收发群聊/单聊消息；不依赖第三方 SDK，复用宿主 aiohttp/httpx。",
-            "version": "1.1.1",
+            "version": "1.1.2",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [],
@@ -1355,7 +1428,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 3,
+            "downloads": 6,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -1365,7 +1438,7 @@
         {
             "name": "gateway-slack",
             "description": "Slack 平台适配器（社区插件，万物即插件 Phase E）：使用 Slack Web API 收发消息，支持 Block Kit 格式、长消息分片；基于 slack-sdk。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [],
@@ -1425,7 +1498,7 @@
                 "gateways": true,
                 "tools": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -1435,7 +1508,7 @@
         {
             "name": "gateway-wecom",
             "description": "企业微信 (WeCom) AI Bot 适配器（社区插件，万物即插件 Phase E）：通过 WebSocket 长连接与 AI Bot Gateway 通信；不依赖第三方 SDK，复用宿主 aiohttp/httpx。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [],
@@ -1448,7 +1521,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -1475,7 +1548,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 9,
+            "downloads": 13,
             "keywords": [
                 "git",
                 "dashboard",
@@ -1489,8 +1562,8 @@
         },
         {
             "name": "git-panel",
-            "description": "Git 控制面板 — 文件变更、暂存/取消暂存、提交、Stash、分支管理、提交历史、Diff 预览",
-            "version": "1.7.2",
+            "description": "Git 控制面板 — 文件变更、暂存/取消暂存、提交、Stash、分支管理、提交历史、Diff 预览、AI 生成提交描述",
+            "version": "2.0.0",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -1506,12 +1579,13 @@
             "components": {
                 "ui": true
             },
-            "downloads": 27,
+            "downloads": 39,
             "keywords": [
                 "git",
                 "source-control",
                 "commit",
-                "branch"
+                "branch",
+                "ai"
             ],
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
@@ -1660,7 +1734,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "ppt",
                 "presentation",
@@ -1729,7 +1803,7 @@
                 "skills": true,
                 "hooks": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1787,7 +1861,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "proxy",
                 "network",
@@ -1907,7 +1981,7 @@
                 "hooks": true,
                 "skills": true
             },
-            "downloads": 7,
+            "downloads": 8,
             "keywords": [
                 "prompt",
                 "optimizer",
@@ -1974,7 +2048,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "theme",
                 "laputa",
@@ -2025,6 +2099,7 @@
                 "gateways": false,
                 "engines": false
             },
+            "downloads": 2,
             "keywords": [
                 "marketplace",
                 "evolved"
@@ -2090,7 +2165,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 1,
+            "downloads": 3,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2150,7 +2225,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 4,
+            "downloads": 6,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2208,7 +2283,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 9,
+            "downloads": 10,
             "keywords": [
                 "skill",
                 "agents",
@@ -2346,7 +2421,7 @@
             "components": {
                 "providers": true
             },
-            "downloads": 2,
+            "downloads": 4,
             "keywords": [
                 "服务商"
             ],
@@ -2360,8 +2435,8 @@
         },
         {
             "name": "openhanako-adapter",
-            "description": "openhanako（HanaAgent）能力适配插件：内置技能、智能体人格、beautify HTML 美学、日记（diary）、会话转技能（/xing）、即梦 CLI 生图",
-            "version": "0.2.0",
+            "description": "openhanako（HanaAgent）能力适配插件：内置技能、智能体人格、beautify HTML 美学、日记（/diary）、会话检索（/recall + sessions 工具）、会话转技能（/xing）、即梦 CLI 生图",
+            "version": "0.4.0",
             "author": "mading",
             "license": "Apache-2.0",
             "categories": [
@@ -2393,11 +2468,13 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 2,
+            "downloads": 12,
             "keywords": [
                 "openhanako",
                 "hana",
                 "diary",
+                "recall",
+                "sessions",
                 "xing",
                 "jimeng",
                 "beautify"
@@ -2471,7 +2548,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 4,
+            "downloads": 9,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -2564,7 +2641,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 17,
+            "downloads": 24,
             "keywords": [
                 "dashboard",
                 "stats",
@@ -2600,7 +2677,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 11,
+            "downloads": 14,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -2610,7 +2687,7 @@
         {
             "name": "prompt-enhancer",
             "description": "输入框按钮：一键用 LLM 优化当前输入框的提示词，增强指令可在系统配置中多行编辑。优化中按钮圆环转圈动画，复用主程序模型配置，「提示词增强模型」选择可持久化（关闭再打开保留），闭包实现（不修改主程序）。",
-            "version": "0.2.3",
+            "version": "0.2.5",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -2625,7 +2702,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 19,
+            "downloads": 34,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -2663,6 +2740,56 @@
                 "python",
                 "typing",
                 "lint"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "quick-screenshot",
+            "description": "输入框工具栏一键选区截图：左键点按钮拖框选取屏幕区域，松手自动复制到系统剪贴板，Ctrl+V 进输入框即可作为附件发送；右键按钮先隐藏 DriFox 主窗再截图，可截身后的画面",
+            "version": "0.2.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/quick-screenshot",
+                "ref": "main"
+            },
+            "components": {
+                "tools": false,
+                "commands": true,
+                "agents": false,
+                "skills": false,
+                "hooks": false,
+                "mcp": false,
+                "lsp": false,
+                "themes": false,
+                "ui": true,
+                "providers": false,
+                "team_templates": false,
+                "model_adapters": false,
+                "loop_policies": false,
+                "storages": false,
+                "serializers": false,
+                "gateways": false,
+                "engines": false
+            },
+            "downloads": 12,
+            "keywords": [
+                "screenshot",
+                "clipboard",
+                "input-button",
+                "selection",
+                "选区截图"
             ],
             "drifox": {
                 "min_version": "0.5.0"
@@ -2795,7 +2922,7 @@
                 "tools": true,
                 "skills": true
             },
-            "downloads": 11,
+            "downloads": 15,
             "keywords": [
                 "self-evolve",
                 "plugin",
@@ -2865,7 +2992,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 1,
+            "downloads": 3,
             "keywords": [
                 "session",
                 "history",
@@ -2906,6 +3033,39 @@
                 "min_version": "0.5.0"
             },
             "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/skill-creator",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "skillhub",
+            "description": "SkillHub 技能工作流 — 内网技能注册中心（registry）的批量发布、搜索与安装。内置限流重试、断点续传与发布失败分类处理。",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/skillhub",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "skillhub",
+                "publish",
+                "registry",
+                "skill",
+                "install"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2963,7 +3123,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 3,
+            "downloads": 6,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2987,7 +3147,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 12,
+            "downloads": 14,
             "platforms": [
                 "windows",
                 "linux",
@@ -3069,7 +3229,7 @@
                 "skills": true,
                 "hooks": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "skills",
                 "tdd",
@@ -3141,7 +3301,7 @@
                 "ui": true,
                 "agents": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "taskboard",
                 "kanban",
@@ -3298,7 +3458,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -3387,7 +3547,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 6,
+            "downloads": 9,
             "keywords": [
                 "twin",
                 "dual",
@@ -3425,7 +3585,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "animation",
                 "motion",
@@ -3472,6 +3632,57 @@
                 "min_version": "0.5.0"
             },
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "voice-input",
+            "description": "输入框工具栏语音听写按钮：点击开始录音，再次点击结束并把识别文字插入输入框光标处。纯云端识别：硅基流动（免费模型，默认）与 MiniMax 双引擎可配，云端失败自动互为备用",
+            "version": "0.4.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/voice-input",
+                "ref": "main"
+            },
+            "components": {
+                "tools": false,
+                "commands": false,
+                "agents": false,
+                "skills": false,
+                "hooks": false,
+                "mcp": false,
+                "lsp": false,
+                "themes": false,
+                "ui": true,
+                "providers": false,
+                "team_templates": false,
+                "model_adapters": false,
+                "loop_policies": false,
+                "storages": false,
+                "serializers": false,
+                "gateways": false,
+                "engines": false
+            },
+            "downloads": 2,
+            "keywords": [
+                "voice",
+                "dictation",
+                "speech-recognition",
+                "input-button",
+                "语音输入",
+                "听写"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -3645,7 +3856,7 @@
         {
             "name": "win-powershell",
             "description": "专用 Windows PowerShell 执行工具——强制走 PowerShell 原生入口运行 PS 脚本/命令（cmdlet、管道对象、ConvertTo-Json），自动处理 UTF-8 编码与超时，区别于通用 bash 工具。",
-            "version": "1.0.6",
+            "version": "1.0.7",
             "author": "马丁",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -3660,7 +3871,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 18,
+            "downloads": 24,
             "keywords": [
                 "powershell",
                 "windows",
@@ -3710,6 +3921,30 @@
             "drifox": {
                 "min_version": "0.5.0"
             },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "workflow",
+            "description": "受限 Python 脚本编排子智能体：条件/循环/并行扇出，默认后台立即返回 run_id，对话流实时卡片可见进度；支持 save/list/load/resume",
+            "version": "0.2.0",
+            "author": "DriFoxx Team",
+            "license": "MIT",
+            "categories": [
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/workflow",
+                "ref": "main"
+            },
+            "components": {
+                "tools": true
+            },
+            "downloads": 3,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"

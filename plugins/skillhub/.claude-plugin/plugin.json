@@ -1,0 +1,23 @@
+{
+    "name": "skillhub",
+    "description": "SkillHub 技能工作流 — 内网技能注册中心（registry）的批量发布、搜索与安装。内置限流重试、断点续传与发布失败分类处理。",
+    "version": "1.0.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "skillhub",
+        "publish",
+        "registry",
+        "skill",
+        "install"
+    ],
+    "components": {
+        "skills": true
+    }
+}

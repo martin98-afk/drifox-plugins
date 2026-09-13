@@ -5,7 +5,7 @@
     },
     "name": "gateway-qq",
     "description": "QQ 机器人适配器（QQ 开放平台）：WebSocket 长连接收发群聊/单聊消息；不依赖第三方 SDK，复用宿主 aiohttp/httpx。",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "author": {
         "name": "DriFoxx Team"
     },
@@ -45,6 +45,13 @@
                 "type": "text",
                 "default": "wss://api.sgroup.qq.com/websocket",
                 "placeholder": "wss://api.sgroup.qq.com/websocket"
+            },
+            {
+                "key": "create_bot",
+                "label": "创建机器人",
+                "type": "link",
+                "url": "https://q.qq.com/",
+                "placeholder": "前往 QQ 机器人开放平台创建"
             }
         ]
     }

@@ -546,7 +546,7 @@ class DingTalkAdapter(BasePlatformAdapter):
                 return SendResult(success=False, error=f"HTTP {response.status_code}")
 
         except Exception as e:
-            logger.error("[DingTalk] Send file failed: %s", e, exc_info=True)
+            logger.error("[DingTalk] Send file failed: {}", e, exc_info=True)
             return SendResult(success=False, error=str(e), retryable=True)
 
     async def get_chat_info(self, chat_id: str) -> ChatInfo:
@@ -615,7 +615,7 @@ def _build_incoming_handler_class():
                 return AckMessage.STATUS_OK, "OK"
 
             except Exception as e:
-                logger.error("[DingTalk] Handler process error: %s", e, exc_info=True)
+                logger.error("[DingTalk] Handler process error: {}", e, exc_info=True)
                 from dingtalk_stream import AckMessage
 
                 return AckMessage.STATUS_FAIL, str(e)

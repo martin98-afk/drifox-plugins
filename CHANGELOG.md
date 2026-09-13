@@ -8,6 +8,42 @@
 - **验证**：独立 venv（PySide6 6.11.2 + PySide6-Fluent-Widgets 1.11.3，qfluentwidgets PySide6 分支版）py_compile 87/87 通过；64 个 UI/worker 模块真实 import 成功（含 stub 主程序 `app.*` 上下文的 7 个），0 失败；WebEngine 真开窗口渲染 + JS 回读 + 下载/Profile/Script API 断言 15/15 通过（offscreen，Chromium 正常起帧）
 - **文档同步**：autoloop / cron-tasks / git-panel / project-dashboard / taskboard 5 个 README 依赖表 PyQt5 → PySide6
 
+## 2.11.0 (2026-09-13)
+### ✨ voice-input 转纯云端双链：硅基流动免费优先 + MiniMax 备用，砍本地引擎（v0.4.0）
+- **硅基流动接入（免费）**：实测 `Qwen/Qwen3-ASR-1.7B` 免费且中文识别带标点（官方定价页确认 Qwen3-ASR / XingChenASR 系列 / TeleSpeechASR / SenseVoiceSmall 全部免费）；`FunAudioLLM/SenseVoiceSmall` 免费通道当前限流严重（请求挂起不响应），模型名做成配置项默认 Qwen3-ASR 可随时换
+- **worker 通用化**：`ui/minimax_recognizer.py` 重构为 `ui/cloud_recognizer.py` —— 硅基流动（OpenAI 兼容）与 MiniMax 专有接口协议同构（multipart 上传 + Bearer + `{"text"}`），差异仅 URL/模型名/Key，统一 `CloudRecognizeWorker` + `transcribe_wav` 纯函数；仍纯标准库 urllib 零第三方依赖，超时错误细分为「响应超时（可能限流）」
+- **识别链架构**：`auto`（默认）按配置生成引擎链，头部失败自动转备用、本次录音不丢；`siliconflow`/`minimax` 单引擎失败即报错；配置 key 全缺时录音入口直接拦截提示
+- **删除本地识别**：SAPI5（recognizer.py）与 Whisper（whisper_recognizer.py + tools/install_whisper.py）整体移除，zh 引擎强检逻辑随之删除，插件不再依赖任何本地组件
+- **配置卡**：识别引擎三选项（自动/仅硅基流动/仅 MiniMax）+ 双 Key（`SILICONFLOW_API_KEY`/`MINIMAX_API_KEY` 环境变量可覆盖）+ 硅基流动模型名可配 + 两个获取 Key 外链
+- **验证**：真实 key 走 `transcribe_wav` 全链路（硅基流动 Qwen3-ASR 返回带标点文本一字不差）；MiniMax 链路协议未变沿用 0.3.0 实测结论；plugin.json 合法、py_compile / ruff 过
+
+## 2.10.0 (2026-09-12)
+### ✨ voice-input 接入 MiniMax 云端识别，引擎设置可选（v0.3.0）
+- **MiniMax 云端识别后端**：新增 `ui/minimax_recognizer.py`，上传 16kHz WAV 至 `POST https://api.minimaxi.com/v1/speech_to_text`（`asr-1.0`），带标点中文秒级返回；纯标准库 urllib 手写 multipart（宿主 PyInstaller 未收集 requests，插件零第三方依赖）；30s 超时兜底，网络/HTTP/JSON 错误全链路人话化
+- **声明式配置卡**：plugin.json 声明 `config_schema`，设置页自动生成「语音听写配置」卡 —— 识别引擎 select（自动/MiniMax 云端/SAPI5）、API Key password（支持 `MINIMAX_API_KEY` 环境变量覆盖）、获取 Key 外链；配置走主程序 PluginConfigStore（`plugin_data/voice-input/config.json`），主程序零改动
+- **引擎链重排**：`auto`（默认）配了 Key 即云端优先，失败（网络/401/额度不足）自动回退本地链（Whisper → SAPI5），本次录音不丢；`minimax` 强制云端（Key 缺失提示后回退）；`sapi5` 强制本地；纯云端模式不再强检本地 zh 识别引擎，无 SAPI5 中文引擎的机器也可用
+- **验证**：真实代码路径 `transcribe_wav` 识别 TTS 中文音频 39 字全对带标点；无效 key → HTTP 401 → `RuntimeError` → 回退分支确认；plugin.json 合法、py_compile / ruff 全过
+
+## 2.9.1 (2026-09-11)
+### 🔧 网关消息分片自包含化 + loguru 日志占位符修正（qq v1.1.2 / wecom v1.0.1 / feishu v1.2.2 / slack v1.0.1 / dingtalk v1.0.1）
+- **QQ/WeCom 发送崩于已下线的宿主基类方法**：主程序 `b6136c7a` 死代码剪枝移除了 `BasePlatformAdapter.truncate_message`（主仓库内无引用，调用方在插件仓库故未被识别），`QqAdapter._send_plain_chunks` 与 `WeComAdapter.send` 一调用即抛 `AttributeError`，QQ 群聊消息全量发不出去；现各网关自带 `_split_message`（优先按空行切段、单段超限硬切，与 feishu/slack 同名同风格），不再依赖宿主基类方法
+- **日志占位符统一改 `{}`**：loguru 走 `str.format`，`%s` 不会被替换且参数被静默丢弃，真实异常与 HTTP 状态码全部丢失（如 `[QQ] replace flush failed: HTTP %s code=%s`）；本轮修正 qq 17 处、wecom 9 处、feishu 14 处、slack 5 处、dingtalk 2 处；dingtalk 保留的 2 处 `self.logger` 属 dingtalk_stream SDK 自带标准 logging，`%s` 是正确写法
+- **验证**：桩 http client 端到端跑通 QQ 群聊长文本（10548 字 → 6 片 `[1772,1781,1774,1774,1774,1663]`，msg_seq 递增）与单聊超长兜底（`[1800,1800,1400]`）；10 组分片边界用例（空串 / 恰好上限 / 纯超长段 / markdown 代码块）满足不超限且不丢字；`ruff check` 通过
+
+## 2.9.0 (2026-09-06)
+### ✨ voice-input 识别引擎双后端：Whisper 优先，SAPI5 自动兜底（v0.2.0）
+- **准确率瓶颈根治**：旧版全程走 SAPI5 dictation（Vista 时代离线引擎，中文听写字准确率仅 ~60–75%、无标点），属引擎天花板；新增 `ui/whisper_recognizer.py` faster-whisper 后端（CPU int8、固定 zh、VAD 裁剪、`initial_prompt` 引导简体中文与标点、关前文条件依赖防长音频幻觉），中文准确率提升至 ~90%+
+- **双引擎自动切换不破会话**：`ui/__init__.py` 停止录音后按可用性探测（轻量 `find_spec`，不卡 UI）选择后端；Whisper 依赖缺失 / 模型下载失败 / 识别异常任一环节自动回退 SAPI5 并 InfoBar 提示，插件永不失效；浮窗新增 `set_status` 实时反馈「下载模型… / 识别中…」阶段
+- **自包含依赖安装**：`tools/install_whisper.py` 一键把 faster-whisper 装进插件自带 `deps/`（desktop-automation 同款 `sys.path` 注入），pip 按宿主解释器自动挑选编译轮子 —— ctranslate2 4.8.2（cp314）/ av（abi3）/ tokenizers（abi3）/ numpy 2.5.2 实测解析通过；装完隔离子进程验证 import，卸载删 `deps/` 即可
+- **模型首次自动下载 + 档位可配**：默认 small（≈460MB，CPU 实时率良好），缓存 `~/.cache/drifox-voice-input/`；`DRIFOX_VOICE_MODEL` 可切 tiny/base/medium，`DRIFOX_VOICE_WHISPER_DIR` 可改缓存目录；国内网络可设 `HF_ENDPOINT=https://hf-mirror.com`
+- README / plugin.json 同步更新（v0.1.0 → v0.2.0）
+
+## 2.8.6 (2026-09-05)
+### ✨ quick-screenshot 右键隐藏主窗截图（v0.2.0）
+- **右键按钮隐藏截图**：右键点工具栏截图按钮 → DriFox 主窗 `hide()` → 等 280ms DWM 合成刷新后 `grabWindow` 冻结底图 → 选区复制剪贴板 → 主窗自动恢复并抢回前台（`show`+`raise_`+`activateWindow`）→ InfoBar 提示；Esc/右键取消同样恢复，任何失败路径强制恢复主窗不留黑屏
+- **主程序接口扩展**：`register_input_button` 新增 `on_right_click` 参数（同款 context），按钮右键走 `CustomContextMenu`+`customContextMenuRequested` 派发，不再弹系统菜单；插件侧 `inspect.signature` 检测降级，旧主程序自动回纯左键模式（tooltip 同步切换）
+- **左键行为不变**：快速截图仍含 DriFox 窗口，遮罩内右键仍是取消选区
+
 ## 2.8.5 (2026-08-28)
 ### ✨ 新增 command-code 服务商插件（v0.1.0）
 - **Command Code 聚合网关接入**：`providers/command_code.py` 注册 `Command Code` 服务商，走 OpenAI 兼容协议（`https://api.commandcode.ai/provider/v1`），Bearer 鉴权，把 Claude / GPT / Gemini / DeepSeek / Kimi / GLM / MiniMax 等主流与开源模型统一接入 DriFox 模型选择器

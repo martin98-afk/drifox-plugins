@@ -207,6 +207,8 @@ class CronJob:
     model_key: str = ""  # 执行模型（主程序 provider 配置名）；空 = 跟随当前会话模型
     workdir: str = ""  # 执行工作目录；空 = 当前工作目录
     notify: str = ""  # 完成通知方式：""=默认弹窗 / "system"=系统托盘 / "gateway:平台:chat_id"
+    max_rounds: int = 0  # 最大循环轮数（API 调用次数）；0 = 默认（60）
+    timeout_seconds: int = 0  # 单次执行超时秒数；0 = 默认（20 分钟）
     enabled: bool = True
     created_at: str = field(default_factory=now_iso)
     next_run_at: str = ""  # ISO 本地时间；空 = 待计算/已失效
@@ -228,6 +230,8 @@ class CronJob:
             "modelKey": self.model_key,
             "workdir": self.workdir,
             "notify": self.notify,
+            "maxRounds": self.max_rounds,
+            "timeoutSeconds": self.timeout_seconds,
             "enabled": self.enabled,
             "createdAt": self.created_at,
             "nextRunAt": self.next_run_at,
@@ -255,6 +259,14 @@ class CronJob:
         job.model_key = str(data.get("modelKey") or "")
         job.workdir = str(data.get("workdir") or "")
         job.notify = str(data.get("notify") or "")
+        try:
+            job.max_rounds = int(data.get("maxRounds") or 0)
+        except (ValueError, TypeError):
+            job.max_rounds = 0
+        try:
+            job.timeout_seconds = int(data.get("timeoutSeconds") or 0)
+        except (ValueError, TypeError):
+            job.timeout_seconds = 0
         job.enabled = bool(data.get("enabled", True))
         job.created_at = str(data.get("createdAt") or "")
         job.next_run_at = str(data.get("nextRunAt") or "")

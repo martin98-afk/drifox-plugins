@@ -14,9 +14,9 @@ hidden: false
 
 1. **收素材**：
    - 逻辑日 = 今天；若当前时间在凌晨 4 点前，逻辑日算昨天
-   - 素材来源 = DriFox 会话库 `<app_data_dir>/sessions.db`（`~/.drifox/sessions.db`）的 `sessions` 表（列：`session_id, title, messages, updated_at, project`），`messages` 为 JSON 数组
-   - 用 `powershell`（或 python）只读查询 `updated_at` 落在当天 04:00 → 次日 04:00 的会话；无 SQL 环境时也可用 `read` 逐个翻最近会话（sessions.db 是 sqlite，read 读不了二进制——优先用脚本查）
-   - 只取 user/assistant 文本轮次，跳过工具调用细节与 `<system-reminder>` 注入块
+   - 用 `sessions` 工具取材：`sessions list`（`days` 设 1~2）拿到今天的会话列表，再用 `sessions read` 逐个读正文（`session_id` 从列表里原样复制）
+   - 只取 user/assistant 文本轮次；工具已自动跳过注入块与推理过程，放心用
+   - 会话很多时优先挑有实际工作内容的读，闲聊翻个开头就够了
 2. **写日记**（写作要求内联在本命令下方）：
    - 第一人称、私人日记口吻，不是汇报
    - 时间感 + 场景感，心境/感受/灵感融进正文

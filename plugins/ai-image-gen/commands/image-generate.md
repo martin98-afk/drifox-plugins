@@ -6,7 +6,7 @@ parameters:
     description: "图片描述（必填）"
     param_type: positional
   - name: "--model="
-    description: "模型：imagen-4 / nano-banana-2 / dall-e-3 / midjourney-v7 / flux-pro / sd-3.5 / recraft-v3 / ideogram-2.0 / 默认 auto"
+    description: "模型：wan2.7-image / wan2.7-image-pro（阿里云百炼）/ imagen-4 / nano-banana-2 / dall-e-3 / midjourney-v7 / flux-pro / sd-3.5 / recraft-v3 / ideogram-2.0 / 默认 auto"
     param_type: value
   - name: "--aspect="
     description: "宽高比：1:1 / 16:9 / 9:16 / 4:3 / 3:4 / 21:9"
@@ -27,6 +27,7 @@ allowed-tools:
   - read
   - bash
   - grep
+  - write
 hidden: false
 ---
 
@@ -99,6 +100,8 @@ hidden: false
 | sd-3.5 | 生态丰富 | 需 GPU |
 | recraft-v3 | 设计师向 | 写实弱 |
 | ideogram-2.0 | 文字渲染 | 风格化弱 |
+| wan2.7-image | 阿里云百炼套餐内、中文写实好 | 仅限国内网关 |
+| wan2.7-image-pro | 同上、质量更高 | 更慢更贵 |
 <!-- end -->
 
 <!-- section:aspect -->
@@ -137,6 +140,43 @@ hidden: false
 ```
 
 通常包括：模糊、低质量、扭曲、难看、水印、文字、错误解剖、风格混乱。
+<!-- end -->
+
+<!-- section:dashscope -->
+### 阿里云百炼（DashScope）路线
+
+**2026-09-10 实测验证**。凭证在 DriFox `~/.drifox/app.config` 的 `SavedProviders` → `阿里云 (DashScope)` 条目（`API_URL` + `API_KEY`）。
+
+- key 为 `sk-sp-` 开头的 token 计划 key，**只对该网关有效**；直接调官方 `dashscope.aliyuncs.com` 报 `InvalidApiKey`
+- 该网关**没有** `/images/generations` 端点（报 `InvalidParameter: url error`），不要走这条路
+- 唯一通路是 `chat/completions`，且 `content` 必须是数组：`[{"type":"text","text":"<prompt>"}]`；纯字符串报 `input.messages.0.content` 校验错
+- 响应图片在 `output.choices[0].message.content[].image`，是带签名 OSS 直链（约 24 小时过期），**必须立即下载**到 `--output` 目录
+
+```bash
+:: 1. 先探测套餐内可生图模型（qwen/glm/deepseek 全是文本模型，不能生图）
+curl -sS "{API_URL}/models" -H "@hdr.txt"
+
+:: 2. 请求体写 UTF-8 文件 req.json（防 cmd 中文乱码）
+{"model":"wan2.7-image","messages":[{"role":"user","content":[{"type":"text","text":"<prompt>"}]}]}
+
+:: 3. 调用（Authorization: Bearer <key> 写临时 header 文件，用完即删）
+curl -sS -X POST "{API_URL}/chat/completions" -H "@hdr.txt" -H "Content-Type: application/json" --data-binary "@req.json"
+
+:: 4. 取响应里的 OSS URL 写入 curl 配置 url.cfg 后下载
+:: url = "<oss-url>"
+:: output = "<output-dir>/<name>-001.png"
+curl -sS -L -K "url.cfg"
+```
+<!-- end -->
+
+<!-- section:windows-cmd -->
+### Windows cmd 注意事项（DriFox bash 工具实走 cmd）
+
+- bash 语法（`[ -z ]`）失效，报 `'[' 不是内部或外部命令`；改用 cmd 语法（`if DEFINED`、`dir`、`findstr`）
+- 中文 prompt 直接放命令行会因代码页乱码：请求体一律写 UTF-8 文件后 `--data-binary "@file"`
+- key 不进命令行：Authorization 写临时 header 文件 `curl -H "@hdr.txt"`，用完 `del`
+- OSS 签名 URL 含 `%3D` 等百分号编码，cmd 会当变量展开吃掉：URL 写进 curl 配置文件用 `curl -K cfg` 下载
+- findstr 等命令把正斜杠路径当开关吞掉：传给它们的路径用反斜杠
 <!-- end -->
 
 ## 模板变量

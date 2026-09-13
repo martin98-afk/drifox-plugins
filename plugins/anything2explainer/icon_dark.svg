@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#E6E6E6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <!-- 胶片条边框 -->
+  <rect x="2.5" y="4.5" width="19" height="15" rx="1.2"/>
+  <!-- 顶/底打孔（白线条） -->
+  <line x1="2.5" y1="8.5" x2="5.5" y2="8.5"/>
+  <line x1="18.5" y1="8.5" x2="21.5" y2="8.5"/>
+  <line x1="2.5" y1="15.5" x2="5.5" y2="15.5"/>
+  <line x1="18.5" y1="15.5" x2="21.5" y2="15.5"/>
+  <!-- 紫色播放三角（重点元素，唯一紫） -->
+  <path d="M10 9 L16 12 L10 15 Z" fill="#C4B5FD" stroke="#C4B5FD" stroke-width="0.6"/>
+</svg>

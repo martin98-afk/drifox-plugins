@@ -1,11 +1,11 @@
 {
     "name": "git-panel",
-    "description": "Git 控制面板 — 文件变更、暂存/取消暂存、提交、Stash、分支管理、提交历史、Diff 预览",
+    "description": "Git 控制面板 — 文件变更、暂存/取消暂存、提交、Stash、分支管理、提交历史、Diff 预览、AI 生成提交描述",
     "icon": {
         "light": "icon.svg",
         "dark": "icon_dark.svg"
     },
-    "version": "1.7.2",
+    "version": "2.0.0",
     "author": {
         "name": "DriFox Contributors"
     },
@@ -16,9 +16,32 @@
         "git",
         "source-control",
         "commit",
-        "branch"
+        "branch",
+        "ai"
     ],
     "components": {
         "ui": true
+    },
+    "config_schema": {
+        "title": "Git 提交描述生成",
+        "fields": [
+            {
+                "key": "commit_prompt",
+                "label": "提交描述生成提示词",
+                "type": "textarea",
+                "rows": 8,
+                "default": "你是一名资深软件工程师。请根据暂存区的代码变更生成一条简洁专业的 Git 提交描述：使用中文；第一行概括本次变更的目的与要点（格式可参考 feat/fix/docs/chore: 范围 - 摘要）；如有关键改动点可用短句补充；不要用 Markdown 代码块包裹、不要解释，只输出提交描述本身。",
+                "placeholder": "用于根据暂存变更生成提交描述的 system 指令",
+                "description": "点击提交栏「AI 生成」按钮时，此指令作为 system prompt，根据暂存区 diff 生成提交描述。"
+            },
+            {
+                "key": "commit_model",
+                "label": "提交描述模型",
+                "type": "text",
+                "default": "",
+                "placeholder": "留空使用调用方当前模型",
+                "description": "用于生成提交描述的 LLM。格式「服务商:模型名」（与主程序标题生成/子智能体一致）。留空时沿用当前窗口正在使用的模型。"
+            }
+        ]
     }
 }
