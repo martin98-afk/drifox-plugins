@@ -46,10 +46,18 @@ class _CollectWorker(QObject):
             self.error.emit(f"{e}")
 
 
-class _Collector:
-    """异步采集管理器（模块级单例）"""
+class _Collector(QObject):
+    """异步采集管理器（模块级单例，QObject 化保证回调线程归位主线程）
+
+    【PySide6 崩溃修复】此前为纯 Python 对象：信号连接到非 QObject receiver
+    无 thread affinity，PySide6 会在 worker 线程直接执行 _on_done →
+    _refresh_welcome_cards 跨线程调 card.set_welcome_mode → qFatal 闪退
+    （crash 0xC0000409，日志为空）。QObject 化后实例驻留主线程（首次由
+    render_func 创建），信号自动走 queued 连接回主线程执行。
+    """
 
     def __init__(self):
+        super().__init__()
         self._thread: Optional[QThread] = None
         self._worker: Optional[_CollectWorker] = None
         self._cache: Optional[dict] = None
@@ -86,24 +94,29 @@ class _Collector:
         w.finished.connect(w.deleteLater)
         w.error.connect(w.deleteLater)
         t.finished.connect(t.deleteLater)
+        # 引用清理统一挪到线程真正结束后（见 _on_thread_finished）：
+        # 若在 _on_done（主线程）提前置 None，GC 可能从主线程销毁活在
+        # worker 线程的 QObject → 段错误 0xC0000005。
+        t.finished.connect(self._on_thread_finished)
         self._thread, self._worker = t, w
         t.start()
 
     def _on_done(self, data: dict):
         self._cache = data
         self._cache_ts = time.monotonic()
-        self._thread = None
-        self._worker = None
         _refresh_welcome_cards()
         logger.info("[project-dashboard] collect done")
 
     def _on_error(self, err: str):
-        self._thread = None
-        self._worker = None
         self._cache = {"error": f"采集失败: {err}"}
         self._cache_ts = time.monotonic()
         _refresh_welcome_cards()
         logger.error(f"[project-dashboard] collect error: {err}")
+
+    def _on_thread_finished(self):
+        """worker 线程真正结束后才清理引用（deleteLater 已全部处理完）"""
+        self._thread = None
+        self._worker = None
 
     def _cleanup(self):
         """清理残留引用（线程已由信号链 deleteLater）"""
@@ -126,6 +139,14 @@ def _refresh_welcome_cards():
                 card = cache.get(wid)
                 if card is None:
                     continue
+                # 🛡️ C++ 对象已析构时调任何方法都是 access violation（不可捕获）
+                try:
+                    from shiboken6 import isValid
+
+                    if not isValid(card):
+                        continue
+                except ImportError:
+                    pass
                 mode = getattr(card, "_welcome_mode", "")
                 if mode == "project-dashboard":
                     card.set_welcome_mode("project-dashboard")
