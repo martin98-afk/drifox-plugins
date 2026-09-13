@@ -170,7 +170,7 @@ class FeishuAdapter(BasePlatformAdapter):
             return True
 
         except Exception as e:
-            logger.error("[Feishu] Failed to connect: %s", e)
+            logger.error("[Feishu] Failed to connect: {}", e)
             import traceback
 
             traceback.print_exc()
@@ -222,15 +222,15 @@ class FeishuAdapter(BasePlatformAdapter):
             except Exception as e:
                 msg = str(e).lower()
                 if "event loop" not in msg and "running" not in msg:
-                    logger.error("[Feishu] Client error: %s", e)
+                    logger.error("[Feishu] Client error: {}", e)
                 else:
-                    logger.debug("[Feishu] Client stopped (expected): %s", e)
+                    logger.debug("[Feishu] Client stopped (expected): {}", e)
             finally:
                 self._ws_loop = None
                 loop.close()
 
         except Exception as e:
-            logger.error("[Feishu] Thread error: %s", e)
+            logger.error("[Feishu] Thread error: {}", e)
 
     def _on_feishu_message(self, data: Any) -> None:
         """处理接收到的飞书消息
@@ -360,10 +360,10 @@ class FeishuAdapter(BasePlatformAdapter):
                     else:
                         logger.error("[Feishu] Handler loop not running, dropping message")
                 except Exception as e:
-                    logger.error("[Feishu] Handle message error: %s", e)
+                    logger.error("[Feishu] Handle message error: {}", e)
 
         except Exception as e:
-            logger.error("[Feishu] Parse message error: %s", e)
+            logger.error("[Feishu] Parse message error: {}", e)
             import traceback
 
             traceback.print_exc()
@@ -415,7 +415,7 @@ class FeishuAdapter(BasePlatformAdapter):
                 loop = self._handler_loop
                 if loop is not None and loop.is_running():
                     asyncio.run_coroutine_threadsafe(self._message_handler(ev), loop)
-                    logger.info("[Feishu] Card action injected: %s", cmd[:80])
+                    logger.info("[Feishu] Card action injected: {}", cmd[:80])
                     return self._card_toast("success", f"⏳ 已执行 {cmd[:40]}")
                 logger.error("[Feishu] Handler loop not running, card action dropped")
                 return self._card_toast("error", "处理循环不可用")
@@ -423,7 +423,7 @@ class FeishuAdapter(BasePlatformAdapter):
             return self._card_toast("error", "消息处理器未就绪")
 
         except Exception as e:
-            logger.error("[Feishu] Card action error: %s", e)
+            logger.error("[Feishu] Card action error: {}", e)
             return self._card_toast("error", "处理失败")
 
     @staticmethod
@@ -473,7 +473,7 @@ class FeishuAdapter(BasePlatformAdapter):
                 fut = asyncio.run_coroutine_threadsafe(client._disconnect(), ws_loop)
                 fut.result(timeout=3)
             except Exception as e:
-                logger.debug("[Feishu] Disconnect note: %s", e)
+                logger.debug("[Feishu] Disconnect note: {}", e)
 
         # 3+4. 两阶段优雅关闭 ws loop，等待 ws 线程退出。
         # lark SDK 的 ws 线程阻塞在 run_until_complete(<驱动协程>)（常驻为
@@ -509,7 +509,7 @@ class FeishuAdapter(BasePlatformAdapter):
             try:
                 ws_loop.call_soon_threadsafe(_cancel_and_stop, ws_loop)
             except Exception as e:
-                logger.debug("[Feishu] Stop ws loop note: %s", e)
+                logger.debug("[Feishu] Stop ws loop note: {}", e)
 
         if ws_thread is not None and ws_thread.is_alive():
             ws_thread.join(timeout=3)
@@ -607,7 +607,7 @@ class FeishuAdapter(BasePlatformAdapter):
                 # 卡片失败回退纯文本（部分应用未开通卡片消息权限）
                 if response.status_code != 200 or response.json().get("code") not in (0, None):
                     logger.warning(
-                        "[Feishu] Card send fallback to text: HTTP %s code=%s",
+                        "[Feishu] Card send fallback to text: HTTP {} code={}",
                         response.status_code,
                         response.json().get("code"),
                     )
@@ -634,7 +634,7 @@ class FeishuAdapter(BasePlatformAdapter):
             )
 
         except Exception as e:
-            logger.error("[Feishu] Send failed: %s", e)
+            logger.error("[Feishu] Send failed: {}", e)
             return SendResult(success=False, error=str(e))
 
     @staticmethod
@@ -704,7 +704,7 @@ class FeishuAdapter(BasePlatformAdapter):
                 agents = FeishuAdapter._parse_agent_list(content)
                 return FeishuAdapter._build_agent_card(agents) if agents else None
         except Exception as e:
-            logger.warning("[Feishu] Command card detect failed, fallback: %s", e)
+            logger.warning("[Feishu] Command card detect failed, fallback: {}", e)
         return None
 
     @staticmethod
@@ -964,7 +964,7 @@ class FeishuAdapter(BasePlatformAdapter):
             return None
 
         except Exception as e:
-            logger.error("[Feishu] Failed to get access token: %s", e)
+            logger.error("[Feishu] Failed to get access token: {}", e)
             return None
 
     def _split_message(self, content: str) -> List[str]:

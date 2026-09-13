@@ -14,7 +14,7 @@ hidden: false
 
 1. **提素材**：
    - 优先直接使用**当前会话上下文**（你就在这个对话里，素材天然在手）
-   - 需要回看其他会话时：用 `powershell`/python 只读查 `<app_data_dir>/sessions.db` 的 `sessions` 表（messages 为 JSON），或让用户指定 session
+   - 需要回看其他会话时：`sessions search`（关键词定位）→ `sessions read`（读全文），或让用户指定 session
 2. **提炼**：
    - 抽出「用户想做成什么 → 实际怎么做的 → 关键步骤 / 坑」
    - 写成**可复现的操作指南**，不是对话回放

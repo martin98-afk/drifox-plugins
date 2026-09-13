@@ -11,7 +11,7 @@ import sqlite3
 import traceback
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional
 
 from PySide6.QtCore import QObject, Signal
 from loguru import logger

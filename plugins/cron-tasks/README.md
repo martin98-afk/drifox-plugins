@@ -13,6 +13,7 @@
 - 🤖 **任务可绑定智能体**：执行时用所选 agent 的系统提示词 + agent 视角工具集；留空跟随主程序默认
 - 💠 **任务可指定模型**：每个服务商的全部模型可选（模型列表展开），执行时覆盖 模型名称；留空跟随当前会话模型
 - 📁 **可选工作目录**：任务执行前切换 workdir，结束后自动还原
+- ⚙️ **任务级轮数/超时可配**：每任务可单独设置最大循环轮数（默认 60 轮 API 调用）与执行超时（默认 20 分钟），编辑表单或 AI 工具均可配，防长任务被误截断/防工具失败死循环跑满超时
 - ▶️ **手动控制**：启用/禁用开关、立即运行、编辑、删除
 - 📜 **运行历史**：每任务保留最近 30 次运行，记录状态/耗时/工具调用次数/智能体/模型/**响应全文**，UI 可查看
 - 🔔 **执行通知**：任务开始/结束经主程序 InfoBar 通知
@@ -49,6 +50,9 @@ plugins/cron-tasks/
 | `get_agent_prompt` / `get_tools_schema` | 组装任务执行上下文（指定 agent 的提示词 + 工具集） |
 | `get_workdir` / `set_workdir` | 任务工作目录切换与还原 |
 | `notify` | InfoBar 执行通知 |
+| `send_to_platform` | 向已连接通讯平台会话主动发消息（`(platform, chat_id, content)` → `SendResult`）；gateway 模式通知走此通道 |
+| `list_platform_sessions` | 已知 gateway 会话列表（`GatewaySession`：platform/chat_id/display_name），供「完成通知 → Gateway 消息」下拉选择投递目标 |
+| `list_platforms` | 已注册通讯平台及连接状态（`{id, enabled, connected, available, error}`）；用于区分「没配平台」「配了没连接」「连了但没会话」三种空状态 |
 
 调度器每次 tick 经 `UIPluginRegistry` 活跃窗口 provider 拉最新 services（多窗口自适应），
 拉不到时退回 controller 缓存；无可用 services 时任务推迟到下一轮 tick（不丢任务）。
@@ -58,7 +62,8 @@ plugins/cron-tasks/
 - **调度与执行分离**：调度逻辑不涉及 LLM，只有执行回调驱动对话（确定性代码层）
 - **串行执行**：同一时刻仅一个任务在跑（tool_executor 为共享单例，并行会互相干扰）；其余到期任务下一轮 tick 依次派发
 - **自愈**：jobs.json 缺失/失效的 next_run_at 自动补算；单次任务过期自动禁用
-- **单次执行超时**：20 分钟（对齐 openhanako DEFAULT_CRON_EXECUTION_TIMEOUT_MS）
+- **循环轮数上限**：默认 60 轮（API 调用次数），任务级可配（`max_rounds`）；达上限自动收尾，防工具失败死循环
+- **单次执行超时**：默认 20 分钟，任务级可配（`timeout_seconds`）
 
 ## 使用方法
 
@@ -85,7 +90,7 @@ plugins/cron-tasks/
 |---|---|---|
 | `list` | — | 列出全部任务（id/调度/状态/下次运行） |
 | `get` | `job_id` | 查看单个任务详情（含 prompt 全文） |
-| `create` | `type` + `schedule` + `prompt` | 新建任务；可选 `label`/`agent`/`model_key`/`workdir`/`notify`/`enabled` |
+| `create` | `type` + `schedule` + `prompt` | 新建任务；可选 `label`/`agent`/`model_key`/`workdir`/`notify`/`enabled`/`max_rounds`/`timeout_seconds` |
 | `update` | `job_id` | 修改任务（传哪些字段改哪些） |
 | `delete` | `job_id` | 删除任务 |
 | `toggle` | `job_id` | 启用/禁用切换 |
@@ -109,7 +114,7 @@ plugins/cron-tasks/
 
 | 依赖 | 说明 |
 |------|------|
-| DriFox ≥ 0.5.0 | 需支持 `create_engine_session` 服务（EP3 契约）+ `register_input_button` |
+| DriFox ≥ 0.5.10 | 需支持 `create_engine_session` 服务（EP3 契约）+ `register_input_button` + `send_to_platform` / `list_platforms` / `list_platform_sessions`（Gateway 主动投递服务面） |
 | PySide6 / qfluentwidgets / loguru | UI 与日志 |
 
 ## 已知限制

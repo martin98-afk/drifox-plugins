@@ -210,6 +210,68 @@ class GitRepo:
             result.append((path, f"{x}{y}"))
         return result
 
+    def status_v2(self) -> dict:
+        """git status --porcelain=v2 --branch：一次子进程拿齐
+
+        分支名 / ahead / behind / 文件变更列表，
+        将 branch + ahead_behind + status 三次子进程合并为一次（刷新提速）。
+        返回 {"branch", "ahead", "behind", "items"}，items 结构与 status_items 一致。
+        """
+        out = {"branch": "", "ahead": 0, "behind": 0, "items": []}
+        # strip=False：变更行 path 前后空白有语义，不能 strip
+        res = self._run("--no-optional-locks", "status", "--porcelain=v2", "--branch",
+                        strip=False)
+        if not res.ok:
+            return out
+        oid = ""
+        branch_head = ""
+        for line in res.stdout.splitlines():
+            if line.startswith("# branch.oid "):
+                oid = line[len("# branch.oid "):].strip()
+            elif line.startswith("# branch.head "):
+                branch_head = line[len("# branch.head "):].strip()
+            elif line.startswith("# branch.ab "):
+                parts = line.split()  # ['#', 'branch.ab', '+1', '-0']
+                if len(parts) == 4:
+                    try:
+                        out["ahead"] = int(parts[2].lstrip("+"))
+                        out["behind"] = int(parts[3].lstrip("-"))
+                    except ValueError:
+                        pass
+            elif line.startswith("1 "):
+                # 1 <XY> <sub> <mH> <mI> <mW> <hH> <hI> <path>
+                f = line[2:].split(None, 7)
+                if len(f) == 8:
+                    self._append_v2_item(out["items"], f[0], f[7])
+            elif line.startswith("2 "):
+                # 2 <XY> ... <path>\t<origPath>（重命名/复制，取工作树新路径）
+                f = line[2:].split(None, 7)
+                if len(f) == 8:
+                    self._append_v2_item(out["items"], f[0], f[7].split("\t")[0])
+            elif line.startswith("u "):
+                # u <XY> <sub> <m1> <m2> <m3> <mW> <h1> <h2> <h3> <path>
+                f = line[2:].split(None, 9)
+                if len(f) == 10:
+                    out["items"].append(
+                        {"path": f[9], "status": f[0], "staged": False}
+                    )
+            elif line.startswith("? "):
+                out["items"].append({"path": line[2:], "status": "??", "staged": False})
+        if branch_head and branch_head != "(detached)":
+            out["branch"] = branch_head
+        elif branch_head == "(detached)":
+            out["branch"] = f"(detached @ {oid[:7]})" if oid else "(detached)"
+        return out
+
+    @staticmethod
+    def _append_v2_item(items: List[dict], xy: str, path: str):
+        """porcelain v2 的 XY 码 → 与 v1 status_items 同构的条目（. 表示无变更）"""
+        x, y = (xy[0], xy[1]) if len(xy) >= 2 else (".", ".")
+        if x != ".":
+            items.append({"path": path, "status": x, "staged": True})
+        if y != ".":
+            items.append({"path": path, "status": y, "staged": False})
+
     def status_items(self) -> List[dict]:
         """文件变更列表 [{"path", "status", "staged"}]（UI 渲染用）
 
@@ -323,6 +385,20 @@ class GitRepo:
     def branch_delete(self, name: str) -> GitResult:
         return self._run("branch", "-d", name)
 
+    # ── 提交操作（提交历史右键） ──
+
+    def checkout_commit(self, hash_: str) -> GitResult:
+        """检出指定提交（detached HEAD）"""
+        return self._run("checkout", hash_)
+
+    def revert_commit(self, hash_: str) -> GitResult:
+        """还原指定提交（生成一条逆向提交，不经编辑器）"""
+        return self._run("revert", "--no-edit", hash_)
+
+    def reset_commit(self, hash_: str, mode: str = "mixed") -> GitResult:
+        """重置当前分支到指定提交（mode: soft / mixed / hard）"""
+        return self._run("reset", f"--{mode}", hash_)
+
     # ── 同步（push / pull / fetch，网络超时 60s） ──
 
     def push(self) -> GitResult:
@@ -363,21 +439,46 @@ class GitRepo:
 
     # ── 日志 ──
 
-    def log(self, n: int = 30, graph: bool = False) -> List[dict]:
-        """提交历史 [{"hash", "author", "date", "subject", "refs", "graph"}]"""
-        fmt = "--format=%h%x1f%an%x1f%ai%x1f%s%x1f%D"
-        args = ["log", f"-n{n}", fmt, "--all"]
+    def log(self, n: int = 30, graph: bool = False, skip: int = 0) -> List[dict]:
+        """提交历史，含每 commit 文件统计（--numstat）；skip 用于「加载更多」翻页"""
+        fmt = "--format=%h%x1f%an%x1f%ai%x1f%s%x1f%D%x1f%p"
+        args = ["log", f"-n{n}", fmt, "--numstat", "--all"]
         if graph:
             args.insert(1, "--graph")
+        if skip > 0:
+            args.insert(2, f"--skip={skip}")
         res = self._run(*args)
         if not res.ok or not res.stdout:
             return []
-        result = []
+        result: List[dict] = []
         for line in res.stdout.splitlines():
-            item = self._parse_log_line(line, graph)
-            if item:
-                result.append(item)
+            if "\x1f" in line:
+                item = self._parse_log_line(line, graph)
+                if item:
+                    result.append(item)
+            elif "\t" in line and result:
+                self._append_numstat(result[-1], line)
         return result
+
+    @staticmethod
+    def _append_numstat(item: dict, line: str) -> None:
+        """把 --numstat 行归入当前 commit（add/del，二进制计 0）"""
+        parts = line.split("\t")
+        if len(parts) < 3:
+            return
+        try:
+            add = int(parts[0])
+        except ValueError:
+            add = 0
+        try:
+            dele = int(parts[1])
+        except ValueError:
+            dele = 0
+        item["stat_files"].append(
+            {"path": "\t".join(parts[2:]), "add": add, "del": dele}
+        )
+        item["stat_add"] += add
+        item["stat_del"] += dele
 
     @staticmethod
     def _parse_log_line(line: str, graph: bool) -> Optional[dict]:
@@ -394,20 +495,31 @@ class GitRepo:
             return None
         hash_, author, date_raw, subject = parts[0], parts[1], parts[2], parts[3]
         refs = parts[4] if len(parts) > 4 else ""
+        parents = parts[5].split() if len(parts) > 5 else []
         date = date_raw[:10] if date_raw and len(date_raw) >= 10 else date_raw
         return {
             "hash": hash_,
             "author": author,
             "date": date,
+            "date_iso": date_raw or "",
             "subject": subject,
             "refs": refs,
+            "parents": parents,
             "graph": graph_prefix,
+            "stat_files": [],
+            "stat_add": 0,
+            "stat_del": 0,
         }
 
     # ── Diff ──
 
     def diff(self, path: str, staged: bool = False) -> str:
         return _get_diff(self.cwd, path, staged)
+
+    def diff_staged(self) -> str:
+        """获取暂存区全量 diff（AI 生成提交描述用）"""
+        stdout, _, _ = _run_git(self.cwd, "diff", "--cached")
+        return stdout
 
     def file_content(self, path: str) -> str:
         """读取工作区文件内容（未跟踪文件预览用）。
@@ -424,6 +536,10 @@ class GitRepo:
     def show_commit(self, hash_: str) -> GitResult:
         """查看单个 commit 的完整信息与 diff（git show --format=fuller）"""
         return self._run("show", "--format=fuller", hash_)
+
+    def show_commit_file(self, hash_: str, path: str) -> GitResult:
+        """查看单个 commit 中单个文件的 diff（fuller 格式：含作者/日期/描述元信息）"""
+        return self._run("show", "--format=fuller", hash_, "--", path)
 
     # ── 冲突解决 ──
 

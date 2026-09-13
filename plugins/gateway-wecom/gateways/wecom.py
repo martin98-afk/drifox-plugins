@@ -157,7 +157,7 @@ class WeComAdapter(BasePlatformAdapter):
             return True
 
         except Exception as e:
-            logger.error("[WeCom] Connection failed: %s", e, exc_info=True)
+            logger.error("[WeCom] Connection failed: {}", e, exc_info=True)
             self._last_error = f"连接失败: {e}"
             await self._cleanup()
             return False
@@ -253,18 +253,18 @@ class WeComAdapter(BasePlatformAdapter):
             except Exception as e:
                 if not self._running:
                     return
-                logger.warning("[WeCom] WebSocket error: %s", e)
+                logger.warning("[WeCom] WebSocket error: {}", e)
 
                 delay = RECONNECT_BACKOFF[min(self._backoff_idx, len(RECONNECT_BACKOFF) - 1)]
                 self._backoff_idx += 1
 
-                logger.info("[WeCom] Reconnecting in %ds...", delay)
+                logger.info("[WeCom] Reconnecting in {}s...", delay)
                 await asyncio.sleep(delay)
 
                 try:
                     await self._reconnect()
                 except Exception as e:
-                    logger.warning("[WeCom] Reconnect failed: %s", e)
+                    logger.warning("[WeCom] Reconnect failed: {}", e)
 
     async def _read_messages(self) -> None:
         """读取 WebSocket 消息"""
@@ -277,7 +277,7 @@ class WeComAdapter(BasePlatformAdapter):
                 except json.JSONDecodeError:
                     logger.debug("[WeCom] Failed to parse message")
                 except Exception as e:
-                    logger.error("[WeCom] Error dispatching message: %s", e, exc_info=True)
+                    logger.error("[WeCom] Error dispatching message: {}", e, exc_info=True)
             elif msg.type in {aiohttp.WSMsgType.CLOSE, aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR}:
                 raise RuntimeError("WebSocket closed")
 
@@ -414,7 +414,7 @@ class WeComAdapter(BasePlatformAdapter):
                             {"cmd": CMD_PING, "headers": {"req_id": self._new_req_id("ping")}, "body": {}}
                         )
                     except Exception as e:
-                        logger.debug("[WeCom] Heartbeat failed: %s", e)
+                        logger.debug("[WeCom] Heartbeat failed: {}", e)
         except asyncio.CancelledError:
             pass
 
@@ -426,14 +426,42 @@ class WeComAdapter(BasePlatformAdapter):
             logger.info("[WeCom] Reconnected successfully")
             self._connected = True
 
+    def _split_message(self, content: str) -> list[str]:
+        """分片长消息：优先按空行切段，单段超限再硬切
+
+        基类 BasePlatformAdapter.truncate_message 已随主程序死代码剪枝下线，
+        网关自包含分片实现（E2 平台迁出方向）。
+        """
+        limit = self.MAX_MESSAGE_LENGTH
+        if len(content) <= limit:
+            return [content]
+
+        chunks: list[str] = []
+        current = ""
+        for para in content.split("\n\n"):
+            # 单段超限：吐出已积累内容后按 limit 硬切，保证每片不越界
+            while len(para) > limit:
+                if current:
+                    chunks.append(current)
+                    current = ""
+                chunks.append(para[:limit])
+                para = para[limit:]
+            if current and len(current) + len(para) + 2 > limit:
+                chunks.append(current)
+                current = ""
+            current += ("\n\n" if current else "") + para
+
+        if current:
+            chunks.append(current)
+        return chunks or [content]
+
     async def send(self, chat_id: str, content: str, **kwargs) -> SendResult:
         """发送消息"""
         if not self._ws or self._ws.closed:
             return SendResult(success=False, error="Not connected", retryable=True)
 
         try:
-            # 截断长消息
-            chunks = self.truncate_message(content)
+            chunks = self._split_message(content)
 
             for i, chunk in enumerate(chunks):
                 # 企业微信使用 markdown 格式
@@ -461,7 +489,7 @@ class WeComAdapter(BasePlatformAdapter):
         except asyncio.TimeoutError:
             return SendResult(success=False, error="Request timeout", retryable=True)
         except Exception as e:
-            logger.error("[WeCom] Send failed: %s", e, exc_info=True)
+            logger.error("[WeCom] Send failed: {}", e, exc_info=True)
             return SendResult(success=False, error=str(e), retryable=True)
 
     async def send_image(self, chat_id: str, image_path: str, **kwargs) -> SendResult:
@@ -539,7 +567,7 @@ class WeComAdapter(BasePlatformAdapter):
             )
 
         except Exception as e:
-            logger.error("[WeCom] Send image failed: %s", e, exc_info=True)
+            logger.error("[WeCom] Send image failed: {}", e, exc_info=True)
             return SendResult(success=False, error=str(e), retryable=True)
 
     async def send_file(self, chat_id: str, file_path: str, **kwargs) -> SendResult:
@@ -612,7 +640,7 @@ class WeComAdapter(BasePlatformAdapter):
             )
 
         except Exception as e:
-            logger.error("[WeCom] Send file failed: %s", e, exc_info=True)
+            logger.error("[WeCom] Send file failed: {}", e, exc_info=True)
             return SendResult(success=False, error=str(e), retryable=True)
 
     async def get_chat_info(self, chat_id: str) -> ChatInfo:

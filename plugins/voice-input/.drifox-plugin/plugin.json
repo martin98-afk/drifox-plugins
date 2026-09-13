@@ -1,0 +1,105 @@
+{
+    "name": "voice-input",
+    "version": "0.4.1",
+    "description": "输入框工具栏语音听写按钮：点击开始录音，再次点击结束并把识别文字插入输入框光标处。纯云端识别：硅基流动（免费模型，默认）与 MiniMax 双引擎可配，云端失败自动互为备用",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "license": "MIT",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "voice",
+        "dictation",
+        "speech-recognition",
+        "input-button",
+        "语音输入",
+        "听写"
+    ],
+    "config_schema": {
+        "title": "语音听写配置",
+        "fields": [
+            {
+                "key": "provider",
+                "label": "识别引擎",
+                "type": "select",
+                "default": "auto",
+                "options": [
+                    {"value": "auto", "label": "自动（硅基流动优先，失败转 MiniMax）"},
+                    {"value": "siliconflow", "label": "仅硅基流动（免费）"},
+                    {"value": "minimax", "label": "仅 MiniMax"}
+                ],
+                "description": "自动：优先硅基流动免费模型，失败自动转 MiniMax"
+            },
+            {
+                "key": "siliconflow_api_key",
+                "label": "硅基流动 API Key",
+                "type": "password",
+                "default": "",
+                "env": "SILICONFLOW_API_KEY",
+                "placeholder": "免费模型不消耗余额"
+            },
+            {
+                "key": "siliconflow_model",
+                "label": "硅基流动模型",
+                "type": "select",
+                "default": "Qwen/Qwen3-ASR-1.7B",
+                "options": [
+                    {"value": "Qwen/Qwen3-ASR-1.7B", "label": "Qwen3-ASR（推荐）"},
+                    {"value": "FunAudioLLM/SenseVoiceSmall", "label": "SenseVoice-Small"},
+                    {"value": "XingChenAGI/XingChenASR-V3.2", "label": "星尘 ASR V3.2"},
+                    {"value": "XingChenAGI/XingChenASR-V3.2-Ultra", "label": "星尘 ASR V3.2 Ultra"},
+                    {"value": "XingChenAGI/XingChenASR-Diarize-V3.0", "label": "星尘 ASR 说话人分离"}
+                ],
+                "description": "以上均为硅基流动免费模型，不消耗余额"
+            },
+            {
+                "key": "siliconflow_console",
+                "label": "获取硅基流动 Key",
+                "type": "link",
+                "url": "https://cloud.siliconflow.cn/account/ak",
+                "placeholder": "前往硅基流动创建 API Key"
+            },
+            {
+                "key": "minimax_api_key",
+                "label": "MiniMax API Key",
+                "type": "password",
+                "default": "",
+                "env": "MINIMAX_API_KEY",
+                "placeholder": "自动模式下作为备用引擎"
+            },
+            {
+                "key": "minimax_console",
+                "label": "获取 MiniMax Key",
+                "type": "link",
+                "url": "https://platform.minimaxi.com/user-center/basic-information",
+                "placeholder": "前往 MiniMax 开放平台创建 API Key"
+            }
+        ]
+    },
+    "components": {
+        "tools": false,
+        "commands": false,
+        "agents": false,
+        "skills": false,
+        "hooks": false,
+        "mcp": false,
+        "lsp": false,
+        "themes": false,
+        "ui": true,
+        "providers": false,
+        "team_templates": false,
+        "model_adapters": false,
+        "loop_policies": false,
+        "storages": false,
+        "serializers": false,
+        "gateways": false,
+        "engines": false
+    }
+}

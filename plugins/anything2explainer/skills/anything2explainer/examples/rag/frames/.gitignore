@@ -1,0 +1,9 @@
+# anything2explainer 插件：examples 样片帧为可重建的二进制资源
+# 不入仓，避免污染仓库体积；用户按需从源仓库下载。
+# 源仓库地址见 ../README.md 与顶层 ../README.md
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.mp4
+*.mov

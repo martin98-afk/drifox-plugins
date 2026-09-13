@@ -158,6 +158,7 @@ def _fmt_detail(j) -> str:
         f"上次运行: {d['lastRunAt'] or '—'}（{d['lastStatus'] or '未运行'}）· 累计 {d['runCount']} 次",
         f"智能体: {d['agent'] or '(跟随默认)'} · 模型: {d['modelKey'] or '(跟随会话)'}",
         f"工作目录: {d['workdir'] or '(当前会话工作目录)'}",
+        f"轮数上限: {d['maxRounds'] or '(默认 60)'} · 超时: {d['timeoutSeconds'] or '(默认 1200s)'}",
         f"通知: {d['notify'] or '(默认弹窗)'}",
         f"创建时间: {d['createdAt'] or '—'}",
         f"prompt:\n{d['prompt']}",
@@ -220,6 +221,12 @@ def _build_job_from_kw(kw: Dict[str, Any], existing=None):
     for f in _STRING_FIELDS:
         if kw.get(f) is not None:
             setattr(job, f, str(kw.get(f)))
+    for k in ("max_rounds", "timeout_seconds"):
+        if kw.get(k) is not None:
+            try:
+                setattr(job, k, int(kw.get(k)))
+            except (TypeError, ValueError):
+                return None, f"{k} 必须是整数（{k}={kw.get(k)!r}）"
     if kw.get("enabled") is not None:
         job.enabled = bool(kw.get("enabled"))
     return job, ""
@@ -401,6 +408,14 @@ _SCHEMA = {
                 "notify": {
                     "type": "string",
                     "description": "完成通知方式：空=默认弹窗 / \"system\"=系统托盘 / \"gateway:平台:chat_id\"",
+                },
+                "max_rounds": {
+                    "type": "integer",
+                    "description": "最大循环轮数（API 调用次数上限，防工具失败死循环；0=默认 60；update 可改）",
+                },
+                "timeout_seconds": {
+                    "type": "integer",
+                    "description": "单次执行超时秒数（0=默认 1200，即 20 分钟；update 可改）",
                 },
                 "enabled": {
                     "type": "boolean",

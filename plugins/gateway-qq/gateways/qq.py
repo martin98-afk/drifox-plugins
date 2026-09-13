@@ -224,7 +224,7 @@ class QqAdapter(BasePlatformAdapter):
                     }
                 )
                 logger.info(
-                    "[QQ] RESUME sent (session_id=%s, seq=%s)",
+                    "[QQ] RESUME sent (session_id={}, seq={})",
                     self._session_id[:16],
                     self._last_seq,
                 )
@@ -254,7 +254,7 @@ class QqAdapter(BasePlatformAdapter):
             return True
 
         except Exception as e:
-            logger.error("[QQ] Connection failed: %s", e, exc_info=True)
+            logger.error("[QQ] Connection failed: {}", e, exc_info=True)
             self._last_error = f"连接失败: {e}"
             # 保留 session_id/seq 供下次 RESUME 尝试
             await self._cleanup(keep_session=True)
@@ -342,16 +342,16 @@ class QqAdapter(BasePlatformAdapter):
                 token = data.get("access_token", "")
                 expires_in = int(data.get("expires_in", 0))
                 if not token:
-                    logger.error("[QQ] getAppAccessToken failed: %s", data)
+                    logger.error("[QQ] getAppAccessToken failed: {}", data)
                     return ""
 
                 self._access_token = token
                 self._token_expire_at = now + max(expires_in, 60)
-                logger.info("[QQ] access_token refreshed (expires_in=%ss)", expires_in)
+                logger.info("[QQ] access_token refreshed (expires_in={}s)", expires_in)
                 return token
 
             except Exception as e:
-                logger.error("[QQ] getAppAccessToken error: %s", e, exc_info=True)
+                logger.error("[QQ] getAppAccessToken error: {}", e, exc_info=True)
                 return ""
 
     # ── 监听与心跳 ───────────────────────────────────────
@@ -377,10 +377,10 @@ class QqAdapter(BasePlatformAdapter):
                     if event_type == "READY":
                         self._session_id = (payload.get("d") or {}).get("session_id", "")
                         self._resume_pending = False
-                        logger.info("[QQ] READY (session_id=%s)", self._session_id[:16])
+                        logger.info("[QQ] READY (session_id={})", self._session_id[:16])
                     elif event_type == "RESUMED":
                         self._resume_pending = False
-                        logger.info("[QQ] RESUMED (session_id=%s)", self._session_id[:16])
+                        logger.info("[QQ] RESUMED (session_id={})", self._session_id[:16])
                     else:
                         await self._dispatch_event(event_type, payload.get("d") or {})
 
@@ -393,7 +393,7 @@ class QqAdapter(BasePlatformAdapter):
         except asyncio.CancelledError:
             pass
         except Exception as e:
-            logger.error("[QQ] Listen loop crashed: %s", e, exc_info=True)
+            logger.error("[QQ] Listen loop crashed: {}", e, exc_info=True)
             self._last_error = str(e)
             if self._running:
                 await self._handle_reconnect()
@@ -415,7 +415,7 @@ class QqAdapter(BasePlatformAdapter):
         while self._running:
             delay = RECONNECT_BACKOFF[min(self._backoff_idx, len(RECONNECT_BACKOFF) - 1)]
             self._backoff_idx += 1
-            logger.info("[QQ] Reconnecting in %ss...", delay)
+            logger.info("[QQ] Reconnecting in {}s...", delay)
             await asyncio.sleep(delay)
 
             can_resume = bool(self._session_id) and self._last_seq is not None
@@ -433,7 +433,7 @@ class QqAdapter(BasePlatformAdapter):
                     try:
                         await self._send_json({"op": OP_HEARTBEAT, "d": self._last_seq})
                     except Exception as e:
-                        logger.debug("[QQ] Heartbeat failed: %s", e)
+                        logger.debug("[QQ] Heartbeat failed: {}", e)
         except asyncio.CancelledError:
             pass
 
@@ -460,7 +460,7 @@ class QqAdapter(BasePlatformAdapter):
 
         text = str(data.get("content") or "").strip()
         if not text:
-            logger.debug("[QQ] Empty message skipped (%s)", event_type)
+            logger.debug("[QQ] Empty message skipped ({})", event_type)
             return
 
         # 群聊去掉 @机器人 前缀（保留 / 命令前缀；兼容 <@!BOT_ID> 官方 mention）
@@ -537,14 +537,43 @@ class QqAdapter(BasePlatformAdapter):
             return await self._send_plain_chunks(openid, prefix, msg_id, content)
 
         except Exception as e:
-            logger.error("[QQ] Send failed: %s", e, exc_info=True)
+            logger.error("[QQ] Send failed: {}", e, exc_info=True)
             return SendResult(success=False, error=str(e), retryable=True)
+
+    def _split_message(self, content: str) -> list[str]:
+        """分片长消息：优先按空行切段，单段超限再硬切
+
+        基类 BasePlatformAdapter.truncate_message 已随主程序死代码剪枝下线，
+        网关自包含分片实现（E2 平台迁出方向）。
+        """
+        limit = self.MAX_MESSAGE_LENGTH
+        if len(content) <= limit:
+            return [content]
+
+        chunks: list[str] = []
+        current = ""
+        for para in content.split("\n\n"):
+            # 单段超限：吐出已积累内容后按 limit 硬切，保证每片不越界
+            while len(para) > limit:
+                if current:
+                    chunks.append(current)
+                    current = ""
+                chunks.append(para[:limit])
+                para = para[limit:]
+            if current and len(current) + len(para) + 2 > limit:
+                chunks.append(current)
+                current = ""
+            current += ("\n\n" if current else "") + para
+
+        if current:
+            chunks.append(current)
+        return chunks or [content]
 
     async def _send_plain_chunks(
         self, openid: str, prefix: str, msg_id: str, content: str
     ) -> SendResult:
         """普通逐条发送（分片，msg_seq 递增防判重）"""
-        chunks = self.truncate_message(content)
+        chunks = self._split_message(content)
 
         ok, err = True, None
         # 同一 msg_id 的多轮回复 msg_seq 必须递增，重置会被 QQ 判重吞掉
@@ -566,7 +595,7 @@ class QqAdapter(BasePlatformAdapter):
             if resp.status_code >= 400:
                 ok = False
                 err = f"HTTP {resp.status_code}: {resp.text[:200]}"
-                logger.error("[QQ] Send failed: %s", err)
+                logger.error("[QQ] Send failed: {}", err)
                 break
 
         if ok and msg_id:
@@ -684,7 +713,7 @@ class QqAdapter(BasePlatformAdapter):
             url = f"{DEFAULT_API_BASE}/v2/users/{openid}/stream_messages"
             resp = await self._http_client.post(url, json=body, headers=self._api_headers())
         except Exception as e:
-            logger.error("[QQ] replace flush error: %s", e)
+            logger.error("[QQ] replace flush error: {}", e)
             return False
 
         if resp.status_code >= 400:
@@ -693,7 +722,7 @@ class QqAdapter(BasePlatformAdapter):
                 code = str(resp.json().get("code", ""))
             except Exception:
                 code = resp.text[:100]
-            logger.error("[QQ] replace flush failed: HTTP %s code=%s", resp.status_code, code)
+            logger.error("[QQ] replace flush failed: HTTP {} code={}", resp.status_code, code)
             if resp.status_code == 400 and "40007" in str(code):
                 # 快照前缀跳变（如未闭合标签被清洗）→ 跳帧；连续 2 次放弃
                 st.prefix_errors += 1
@@ -778,7 +807,7 @@ class QqAdapter(BasePlatformAdapter):
             if not s2 or s2.flushing:
                 return
             if time.monotonic() - s2.last_activity >= STREAM_IDLE_TIMEOUT - 0.5:
-                logger.warning("[QQ] Stream idle timeout, force final flush (chat=%s)", chat_id)
+                logger.warning("[QQ] Stream idle timeout, force final flush (chat={})", chat_id)
                 prefix, openid = self._parse_chat_id(chat_id)
                 if s2.mode == "replace":
                     # 宿主崩溃未收尾：已下发过则发结束片，否则静默丢弃
@@ -847,7 +876,7 @@ class QqAdapter(BasePlatformAdapter):
 
             if resp.status_code >= 400:
                 err = f"HTTP {resp.status_code}: {resp.text[:200]}"
-                logger.error("[QQ] Stream flush failed: %s", err)
+                logger.error("[QQ] Stream flush failed: {}", err)
                 # 接口不可用：永久回退普通发送，本次内容补发
                 self._stream_available = False
                 self._streams.pop(chat_id, None)

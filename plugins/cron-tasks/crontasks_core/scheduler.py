@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import threading
+import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -24,6 +25,7 @@ from .models import CronJob
 from .store import CronStore
 
 TICK_INTERVAL_MS = 30_000  # 30 秒检查一次（分钟粒度任务的最低唤醒成本）
+DEFAULT_MAX_ROUNDS = 60  # 任务未指定轮数上限时的默认值（对齐主程序 plugin_config 默认）
 
 
 class CronScheduler(QObject):
@@ -43,6 +45,7 @@ class CronScheduler(QObject):
         self._services: Dict[str, Any] = {}  # controller 注入的缓存
         self._main_widget: Any = None  # 活跃窗口 main_widget（模型列表/覆盖用）
         self._prev_workdir: str = ""  # 执行前的工作目录（结束后还原）
+        self._job_workdir: str = ""  # 本任务设置的目录（判断用户是否中途切走）
         self._timer = QTimer(self)
         self._timer.setInterval(TICK_INTERVAL_MS)
         self._timer.timeout.connect(self._tick)
@@ -57,21 +60,26 @@ class CronScheduler(QObject):
         if self._timer.isActive():
             return
         self._reload()
-        # 存量任务补算 next_run_at（禁用/单次已过期除外）；复位上次异常退出
-        # 遗留的 lastStatus=running（无 executor 在跑却显示运行中的假状态）
+        # 存量任务补算 next_run_at（空 / 已过期均重算，含上次 tick 后关软件残留的过期时间）；
+        # 复位上次异常退出遗留的 lastStatus=running
+        # （无 executor 在跑却显示运行中的假状态）
+        # —— 仅在 next_run_at 为空时重算不够：若磁盘残留过期时间戳，
+        # _tick() 第一次扫描就会把过期任务当到期任务立刻触发。
         changed = False
         now = datetime.now()
         for job in self._jobs:
             if job.last_status == "running":
                 job.last_status = ""
                 changed = True
-            if job.enabled and not job.next_run_at:
-                if not job.recompute_next_run(now):
-                    if job.type == "at":
-                        job.enabled = False  # 过期单次任务自动禁用
-                        changed = True
+            if job.enabled:
+                nxt = job.next_run_dt()
+                if nxt is None or nxt <= now:
+                    if not job.recompute_next_run(now):
+                        if job.type == "at":
+                            job.enabled = False  # 过期单次任务自动禁用
+                            changed = True
                         continue
-                changed = True
+                    changed = True
         if changed:
             self._store.save_jobs(self._jobs)
         self._timer.start()
@@ -97,9 +105,12 @@ class CronScheduler(QObject):
     def stop(self):
         """停止调度并取消运行中的任务（插件卸载/热重载/应用退出）
 
-        先 disconnect（孤儿防写盘），再 cancel + 有限等待；
-        等待期内正常返回的同步手动收尾落盘，卡死不返回的放弃收尾
-        （热重载属开发场景，新代调度器 start() 时 _reload 自愈磁盘状态）。
+        先 disconnect（孤儿防写盘），再 cancel + 有限等待；之后无论 executor
+        是否按期收尾，都保证落一条运行记录：
+        - 已收尾 → 用 _last_result（真实 status）
+        - 卡死不返回 → 补写 cancelled，避免 lastStatus 永久悬挂在 running
+          （悬挂会让 UI 一直显示“运行中”，下次启动的复位逻辑又会静默抹掉）
+        另外 workdir 此处兜底还原（正常路径由 _on_executor_done 还原并清空）。
         """
         self._timer.stop()
         ex = self._executor
@@ -110,17 +121,63 @@ class CronScheduler(QObject):
                 ex.wait(8000)
             except Exception:
                 pass
-            if not ex.isRunning():
-                res = getattr(ex, "_last_result", None)
-                if isinstance(res, dict):
-                    try:
-                        self._on_executor_done(res)
-                    except Exception as e:
-                        logger.warning(f"[cron-tasks] stop 收尾失败: {e}")
+            res = getattr(ex, "_last_result", None)
+            if not isinstance(res, dict):
+                job = getattr(ex, "_job", None)
+                if job is not None:
+                    started_at = float(getattr(ex, "_started_at", 0.0) or 0.0)
+                    duration_ms = int((time.monotonic() - started_at) * 1000) if started_at else 0
+                    res = {
+                        "job_id": job.id,
+                        "status": "cancelled",
+                        "error": "插件重载/停止时任务被中断",
+                        "response_text": "",
+                        "head": "",
+                        "duration_ms": max(0, duration_ms),
+                        "tool_calls": 0,
+                    }
+                    logger.warning("[cron-tasks] stop: executor 未在等待期内收尾，补写中断记录")
+                else:
+                    res = None
+            if isinstance(res, dict):
+                try:
+                    self._on_executor_done(res)
+                except Exception as e:
+                    logger.warning(f"[cron-tasks] stop 收尾失败: {e}")
         elif ex is not None:
             self._detach_executor(ex)
         self._executor = None
+        # workdir 兜底还原（正常路径已在 _on_executor_done 还原并清空）
+        self._restore_workdir()
         logger.info("[cron-tasks] scheduler stopped")
+
+    def _restore_workdir(self):
+        """还原执行前的工作目录（stop / 正常收尾 / 卡死兜底共用）
+
+        仅当当前目录仍是本任务设置的目录时才还原：执行期间用户可能主动
+        切换项目（实测发生），此时还原会把用户的选择覆盖回旧值。
+        get_workdir 不可用时降级为直接还原（保持旧语义）。
+        """
+        prev = self._prev_workdir
+        if not prev:
+            return
+        job_workdir = self._job_workdir
+        self._prev_workdir = ""
+        self._job_workdir = ""
+        try:
+            services = self._services or {}
+            set_workdir = services.get("set_workdir")
+            if not callable(set_workdir):
+                return
+            get_workdir = services.get("get_workdir")
+            if job_workdir and callable(get_workdir):
+                cur = get_workdir() or ""
+                if cur and cur != job_workdir:
+                    # 执行期间用户切走了项目 → 保留用户选择，不覆盖
+                    return
+            set_workdir(prev)
+        except Exception:
+            pass
 
     def cancel_job(self, job_id: str) -> bool:
         """手动停止指定任务（UI 停止按钮）。立即断开信号 + 置 None 释放串行锁
@@ -344,19 +401,22 @@ class CronScheduler(QObject):
         model_override = self._resolve_model_override(job)
 
         # 无人值守轮数上限：模型陷入工具失败循环（如 websearch 无 key 反复失败）时
-        # 正常收尾（带已有内容），而非跑满执行超时（LoopPolicy default 读此键）
+        # 正常收尾（带已有内容），而非跑满执行超时（LoopPolicy default 读此键）。
+        # 任务可配 max_rounds（create/update 传入），0=默认 60。
         if model_override is None:
             model_override = {}
-        model_override.setdefault("最大循环轮数", 15)
+        model_override["最大循环轮数"] = job.max_rounds or DEFAULT_MAX_ROUNDS
 
         # workdir 切换（执行完还原）
         self._prev_workdir = ""
+        self._job_workdir = ""
         workdir = (job.workdir or "").strip()
         get_workdir = services.get("get_workdir")
         set_workdir = services.get("set_workdir")
         if workdir and callable(set_workdir):
             if callable(get_workdir):
                 self._prev_workdir = get_workdir() or ""
+            self._job_workdir = workdir
             set_workdir(workdir)
 
         # 标记运行状态
@@ -371,6 +431,7 @@ class CronScheduler(QObject):
             system_prompt=system_prompt,
             tools=tools,
             model_config_override=model_override,
+            timeout_seconds=job.timeout_seconds or 0,
         )
         self._executor.finished_with_result.connect(self._on_executor_done)
         self._executor.start()
@@ -470,15 +531,8 @@ class CronScheduler(QObject):
             },
         )
 
-        # 还原工作目录
-        if self._prev_workdir:
-            try:
-                set_workdir = (self._services or {}).get("set_workdir")
-                if callable(set_workdir):
-                    set_workdir(self._prev_workdir)
-            except Exception:
-                pass
-            self._prev_workdir = ""
+        # 还原工作目录（用户中途切过项目则不覆盖）
+        self._restore_workdir()
 
         # 清理 executor（延迟 deleteLater 避免 QThread Destroyed-while-running）
         ex = self._executor
@@ -499,9 +553,13 @@ class CronScheduler(QObject):
         if notify_mode == "system":
             self._notify_system(text)
         elif notify_mode.startswith("gateway:"):
-            self._notify_gateway(notify_mode, label, summary, icon)
+            self._notify_gateway(job_id, label, status, summary, notify_mode, icon, response_text)
         else:
             self.notify_requested.emit("定时任务", text)
+        # 完成收尾统一发信号（此前只在 gateway 分支发，system/默认模式下
+        # UI 永远停在「运行中」且心跳停不下来）
+        self.job_finished.emit(job_id, label, status, summary)
+        self.jobs_changed.emit()
 
     def _notify_system(self, text: str):
         """系统托盘弹窗（失败回退本地 InfoBar）"""
@@ -513,31 +571,41 @@ class CronScheduler(QObject):
             logger.warning(f"[cron-tasks] 系统通知失败，回退本地: {e}")
             self.notify_requested.emit("定时任务", text)
 
-    def _notify_gateway(self, notify_mode: str, label: str, summary: str, icon: str):
-        """gateway:平台:chat_id → 后台线程异步发送（失败仅记日志，不阻塞收尾）"""
+    def _notify_gateway(self, job_id: str, label: str, status: str, summary: str, notify_mode: str, icon: str, response_text: str = ""):
+        """gateway:平台:chat_id → 后台线程异步发送（失败仅记日志，不阻塞收尾）
+
+        走主程序注入的 `services["send_to_platform"]`，不自行 import
+        `app.gateway.get_platform_manager()`——后者返回的模块级单例只由
+        GatewayService 赋值，插件侧恒为 None。
+        """
         parts = notify_mode.split(":", 2)
         platform_name = parts[1] if len(parts) > 1 else ""
         chat_id = parts[2] if len(parts) > 2 else ""
-        text = f"{icon}「{label}」{summary[:300]}"
+        # 成功时发完整响应（此前只发 200 字摘要，飞书侧收到的内容不完整）；
+        # 失败/超时只有 error 短文本，维持原样
+        if status == "success" and response_text.strip():
+            text = f"{icon}「{label}」执行完成\n\n{response_text}"
+        else:
+            text = f"{icon}「{label}」{summary[:300]}"
 
         def _worker():
             try:
-                import asyncio
-
-                from app.gateway import Platform, get_platform_manager
-
-                adapter = get_platform_manager().get_adapter(Platform(platform_name))
-                if adapter is None:
-                    logger.warning(f"[cron-tasks] gateway 平台不可用: {platform_name}")
+                send = (self._services or {}).get("send_to_platform")
+                if not callable(send):
+                    logger.warning(
+                        "[cron-tasks] gateway 通知跳过：主程序未提供 send_to_platform 服务"
+                    )
                     return
-                result = asyncio.run(adapter.send(chat_id, text))
-                logger.info(f"[cron-tasks] gateway 通知已发送 ({platform_name}): {result}")
+                result = send(platform_name, chat_id, text)
+                if getattr(result, "success", False):
+                    logger.info(f"[cron-tasks] gateway 通知已发送 ({platform_name})")
+                else:
+                    err = getattr(result, "error", None) or result
+                    logger.warning(f"[cron-tasks] gateway 通知发送失败 ({platform_name}): {err}")
             except Exception as e:
-                logger.warning(f"[cron-tasks] gateway 通知发送失败: {e}")
+                logger.warning(f"[cron-tasks] gateway 通知发送异常: {e}")
 
         threading.Thread(target=_worker, daemon=True, name="cron-gw-notify").start()
-        self.job_finished.emit(job_id, label, status, summary)
-        self.jobs_changed.emit()
 
     def load_runs(self, job_id: str, limit: int = 20) -> List[dict]:
         return self._store.load_runs(job_id, limit)

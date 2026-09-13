@@ -25,11 +25,20 @@ DriFox 内置的 `bash` 工具在 Windows 下底层也调 PowerShell，但它执
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `script` | string | 是 | 要执行的 PowerShell 脚本/命令/脚本块 |
-| `cwd` | string | 否 | 工作目录，默认当前项目目录 |
+| `command` | string | 是 | 要执行的 PowerShell 脚本/命令/脚本块 |
 | `timeout` | integer | 否 | 超时秒数，默认 120（范围 1-3600） |
+| `description` | string | 是 | 一句话自然语言描述这条命令在做什么 |
 
 `danger = dangerous`：可执行任意命令，首次调用会触发权限确认。
+
+## `description`：折叠卡上显示什么
+
+消息列表里的工具卡折叠时只显示一行预览。没有 `description` 时只能退化为命令首行
+（`PowerShell: Get-ChildItem -Path D:\work\...`），扫一眼看不出意图；填了之后直接显示
+意图文本，原始命令仍保留在展开后的输出区和权限确认弹窗里。
+
+- 写**意图**，不要复述命令：`遍历插件市场目录结构` ✅ / `执行 Get-ChildItem` ❌
+- 缺失时自动回退命令首行，不会报错（schema 标必填，但主程序不做强校验）。
 
 ## 示例
 
@@ -37,6 +46,8 @@ DriFox 内置的 `bash` 工具在 Windows 下底层也调 PowerShell，但它执
 # 取进程并按 CPU 排序，输出 JSON
 Get-Process | Sort-Object CPU -Descending | Select-Object -First 5 | ConvertTo-Json
 ```
+
+调用参数：`command` 为上面这段脚本，`description` 填 `查看占用 CPU 最高的 5 个进程`。
 
 ```powershell
 # 读取并解析 JSON 文件

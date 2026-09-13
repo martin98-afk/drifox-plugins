@@ -10,7 +10,9 @@ import os
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-from PySide6.QtCore import Qt, QSize, Signal
+from loguru import logger
+from PySide6.QtCore import Qt, QSize, QTimer, Signal
+from PySide6.QtGui import QFontMetrics
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -52,6 +54,35 @@ from app.utils.utils import get_font_family_css
 from crontasks_core.models import CronJob, WEEKDAY_CN
 
 FONT_CSS = get_font_family_css()
+
+
+def resolve_ui_service(name: str):
+    """从 controller 缓存取宿主服务；缓存未就绪时从活跃窗口上下文兜底拉。
+
+    与 controller._on_notify 同一范式：卡片可能先于 services 注入被构造，
+    故不能只依赖构造期捕获。
+    """
+    try:
+        from .controller import CronTasksController
+
+        svc = (CronTasksController.get_instance()._services or {}).get(name)
+        if callable(svc):
+            return svc
+    except Exception:
+        pass
+    try:
+        from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
+
+        reg = UIPluginRegistry.get_instance()
+        provider = reg._resolve_active_window_provider() or reg._context_provider
+        if provider is not None:
+            ctx = provider() or {}
+            svc = (ctx.get("services") or {}).get(name)
+            if callable(svc):
+                return svc
+    except Exception:
+        pass
+    return None
 
 
 def _panel_title_css() -> str:
@@ -671,6 +702,34 @@ class _ResponsiveFormBody(QWidget):
             self._grid.setRowStretch(3, 0)
 
 
+class ElidedComboBox(ComboBox):
+    """长文本自动中间省略的下拉框：按钮宽度封顶，不挤压双列布局的另一列
+
+    qfluentwidgets 的 ComboBox 是 QPushButton 系，sizeHint/minimumSizeHint
+    随当前文本宽度暴涨（gateway 会话名、模型名等长文本会把编辑面板左列
+    的任务卡挤窄）。此处在文本入口统一 QFontMetrics 中间省略；下拉菜单
+    仍按 items 原文渲染，选中项全文可在菜单里查看。
+    """
+
+    ELIDE_WIDTH = 200  # 按钮文本宽度上限(px)
+    HINT_MAX_EXTRA = 40  # 文本宽度之外的余量（padding + 右侧箭头区）
+
+    def setText(self, text: str | None):
+        if not text:
+            super().setText("")
+            return
+        fm = QFontMetrics(self.font())
+        super().setText(fm.elidedText(text, Qt.ElideMiddle, self.ELIDE_WIDTH))
+
+    def sizeHint(self) -> QSize:
+        sh = super().sizeHint()
+        return QSize(min(sh.width(), self.ELIDE_WIDTH + self.HINT_MAX_EXTRA), sh.height())
+
+    def minimumSizeHint(self) -> QSize:
+        msh = super().minimumSizeHint()
+        return QSize(min(msh.width(), self.ELIDE_WIDTH + self.HINT_MAX_EXTRA), msh.height())
+
+
 class JobEditPanel(QWidget):
     """新建/编辑任务表单"""
 
@@ -853,8 +912,8 @@ class JobEditPanel(QWidget):
         s2l.addWidget(self._preview_label)
 
         # 执行模型 + 智能体（横向两列节省垂直空间）
-        self._model_combo = ComboBox()
-        self._agent_combo = ComboBox()
+        self._model_combo = ElidedComboBox()
+        self._agent_combo = ElidedComboBox()
         exec_row = QHBoxLayout()
         exec_row.setSpacing(10)
         exec_row.addLayout(_labeled("执行模型", self._model_combo), 1)
@@ -878,7 +937,7 @@ class JobEditPanel(QWidget):
         target_lbl.setStyleSheet(_field_label_css())
         self._field_labels.append(target_lbl)
         nrow.addWidget(target_lbl)
-        self._notify_target_combo = ComboBox()
+        self._notify_target_combo = ElidedComboBox()
         nrow.addWidget(self._notify_target_combo)
         self._notify_target_row.setVisible(False)
         s3l.addWidget(self._notify_target_row)
@@ -897,6 +956,23 @@ class JobEditPanel(QWidget):
         wd_layout.addWidget(self._workdir_edit, 1)
         wd_layout.addWidget(browse_btn)
         s3l.addLayout(_labeled("工作目录", wd_widget))
+
+        # 轮数上限 + 超时（并排）：0 语义由调度层兜底（0=默认 60 / 1200s）
+        self._max_rounds_spin = SpinBox()
+        self._max_rounds_spin.setRange(1, 1000)
+        self._max_rounds_spin.setValue(60)
+        self._max_rounds_spin.setToolTip("单次执行的最大循环轮数（API 调用次数）；默认 60，防工具失败死循环")
+        self._timeout_spin = SpinBox()
+        self._timeout_spin.setRange(1, 36000)
+        self._timeout_spin.setValue(1200)
+        self._timeout_spin.setToolTip("单次执行超时秒数；默认 1200（20 分钟）")
+        lim_widget = QWidget()
+        lim_layout = QHBoxLayout(lim_widget)
+        lim_layout.setContentsMargins(0, 0, 0, 0)
+        lim_layout.setSpacing(6)
+        lim_layout.addWidget(self._max_rounds_spin, 1)
+        lim_layout.addWidget(self._timeout_spin, 1)
+        s3l.addLayout(_labeled("轮数上限 / 超时(秒)", lim_widget))
 
         # 响应式主体：窄=单列纵排；宽(≥720px)=左(任务) 右上(调度) 右下(通知) 双列
         body = _ResponsiveFormBody(s1, s2, s3)
@@ -993,21 +1069,26 @@ class JobEditPanel(QWidget):
             self._load_gateway_sessions()
 
     def _load_gateway_sessions(self):
-        """从主程序 PlatformManager 拉取已知会话（platform:chat_id 免手填）"""
+        """拉取主程序已知 gateway 会话（platform:chat_id 免手填）
+
+        走注入的 `services["list_platform_sessions"]`。不自行 import
+        `app.gateway.get_platform_manager()`——该模块级单例只由
+        GatewayService 赋值，插件侧恒为 None，会导致下拉框永远为空。
+        """
         combo = self._notify_target_combo
         current = combo.currentData()
         combo.clear()
         sessions = []
-        try:
-            from app.gateway import get_platform_manager
-
-            mgr = get_platform_manager()
-            if mgr is not None:
-                sessions = mgr.get_sessions() or []
-        except Exception as e:
-            logger.warning(f"[cron-tasks] 拉取 gateway 会话失败: {e}")
+        lister = resolve_ui_service("list_platform_sessions")
+        if callable(lister):
+            try:
+                sessions = lister() or []
+            except Exception as e:
+                logger.warning(f"[cron-tasks] 拉取 gateway 会话失败: {e}")
+        else:
+            logger.warning("[cron-tasks] 主程序未提供 list_platform_sessions 服务")
         if not sessions:
-            combo.addItem("（暂无会话——先给机器人发条消息）", "")
+            combo.addItem(self._empty_target_hint(), userData="")
         else:
             sessions = sorted(sessions, key=lambda s: s.last_active, reverse=True)
             # 去重：同一 platform:chat_id 只保留最近活跃的一条
@@ -1018,7 +1099,7 @@ class JobEditPanel(QWidget):
                 if key in seen:
                     continue
                 seen.add(key)
-                combo.addItem(s.display_name, key)
+                combo.addItem(s.display_name, userData=key)
         if current:
             cidx = combo.findData(current)
             if cidx >= 0:
@@ -1026,6 +1107,32 @@ class JobEditPanel(QWidget):
             else:
                 combo.addItem(f"（原配置）{current}", current)
                 combo.setCurrentIndex(combo.count() - 1)
+
+    @staticmethod
+    def _empty_target_hint() -> str:
+        """会话为空时的提示文案——区分「没连平台」与「连了但没收到过消息」
+
+        session 由入站消息被动创建，平台已连接但用户从未给机器人发过消息时
+        会话列表同样为空。笼统提示「暂无会话」会让用户分不清该去配平台还是
+        该去发消息，故按平台连接状态给不同指引。
+        """
+        lister = resolve_ui_service("list_platforms")
+        if not callable(lister):
+            return "（暂无会话——先给机器人发条消息）"
+        try:
+            platforms = lister() or []
+        except Exception as e:
+            logger.warning(f"[cron-tasks] 拉取 gateway 平台失败: {e}")
+            return "（暂无会话——先给机器人发条消息）"
+        connected = [p for p in platforms if p.get("connected")]
+        if connected:
+            names = "、".join(str(p.get("id")) for p in connected)
+            return f"（{names} 已连接但无会话——先给机器人发条消息）"
+        enabled = [p for p in platforms if p.get("enabled")]
+        if enabled:
+            names = "、".join(str(p.get("id")) for p in enabled)
+            return f"（{names} 已启用但未连接——检查平台配置或插件开关）"
+        return "（未启用任何 Gateway 平台——先在设置里启用并配置）"
 
     def _browse_workdir(self):
         from PySide6.QtWidgets import QFileDialog
@@ -1078,6 +1185,8 @@ class JobEditPanel(QWidget):
         if midx >= 0:
             self._model_combo.setCurrentIndex(midx)
         self._workdir_edit.setText(default_workdir)
+        self._max_rounds_spin.setValue(60)
+        self._timeout_spin.setValue(1200)
         self._refresh_preview()
 
     def begin_create_with_template(self, tpl: dict, default_workdir: str = ""):
@@ -1116,13 +1225,16 @@ class JobEditPanel(QWidget):
         midx = self._model_combo.findData(job.model_key)
         self._model_combo.setCurrentIndex(midx if midx >= 0 else 0)
         self._workdir_edit.setText(job.workdir or "")
+        self._max_rounds_spin.setValue(job.max_rounds or 60)
+        self._timeout_spin.setValue(job.timeout_seconds or 1200)
         # 完成通知回填：""=默认 / system / gateway:平台:chat_id
         n = job.notify or ""
         if n.startswith("gateway:"):
             self._notify_combo.setCurrentIndex(2)
             self._notify_target_combo.clear()
             self._notify_target_combo.addItem(
-                f"（原配置）{':'.join(n.split(':', 2)[1:])}", ":".join(n.split(':', 2)[1:])
+                f"（原配置）{':'.join(n.split(':', 2)[1:])}",
+                userData=":".join(n.split(':', 2)[1:]),
             )
         elif n == "system":
             self._notify_combo.setCurrentIndex(1)
@@ -1185,6 +1297,8 @@ class JobEditPanel(QWidget):
         job.agent = self._agent_combo.currentData() or ""
         job.model_key = self._model_combo.currentData() or ""
         job.workdir = self._workdir_edit.text().strip()
+        job.max_rounds = self._max_rounds_spin.value()
+        job.timeout_seconds = self._timeout_spin.value()
         ni = self._notify_combo.currentIndex()
         if ni == 2:
             target = str(self._notify_target_combo.currentData() or "")
@@ -1409,6 +1523,13 @@ class CronTasksCard(QFrame):
         self._ctx_provider = None
         self._last_ctx: Dict[str, Any] = {}
         self._rows: Dict[str, JobRowCard] = {}
+        self._row_states: Dict[str, tuple] = {}  # 行卡展示要素快照（增量 diff 用）
+        # 自保底轮询：热重载清 sys.modules 后旧卡片持有旧类单例，信号推送链
+        # （job_started/jobs_changed → controller → 卡片）会断在两套实例之间，
+        # 表现为完成/开始事件到不了卡片、行卡冻结在旧状态。卡片可见时自行
+        # 检测运行态翻转，翻转才全量刷（不闪），不依赖任何信号链。
+        self._poll_timer: Optional[QTimer] = None
+        self._last_poll_running: Optional[bool] = None
         self._build_ui()
         # qfluentwidgets 组件字号跟随系统设置
         apply_font_size_to_widget(self)
@@ -1474,6 +1595,7 @@ class CronTasksCard(QFrame):
         ctrl.ensure_started(self._last_ctx)
         ctrl.bind_card(self)  # 注册卡片实例，调度器变化时刷新
         self.refresh_jobs()
+        self._start_poll()
         # 2) 下拉数据源（每步独立容错，失败仅影响对应下拉）
         try:
             self._load_agents()
@@ -1736,8 +1858,59 @@ class CronTasksCard(QFrame):
 
     # ---------- 刷新 ----------
 
-    def refresh_jobs(self):
-        """从 controller 拉最新任务列表重建行卡片"""
+    def _start_poll(self):
+        """卡片可见期间启动运行态轮询（hideEvent 停止）"""
+        if self._poll_timer is None:
+            self._poll_timer = QTimer(self)
+            self._poll_timer.setInterval(5000)
+            self._poll_timer.timeout.connect(self._poll_tick)
+        self._last_poll_running = None  # 首拍强制建基线
+        self._poll_timer.start()
+
+    def _stop_poll(self):
+        if self._poll_timer is not None:
+            self._poll_timer.stop()
+
+    def _poll_tick(self):
+        """运行态翻转检测：翻转才全量刷新（平时不重建、不闪）"""
+        try:
+            from .controller import CronTasksController
+
+            ctrl = CronTasksController.get_instance()
+            running = bool(ctrl.scheduler.is_running_job())
+            if running != self._last_poll_running:
+                self._last_poll_running = running
+                self.refresh_jobs()
+        except RuntimeError:
+            self._stop_poll()
+        except Exception as e:
+            logger.warning(f"[cron-tasks] poll_tick: {e}")
+
+    def hideEvent(self, event):
+        super().hideEvent(event)
+        self._stop_poll()
+
+    @staticmethod
+    def _row_snapshot(job: CronJob, running: bool) -> tuple:
+        """行卡展示要素快照：与上次渲染比对，字段变化才碰那一行"""
+        return (
+            job.display_label(),
+            job.schedule_desc(),
+            job.enabled,
+            job.last_status,
+            job.last_run_at,
+            job.agent,
+            job.model_key,
+            running,
+        )
+
+    def refresh_jobs(self, force: bool = False):
+        """刷新任务列表
+
+        默认增量：与上次渲染快照比对，无变化的行完全不碰
+        （开关/执行等单行变化不再牵连整表重建、其他行开关不再闪）。
+        force=True 全量重建（主题切换等需要行卡重取样式的场景）。
+        """
         from .controller import CronTasksController
 
         # 热重载边界防御：多次 reload 后残留的旧实例可能属性不全，跳过避免崩
@@ -1747,14 +1920,48 @@ class CronTasksCard(QFrame):
         ctrl = CronTasksController.get_instance()
         jobs = ctrl.scheduler.get_jobs()
         running_id = ctrl.scheduler.is_running_job() and ctrl.scheduler._executor._job.id or ""
+        enabled_cnt = sum(1 for j in jobs if j.enabled)
+        sub = f"· {len(jobs)} 个任务 / {enabled_cnt} 启用" + (
+            " · 任务执行中…" if running_id else ""
+        )
 
-        # 重建（任务数量小，简单粗暴即可）
+        if not force:
+            new_ids = {j.id for j in jobs}
+            for jid in [k for k in self._rows if k not in new_ids]:
+                w = self._rows.pop(jid)
+                self._row_states.pop(jid, None)
+                self._jobs_layout.removeWidget(w)
+                w.deleteLater()
+            for job in jobs:
+                state = self._row_snapshot(job, job.id == running_id)
+                row = self._rows.get(job.id)
+                if row is not None and self._row_states.get(job.id) == state:
+                    continue  # 无变化：不碰（开关不闪、不重 connect）
+                if row is None:
+                    row = JobRowCard(job)
+                    row.toggleRequested.connect(ctrl.toggle_job)
+                    row.editRequested.connect(self._on_edit)
+                    row.historyRequested.connect(self._on_history)
+                    row.deleteRequested.connect(ctrl.delete_job)
+                    row.runNowRequested.connect(ctrl.run_now)
+                    row.stopRequested.connect(ctrl.stop_job)
+                    self._jobs_layout.insertWidget(self._jobs_layout.count() - 1, row)
+                    self._rows[job.id] = row
+                row.refresh(job, running=(job.id == running_id))
+                self._row_states[job.id] = state
+            if self._subtitle.text() != sub:
+                self._subtitle.setText(sub)
+            self._list_stack.setCurrentIndex(0 if not jobs else 1)
+            return
+
+        # 全量重建（任务数量小，简单粗暴即可）
         while self._jobs_layout.count() > 1:
             item = self._jobs_layout.takeAt(0)
             w = item.widget()
             if w is not None:
                 w.deleteLater()
         self._rows.clear()
+        self._row_states.clear()
 
         for job in jobs:
             row = JobRowCard(job)
@@ -1767,9 +1974,9 @@ class CronTasksCard(QFrame):
             row.refresh(job, running=(job.id == running_id))
             self._jobs_layout.insertWidget(self._jobs_layout.count() - 1, row)
             self._rows[job.id] = row
+            self._row_states[job.id] = self._row_snapshot(job, job.id == running_id)
 
-        enabled_cnt = sum(1 for j in jobs if j.enabled)
-        self._subtitle.setText(f"· {len(jobs)} 个任务 / {enabled_cnt} 启用" + (" · 任务执行中…" if running_id else ""))
+        self._subtitle.setText(sub)
         self._list_stack.setCurrentIndex(0 if not jobs else 1)
 
     def update_running_row_elapsed(self):
@@ -1785,6 +1992,10 @@ class CronTasksCard(QFrame):
 
         ctrl = CronTasksController.get_instance()
         if not ctrl.scheduler.is_running_job():
+            # 自愈：实际没在跑但行卡还挂着「运行中」（完成事件在热重载脱钩时
+            # 丢失）→ 全量刷一次复位；无残留时不动（避免每次心跳无谓重建）
+            if any(getattr(r, "_running", False) for r in self._rows.values()):
+                self.refresh_jobs()
             return
         ex = ctrl.scheduler._executor
         if not ex or not ex._job:
@@ -1816,7 +2027,7 @@ class CronTasksCard(QFrame):
         self._edit_panel.refresh_theme()
         self._history_panel.refresh_theme()
         try:
-            self.refresh_jobs()  # 行卡按新主题重建
+            self.refresh_jobs(force=True)  # 行卡按新主题重建
         except Exception:
             pass
         # 同步刷新标记：让 showEvent 不再重复刷
