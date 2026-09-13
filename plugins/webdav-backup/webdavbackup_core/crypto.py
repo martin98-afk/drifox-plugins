@@ -81,11 +81,8 @@ def decrypt_bytes(blob: bytes, password: str) -> bytes:
 # ============================================================
 
 
-def make_zip(entries: list, skipped: List[str], manifest_json: str = "") -> bytes:
-    """把 (arcname, 绝对路径) 列表打进 zip，返回字节流。
-
-    entries 的 arcname 为包内 posix 路径；manifest_json 非空时以
-    _external/manifest.json 写入（外部路径映射清单，恢复时用）。"""
+def make_zip(entries: list, skipped: List[str]) -> bytes:
+    """把 (arcname, 绝对路径) 列表打进 zip，返回字节流"""
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True) as zf:
         for arcname, f in entries:
@@ -93,8 +90,6 @@ def make_zip(entries: list, skipped: List[str], manifest_json: str = "") -> byte
                 zf.write(f, arcname=arcname)
             except OSError as e:
                 skipped.append(f"{Path(f).name}: {e}")
-        if manifest_json:
-            zf.writestr("_external/manifest.json", manifest_json)
     return buf.getvalue()
 
 

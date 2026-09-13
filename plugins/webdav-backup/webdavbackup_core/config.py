@@ -119,10 +119,6 @@ def load_config() -> Dict[str, Any]:
         for seg in re.split(r"[\n,，]", str(raw_extra))
     ]
     include_extra = [ln for ln in include_extra if ln]
-    # 外部绝对路径（数据目录之外的自定义备份目标），每行/逗号一个
-    raw_paths = store.get(PLUGIN_NAME, "include_paths") or ""
-    include_paths = [seg.strip() for seg in re.split(r"[\n,，]", str(raw_paths))]
-    include_paths = [seg for seg in include_paths if seg]
     return {
         "server_url": g("server_url", schema_defaults["server_url"]).strip(),
         "username": g("username", "").strip(),
@@ -134,7 +130,6 @@ def load_config() -> Dict[str, Any]:
         "encryption_password": g("encryption_password", ""),
         "include_dirs": include_dirs,
         "include_extra": include_extra,
-        "include_paths": include_paths,
     }
 
 

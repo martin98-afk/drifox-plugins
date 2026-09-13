@@ -8,7 +8,6 @@
 - app.utils.utils.get_app_data_dir            → ~/.drifox（打包版标准位置）
 - app.plugins.managers.PluginConfigStore      → 插件内等价实现（同路径同格式扁平 dict）
 - app.utils.app_restart.restart_application   → 插件内自重启（拉起新进程 + 优雅退出）
-- app.tools.result.ToolResult                 → 返回 str（tools 契约接受 str/dict/ToolResult）
 """
 from __future__ import annotations
 
@@ -181,18 +180,3 @@ def _quit_current_gracefully() -> None:
     if app is None:
         os._exit(0)
     app.quit()
-
-
-# ============================================================
-#  工具结果
-# ============================================================
-
-
-def make_tool_result(ok: bool, content: str):
-    """ToolResult 可用则用之；不可用降级返回 str（tools 契约接受 str/dict/ToolResult）"""
-    try:
-        from app.tools.result import ToolResult
-
-        return ToolResult(ok, content=content)
-    except Exception:
-        return content

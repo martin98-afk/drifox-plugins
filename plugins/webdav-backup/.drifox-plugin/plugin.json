@@ -5,7 +5,7 @@
     },
     "name": "webdav-backup",
     "description": "WebDAV 备份 — 将 DriFox 数据（会话/配置/插件数据）全量备份到坚果云、Nextcloud 等 WebDAV 网盘，支持定时自动备份、可选 AES-256 加密、历史版本管理与一键恢复",
-    "version": "0.6.0",
+    "version": "0.7.0",
     "author": {
         "name": "DriFox Contributors"
     },
@@ -26,8 +26,7 @@
         "同步"
     ],
     "components": {
-        "ui": true,
-        "tools": true
+        "ui": true
     },
     "config_schema": {
         "title": "WebDAV 备份",
@@ -94,17 +93,6 @@
                 "type": "password",
                 "default": "",
                 "description": "留空则上传普通 zip（可用任意解压工具打开）；设置后备份包经 AES-256-GCM 加密（扩展名 .dvp），恢复时需输入同一密码"
-            },
-            {
-                "key": "test_connection",
-                "label": "测试连接",
-                "type": "action",
-                "action": {
-                    "tool": "webdav_backup",
-                    "args": {
-                        "action": "test"
-                    }
-                }
             }
         ]
     }
