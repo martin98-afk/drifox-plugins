@@ -150,7 +150,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "video",
                 "explainer",
@@ -333,7 +333,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 46,
+            "downloads": 47,
             "keywords": [
                 "browser",
                 "web",
@@ -365,7 +365,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 23,
+            "downloads": 24,
             "keywords": [
                 "calendar",
                 "date",
@@ -688,7 +688,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 22,
+            "downloads": 23,
             "keywords": [
                 "welcome",
                 "stats",
@@ -792,7 +792,7 @@
                 "tools": true,
                 "hook_policies": true
             },
-            "downloads": 35,
+            "downloads": 36,
             "keywords": [
                 "cron",
                 "schedule",
@@ -1124,7 +1124,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "theme",
                 "fire-emblem",
@@ -1388,7 +1388,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 29,
+            "downloads": 30,
             "platforms": [
                 "windows",
                 "linux",
@@ -1548,7 +1548,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 15,
+            "downloads": 16,
             "keywords": [
                 "git",
                 "dashboard",
@@ -1579,7 +1579,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 44,
+            "downloads": 45,
             "keywords": [
                 "git",
                 "source-control",
@@ -2048,7 +2048,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 7,
+            "downloads": 8,
             "keywords": [
                 "theme",
                 "laputa",
@@ -2189,7 +2189,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "theme",
                 "dark",
@@ -2283,7 +2283,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 10,
+            "downloads": 11,
             "keywords": [
                 "skill",
                 "agents",
@@ -2468,7 +2468,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 12,
+            "downloads": 13,
             "keywords": [
                 "openhanako",
                 "hana",
@@ -2548,7 +2548,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 11,
+            "downloads": 12,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -2641,7 +2641,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 26,
+            "downloads": 27,
             "keywords": [
                 "dashboard",
                 "stats",
@@ -2702,7 +2702,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 39,
+            "downloads": 40,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -2783,7 +2783,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 18,
+            "downloads": 19,
             "keywords": [
                 "screenshot",
                 "clipboard",
@@ -2817,7 +2817,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "theme",
                 "rdr2",
@@ -2922,7 +2922,7 @@
                 "tools": true,
                 "skills": true
             },
-            "downloads": 15,
+            "downloads": 16,
             "keywords": [
                 "self-evolve",
                 "plugin",
@@ -3671,7 +3671,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "voice",
                 "dictation",
@@ -3871,7 +3871,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 26,
+            "downloads": 27,
             "keywords": [
                 "powershell",
                 "windows",
