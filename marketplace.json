@@ -3871,6 +3871,7 @@
             "components": {
                 "ui": true
             },
+            "downloads": 4,
             "keywords": [
                 "webdav",
                 "backup",
