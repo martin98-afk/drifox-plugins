@@ -196,6 +196,28 @@ def run_backup() -> Dict[str, Any]:
         _BACKUP_LOCK.release()
 
 
+def _write_finish_bat(pending_dir: Path, app_data: Path) -> Path:
+    """生成一键完成脚本：robocopy 把暂存文件移入数据目录，完成后自删"""
+    bat = Path(tempfile.gettempdir()) / f"finish_restore-{_now_str()}.bat"
+    content = (
+        "@echo off\r\n"
+        "chcp 65001 >nul\r\n"
+        "echo Applying remaining DriFox restore files...\r\n"
+        f'robocopy "{pending_dir}" "{app_data.resolve()}" /E /MOVE /NFL /NDL /NJH /NJS\r\n'
+        "if errorlevel 8 (\r\n"
+        "  echo RESTORE FAILED - please check the paths above.\r\n"
+        "  pause\r\n"
+        "  exit /b 1\r\n"
+        ")\r\n"
+        f'rd /q "{pending_dir}" 2>nul\r\n'
+        "echo Done. You can start DriFox now.\r\n"
+        "pause\r\n"
+        'del "%~f0"\r\n'
+    )
+    bat.write_text(content, encoding="utf-8")
+    return bat
+
+
 def _prune_old(client: WebDAVClient, cfg: Dict[str, Any], keep: int) -> List[str]:
     """按文件名（时间戳序）保留最新 keep 份，删多余；删除失败不中断"""
     rdir = _remote_dir(cfg)
@@ -254,16 +276,36 @@ def run_restore(backup_name: str, encryption_password: str = "") -> Dict[str, An
             # 回滚副本放系统临时目录固定前缀下，不自动清理（路径在结果中给出，确认无误后自行删除）
             rollback_dir = Path(tempfile.gettempdir()) / f"webdav-rollback-{_now_str()}"
             rollback_dir.mkdir(parents=True, exist_ok=True)
-            applied, moved_count = _apply(app_data, data, staging, rollback_dir, skipped)
+            applied, moved_count, pending = _apply(app_data, data, staging, rollback_dir, skipped)
+
+            finish_bat = None
+            if pending:
+                # 被占用的文件（DriFox 运行中的 SQLite/配置等）暂存，生成关闭 DriFox 后的一键完成脚本
+                pending_dir = Path(tempfile.gettempdir()) / f"webdav-restore-pending-{_now_str()}"
+                for rel in pending:
+                    dest = pending_dir / rel
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(staging / rel, dest)
+                finish_bat = _write_finish_bat(pending_dir, app_data)
 
         _update_state(last_restore_at=datetime.now().isoformat(timespec="seconds"), last_restore_file=name)
-        msg = f"恢复完成：{name}（应用 {len(applied)} 个文件）。请重启 DriFox 生效。"
+        if pending:
+            msg = (
+                f"恢复部分完成：{name}\n"
+                f"已应用 {len(applied) - len(pending)} 个文件；另有 {len(pending)} 个正被 DriFox 占用（会话库等），"
+                f"已暂存待应用。\n"
+                f"请完全退出 DriFox 后，双击运行：{finish_bat}\n完成后再启动 DriFox。"
+            )
+        else:
+            msg = f"恢复完成：{name}（应用 {len(applied)} 个文件）。请重启 DriFox 生效。"
         if skipped:
             msg += f" 跳过 {len(skipped)} 项。"
         return {
             "ok": True,
             "message": msg,
-            "applied": len(applied),
+            "applied": len(applied) - len(pending),
+            "pending": pending,
+            "finish_script": str(finish_bat) if finish_bat else None,
             "skipped": skipped,
             "rollback_dir": str(rollback_dir) if moved_count else None,
         }
@@ -278,29 +320,38 @@ def run_restore(backup_name: str, encryption_password: str = "") -> Dict[str, An
 
 
 def _apply(app_data: Path, data: bytes, staging: Path, rollback_dir: Path, skipped: List[str]) -> tuple:
-    """解包到 staging → 旧文件备份进 rollback_dir → 覆盖到 app_data
+    """解包到 staging → 可覆盖的直接覆盖（旧文件备份进 rollback_dir）
 
-    返回 (applied 相对路径列表, moved_count 被覆盖的文件数)
-    """
+    被占用的文件（PermissionError，如运行中的 SQLite）跳过并记入 pending，
+    由调用方暂存生成完成脚本；返回 (applied, moved_count, pending)。"""
     applied = crypto.extract_zip(data, staging, skipped)
     if not applied:
         raise ValueError("备份包内没有可应用的文件")
     moved: List[tuple] = []
+    pending: List[str] = []
     try:
         for rel in applied:
             src = staging / rel
             dst = app_data / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
             if dst.exists():
-                rb = rollback_dir / rel
-                rb.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(dst, rb)
-                moved.append((dst, rb))
-            shutil.copy2(src, dst)
-        return applied, len(moved)
+                try:
+                    rb = rollback_dir / rel
+                    rb.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(dst, rb)
+                    moved.append((dst, rb))
+                except OSError:
+                    moved.append((dst, None))
+            try:
+                shutil.copy2(src, dst)
+            except PermissionError:
+                pending.append(rel)
+        return applied, len(moved), pending
     except Exception:
         # 尽力回滚已覆盖文件
         for dst, rb in reversed(moved):
+            if rb is None:
+                continue
             try:
                 shutil.copy2(rb, dst)
             except OSError:
