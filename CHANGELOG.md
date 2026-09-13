@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+### 🐛 git-panel v2.0.1 — PySide6 `disconnect()` 死循环致「打开系统配置」整软件卡死
+- **现象**：点击 TabPanel 左下角 ⚙ → 整个应用无响应，Windows 画 Ghost 幽灵窗口（`对话 … - Drifox (未响应)`），`SendMessageTimeout(WM_NULL, 2000ms)` 无回应，只能强杀
+- **根因**：`plugins/git-panel/ui/config_card.py:_echo` 沿用了 PyQt5 语义的清连接写法 `while True: try: self._edit.textChanged.disconnect() / except TypeError: break`。**PySide6 下无连接时 `disconnect()` 返回 `False` 且只发 RuntimeWarning、不抛 `TypeError`** → `except` 分支永不触发 → 主线程死循环。该卡由主程序 `rebuild_plugin_cards` 在**主线程同步**构造，故一打开设置即冻死事件循环
+- **修复**：改判返回值 —— `if not self._edit.textChanged.disconnect(): break` + `except (TypeError, RuntimeError)`，与 `prompt-enhancer._EnhanceConfigCard._echo` 同源（该处此前已修，git-panel 系照抄旧版未带修复）
+- **验证**：离屏构造 `_CommitConfigCard` 硬超时 25s A/B —— 修复后 **28.9 ms OK**（提示词正常回显）/ 旧写法副本 **TIMEOUT >25s**；全仓扫 13679 个 py 文件，同款「`while True` + 裸 `disconnect()`」写法仅 3 处，git-panel 修复后其余均已有返回值判定；行尾保持 CRLF 未翻转
+
 ### 🔧 全量迁移 PyQt5 → PySide6（pyside6 分支）
 - **87 个文件迁移**：23 个带 UI 插件 + tests + tools，`PyQt5` → `PySide6`、`pyqtSignal/pyqtSlot/pyqtProperty` → `Signal/Slot/Property`、`exec_()` → `exec()`
 - **Qt6 改名适配**：`QWebEngineDownloadItem` → `QWebEngineDownloadRequest`（browser 下载面板）；`QShortcut` 从 QtWidgets 移到 QtGui（browser 快捷键）；**WebEngine 类归属**——`QWebEnginePage/Profile/Settings/Script` 从 QtWebEngineWidgets 移到 QtWebEngineCore（Widgets 仅剩 `QWebEngineView`），修 `_page_factory/devtools/browser_window/profile_manager` 共 6 处 import

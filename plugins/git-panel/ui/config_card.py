@@ -108,10 +108,15 @@ class _CommitConfigCard(_CONFIG_CARD_BASE):
         from .llm_config import load_plugin_text_config
 
         # 提示词编辑框
+        # PySide6：disconnect() 无连接时返回 False（不抛异常）；PyQt5 抛 TypeError。
+        # 旧写法忽略返回值、仅 except TypeError → PySide6 下 while True 永不退出，
+        # 而本卡由 rebuild_plugin_cards 在主线程同步构造 → 打开系统配置即整软件卡死。
+        # 与 prompt-enhancer._EnhanceConfigCard._echo 同源修复：判返回值 + 双异常兜底。
         while True:
             try:
-                self._edit.textChanged.disconnect()
-            except TypeError:
+                if not self._edit.textChanged.disconnect():
+                    break
+            except (TypeError, RuntimeError):
                 break
         self._edit.setPlainText(load_plugin_text_config("commit_prompt", DEFAULT_COMMIT_PROMPT))
         self._edit.textChanged.connect(self._on_prompt_changed)
