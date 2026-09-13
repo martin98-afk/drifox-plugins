@@ -15,12 +15,14 @@ from typing import Any, Callable, List, Optional
 from loguru import logger
 from PyQt5.QtCore import QObject, QThread, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 from qfluentwidgets import (
     CaptionLabel,
+    CheckBox,
     ElevatedCardWidget,
     FluentIcon,
     IconWidget,
+    LineEdit,
     PrimaryPushButton,
     PushButton,
     StrongBodyLabel,
@@ -236,6 +238,7 @@ class WebDavBackupCard(QFrame):
                 self._scheduler_connected = True
             except Exception as e:
                 logger.warning(f"[webdav-backup] 连接调度器信号失败: {e}")
+        self._refresh_scope_ui()
         self.refresh_all()
         self.setVisible(True)
 
@@ -303,6 +306,10 @@ class WebDavBackupCard(QFrame):
         self._test_btn.clicked.connect(self._on_test)
         btn_row.addWidget(self._test_btn)
 
+        self._test_result = CaptionLabel("")
+        self._test_result.setStyleSheet(_caption_css())
+        btn_row.addWidget(self._test_result)
+
         self._refresh_btn = PushButton(FluentIcon.SYNC, "刷新列表")
         self._refresh_btn.setFixedHeight(34)
         self._refresh_btn.clicked.connect(self.refresh_all)
@@ -315,6 +322,9 @@ class WebDavBackupCard(QFrame):
         self._summary_label.setWordWrap(True)
         ops_lay.addWidget(self._summary_label)
         root.addWidget(ops)
+
+        # ── 备份范围卡（勾选即存；连接配置在设置卡，此处只管范围） ──
+        root.addWidget(self._build_scope_card())
 
         # ── 云端备份卡 ──
         hist = _make_section_card()
@@ -363,6 +373,84 @@ class WebDavBackupCard(QFrame):
         self._status_label.setStyleSheet(_caption_css())
         self._status_label.setWordWrap(True)
         root.addWidget(self._status_label)
+
+    # ── 备份范围卡 ──────────────────────────────────────
+
+    def _build_scope_card(self) -> QWidget:
+        card = _make_section_card()
+        lay = QVBoxLayout(card)
+        lay.setContentsMargins(16, 14, 16, 14)
+        lay.setSpacing(8)
+
+        head = QHBoxLayout()
+        title = StrongBodyLabel("备份范围")
+        title.setStyleSheet(_section_title_css())
+        head.addWidget(title)
+        head.addStretch(1)
+        self._scope_hint = CaptionLabel("")
+        self._scope_hint.setStyleSheet(_caption_css())
+        head.addWidget(self._scope_hint)
+        lay.addLayout(head)
+
+        self._scope_checks: dict = {}
+        grid = QGridLayout()
+        grid.setHorizontalSpacing(16)
+        grid.setVerticalSpacing(6)
+        for i, (field, dirname) in enumerate(cfg_mod.INCLUDE_FIELDS.items()):
+            cb = CheckBox(f"{cfg_mod.INCLUDE_LABELS[dirname]} ({dirname})")
+            cb.toggled.connect(self._on_scope_changed)
+            grid.addWidget(cb, i // 2, i % 2)
+            self._scope_checks[field] = (cb, dirname)
+        lay.addLayout(grid)
+
+        extra_row = QHBoxLayout()
+        extra_label = CaptionLabel("额外包含")
+        extra_label.setStyleSheet(_caption_css())
+        extra_row.addWidget(extra_label)
+        self._scope_extra = LineEdit()
+        self._scope_extra.setPlaceholderText("目录名，逗号分隔，如：memory, gateway")
+        self._scope_extra.setClearButtonEnabled(True)
+        self._scope_extra.editingFinished.connect(self._on_scope_changed)
+        extra_row.addWidget(self._scope_extra, 1)
+        lay.addLayout(extra_row)
+
+        self._scope_hint_timer = QTimer(self)
+        self._scope_hint_timer.setSingleShot(True)
+        self._scope_hint_timer.timeout.connect(lambda: self._scope_hint.setText(""))
+
+        self._refresh_scope_ui()
+        return card
+
+    def _refresh_scope_ui(self):
+        """从配置回显勾选（仅构造/显示时调用，不覆盖用户编辑中状态）"""
+        try:
+            cfg = cfg_mod.load_config()
+        except Exception:
+            return
+        dirs = cfg.get("include_dirs", set())
+        for cb, dirname in self._scope_checks.values():
+            cb.blockSignals(True)
+            cb.setChecked(dirname in dirs)
+            cb.blockSignals(False)
+        self._scope_extra.blockSignals(True)
+        self._scope_extra.setText(", ".join(cfg.get("include_extra", [])))
+        self._scope_extra.blockSignals(False)
+
+    def _on_scope_changed(self, *args):
+        """勾选/额外项变更：合并写存储（只落范围键，不碰账号密码）"""
+        try:
+            from app.plugins.managers.plugin_config_store import PluginConfigStore
+
+            values = {f: cb.isChecked() for f, (cb, _) in self._scope_checks.items()}
+            values["include_extra"] = self._scope_extra.text().strip()
+            PluginConfigStore().set_values(cfg_mod.PLUGIN_NAME, values)
+            from datetime import datetime
+
+            self._scope_hint.setText(f"已保存 {datetime.now().strftime('%H:%M:%S')}")
+            self._scope_hint_timer.start(3000)
+            self._refresh_info_only()
+        except Exception as e:
+            self._scope_hint.setText(f"保存失败: {e}")
 
     # ── 数据与渲染 ──────────────────────────────────────
 
@@ -483,11 +571,11 @@ class WebDavBackupCard(QFrame):
             self._run_async(lambda: engine.run_list(), self._on_list_done)
 
     def _on_test(self):
-        self._set_status("正在测试连接…")
+        self._test_result.setText("测试中…")
         self._run_async(lambda: engine.run_test(), self._on_test_done)
 
     def _on_test_done(self, result: dict):
-        self._set_status(("✓ " if result.get("ok") else "✗ ") + str(result.get("message", "")))
+        self._test_result.setText(("✓ " if result.get("ok") else "✗ ") + str(result.get("message", "")))
 
     def _on_list_done(self, result: dict):
         items = result.get("items", []) if isinstance(result, dict) else []
@@ -519,7 +607,7 @@ class WebDavBackupCard(QFrame):
         rb = result.get("rollback_dir")
         if ok and rb:
             msg += f" 回滚副本：{rb}"
-        self._set_status(("✓ " if ok else "✗ ") + msg)
+        self._set_status(msg)
 
     def _on_delete(self, name: str):
         self._set_status(f"正在删除 {name}…")

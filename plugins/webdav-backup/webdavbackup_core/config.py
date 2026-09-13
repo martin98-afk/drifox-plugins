@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+import re
 import threading
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -27,6 +28,12 @@ INCLUDE_FIELDS = {
     "inc_workspaces": "workspaces",
     "inc_screenshots": "screenshots",
     "inc_backups": "backups",
+}
+
+# 范围默认值（设置在 UI 卡勾选，schema 无此字段时的兑底；大体积/可再生目录默认关）
+INCLUDE_DEFAULTS = {
+    dirname: dirname not in ("plugins", "workspaces", "screenshots", "backups")
+    for dirname in INCLUDE_FIELDS.values()
 }
 
 # 中文名（UI 摘要展示用）
@@ -100,14 +107,17 @@ def load_config() -> Dict[str, Any]:
         "keep_versions": 10,
         "encryption_password": "",
     }
-    # 范围白名单：inc_* 三级链取值 → 选中的顶层目录集合；include_extra 逐行拆分
+    # 范围白名单：inc_* 取值（schema 无此字段，UI 卡写入存储）→ 选中目录集合
     include_dirs = {
         dirname
         for field, dirname in INCLUDE_FIELDS.items()
-        if _to_bool(store.get(PLUGIN_NAME, field), False)
+        if _to_bool(store.get(PLUGIN_NAME, field), INCLUDE_DEFAULTS[dirname])
     }
     raw_extra = store.get(PLUGIN_NAME, "include_extra") or ""
-    include_extra = [ln.strip().strip("/").replace("\\", "/") for ln in str(raw_extra).splitlines()]
+    include_extra = [
+        seg.strip().strip("/").replace("\\", "/")
+        for seg in re.split(r"[\n,，]", str(raw_extra))
+    ]
     include_extra = [ln for ln in include_extra if ln]
     return {
         "server_url": g("server_url", schema_defaults["server_url"]).strip(),
