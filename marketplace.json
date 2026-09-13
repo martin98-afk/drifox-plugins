@@ -333,7 +333,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 41,
+            "downloads": 42,
             "keywords": [
                 "browser",
                 "web",
@@ -792,7 +792,7 @@
                 "tools": true,
                 "hook_policies": true
             },
-            "downloads": 31,
+            "downloads": 32,
             "keywords": [
                 "cron",
                 "schedule",
@@ -1388,7 +1388,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 27,
+            "downloads": 28,
             "platforms": [
                 "windows",
                 "linux",
@@ -1579,7 +1579,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 39,
+            "downloads": 40,
             "keywords": [
                 "git",
                 "source-control",
@@ -2702,7 +2702,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 34,
+            "downloads": 35,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -2783,7 +2783,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 12,
+            "downloads": 13,
             "keywords": [
                 "screenshot",
                 "clipboard",
