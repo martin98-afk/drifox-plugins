@@ -344,7 +344,9 @@ def _apply(app_data: Path, data: bytes, staging: Path, rollback_dir: Path, skipp
                     moved.append((dst, None))
             try:
                 shutil.copy2(src, dst)
-            except PermissionError:
+            except OSError:
+                # PermissionError(WinError 32/5) 与 WinError 1224(用户映射区域，
+                # SQLite mmap 打开的文件) 均为占用类失败 → 暂存待应用
                 pending.append(rel)
         return applied, len(moved), pending
     except Exception:
