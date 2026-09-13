@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+### 🐛 win-powershell — 超时杀进程不彻底致「安静孙进程持有管道写端 → 工具线程永久死锁」
+- **现象**：AI 调 powershell 工具执行长寿子进程（如 `.venv` python 探针起 UI 不退出）后工具转圈永不返回；py-spy 实锤工具线程卡死在 `subprocess.run` 超时分支的二次 `communicate()`（等管道 EOF），机器上累积 12 个孤儿探针进程
+- **根因**：`subprocess.run(timeout=)` 在 Windows 超时时只 kill 直接子进程（powershell.exe）后再次 `communicate()` 收集输出；而 PowerShell 5.1 启动 native exe 时句柄继承泄漏，孙进程（venv python trampoline → 真解释器）持有 stdout 管道写端，安静不退出 → EOF 永不到达 → `TimeoutExpired` 抛不出来 → 插件超时兜底永远执行不到
+- **修复**：`subprocess.run` 改 `Popen + communicate(timeout)`，超时 `taskkill /F /T /PID` 杀整棵进程树再收尾；树死句柄释放，EOF 立即达成
+- **验证**：安静挂住子进程（`python -c "time.sleep(600)"`）timeout=5 复现死锁 → 修复后 5.1s 返回超时错误且进程树零残留；正常命令/中文编码/退出码回归 3/3 通过（`tests/test_win_powershell_timeout.py`）
+
 ### 🐛 git-panel v2.0.1 — PySide6 `disconnect()` 死循环致「打开系统配置」整软件卡死
 - **现象**：点击 TabPanel 左下角 ⚙ → 整个应用无响应，Windows 画 Ghost 幽灵窗口（`对话 … - Drifox (未响应)`），`SendMessageTimeout(WM_NULL, 2000ms)` 无回应，只能强杀
 - **根因**：`plugins/git-panel/ui/config_card.py:_echo` 沿用了 PyQt5 语义的清连接写法 `while True: try: self._edit.textChanged.disconnect() / except TypeError: break`。**PySide6 下无连接时 `disconnect()` 返回 `False` 且只发 RuntimeWarning、不抛 `TypeError`** → `except` 分支永不触发 → 主线程死循环。该卡由主程序 `rebuild_plugin_cards` 在**主线程同步**构造，故一打开设置即冻死事件循环
