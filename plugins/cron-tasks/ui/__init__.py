@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""cron-tasks UI 组件入口 — 注册任务中心卡 + 输入区按钮（模式对齐 autoloop）"""
+"""cron-tasks UI 组件入口 — 注册任务中心卡（full 覆盖对话区，经侧边栏插件列表弹出）"""
 
 import sys
 from pathlib import Path
@@ -27,7 +27,7 @@ def register_ui(registry):
 
     from .cards import CronTasksCard
 
-    # 任务中心卡（full 覆盖对话区；hide_sidebar：经输入按钮/命令弹出）
+    # 任务中心卡（full 覆盖对话区；经左侧边栏插件列表 / /cron-tasks:tasks 命令弹出）
     registry.register_floating_card(
         plugin_name="cron-tasks",
         card_id="tasks",
@@ -35,20 +35,6 @@ def register_ui(registry):
         container="full",
         title="定时任务",
         default_visible=False,
-        metadata={"hide_sidebar": True},
-    )
-
-    # 输入区按钮（深色主题 clock_light.svg 白色线条；浅色主题 clock.svg 深色线条）
-    _dark_icon = _PLUGIN_ROOT / "icons" / "clock_light.svg"
-    _light_icon = _PLUGIN_ROOT / "icons" / "clock.svg"
-    registry.register_input_button(
-        plugin_name="cron-tasks",
-        button_id="cron-tasks",
-        icon_path=str(_dark_icon) if _dark_icon.exists() else "",
-        icon_light_path=str(_light_icon) if _light_icon.exists() else "",
-        tooltip="定时任务 — 可视化配置单次/间隔/Cron 定时执行",
-        on_click=_on_input_button_clicked,
-        position="before:memory",  # 插到「长期记忆」按钮左边
     )
 
     # 卡片实例化时绑定 controller（经 widget_class 包装不可行 → 用卡片 showEvent 内
@@ -74,15 +60,6 @@ def _patch_card_binding():
 
     ctrl = CronTasksController.takeover()
     ctrl.ensure_started()
-
-
-def _on_input_button_clicked(context):
-    """输入区按钮点击 — 切换任务中心卡显示"""
-    from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
-
-    UIPluginRegistry.get_instance().toggle_floating_card(
-        "tasks", main_widget=context.get("main_widget")
-    )
 
 
 def unload_ui(registry):
