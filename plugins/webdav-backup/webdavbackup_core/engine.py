@@ -6,14 +6,10 @@
 """
 from __future__ import annotations
 
-import io
-import json
-import os
 import shutil
 import tempfile
 import threading
 import time
-import zipfile
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
@@ -29,7 +25,6 @@ EXCLUDE_DIR_NAMES = {
 }
 EXCLUDE_SUFFIXES = {".lock", ".tmp", ".pyc", ".pyo", ".log"}
 MAX_FILE_SIZE = 200 * 1024 * 1024  # 坚果云免费版单文件上限附近，超过直接跳过
-MAX_EXTERNAL_FILES = 20000         # 外部路径收集总文件数上限，防误填大目录
 
 # 进程内互斥：调度器与手动/工具触发同时备份时只放一个进去
 _BACKUP_LOCK = threading.Lock()
@@ -80,69 +75,6 @@ def _collect_files(app_data: Path, include_dirs: set, include_extra: list) -> tu
             continue
         files.append(p)
     return files, skipped
-
-
-def _collect_external(paths: List[str]) -> tuple:
-    """收集数据目录之外的自定义备份路径。
-
-    返回 (externals, skipped)；externals = [(key, root_path, files)]，
-    key 为 zip 内 _external/<key>/ 前缀序号。沿用排除集/大小限制，
-    单文件上限 200MB，总文件数超限截断并记录。
-    """
-    externals: List[tuple] = []
-    skipped: List[str] = []
-    total = 0
-    for i, raw in enumerate(paths):
-        raw = (raw or "").strip().strip('"')
-        if not raw:
-            continue
-        try:
-            p = Path(os.path.expandvars(raw)).expanduser()
-            rp = p.resolve()
-        except OSError:
-            skipped.append(f"{raw}: 路径无法解析")
-            continue
-        if not rp.exists():
-            skipped.append(f"{raw}: 路径不存在，已跳过")
-            continue
-
-        if rp.is_file():
-            try:
-                if rp.stat().st_size > MAX_FILE_SIZE:
-                    skipped.append(f"{raw}: 超过 200MB 已跳过")
-                    continue
-                externals.append((str(i), rp.parent, [rp]))
-                total += 1
-            except OSError as e:
-                skipped.append(f"{raw}: {e}")
-            continue
-
-        files: List[Path] = []
-        for f in sorted(rp.rglob("*")):
-            if not f.is_file():
-                continue
-            parts = set(f.relative_to(rp).parts)
-            if parts & EXCLUDE_DIR_NAMES:
-                continue
-            if f.suffix.lower() in EXCLUDE_SUFFIXES:
-                continue
-            try:
-                if f.stat().st_size > MAX_FILE_SIZE:
-                    skipped.append(f"{raw}/{f.name}: 超过 200MB 已跳过")
-                    continue
-            except OSError as e:
-                skipped.append(f"{f.name}: {e}")
-                continue
-            files.append(f)
-        if not files:
-            skipped.append(f"{raw}: 目录为空或全部被排除")
-            continue
-        if total + len(files) > MAX_EXTERNAL_FILES:
-            skipped.append(f"{raw}: 文件数超出上限（累计 {MAX_EXTERNAL_FILES}），已整路径跳过")
-            continue
-        total += len(files)
-        externals.append((str(i), rp, files))
-    return externals, skipped
 
 
 def _make_client(cfg: Dict[str, Any]) -> WebDAVClient:
@@ -218,22 +150,13 @@ def run_backup() -> Dict[str, Any]:
     try:
         app_data = cfg_mod.get_app_data_root()
         files, skipped = _collect_files(app_data, c.get("include_dirs", set()), c.get("include_extra", []))
-        externals, ext_skipped = _collect_external(c.get("include_paths", []))
-        skipped = skipped + ext_skipped
-        if not files and not externals:
+        if not files:
             return {"ok": False, "message": f"未收集到可备份文件（数据目录: {app_data}）", "skipped": skipped}
 
-        # 打包条目：数据目录相对路径 + 外部路径（_external/<key>/…）+ 映射清单
         entries = [(f.relative_to(app_data).as_posix(), f) for f in files]
-        manifest = {"externals": [{"key": key, "path": str(root_path)} for key, root_path, _ in externals]}
-        for key, root_path, efiles in externals:
-            for f in efiles:
-                entries.append((f"_external/{key}/{f.relative_to(root_path).as_posix()}", f))
-        manifest_json = json.dumps(manifest, ensure_ascii=False) if externals else ""
-
         pwd = (c.get("encryption_password") or "").strip()
         encrypted = bool(pwd)
-        payload = crypto.make_zip(entries, skipped, manifest_json)
+        payload = crypto.make_zip(entries, skipped)
         if encrypted:
             payload = crypto.encrypt_bytes(payload, pwd)
         fname = _backup_filename(encrypted)
@@ -253,21 +176,10 @@ def run_backup() -> Dict[str, Any]:
             last_backup_size=size,
             last_error="",
         )
-        msg = f"备份完成：{fname}（{size / 1048576:.1f} MB，{len(files) + sum(len(e[2]) for e in externals)} 个文件，{dur:.1f}s）"
-        if externals:
-            paths_desc = "、".join(str(e[1]) for e in externals[:3]) + ("…" if len(externals) > 3 else "")
-            msg += f"；含外部路径 {len(externals)} 个：{paths_desc}"
+        msg = f"备份完成：{fname}（{size / 1048576:.1f} MB，{len(files)} 个文件，{dur:.1f}s）"
         if pruned:
             msg += f"，清理旧版 {len(pruned)} 份"
-        return {
-            "ok": True,
-            "message": msg,
-            "file": fname,
-            "size": size,
-            "count": len(files),
-            "externals": [str(e[1]) for e in externals],
-            "skipped": skipped,
-        }
+        return {"ok": True, "message": msg, "file": fname, "size": size, "count": len(files), "skipped": skipped}
     except crypto.CryptoUnavailableError as e:
         _update_state(last_backup_status="error", last_error=str(e))
         return {"ok": False, "message": str(e), "skipped": skipped}
@@ -285,35 +197,25 @@ def run_backup() -> Dict[str, Any]:
         _BACKUP_LOCK.release()
 
 
-def _write_finish_bat(pending_dir: Path, app_data: Path, externals_map: Dict[str, Path]) -> Path:
-    """生成一键完成脚本：按目标分组 robocopy（/MOVE），完成后自删。
-
-    pending_dir 内保持 zip 内相对结构；app_data 组排除 _external，
-    外部路径组按 key 逐组拷回原绝对路径。"""
+def _write_finish_bat(pending_dir: Path, app_data: Path) -> Path:
+    """生成一键完成脚本：robocopy 把暂存文件移入数据目录，完成后自删"""
     bat = Path(tempfile.gettempdir()) / f"finish_restore-{_now_str()}.bat"
-    rc = 'robocopy "{src}" "{dst}" /E /MOVE /NFL /NDL /NJH /NJS'
-    lines = [
-        "@echo off",
-        "chcp 65001 >nul",
-        "echo Applying remaining DriFox restore files...",
-        rc.format(src=pending_dir, dst=app_data.resolve()) + ' /XD _external',
-    ]
-    for key, target in externals_map.items():
-        sub = pending_dir / "_external" / key
-        if sub.exists():
-            lines.append(rc.format(src=sub, dst=target))
-    lines += [
-        "if errorlevel 8 (",
-        "  echo RESTORE FAILED - please check the paths above.",
-        "  pause",
-        "  exit /b 1",
-        ")",
-        f'rd /s /q "{pending_dir}" 2>nul',
-        "echo Done. You can start DriFox now.",
-        "pause",
-        'del "%~f0"',
-    ]
-    bat.write_text("\r\n".join(lines) + "\r\n", encoding="utf-8")
+    content = (
+        "@echo off\r\n"
+        "chcp 65001 >nul\r\n"
+        "echo Applying remaining DriFox restore files...\r\n"
+        f'robocopy "{pending_dir}" "{app_data.resolve()}" /E /MOVE /NFL /NDL /NJH /NJS\r\n'
+        "if errorlevel 8 (\r\n"
+        "  echo RESTORE FAILED - please check the paths above.\r\n"
+        "  pause\r\n"
+        "  exit /b 1\r\n"
+        ")\r\n"
+        f'rd /s /q "{pending_dir}" 2>nul\r\n'
+        "echo Done. You can start DriFox now.\r\n"
+        "pause\r\n"
+        'del "%~f0"\r\n'
+    )
+    bat.write_text(content, encoding="utf-8")
     return bat
 
 
@@ -354,43 +256,8 @@ def _download_backup(c: Dict[str, Any], name: str, encryption_password: str) -> 
     return blob, None
 
 
-def run_inspect(backup_name: str, encryption_password: str = "") -> Dict[str, Any]:
-    """查看备份包内容清单（数据目录文件数 + 外部路径构成），不落盘"""
-    name = (backup_name or "").strip().strip("/")
-    if not name or "/" in name or name.startswith("."):
-        return {"ok": False, "message": f"非法备份名: {backup_name!r}"}
-    c = cfg_mod.load_config()
-    if not cfg_mod.is_configured(c):
-        return {"ok": False, "message": "尚未配置 WebDAV"}
-    try:
-        data, err = _download_backup(c, name, encryption_password)
-        if err:
-            return err
-        lines = [f"{name} 内容："]
-        with zipfile.ZipFile(io.BytesIO(data)) as zf:
-            names = [n for n in zf.namelist() if not n.endswith("/")]
-            data_files = [n for n in names if not n.startswith("_external/")]
-            lines.append(f"- DriFox 数据目录：{len(data_files)} 个文件")
-            try:
-                raw = zf.read("_external/manifest.json")
-                externals = json.loads(raw).get("externals", [])
-                for e in externals:
-                    prefix = f"_external/{e['key']}/"
-                    n = len([x for x in names if x.startswith(prefix)])
-                    lines.append(f"- 外部路径 {e['path']}：{n} 个文件")
-            except KeyError:
-                lines.append("- 外部路径：无")
-        return {"ok": True, "message": "\n".join(lines)}
-    except crypto.DecryptionError as e:
-        return {"ok": False, "message": str(e)}
-    except WebDAVError as e:
-        return {"ok": False, "message": str(e)}
-    except Exception as e:
-        return {"ok": False, "message": f"查看失败: {e}"}
-
-
 def run_restore(backup_name: str, encryption_password: str = "") -> Dict[str, Any]:
-    """恢复指定备份包（数据目录 + 外部路径写回原位；覆盖前留回滚副本）"""
+    """恢复指定备份包到本地（覆盖前留回滚副本），完成后需重启 DriFox"""
     name = (backup_name or "").strip().strip("/")
     if not name or "/" in name or name.startswith("."):
         return {"ok": False, "message": f"非法备份名: {backup_name!r}"}
@@ -414,9 +281,7 @@ def run_restore(backup_name: str, encryption_password: str = "") -> Dict[str, An
             # 回滚副本放系统临时目录固定前缀下，不自动清理（路径在结果中给出，确认无误后自行删除）
             rollback_dir = Path(tempfile.gettempdir()) / f"webdav-rollback-{_now_str()}"
             rollback_dir.mkdir(parents=True, exist_ok=True)
-            applied, moved_count, pending, externals_map = _apply(
-                app_data, data, staging, rollback_dir, skipped
-            )
+            applied, moved_count, pending = _apply(app_data, data, staging, rollback_dir, skipped)
 
             finish_bat = None
             if pending:
@@ -426,18 +291,17 @@ def run_restore(backup_name: str, encryption_password: str = "") -> Dict[str, An
                     dest = pending_dir / rel
                     dest.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(staging / rel, dest)
-                finish_bat = _write_finish_bat(pending_dir, app_data, externals_map)
+                finish_bat = _write_finish_bat(pending_dir, app_data)
 
         _update_state(last_restore_at=datetime.now().isoformat(timespec="seconds"), last_restore_file=name)
-        ext_note = f"；外部路径 {len(externals_map)} 个已写回原位" if externals_map else ""
         if pending:
             msg = (
                 f"恢复部分完成：{name}\n"
-                f"已应用 {applied - len(pending)} 个文件{ext_note}；另有 {len(pending)} 个正被占用，已暂存待应用。\n"
+                f"已应用 {applied - len(pending)} 个文件；另有 {len(pending)} 个正被占用，已暂存待应用。\n"
                 f"请完全退出 DriFox 后，双击运行：{finish_bat}\n完成后再启动 DriFox。"
             )
         else:
-            msg = f"恢复完成：{name}（应用 {applied} 个文件{ext_note}）。请重启 DriFox 生效。"
+            msg = f"恢复完成：{name}（应用 {applied} 个文件）。请重启 DriFox 生效。"
         if skipped:
             msg += f" 跳过 {len(skipped)} 项。"
         return {
@@ -460,44 +324,22 @@ def run_restore(backup_name: str, encryption_password: str = "") -> Dict[str, An
 
 
 def _apply(app_data: Path, data: bytes, staging: Path, rollback_dir: Path, skipped: List[str]) -> tuple:
-    """解包到 staging → 按 manifest 分发：数据目录相对路径 + _external/<key>/ 外部路径
+    """解包到 staging → 数据目录相对路径覆盖应用
 
     可覆盖的直接覆盖（旧文件备份进 rollback_dir）；占用类失败（OSError）
     记入 pending（(rel, 目标绝对路径) 列表），由调用方暂存生成完成脚本。
-    返回 (applied 成功数, moved_count, pending, externals_map)。"""
+    返回 (applied 成功数, moved_count, pending)。"""
     applied_names = crypto.extract_zip(data, staging, skipped)
     if not applied_names:
         raise ValueError("备份包内没有可应用的文件")
 
-    externals_map: Dict[str, Path] = {}
-    manifest_rel = "_external/manifest.json"
-    if manifest_rel in applied_names:
-        try:
-            raw = json.loads((staging / manifest_rel).read_text(encoding="utf-8"))
-            for e in raw.get("externals", []):
-                externals_map[str(e["key"])] = Path(e["path"])
-        except Exception:
-            skipped.append("_external/manifest.json: 清单解析失败，外部路径部分按无映射跳过")
-
-    ext_prefix = "_external/"
     applied = 0
     moved: List[tuple] = []
     pending: List[tuple] = []
     try:
         for rel in applied_names:
-            if rel == manifest_rel:
-                continue
             src = staging / rel
-            if rel.startswith(ext_prefix):
-                rest = rel[len(ext_prefix):]
-                key, _, sub = rest.partition("/")
-                target_root = externals_map.get(key)
-                if target_root is None or not sub:
-                    skipped.append(f"{rel}: 无映射清单，跳过")
-                    continue
-                dst = target_root / sub
-            else:
-                dst = app_data / rel
+            dst = app_data / rel
             dst.parent.mkdir(parents=True, exist_ok=True)
             if dst.exists():
                 try:
@@ -514,7 +356,7 @@ def _apply(app_data: Path, data: bytes, staging: Path, rollback_dir: Path, skipp
                 # PermissionError(WinError 32/5) 与 WinError 1224(用户映射区域，
                 # SQLite mmap 打开的文件) 均为占用类失败 → 暂存待应用
                 pending.append((rel, dst))
-        return applied, len(moved), pending, externals_map
+        return applied, len(moved), pending
     except Exception:
         # 尽力回滚已覆盖文件
         for dst, rb in reversed(moved):

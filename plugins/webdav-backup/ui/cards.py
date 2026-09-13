@@ -23,7 +23,6 @@ from qfluentwidgets import (
     FluentIcon,
     IconWidget,
     LineEdit,
-    PlainTextEdit,
     PrimaryPushButton,
     PushButton,
     StrongBodyLabel,
@@ -424,9 +423,10 @@ class WebDavBackupCard(QFrame):
         self._scope_checks: dict = {}
         grid = QGridLayout()
         grid.setHorizontalSpacing(16)
-        grid.setVerticalSpacing(6)
+        grid.setVerticalSpacing(4)
         for i, (field, dirname) in enumerate(cfg_mod.INCLUDE_FIELDS.items()):
             cb = CheckBox(f"{cfg_mod.INCLUDE_LABELS[dirname]} ({dirname})")
+            cb.setMinimumHeight(28)  # 防容器高度不足时行被压扁重叠
             cb.toggled.connect(self._on_scope_changed)
             grid.addWidget(cb, i // 2, i % 2)
             self._scope_checks[field] = (cb, dirname)
@@ -442,23 +442,6 @@ class WebDavBackupCard(QFrame):
         self._scope_extra.editingFinished.connect(self._on_scope_changed)
         extra_row.addWidget(self._scope_extra, 1)
         lay.addLayout(extra_row)
-
-        # 外部绝对路径（数据目录之外的自定义备份目标）
-        ext_row = QHBoxLayout()
-        ext_label = CaptionLabel("外部路径")
-        ext_label.setStyleSheet(_caption_css())
-        ext_label.setToolTip("数据目录之外的本地文件/目录，每行一个绝对路径，随备份包上传并恢复到原位")
-        ext_row.addWidget(ext_label)
-        self._scope_paths = PlainTextEdit()
-        self._scope_paths.setPlaceholderText("每行一个绝对路径，如：D:\\work\\my-notes")
-        self._scope_paths.setFixedHeight(64)
-        self._scope_paths.textChanged.connect(self._on_paths_changed)
-        self._paths_timer = QTimer(self)
-        self._paths_timer.setSingleShot(True)
-        self._paths_timer.setInterval(600)
-        self._paths_timer.timeout.connect(self._save_paths)
-        ext_row.addWidget(self._scope_paths, 1)
-        lay.addLayout(ext_row)
 
         self._scope_hint_timer = QTimer(self)
         self._scope_hint_timer.setSingleShot(True)
@@ -481,9 +464,6 @@ class WebDavBackupCard(QFrame):
         self._scope_extra.blockSignals(True)
         self._scope_extra.setText(", ".join(cfg.get("include_extra", [])))
         self._scope_extra.blockSignals(False)
-        self._scope_paths.blockSignals(True)
-        self._scope_paths.setPlainText("\n".join(cfg.get("include_paths", [])))
-        self._scope_paths.blockSignals(False)
 
     def _on_scope_changed(self, *args):
         """勾选/额外项变更：合并写存储（只落范围键，不碰账号密码）"""
@@ -696,24 +676,6 @@ class WebDavBackupCard(QFrame):
             b.setEnabled(enabled)
         for row in self._rows:
             row.set_busy(not enabled)
-
-    def _on_paths_changed(self, *args):
-        """外部路径输入防抖 600ms 后保存"""
-        self._paths_timer.start()
-
-    def _save_paths(self):
-        try:
-            from webdavbackup_core.host_compat import get_config_store
-
-            get_config_store().set_values(
-                cfg_mod.PLUGIN_NAME, {"include_paths": self._scope_paths.toPlainText().strip()}
-            )
-            from datetime import datetime
-
-            self._scope_hint.setText(f"已保存 {datetime.now().strftime('%H:%M:%S')}")
-            self._scope_hint_timer.start(3000)
-        except Exception as e:
-            self._scope_hint.setText(f"保存失败: {e}")
 
     def _on_restart(self):
         """重启：优先主程序官方逻辑，主程序不可用时自包含拉起新进程"""
