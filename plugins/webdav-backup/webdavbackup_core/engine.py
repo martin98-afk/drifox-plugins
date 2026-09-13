@@ -6,12 +6,14 @@
 """
 from __future__ import annotations
 
+import json
+import os
 import shutil
 import tempfile
 import threading
 import time
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Dict, List
 
 from . import config as cfg_mod
@@ -25,6 +27,7 @@ EXCLUDE_DIR_NAMES = {
 }
 EXCLUDE_SUFFIXES = {".lock", ".tmp", ".pyc", ".pyo", ".log"}
 MAX_FILE_SIZE = 200 * 1024 * 1024  # 坚果云免费版单文件上限附近，超过直接跳过
+MAX_EXTERNAL_FILES = 20000         # 外部路径收集总文件数上限，防误填大目录
 
 # 进程内互斥：调度器与手动/工具触发同时备份时只放一个进去
 _BACKUP_LOCK = threading.Lock()
@@ -75,6 +78,69 @@ def _collect_files(app_data: Path, include_dirs: set, include_extra: list) -> tu
             continue
         files.append(p)
     return files, skipped
+
+
+def _collect_external(paths: List[str]) -> tuple:
+    """收集数据目录之外的自定义备份路径。
+
+    返回 (externals, skipped)；externals = [(key, root_path, files)]，
+    key 为 zip 内 _external/<key>/ 前缀序号。沿用排除集/大小限制，
+    单文件上限 200MB，总文件数超限截断并记录。
+    """
+    externals: List[tuple] = []
+    skipped: List[str] = []
+    total = 0
+    for i, raw in enumerate(paths):
+        raw = (raw or "").strip().strip('"')
+        if not raw:
+            continue
+        try:
+            p = Path(os.path.expandvars(raw)).expanduser()
+            rp = p.resolve()
+        except OSError:
+            skipped.append(f"{raw}: 路径无法解析")
+            continue
+        if not rp.exists():
+            skipped.append(f"{raw}: 路径不存在，已跳过")
+            continue
+
+        if rp.is_file():
+            try:
+                if rp.stat().st_size > MAX_FILE_SIZE:
+                    skipped.append(f"{raw}: 超过 200MB 已跳过")
+                    continue
+                externals.append((str(i), rp.parent, [rp]))
+                total += 1
+            except OSError as e:
+                skipped.append(f"{raw}: {e}")
+            continue
+
+        files: List[Path] = []
+        for f in sorted(rp.rglob("*")):
+            if not f.is_file():
+                continue
+            parts = set(f.relative_to(rp).parts)
+            if parts & EXCLUDE_DIR_NAMES:
+                continue
+            if f.suffix.lower() in EXCLUDE_SUFFIXES:
+                continue
+            try:
+                if f.stat().st_size > MAX_FILE_SIZE:
+                    skipped.append(f"{raw}/{f.name}: 超过 200MB 已跳过")
+                    continue
+            except OSError as e:
+                skipped.append(f"{f.name}: {e}")
+                continue
+            files.append(f)
+        if not files:
+            skipped.append(f"{raw}: 目录为空或全部被排除")
+            continue
+        if total + len(files) > MAX_EXTERNAL_FILES:
+            skipped.append(f"{raw}: 文件数超出上限（累计 {MAX_EXTERNAL_FILES}），已整路径跳过")
+            continue
+        total += len(files)
+        externals.append((str(i), rp, files))
+    return externals, skipped
 
 
 def _make_client(cfg: Dict[str, Any]) -> WebDAVClient:
@@ -150,12 +216,22 @@ def run_backup() -> Dict[str, Any]:
     try:
         app_data = cfg_mod.get_app_data_root()
         files, skipped = _collect_files(app_data, c.get("include_dirs", set()), c.get("include_extra", []))
-        if not files:
+        externals, ext_skipped = _collect_external(c.get("include_paths", []))
+        skipped = skipped + ext_skipped
+        if not files and not externals:
             return {"ok": False, "message": f"未收集到可备份文件（数据目录: {app_data}）", "skipped": skipped}
+
+        # 打包条目：数据目录相对路径 + 外部路径（_external/<key>/…）+ 映射清单
+        entries = [(f.relative_to(app_data).as_posix(), f) for f in files]
+        manifest = {"externals": [{"key": key, "path": str(root_path)} for key, root_path, _ in externals]}
+        for key, root_path, efiles in externals:
+            for f in efiles:
+                entries.append((f"_external/{key}/{f.relative_to(root_path).as_posix()}", f))
+        manifest_json = json.dumps(manifest, ensure_ascii=False) if externals else ""
 
         pwd = (c.get("encryption_password") or "").strip()
         encrypted = bool(pwd)
-        payload = crypto.make_zip(app_data, files, skipped)
+        payload = crypto.make_zip(entries, skipped, manifest_json)
         if encrypted:
             payload = crypto.encrypt_bytes(payload, pwd)
         fname = _backup_filename(encrypted)
@@ -175,10 +251,21 @@ def run_backup() -> Dict[str, Any]:
             last_backup_size=size,
             last_error="",
         )
-        msg = f"备份完成：{fname}（{size / 1048576:.1f} MB，{len(files)} 个文件，{dur:.1f}s）"
+        msg = f"备份完成：{fname}（{size / 1048576:.1f} MB，{len(files) + sum(len(e[2]) for e in externals)} 个文件，{dur:.1f}s）"
+        if externals:
+            paths_desc = "、".join(str(e[1]) for e in externals[:3]) + ("…" if len(externals) > 3 else "")
+            msg += f"；含外部路径 {len(externals)} 个：{paths_desc}"
         if pruned:
             msg += f"，清理旧版 {len(pruned)} 份"
-        return {"ok": True, "message": msg, "file": fname, "size": size, "count": len(files), "skipped": skipped}
+        return {
+            "ok": True,
+            "message": msg,
+            "file": fname,
+            "size": size,
+            "count": len(files),
+            "externals": [str(e[1]) for e in externals],
+            "skipped": skipped,
+        }
     except crypto.CryptoUnavailableError as e:
         _update_state(last_backup_status="error", last_error=str(e))
         return {"ok": False, "message": str(e), "skipped": skipped}

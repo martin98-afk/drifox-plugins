@@ -9,12 +9,12 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from app.tools.result import ToolResult
-
 # 插件根加入 sys.path（tools 加载器不保证 UI 侧已注入；幂等）
 _PLUGIN_ROOT = Path(__file__).parent.parent
 if str(_PLUGIN_ROOT) not in sys.path:
     sys.path.insert(0, str(_PLUGIN_ROOT))
+
+from webdavbackup_core.host_compat import make_tool_result as ToolResult  # noqa: E402  自包含收口：主程序 ToolResult 缺失时降级为 str
 
 _ACTIONS = ("test", "list", "backup")
 
