@@ -333,7 +333,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 52,
+            "downloads": 54,
             "keywords": [
                 "browser",
                 "web",
@@ -3671,7 +3671,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 12,
+            "downloads": 14,
             "keywords": [
                 "voice",
                 "dictation",
@@ -3871,7 +3871,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 8,
+            "downloads": 10,
             "keywords": [
                 "webdav",
                 "backup",
