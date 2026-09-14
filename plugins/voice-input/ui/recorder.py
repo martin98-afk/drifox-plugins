@@ -8,6 +8,7 @@ start() 开始录音 → stop_and_save(path) 收尾保存 → close() 释放设�
 
 from __future__ import annotations
 
+import array
 import ctypes
 import os
 import wave
@@ -57,6 +58,27 @@ def _wav_duration(path: str) -> float:
         return -1.0
 
 
+def _wav_level(path: str) -> tuple[float, float]:
+    """返回 (rms, peak)，16bit PCM 归一化 0~1。读取失败/非 16bit 返回 (-1, -1)。
+
+    判读：peak<0.01≈数字静音（录到没声音）；peak>0.1 正常说话音量。
+    """
+    try:
+        with wave.open(path, "rb") as w:
+            if w.getsampwidth() != 2:
+                return -1.0, -1.0
+            frames = w.readframes(w.getnframes())
+    except Exception:  # noqa: BLE001 — 诊断日志失败不影响主流程
+        return -1.0, -1.0
+    samples = array.array("h")  # WAV 小端，x86/ARM Windows 平台序一致
+    samples.frombytes(frames)
+    if not samples:
+        return 0.0, 0.0
+    peak = max(abs(s) for s in samples) / 32768.0
+    rms = (sum(s * s for s in samples) / len(samples)) ** 0.5 / 32768.0
+    return rms, peak
+
+
 class VoiceRecorder:
     """单实例录音器。同一时刻只允许一个会话（由上层状态机保证）。"""
 
@@ -92,9 +114,11 @@ class VoiceRecorder:
         _mci(f'save {self._alias} "{wav_path}"')
         dur = _wav_duration(wav_path)
         size = os.path.getsize(wav_path) if os.path.exists(wav_path) else -1
+        rms, peak = _wav_level(wav_path)
         if dur >= 0:
             logger.info(
-                f"[voice-input] 录音已保存: {wav_path}（{dur:.1f} 秒, {size} 字节）"
+                f"[voice-input] 录音已保存: {wav_path}（{dur:.1f} 秒, {size} 字节, "
+                f"电平 rms={rms:.4f}/peak={peak:.4f}）"
             )
         else:
             logger.info(f"[voice-input] 录音已保存: {wav_path}（时长读取失败）")
