@@ -87,10 +87,16 @@ def transcribe_wav(url: str, model: str, api_key: str, wav_path: str) -> str:
             base.get("status_msg")
             or err_msg
             or payload.get("message")
-            or f"状态码 {base.get('status_code', '未知')}"
+            or ""
         )
         logger.warning(f"[voice-input] 未识别到文本，原始响应: {str(payload)[:300]}")
-        raise RuntimeError(f"服务未返回文本：{msg}")
+        if msg:
+            raise RuntimeError(f"服务未返回文本：{msg}")
+        # 无任何错误字段：服务端正常处理但识别结果为空（录音太短/静音/过载丢音频）
+        usage = payload.get("usage") or {}
+        seconds = usage.get("seconds") if isinstance(usage, dict) else None
+        tail = f"（{seconds} 秒音频）" if seconds else ""
+        raise RuntimeError(f"未识别到语音{tail}，请对准麦克风说话后稍停再停止")
     logger.info(f"[voice-input] 云端识别完成: {len(text)} 字")
     return text
 
