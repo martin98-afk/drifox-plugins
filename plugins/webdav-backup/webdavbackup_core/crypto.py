@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import io
 import os
+import time
 import zipfile
 from pathlib import Path
 from typing import List
@@ -81,15 +82,29 @@ def decrypt_bytes(blob: bytes, password: str) -> bytes:
 # ============================================================
 
 
-def make_zip(entries: list, skipped: List[str]) -> bytes:
-    """把 (arcname, 绝对路径) 列表打进 zip，返回字节流"""
+def make_zip(entries: list, skipped: List[str], retries: int = 3) -> bytes:
+    """把 (arcname, 绝对路径) 列表打进 zip，返回字节流
+
+    单文件读取失败（如 SQLite 运行中被锁）重试若干次后记入 skipped，不中断整体打包。
+    """
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True) as zf:
         for arcname, f in entries:
-            try:
-                zf.write(f, arcname=arcname)
-            except OSError as e:
-                skipped.append(f"{Path(f).name}: {e}")
+            data = None
+            last_err: OSError | None = None
+            for attempt in range(retries):
+                try:
+                    data = Path(f).read_bytes()
+                    break
+                except OSError as e:
+                    last_err = e
+                    if attempt < retries - 1:
+                        time.sleep(0.5 * (attempt + 1))
+            if data is None:
+                skipped.append(f"{Path(f).name}: {last_err}")
+                continue
+            zinfo = zipfile.ZipInfo.from_file(f, arcname)
+            zf.writestr(zinfo, data)
     return buf.getvalue()
 
 

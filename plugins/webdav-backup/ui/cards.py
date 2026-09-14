@@ -509,6 +509,10 @@ class WebDavBackupCard(QFrame):
                     status = state.get("last_backup_status", "")
                     mark = "成功" if status == "success" else "失败"
                     parts.append(f"上次备份 {mark} {_format_time(str(last_at))}")
+                warn = str(state.get("last_backup_warning") or "")
+                if warn:
+                    head = warn[:60] + "…" if len(warn) > 60 else warn
+                    parts.append(f"⚠ {head}")
                 self._summary_label.setText(" · ".join(parts))
         except Exception as e:
             self._subtitle_label.setText(f"读取配置失败: {e}")

@@ -81,6 +81,62 @@ def _make_client(cfg: Dict[str, Any]) -> WebDAVClient:
     return WebDAVClient(cfg["server_url"], cfg["username"], cfg["password"])
 
 
+def _checkpoint_sqlite(app_data: Path) -> List[str]:
+    """备份前对数据目录顶层 *.db 做 WAL checkpoint（合并 -wal 进主库）
+
+    尽力而为：库被主程序持有写锁时失败，仅记 note，不阻断备份。
+    """
+    import sqlite3
+
+    notes: List[str] = []
+    for db in app_data.glob("*.db"):
+        try:
+            conn = sqlite3.connect(str(db), timeout=1)
+            try:
+                conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+            finally:
+                conn.close()
+        except Exception as e:
+            notes.append(f"{db.name}: WAL checkpoint 失败({e})")
+    return notes
+
+
+def _sqlite_snapshots(app_data: Path, files: List[Path], tmp_dir: Path) -> tuple:
+    """对数据目录顶层的 *.db 用 SQLite backup API 生成一致性快照，替换入包来源
+
+    返回 (payload_files, notes)：payload_files 与 files 一一对应；快照成功的条目指向
+    tmp_dir 下的快照文件（含 -wal 中已提交数据，绕开文件锁），失败条目保留原路径。
+    """
+    import sqlite3
+
+    notes: List[str] = []
+    replaced: Dict[int, Path] = {}
+    for idx, p in enumerate(files):
+        if p.parent != app_data or p.suffix.lower() != ".db":
+            continue
+        snap = tmp_dir / f"{p.name}.snapshot"
+        try:
+            src = sqlite3.connect(f"file:{p.resolve().as_posix()}?mode=ro", uri=True, timeout=1)
+            try:
+                dst = sqlite3.connect(str(snap))
+                try:
+                    src.backup(dst)
+                finally:
+                    dst.close()
+            finally:
+                src.close()
+            replaced[idx] = snap
+            notes.append(f"{p.name}: 已以 SQLite 快照入包")
+        except Exception as e:
+            notes.append(f"{p.name}: SQLite 快照失败，回退直读({e})")
+    if not replaced:
+        return files, notes
+    payload_files = list(files)
+    for idx, snap in replaced.items():
+        payload_files[idx] = snap
+    return payload_files, notes
+
+
 def _remote_dir(cfg: Dict[str, Any]) -> str:
     return (cfg.get("remote_dir") or "drifox-backup").strip("/")
 
@@ -147,13 +203,20 @@ def run_backup() -> Dict[str, Any]:
         return {"ok": False, "message": "已有备份任务进行中，请稍后再试"}
     t0 = time.monotonic()
     skipped: List[str] = []
+    notes: List[str] = []
+    tmp_dir: Path | None = None
     try:
         app_data = cfg_mod.get_app_data_root()
+        notes += _checkpoint_sqlite(app_data)
         files, skipped = _collect_files(app_data, c.get("include_dirs", set()), c.get("include_extra", []))
         if not files:
             return {"ok": False, "message": f"未收集到可备份文件（数据目录: {app_data}）", "skipped": skipped}
 
-        entries = [(f.relative_to(app_data).as_posix(), f) for f in files]
+        arcnames = [f.relative_to(app_data).as_posix() for f in files]
+        tmp_dir = Path(tempfile.mkdtemp(prefix="webdav-backup-"))
+        payload_files, snap_notes = _sqlite_snapshots(app_data, files, tmp_dir)
+        notes += snap_notes
+        entries = list(zip(arcnames, payload_files))
         pwd = (c.get("encryption_password") or "").strip()
         encrypted = bool(pwd)
         payload = crypto.make_zip(entries, skipped)
@@ -175,25 +238,32 @@ def run_backup() -> Dict[str, Any]:
             last_backup_file=fname,
             last_backup_size=size,
             last_error="",
+            last_backup_warning="; ".join(skipped),
         )
         msg = f"备份完成：{fname}（{size / 1048576:.1f} MB，{len(files)} 个文件，{dur:.1f}s）"
         if pruned:
             msg += f"，清理旧版 {len(pruned)} 份"
+        if notes:
+            msg += "；" + "；".join(notes)
+        if skipped:
+            msg += f"；警告：{len(skipped)} 个文件未入包（" + "；".join(skipped[:3]) + "）"
         return {"ok": True, "message": msg, "file": fname, "size": size, "count": len(files), "skipped": skipped}
     except crypto.CryptoUnavailableError as e:
-        _update_state(last_backup_status="error", last_error=str(e))
+        _update_state(last_backup_status="error", last_error=str(e), last_backup_warning="")
         return {"ok": False, "message": str(e), "skipped": skipped}
     except WebDAVError as e:
         msg = str(e)
         if e.status in (401, 403):
             msg = "认证失败(401/403)：坚果云请确认使用「应用密码」而非登录密码"
-        _update_state(last_backup_status="error", last_error=msg)
+        _update_state(last_backup_status="error", last_error=msg, last_backup_warning="")
         return {"ok": False, "message": msg, "skipped": skipped}
     except Exception as e:  # 顶层屏障
         msg = f"备份失败: {e}"
-        _update_state(last_backup_status="error", last_error=msg)
+        _update_state(last_backup_status="error", last_error=msg, last_backup_warning="")
         return {"ok": False, "message": msg, "skipped": skipped}
     finally:
+        if tmp_dir is not None:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
         _BACKUP_LOCK.release()
 
 
