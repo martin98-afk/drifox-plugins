@@ -9,6 +9,8 @@ start() 开始录音 → stop_and_save(path) 收尾保存 → close() 释放设�
 from __future__ import annotations
 
 import ctypes
+import os
+import wave
 from ctypes import wintypes
 
 from loguru import logger
@@ -45,6 +47,16 @@ def _mci(command: str) -> None:
         )
 
 
+def _wav_duration(path: str) -> float:
+    """读 WAV 头算实际时长（秒）。读取失败返回 -1，不阻断保存流程。"""
+    try:
+        with wave.open(path, "rb") as w:
+            rate = w.getframerate() or 1
+            return w.getnframes() / float(rate)
+    except Exception:  # noqa: BLE001 — 诊断日志失败不影响主流程
+        return -1.0
+
+
 class VoiceRecorder:
     """单实例录音器。同一时刻只允许一个会话（由上层状态机保证）。"""
 
@@ -78,7 +90,14 @@ class VoiceRecorder:
             _mci(f"stop {self._alias}")
             self._recording = False
         _mci(f'save {self._alias} "{wav_path}"')
-        logger.info(f"[voice-input] 录音已保存: {wav_path}")
+        dur = _wav_duration(wav_path)
+        size = os.path.getsize(wav_path) if os.path.exists(wav_path) else -1
+        if dur >= 0:
+            logger.info(
+                f"[voice-input] 录音已保存: {wav_path}（{dur:.1f} 秒, {size} 字节）"
+            )
+        else:
+            logger.info(f"[voice-input] 录音已保存: {wav_path}（时长读取失败）")
         self.close()
 
     def close(self) -> None:
