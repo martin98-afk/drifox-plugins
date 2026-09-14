@@ -89,6 +89,7 @@ def transcribe_wav(url: str, model: str, api_key: str, wav_path: str) -> str:
             or payload.get("message")
             or f"状态码 {base.get('status_code', '未知')}"
         )
+        logger.warning(f"[voice-input] 未识别到文本，原始响应: {str(payload)[:300]}")
         raise RuntimeError(f"服务未返回文本：{msg}")
     logger.info(f"[voice-input] 云端识别完成: {len(text)} 字")
     return text
