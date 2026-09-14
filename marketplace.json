@@ -333,7 +333,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 50,
+            "downloads": 52,
             "keywords": [
                 "browser",
                 "web",
@@ -365,7 +365,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 24,
+            "downloads": 25,
             "keywords": [
                 "calendar",
                 "date",
@@ -688,7 +688,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 23,
+            "downloads": 24,
             "keywords": [
                 "welcome",
                 "stats",
@@ -792,7 +792,7 @@
                 "tools": true,
                 "hook_policies": true
             },
-            "downloads": 37,
+            "downloads": 39,
             "keywords": [
                 "cron",
                 "schedule",
@@ -1388,7 +1388,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 30,
+            "downloads": 32,
             "platforms": [
                 "windows",
                 "linux",
@@ -1428,7 +1428,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -1579,7 +1579,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 45,
+            "downloads": 47,
             "keywords": [
                 "git",
                 "source-control",
@@ -2641,7 +2641,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 27,
+            "downloads": 28,
             "keywords": [
                 "dashboard",
                 "stats",
@@ -2702,7 +2702,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 41,
+            "downloads": 42,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -2783,7 +2783,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 19,
+            "downloads": 20,
             "keywords": [
                 "screenshot",
                 "clipboard",
@@ -3909,7 +3909,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 27,
+            "downloads": 28,
             "keywords": [
                 "powershell",
                 "windows",
