@@ -75,10 +75,17 @@ def transcribe_wav(url: str, model: str, api_key: str, wav_path: str) -> str:
 
     text = str(payload.get("text") or "").strip()
     if not text:
-        # 无文本：各平台错误字段不同，逐个翻
+        # 无文本：各平台错误字段不同，逐个翻。
+        # MiniMax 风格 base_resp / OpenAI 兼容风格 error / 通用 message
         base = payload.get("base_resp") or {}
+        err = payload.get("error")
+        if isinstance(err, dict):
+            err_msg = str(err.get("message") or err.get("code") or "")
+        else:
+            err_msg = str(err or "")
         msg = (
             base.get("status_msg")
+            or err_msg
             or payload.get("message")
             or f"状态码 {base.get('status_code', '未知')}"
         )
