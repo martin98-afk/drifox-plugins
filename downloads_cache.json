@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1789343203.1487856,
+  "fetched_at": 1789352606.8068626,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -24,7 +24,7 @@
     "context-stats": 23,
     "context-usage-stats": 5,
     "context7": 4,
-    "cron-tasks": 36,
+    "cron-tasks": 37,
     "desktop-automation": 16,
     "doc-coauthoring": 1,
     "dsh-presets": 1,
@@ -108,7 +108,7 @@
     "twin-chat": 9,
     "ui-motion-skills": 4,
     "voice-clone": 1,
-    "voice-input": 7,
+    "voice-input": 8,
     "voice-reply": 6,
     "weather-query": 0,
     "web-artifacts-builder": 2,
