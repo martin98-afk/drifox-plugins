@@ -333,7 +333,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 47,
+            "downloads": 50,
             "keywords": [
                 "browser",
                 "web",
@@ -1231,7 +1231,7 @@
                 "commands": true,
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "frontend",
                 "a11y",
@@ -2189,7 +2189,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "theme",
                 "dark",
@@ -2468,7 +2468,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 13,
+            "downloads": 14,
             "keywords": [
                 "openhanako",
                 "hana",
@@ -2702,7 +2702,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 40,
+            "downloads": 41,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -2853,7 +2853,7 @@
                 "commands": true,
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "react",
                 "performance",
@@ -3671,7 +3671,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 8,
+            "downloads": 12,
             "keywords": [
                 "voice",
                 "dictation",
@@ -3768,7 +3768,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "react",
                 "tailwind",
@@ -3802,7 +3802,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "frontend",
                 "html",
@@ -3871,7 +3871,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 4,
+            "downloads": 8,
             "keywords": [
                 "webdav",
                 "backup",
