@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1789434272.655702,
+  "fetched_at": 1789453061.2890399,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -87,7 +87,7 @@
     "rdr2": 5,
     "react-pro": 2,
     "security-guidance": 2,
-    "self-evolver": 16,
+    "self-evolver": 17,
     "seo-audit": 1,
     "session-tree": 3,
     "skill-creator": 2,
@@ -116,7 +116,7 @@
     "webapp-testing": 2,
     "webdav-backup": 10,
     "win-powershell": 28,
-    "workbuddy": 7,
+    "workbuddy": 8,
     "workflow": 3
   }
 }
