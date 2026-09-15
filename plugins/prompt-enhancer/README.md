@@ -53,3 +53,18 @@ prompt-enhancer/
 ├── icon_dark.svg        # 暗色主题图标
 └── README.md
 ```
+
+## 密钥获取（重要）
+插件需要「切到指定服务商跑一次 LLM 调用」时，**必须**经宿主公开服务取配置：
+```python
+cfg = ctx["services"]["get_provider_config"]("MiniMax", "MiniMax-M2.7")
+# → {"API_KEY": "sk-…已解密明文", "API_URL": "…", "模型名称": …}
+```
+**不要**自行 `json.load(~/.drifox/app.config)` 取 `LLM.SavedProviders[*].API_KEY`：
+主程序 `SecretMode` 非 `none` 时，该字段是密文（`password` 模式 `enc:v2:…`）
+或空串（`keyring` 模式密钥已入系统凭证库），拿去发请求会得到
+`401 log in fail: Please carry the API secret key`。只有主程序内存态持有明文。
+
+磁盘文件仍可读**非密钥字段**（`provider_name` / `模型列表` 等），用于渲染
+「服务商:模型名」下拉选项；密钥字段一律走服务。旧版主程序无该服务时，
+回退遍历 `main_widget._valid_configs`（同为内存态，同样不碰磁盘）。

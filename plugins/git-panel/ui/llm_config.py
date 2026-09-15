@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """git-panel LLM 配置辅助 — 提交描述生成的模型解析与调用材料
 
-复用主程序模型配置（与 prompt-enhancer 同约定，用户已确认接受复用私有状态）：
-- app.config 的 LLM.SavedProviders 扫描「服务商:模型名」选项
+复用主程序模型配置（与 prompt-enhancer 同约定）：
+- 明文 API_KEY 经宿主 services["get_provider_config"] 获取（内存态已解锁）；
+  磁盘 app.config 只用于读非密钥字段（渲染「服务商:模型名」下拉选项），
+  密钥模式下其 API_KEY 是密文/空串，不可用于请求。
 - PluginConfigStore 读取 commit_prompt / commit_model 配置
-- _get_llm_config：override 优先，回退调用方当前会话模型
+- get_llm_config：override 优先，回退调用方当前会话模型
 """
 
 import json
@@ -41,7 +43,12 @@ def _resolve_system_config_path() -> Optional[str]:
 
 
 def _load_system_config() -> Optional[Dict[str, Any]]:
-    """读取并缓存主程序 app.config（按 mtime 失效）。"""
+    """读取并缓存主程序 app.config（按 mtime 失效）。
+
+    ⚠️ 仅供读取**非密钥字段**（provider_name / 模型列表 等用于渲染下拉选项）。
+    密钥模式下磁盘 API_KEY 是密文/空串，取 key 走宿主
+    services["get_provider_config"]（见 get_llm_config）。
+    """
     cfg_path = _resolve_system_config_path()
     if not cfg_path:
         return None
@@ -105,30 +112,69 @@ def parse_model_value(value: str) -> Optional[Tuple[str, str]]:
     return None
 
 
-def _get_provider_config_by_name(provider_name: str) -> Optional[Dict[str, Any]]:
-    data = _load_system_config()
-    if data is None:
-        return None
-    saved = ((data.get("LLM") or {}).get("SavedProviders") or {})
-    for _cid, p in saved.items():
-        if isinstance(p, dict) and (p.get("provider_name") or p.get("name") or "") == provider_name:
-            return p
-    return None
+def _get_provider_config_from_memory(
+    main_widget, provider: str = "", model: str = ""
+) -> Optional[Dict[str, Any]]:
+    """从宿主内存态取服务商配置（含已解密明文 API_KEY）。
 
-
-def get_llm_config(main_widget, override_provider: str = None, override_model: str = None) -> Optional[Dict[str, Any]]:
-    """取本次生成用的模型配置；override 优先，回退调用方当前会话模型；无 → None"""
-    if override_provider and override_model:
-        provider_cfg = _get_provider_config_by_name(override_provider)
-        if provider_cfg:
-            merged = dict(provider_cfg)
-            merged["模型名称"] = override_model
-            return merged
+    兜底路径：宿主未提供 services["get_provider_config"]（旧版主程序）时使用。
+    严禁读 app.config 文件——密钥模式下磁盘 API_KEY 是密文（enc:v2:…）或空串。
+    """
     valid = getattr(main_widget, "_valid_configs", None)
-    if not isinstance(valid, dict):
+    if not isinstance(valid, dict) or not valid:
         return None
-    name = getattr(main_widget, "_current_provider_name", None) or "系统默认配置"
-    return valid.get(name)
+    if provider:
+        if provider in valid:
+            return dict(valid[provider])
+        for _cid, info in valid.items():
+            if not isinstance(info, dict):
+                continue
+            if provider in (info.get("display_name"), info.get("provider_name"), info.get("name")):
+                return dict(info)
+        return None
+    name = getattr(main_widget, "_current_provider_name", None) or ""
+    cfg = valid.get(name)
+    return dict(cfg) if isinstance(cfg, dict) else None
+
+
+def get_llm_config(
+    main_widget,
+    override_provider: str = None,
+    override_model: str = None,
+    services: Dict[str, Any] = None,
+) -> Optional[Dict[str, Any]]:
+    """取本次生成用的模型配置；override 优先，回退调用方当前会话模型；无 → None。
+
+    取配置的唯一正确通道是宿主：services["get_provider_config"]（主程序公开服务，
+    读内存态已解锁明文并叠加模型默认参数），旧版主程序则回退遍历
+    main_widget._valid_configs。**绝不 json.load(app.config)**：密钥模式下磁盘
+    API_KEY 是密文或空串，拿它发请求必然 401。
+    """
+    provider = override_provider or ""
+    model = override_model or ""
+
+    if isinstance(services, dict):
+        get_cfg = services.get("get_provider_config")
+        if callable(get_cfg):
+            try:
+                cfg = get_cfg(provider, model)
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"[git-panel] get_provider_config 调用失败: {e}")
+                cfg = None
+            # 判据是「配置非空」：免鉴权服务商 API_KEY 本为空，
+            # build_openai_client 会剥掉 Authorization 头
+            if isinstance(cfg, dict) and cfg:
+                return cfg
+            if provider:
+                # 显式指名的服务商失效 → 不静默串到别的服务商
+                return None
+
+    cfg = _get_provider_config_from_memory(main_widget, provider, model)
+    if not isinstance(cfg, dict):
+        return None
+    if model:
+        cfg["模型名称"] = model
+    return cfg
 
 
 def resolve_model(model_raw: str, main_widget) -> Optional[Tuple[str, str]]:

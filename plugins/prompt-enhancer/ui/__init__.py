@@ -17,10 +17,9 @@
 - 一次性对话范式复用 app.utils.http_client.build_openai_client（参考 topic_summary.py）；
 - 后台 QRunnable + 信号桥接，结果在主线程注回输入框，避免 UI 卡死。
 
-模型配置来自 main_widget._valid_configs（私有状态，非公开 API），用户已确认接受复用。
+模型配置来自宿主 services["get_provider_config"]（主程序读内存态已解锁明文，
 「提示词增强模型」配置项为空时沿用调用方当前 provider/model，否则按
-「ProviderName:ModelName」格式从主程序 LLM.SavedProviders 解析（与主程序
-标题生成/子智能体模型选择器同格式）。
+「ProviderName:ModelName」格式解析（与主程序标题生成/子智能体模型选择器同格式）。
 """
 
 import json
@@ -98,7 +97,13 @@ _SYSTEM_CONFIG_CACHE: Dict[str, Any] = {"path": None, "mtime": 0.0, "data": None
 
 
 def _load_system_config() -> Optional[Dict[str, Any]]:
-    """读取并缓存主程序 app.config（按文件 mtime 失效，避免热重载期间读到陈旧快照）。"""
+    """读取并缓存主程序 app.config（按文件 mtime 失效，避免热重载期间读到陈旧快照）。
+
+    ⚠️ 仅供读取**非密钥字段**（provider_name / 模型列表 等用于渲染下拉选项）。
+    严禁用它取 API_KEY：密钥模式下磁盘该字段是密文（password 模式 enc:v2:…）
+    或空串（keyring 模式），拿它发请求必然 401。要 key 走宿主
+    services["get_provider_config"]（见 _get_llm_config）。
+    """
     cfg_path = _resolve_system_config_path()
     if not cfg_path:
         return None
@@ -182,23 +187,6 @@ def _parse_enhance_model(value: str) -> Optional[Tuple[str, str]]:
     for display, _v in _parse_provider_options():
         if display == f"{provider}:{model}":
             return provider, model
-    return None
-
-
-def _get_provider_config_by_name(provider_name: str) -> Optional[Dict[str, Any]]:
-    """按服务商名取 SavedProviders 中的完整配置（API_KEY / API_URL / 模型名称…）。
-
-    若同名前缀冲突（理论上极少），取第一条匹配。
-    """
-    data = _load_system_config()
-    if data is None:
-        return None
-    saved = ((data.get("LLM") or {}).get("SavedProviders") or {})
-    for _cid, p in saved.items():
-        if not isinstance(p, dict):
-            continue
-        if (p.get("provider_name") or p.get("name") or "") == provider_name:
-            return p
     return None
 
 
@@ -471,33 +459,79 @@ class _EnhanceConfigCard(_ConfigCardBase):
         self._echo()
 
 
+def _get_provider_config_from_memory(
+    main_widget, provider: str = "", model: str = ""
+) -> Optional[Dict[str, Any]]:
+    """从宿主**内存态**取服务商配置（含已解密明文 API_KEY）。
+
+    兜底路径：宿主未提供 services["get_provider_config"]（旧版主程序）时使用。
+    严禁读 app.config 文件——密钥模式下磁盘 API_KEY 是密文（enc:v2:…）或空串，
+    拿它发请求必然 401。
+    """
+    valid = getattr(main_widget, "_valid_configs", None)
+    if not isinstance(valid, dict) or not valid:
+        return None
+    if provider:
+        # 按 config_id / display_name / provider_name 匹配（与主程序五级解析同序）
+        if provider in valid:
+            return dict(valid[provider])
+        for _cid, info in valid.items():
+            if not isinstance(info, dict):
+                continue
+            if provider in (info.get("display_name"), info.get("provider_name"), info.get("name")):
+                return dict(info)
+        return None
+    name = getattr(main_widget, "_current_provider_name", None) or ""
+    cfg = valid.get(name)
+    return dict(cfg) if isinstance(cfg, dict) else None
+
+
 def _get_llm_config(
     main_widget,
     override_provider: Optional[str] = None,
     override_model: Optional[str] = None,
+    services: Optional[Dict[str, Any]] = None,
 ) -> Optional[Dict[str, Any]]:
     """取执行本次提示词增强的模型配置（API_KEY / API_URL / 模型名称）。
 
-    override_provider/override_model 均提供时，优先使用主程序 SavedProviders 中
-    对应服务商的配置（API_KEY/API_URL 来自服务商，「模型名称」使用 override_model）；
-    否则沿用主程序当前会话模型配置（私有状态 _valid_configs，非公开 API；用户已确认接受）。
+    取配置的**唯一正确通道**是宿主：
+    1. services["get_provider_config"]（主程序公开服务，读内存态已解锁明文，
+       并叠加模型默认参数，与主程序发起请求的配置同构）；
+    2. 兜底遍历 main_widget._valid_configs（同为内存态，旧版主程序无服务时用）。
 
-    返回 None 表示无可用配置（需提示用户先配置模型）。
+    绝不 json.load(app.config)：密钥模式下磁盘 API_KEY 是密文或空串。
+
+    override_provider/override_model 均提供时优先用该服务商；否则沿用调用方
+    当前 provider/model。返回 None 表示无可用配置（需提示用户先配置模型）。
     """
-    if override_provider and override_model:
-        provider_cfg = _get_provider_config_by_name(override_provider)
-        if provider_cfg:
-            merged = dict(provider_cfg)  # 拷贝避免改主配置
-            merged["模型名称"] = override_model
-            # 若 override_model 在该 provider 的「模型列表」里不存在，保持 override_model（自定义模型名兜底）
-            return merged
-        # 服务商已被用户从主配置删除 → 兜底用调用方当前模型，不报错（_echo 时已清空）
+    provider = override_provider or ""
+    model = override_model or ""
 
-    valid = getattr(main_widget, "_valid_configs", None)
-    if not isinstance(valid, dict):
+    # 1) 宿主公开服务（首选）
+    if isinstance(services, dict):
+        get_cfg = services.get("get_provider_config")
+        if callable(get_cfg):
+            try:
+                cfg = get_cfg(provider, model)
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"[PromptEnhancer] get_provider_config 调用失败: {e}")
+                cfg = None
+            # 判据是「配置非空」而非「key 非空」：免鉴权服务商（如 OpenCode 免费
+            # 模型）API_KEY 本就为空，build_openai_client 会剥掉 Authorization 头
+            if isinstance(cfg, dict) and cfg:
+                return cfg
+            # 服务返回空（provider 不存在 / 宿主未就绪）→ 继续兜底，
+            # 显式指名的 provider 失效时不静默串到别的服务商
+            if provider:
+                return None
+
+    # 2) 内存态兜底（旧版主程序 / 未注入 services 的调用路径）
+    cfg = _get_provider_config_from_memory(main_widget, provider, model)
+    if not isinstance(cfg, dict):
         return None
-    name = getattr(main_widget, "_current_provider_name", None) or "系统默认配置"
-    return valid.get(name)
+    if model:
+        cfg["模型名称"] = model
+    return cfg
 
 
 def _resolve_enhance_model(main_widget) -> Optional[Tuple[str, str]]:
@@ -557,6 +591,7 @@ def _on_enhance_clicked(context: Dict[str, Any]) -> None:
         main_widget,
         override_provider=override[0] if override else None,
         override_model=override[1] if override else None,
+        services=context.get("services"),
     )
     if not llm_config:
         _notify(main_widget, "提示词增强", "未找到模型配置，请先在设置中配置模型", "warning")
