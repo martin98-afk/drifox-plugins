@@ -41,7 +41,8 @@ def _make_mime(data: dict) -> QMimeData:
     return mime
 
 
-def _parse_mime(mime: Optional[QMimeData]) -> Optional[dict]:
+def parse_drag_mime(mime: Optional[QMimeData]) -> Optional[dict]:
+    """解析拖拽 MIME 数据（公开给卡片层空白区 drop 使用）"""
     if mime is None or not mime.hasFormat(MIME_PIXEL_AGENT):
         return None
     try:
@@ -228,9 +229,10 @@ class AgentTile(_DragSource):
 
     def _apply_base_style(self):
         pal = self._palette
+        fc = pal.get("font_css", "")
         self.setStyleSheet(
             f"AgentTile {{ border: 1px solid {rgba(pal['border'])}; border-radius: 10px; "
-            f"background: {rgba(pal['card_bg'])}; }}"
+            f"background: {rgba(pal['card_bg'])}; {fc} }}"
             f"AgentTile:hover {{ border: 1px solid {rgba(pal['accent'], 190)}; "
             f"background: {rgba(pal['accent'], 26)}; }}"
             f"QLabel#agentName {{ color: {rgba(pal['text'])}; font-size: 12px; "
@@ -313,9 +315,10 @@ class MemberTile(_DragSource):
 
     def _apply_base_style(self):
         pal = self._palette
+        fc = pal.get("font_css", "")
         self.setStyleSheet(
             f"MemberTile {{ border: 1px solid {rgba(pal['border'])}; border-radius: 10px; "
-            f"background: {rgba(pal['card_bg'])}; }}"
+            f"background: {rgba(pal['card_bg'])}; {fc} }}"
             f"MemberTile:hover {{ border: 1px solid {rgba(pal['accent'], 170)}; "
             f"background: {rgba(pal['hover_bg'])}; }}"
             f"QLabel#memberName {{ color: {rgba(pal['text'])}; font-size: 12px; "
@@ -357,7 +360,8 @@ class MemberTile(_DragSource):
         self._state_label.setText(state_txt)
         self._state_label.setStyleSheet(
             f"QLabel#memberState {{ color: {self._state_color_hex()}; font-size: 11px; "
-            f"font-weight: 600; background: transparent; }}"
+            f"font-weight: 600; background: transparent; "
+            f"{self._palette.get('font_css', '')} }}"
         )
 
     def apply_state(self, state: str, task_count: int, context_percent: float = 0.0):
@@ -372,7 +376,7 @@ class MemberTile(_DragSource):
             f"状态: {state_cn(self._state)}\n"
             f"未完成任务: {task_count}\n"
             f"窗口: {self.window_id}\n\n"
-            "双击切到该窗口 · 点✉直接发消息\n拖出面板或拖到垃圾桶可移除（窗口保留）"
+            "双击切到该窗口 · 点✉直接发消息\n拖出面板或拖到垃圾桶可移除（同时关闭其窗口）"
         )
 
     def mouseDoubleClickEvent(self, event):
@@ -415,9 +419,11 @@ class MemberTile(_DragSource):
         editor.setStyleSheet(
             f"PlainTextEdit {{ background: {rgba(self._palette['card_bg'])}; "
             f"color: {rgba(self._palette['text'])}; border: 1px solid {rgba(self._palette['border'])}; "
-            f"border-radius: 8px; padding: 6px; }}"
+            f"border-radius: 8px; padding: 6px; {self._palette.get('font_css', '')} }}"
         )
         dlg.viewLayout.addWidget(editor)
+        dlg.yesButton.setText("发送")
+        dlg.cancelButton.setText("取消")
         editor.setFocus()
         if dlg.exec():
             text = editor.toPlainText().strip()
@@ -460,7 +466,7 @@ class TrashZone(QFrame):
         self.setFixedSize(120, 96)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(6, 6, 6, 6)
-        self._label = QLabel("🗑 移除成员\n拖入离开团队\n（窗口保留）", self)
+        self._label = QLabel("🗑 移除成员\n拖入后离开团队\n（同时关闭其窗口）", self)
         self._label.setAlignment(Qt.AlignCenter)
         self._label.setWordWrap(True)
         lay.addWidget(self._label)
@@ -470,7 +476,8 @@ class TrashZone(QFrame):
         border = rgba(self._palette["danger"], 200 if hover else 90)
         bg = rgba(self._palette["danger"], 26 if hover else 10)
         self.setStyleSheet(
-            f"TrashZone {{ border: 2px dashed {border}; border-radius: 10px; background: {bg}; }}"
+            f"TrashZone {{ border: 2px dashed {border}; border-radius: 10px; "
+            f"background: {bg}; {self._palette.get('font_css', '')} }}"
             f"TrashZone QLabel {{ color: {rgba(self._palette['danger'], 220)}; font-size: 11px; "
             f"background: transparent; }}"
         )
@@ -480,7 +487,7 @@ class TrashZone(QFrame):
         self._apply_style(False)
 
     def dragEnterEvent(self, event):
-        data = _parse_mime(event.mimeData())
+        data = parse_drag_mime(event.mimeData())
         if data and data.get("action") == "remove":
             event.acceptProposedAction()
             self._apply_style(True)
@@ -490,7 +497,7 @@ class TrashZone(QFrame):
 
     def dropEvent(self, event):
         self._apply_style(False)
-        data = _parse_mime(event.mimeData())
+        data = parse_drag_mime(event.mimeData())
         if not data or data.get("action") != "remove":
             event.ignore()
             return
@@ -623,10 +630,11 @@ class TeamPanel(QFrame):
     def _panel_qss(self, border: str, bg: str, left_bar: str = "") -> str:
         """面板整表 QSS 构建器（_apply_style 与拖拽 hover 共用，避免子控件规则丢失）"""
         pal = self._palette
+        fc = pal.get("font_css", "")
         bar = f" border-left: 3px solid {left_bar};" if left_bar else ""
         return (
             f"TeamPanel {{ border: 1px solid {border};{bar} "
-            f"border-radius: 12px; background: {bg}; }}"
+            f"border-radius: 12px; background: {bg}; {fc} }}"
             f"QLabel {{ background: transparent; }}"
             f"QLabel#teamTitle {{ color: {rgba(pal['text'])}; font-size: 13px; "
             f"font-weight: 700; }}"
@@ -683,7 +691,7 @@ class TeamPanel(QFrame):
         act_broadcast = menu.addAction(f"📣 广播消息到 {self._member_count} 个成员…")
         act_broadcast.setEnabled(self._member_count > 0)
         menu.addSeparator()
-        act_dissolve = menu.addAction("解散团队（逐成员移除，窗口保留）")
+        act_dissolve = menu.addAction("解散团队（逐成员移除并关闭窗口）")
         act_dissolve.setEnabled(self._member_count > 0)
         chosen = menu.exec_(event.globalPos())
         if chosen is act_broadcast:
@@ -740,7 +748,7 @@ class TeamPanel(QFrame):
     # ── 拖放（add → 本团队）──
 
     def dragEnterEvent(self, event):
-        data = _parse_mime(event.mimeData())
+        data = parse_drag_mime(event.mimeData())
         if data and data.get("action") == "add":
             event.acceptProposedAction()
             self._apply_drop_hover_style()
@@ -750,7 +758,7 @@ class TeamPanel(QFrame):
 
     def dropEvent(self, event):
         self._apply_style()
-        data = _parse_mime(event.mimeData())
+        data = parse_drag_mime(event.mimeData())
         if not data or data.get("action") != "add":
             event.ignore()
             return
