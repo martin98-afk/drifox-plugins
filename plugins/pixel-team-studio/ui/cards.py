@@ -35,6 +35,7 @@ from loguru import logger
 from qfluentwidgets import (
     FluentIcon,
     IconWidget,
+    LineEdit,
     MessageBox,
     MessageBoxBase,
     PlainTextEdit,
@@ -45,7 +46,7 @@ from qfluentwidgets import (
 
 from . import team_data
 from .palette import make_palette, rgba
-from .widgets import AgentTile, FlowLayout, TeamPanel, TrashZone
+from .widgets import AgentTile, FlowLayout, TeamPanel, TrashZone, parse_drag_mime
 
 REFRESH_MS = 5000
 ANIM_MS = 150
@@ -197,6 +198,53 @@ class PixelTeamStudioCard(QWidget):
         if not QApplication.mouseButtons() & Qt.LeftButton and self._trash_zone.isVisible():
             self._trash_zone.setVisible(False)
 
+    def _panel_drag_enter(self, event):
+        """空白区拖拽悬停：仅接受 add 型（AgentTile），remove 交给原目标"""
+        data = parse_drag_mime(event.mimeData())
+        if data and data.get("action") == "add":
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def _panel_drop(self, event):
+        """空白区松手：弹输入框命名团队，创建并加入该成员"""
+        data = parse_drag_mime(event.mimeData())
+        if not data or data.get("action") != "add":
+            event.ignore()
+            return
+        event.acceptProposedAction()
+        agent = data.get("agent_name", "")
+        QTimer.singleShot(0, lambda: self._on_blank_drop_create_team(agent))
+
+    def _on_blank_drop_create_team(self, agent_name: str):
+        """空白区 drop 建团：弹输入框确认团队名，创建团队并加入首个成员"""
+        if not agent_name:
+            return
+        dlg = MessageBoxBase(self.window())
+        title = SubtitleLabel("新建团队", dlg)
+        dlg.viewLayout.addWidget(title)
+        hint = BodyLabel(f"将创建新团队并加入「{agent_name}」作为首个成员", dlg)
+        dlg.viewLayout.addWidget(hint)
+        editor = LineEdit(dlg)
+        editor.setPlaceholderText("团队名称")
+        editor.setClearButtonEnabled(True)
+        editor.setText(f"{agent_name} 团队")
+        dlg.viewLayout.addWidget(editor)
+        dlg.yesButton.setText("创建")
+        dlg.cancelButton.setText("取消")
+        editor.setFocus()
+        if not dlg.exec():
+            return
+        label = editor.text().strip() or "新团队"
+        self._snapshot_origin()
+        run_id = team_data.create_team_with_label(agent_name, label)
+        if run_id:
+            self._set_status(f"已创建团队「{label}」并加入 {agent_name}")
+            self._restore_origin_tab(shield_seconds=5.0)
+        else:
+            self._set_status("创建团队失败：请确认主窗口已就绪")
+        self._refresh()
+
     def _apply_latest_theme(self):
         ctx = {}
         try:
@@ -207,7 +255,7 @@ class PixelTeamStudioCard(QWidget):
         self._palette = make_palette(ctx)
 
         pal = self._palette
-        ff = pal["font_family"]
+        font_css = pal["font_css"]
         fs = pal["font_size"]
         # 根级默认样式（组件内部由各自 apply_palette 管理，不再全局暴力覆盖）
         self.setStyleSheet(
@@ -226,7 +274,7 @@ class PixelTeamStudioCard(QWidget):
             if lbl is not None:
                 lbl.setStyleSheet(
                     f"color: {rgba(color)}; font-size: {size}px; font-weight: {weight}; "
-                    f"font-family: '{ff}'; background: transparent;"
+                    f"{font_css} background: transparent;"
                 )
         # 面板/垃圾桶/成员格跟随主题
         self._apply_panel_style()
@@ -254,6 +302,11 @@ class PixelTeamStudioCard(QWidget):
         # ── 背景面板（跟随文字亮度自洽深浅 + 圆角边框）──
         self._panel = QFrame(self)
         self._panel.setObjectName("ptsPanel")
+        # 空白区接受 add 拖放：松手 → 弹框命名 → 新建团队并加入（团队面板外的广域目标）
+        self._panel.setAcceptDrops(True)
+        self._panel.dragEnterEvent = self._panel_drag_enter
+        self._panel.dragMoveEvent = self._panel_drag_enter
+        self._panel.dropEvent = self._panel_drop
         root.addWidget(self._panel, 1)
 
         ply = QVBoxLayout(self._panel)
@@ -565,9 +618,11 @@ class PixelTeamStudioCard(QWidget):
         editor.setStyleSheet(
             f"PlainTextEdit {{ background: {rgba(self._palette['card_bg'])}; "
             f"color: {rgba(self._palette['text'])}; border: 1px solid {rgba(self._palette['border'])}; "
-            f"border-radius: 8px; padding: 6px; }}"
+            f"border-radius: 8px; padding: 6px; {self._palette.get('font_css', '')} }}"
         )
         dlg.viewLayout.addWidget(editor)
+        dlg.yesButton.setText("发送")
+        dlg.cancelButton.setText("取消")
         editor.setFocus()
         if not dlg.exec():
             return
@@ -578,11 +633,11 @@ class PixelTeamStudioCard(QWidget):
         self._set_status(f"广播完成：{ok} 个成员已送达" if ok else "广播失败：无可用成员窗口")
 
     def _on_dissolve_team(self, run_id: str, team_label: str):
-        """团队面板右键解散：确认后逐成员移除（窗口保留）"""
+        """团队面板右键解散：确认后逐成员移除（同时关闭其窗口）"""
         label = team_label or run_id[:8]
         box = MessageBox(self.window())
         box.setWindowTitle("解散团队")
-        box.setText(f"确定解散团队「{label}」？\n所有成员将离开团队（窗口保留，独立模式）。")
+        box.setText(f"确定解散团队「{label}」？\n所有成员将移出团队，并直接关闭其窗口标签页。")
         box.setYesButtonText("解散")
         box.setNoButtonText("取消")
         if not box.exec():
@@ -698,7 +753,7 @@ class PixelTeamStudioCard(QWidget):
 
     def _on_remove_member(self, window_id: str):
         ok = team_data.remove_member(window_id)
-        self._set_status("成员已离开团队（窗口保留）" if ok else "移除成员失败")
+        self._set_status("成员已移出团队并关闭其窗口" if ok else "移除成员失败")
         self._refresh()
 
     # ── 刷新 ──

@@ -15,6 +15,12 @@ from typing import Optional
 from PyQt5.QtGui import QColor
 
 
+# 系统 UI 字体链（Win 中文环境 UI 字体优先，向后兼容 mac/英文环境）
+# 注意：不用 ctx.font_family —— 那是主程序 LLM 对话字体设置（默认楷体），
+# 插件是工具面板，应跟随系统 UI 字体而非对话字体（v0.4.1）
+SYSTEM_UI_FONT_STACK = "'Microsoft YaHei UI', 'Microsoft YaHei', 'Segoe UI', 'PingFang SC', sans-serif"
+
+
 def _luminance(c: QColor) -> float:
     """感知亮度 0-255"""
     return 0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue()
@@ -91,7 +97,8 @@ def make_palette(ctx: Optional[dict] = None) -> dict:
         "border": QColor(255, 255, 255, 28) if is_dark else QColor(0, 0, 0, 28),
         "hover_bg": QColor(255, 255, 255, 26) if is_dark else QColor(0, 0, 0, 16),
         "badge_bg": QColor(255, 255, 255, 24) if is_dark else QColor(0, 0, 0, 16),
-        "font_family": ctx.get("font_family", "Microsoft YaHei"),
+        "font_family": SYSTEM_UI_FONT_STACK,
+        "font_css": f"font-family: {SYSTEM_UI_FONT_STACK};",
         "font_size": ctx.get("font_size", 14),
     }
 
