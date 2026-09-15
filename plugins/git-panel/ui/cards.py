@@ -3057,6 +3057,7 @@ class GitPanelCard(QWidget):
             main_widget,
             override_provider=override[0] if override else None,
             override_model=override[1] if override else None,
+            services=ctx.get("services"),
         )
         if not llm:
             self._show_info_bar("info", "AI 生成", "未找到模型配置，请先在系统设置配置模型")

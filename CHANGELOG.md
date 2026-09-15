@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.11.1 (2026-09-15)
+### 🐛 prompt-enhancer v0.3.0 / git-panel v2.0.1：修复密钥加密后插件拿到密文 API Key 导致 401
+- **根因**：两插件直读 `~/.drifox/app.config` 的 `LLM.SavedProviders[*].API_KEY`。主程序引入 `SecretMode` 后，`password` 模式该字段是 `enc:v2:…` 密文、`keyring` 模式是空串（密钥已入系统凭证库），插件把密文当 Bearer token 发出 → `401 log in fail: Please carry the API secret key (1004)`。只有主程序内存态持有解密后的明文
+- **修复**：改走宿主公开服务 `ctx["services"]["get_provider_config"](provider, model)`（主程序读内存态已解锁明文并叠加模型默认参数）；旧版主程序无此服务时回退遍历 `main_widget._valid_configs`（同为内存态）。删除磁盘取 key 路径 `_get_provider_config_by_name`
+- **语义收紧**：显式指名的服务商不存在时返回空配置（不再静默串到当前会话模型）；判定改为「配置非空」而非「key 非空」，免鉴权服务商（如 OpenCode 免费模型，key 本就为空、由 `build_openai_client` 剥掉 Authorization 头）不再被误拒
+- **配套（主仓）**：`app/main_widget.py` 新增 `_resolve_provider_config` 并注入 `services["get_provider_config"]`；`EngineHost` 契约同步该键；输入按钮 context 补 `services`（此前仅浮动卡有），`main_widget._on_plugin_input_button_clicked` / `UIPluginRegistry.invoke_input_button` 两条派发路径均已覆盖
+- **验证**：新增 `tests/test_provider_key_channel.py` 8 用例（磁盘放密文 + 内存放明文，断言取到明文、显式服务商失效不串号、空 key 免鉴权服务商可受理）；在修复前代码上 8/8 失败（精确打出 `enc:v2:` 被当 key 的证据），修复后 8/8 通过；主仓 `tests/plugins/test_engine_host_contract.py` 契约守卫 12 用例通过，全量真实服务商探针 9/9 明文
+
 ## 2.11.0 (2026-09-13)
 ### ✨ voice-input 转纯云端双链：硅基流动免费优先 + MiniMax 备用，砍本地引擎（v0.4.0）
 - **硅基流动接入（免费）**：实测 `Qwen/Qwen3-ASR-1.7B` 免费且中文识别带标点（官方定价页确认 Qwen3-ASR / XingChenASR 系列 / TeleSpeechASR / SenseVoiceSmall 全部免费）；`FunAudioLLM/SenseVoiceSmall` 免费通道当前限流严重（请求挂起不响应），模型名做成配置项默认 Qwen3-ASR 可随时换
