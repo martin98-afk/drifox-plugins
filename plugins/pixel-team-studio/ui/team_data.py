@@ -5,7 +5,7 @@
 所有函数均带 try/except 兜底，保证 UI 在任何异常下不崩溃。
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from loguru import logger
 
@@ -305,6 +305,35 @@ def create_team_from_template(template_name: str) -> int:
     except Exception as e:  # noqa: BLE001
         logger.exception(f"[pixel-team-studio] 创建团队失败: {e}")
         return -1
+
+
+def broadcast_to_team(run_id: str, text: str) -> int:
+    """向指定团队所有成员广播消息；返回成功送达数"""
+    text = (text or "").strip()
+    if not text:
+        return 0
+    ok = 0
+    for team in get_teams():
+        if team.get("run_id", "") != run_id:
+            continue
+        for m in team.get("members", []):
+            wid = m.get("window_id", "")
+            if wid and send_member_message(wid, text):
+                ok += 1
+    return ok
+
+
+def dissolve_team(run_id: str) -> int:
+    """解散指定团队：逐成员移除（窗口保留）。返回成功移除数"""
+    ok = 0
+    for team in get_teams():
+        if team.get("run_id", "") != run_id:
+            continue
+        for m in team.get("members", []):
+            wid = m.get("window_id", "")
+            if wid and remove_member(wid):
+                ok += 1
+    return ok
 
 
 def add_member(agent_name: str, run_id: str, team_label: str) -> bool:

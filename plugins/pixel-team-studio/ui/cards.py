@@ -18,9 +18,10 @@ from typing import Callable, Optional
 
 import time
 
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal
-from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import QEvent, Qt, QTimer, pyqtSignal
+from PyQt5.QtGui import QIcon, QCursor, QPainter, QPen, QColor
 from PyQt5.QtWidgets import (
+    QApplication,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -31,15 +32,52 @@ from PyQt5.QtWidgets import (
     QWidget,
 )
 from loguru import logger
-from qfluentwidgets import FluentIcon, IconWidget, TransparentToolButton
+from qfluentwidgets import (
+    FluentIcon,
+    IconWidget,
+    MessageBox,
+    MessageBoxBase,
+    PlainTextEdit,
+    SubtitleLabel,
+    BodyLabel,
+    TransparentToolButton,
+)
 
 from . import team_data
 from .palette import make_palette, rgba
-from .widgets import AgentTile, TeamPanel, TrashZone
+from .widgets import AgentTile, FlowLayout, TeamPanel, TrashZone
 
 REFRESH_MS = 5000
 ANIM_MS = 150
 BUSY_STATES = ("busy", "streaming", "thinking")
+
+
+class _EmptySpriteRow(QWidget):
+    """空状态插画：几个 idle 像素小人排队等待组队（复用 sprites 绘制，风格统一）"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._frame = 0
+        self._names = ("leader", "plan", "build", "review", "explore")
+        self.setFixedSize(5 * 60 + 40, 78)
+
+    def advance(self):
+        self._frame += 1
+        self.update()
+
+    def paintEvent(self, event):
+        from .sprites import draw_pixel_sprite
+
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing, False)
+        # 依次错开呼吸相位，像在排队聊天
+        for i, name in enumerate(self._names):
+            bounce = 1 if ((self._frame + i * 3) // 8) % 2 == 0 else 0
+            draw_pixel_sprite(painter, 20 + i * 60, 14, 3, name, bounce)
+        # 地面线
+        painter.setPen(QPen(QColor(128, 128, 140, 70), 1))
+        painter.drawLine(8, 64, self.width() - 8, 64)
+        painter.end()
 
 
 class PixelTeamStudioCard(QWidget):
@@ -61,6 +99,8 @@ class PixelTeamStudioCard(QWidget):
         self._title: Optional[QLabel] = None
         self._teams_title: Optional[QLabel] = None
         self._shelf_title: Optional[QLabel] = None
+        self._empty_host: Optional[QWidget] = None
+        self._empty_sprites: Optional["_EmptySpriteRow"] = None
         # 隐藏保护：添加成员/建团后短暂窗口内拒绝被切 tab 隐藏（monotonic 截止时刻）
         self._suppress_hide_until: float = 0.0
         # 恢复 tab 轮询状态
@@ -75,6 +115,13 @@ class PixelTeamStudioCard(QWidget):
         self._anim_timer = QTimer(self)
         self._anim_timer.setInterval(ANIM_MS)
         self._anim_timer.timeout.connect(self._advance_anim)
+        self._anim_timer.timeout.connect(self._advance_empty_sprites)
+
+        # 状态消息淡出：临时消息 N 秒后清空，恢复默认空状态
+        self._status_timer = QTimer(self)
+        self._status_timer.setSingleShot(True)
+        self._status_timer.setInterval(5000)
+        self._status_timer.timeout.connect(lambda: self._set_status(""))
 
     # ── 拉模型上下文注入 ──
 
@@ -126,6 +173,30 @@ class PixelTeamStudioCard(QWidget):
         except Exception:  # noqa: BLE001
             pass
 
+    def eventFilter(self, obj, event):
+        """拖拽进行时浮出垃圾桶（仅 remove 型），结束隐藏"""
+        if event.type() in (QEvent.DragEnter, QEvent.DragMove):
+            mime = event.mimeData()
+            if mime is not None and mime.hasFormat("application/x-pixel-agent"):
+                try:
+                    import json as _json
+
+                    data = _json.loads(bytes(mime.data("application/x-pixel-agent")).decode("utf-8"))
+                except Exception:  # noqa: BLE001
+                    data = None
+                if data and data.get("action") == "remove" and not self._trash_zone.isVisible():
+                    self._trash_zone.setVisible(True)
+        elif event.type() in (QEvent.Drop, QEvent.DragLeave):
+            # 拖拽结束可能无 Leave 事件，靠 Drop/DragLeave 兼带隐藏；
+            # QTimer 兑底：拖拽取消时也能收回
+            QTimer.singleShot(400, self._maybe_hide_trash)
+        return super().eventFilter(obj, event)
+
+    def _maybe_hide_trash(self):
+        """无拖拽进行时收回垃圾桶（QDrag.exec_ 阻塞期间 mouseButtons 仍报告左键）"""
+        if not QApplication.mouseButtons() & Qt.LeftButton and self._trash_zone.isVisible():
+            self._trash_zone.setVisible(False)
+
     def _apply_latest_theme(self):
         ctx = {}
         try:
@@ -159,6 +230,8 @@ class PixelTeamStudioCard(QWidget):
                 )
         # 面板/垃圾桶/成员格跟随主题
         self._apply_panel_style()
+        if self._empty_sprites is not None:
+            self._empty_sprites.setStyleSheet("background: transparent;")
         for panel in self._panels.values():
             panel.apply_palette(pal)
         self._trash_zone.apply_palette(pal)
@@ -256,7 +329,13 @@ class PixelTeamStudioCard(QWidget):
         self._teams_scroll.setWidget(teams_host)
         ply.addWidget(self._teams_scroll, 1)
 
-        # 无团队提示（有团队时与滚动区互斥隐藏）
+        # 无团队提示（有团队时与滚动区互斥隐藏）：像素小人排队插画 + 文案
+        empty_host = QWidget(self._panel)
+        empty_v = QVBoxLayout(empty_host)
+        empty_v.setContentsMargins(0, 0, 0, 0)
+        empty_v.addStretch(1)
+        self._empty_sprites = _EmptySpriteRow(empty_host)
+        empty_v.addWidget(self._empty_sprites, 0, Qt.AlignHCenter)
         self._empty_hint = QLabel(
             "还没有团队\n\n点击右上角「＋ 新建团队」从模板创建，\n"
             "或从下方智能体库双击小人 / 拖拽小人快速组建",
@@ -264,7 +343,10 @@ class PixelTeamStudioCard(QWidget):
         )
         self._empty_hint.setAlignment(Qt.AlignCenter)
         self._empty_hint.setWordWrap(True)
-        ply.addWidget(self._empty_hint, 1)
+        empty_v.addWidget(self._empty_hint)
+        empty_v.addStretch(1)
+        self._empty_host = empty_host
+        ply.addWidget(empty_host, 1)
 
         # ── 分隔线 ──
         sep = QFrame(self._panel)
@@ -288,25 +370,28 @@ class PixelTeamStudioCard(QWidget):
         self._shelf_title.setObjectName("ptsShelfTitle")
         sly.addWidget(self._shelf_title)
 
-        shelf_scroll = QScrollArea(shelf_host)
-        shelf_scroll.setWidgetResizable(True)
-        shelf_scroll.setFrameShape(QFrame.NoFrame)
-        shelf_scroll.setFixedHeight(128)
-        shelf_scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
+        self._shelf_scroll = QScrollArea(shelf_host)
+        self._shelf_scroll.setWidgetResizable(True)
+        self._shelf_scroll.setFrameShape(QFrame.NoFrame)
+        self._shelf_scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
         shelf_host2 = QWidget()
         shelf_host2.setStyleSheet("background: transparent;")
-        self._shelf_layout = QHBoxLayout(shelf_host2)
-        self._shelf_layout.setContentsMargins(0, 0, 0, 0)
-        self._shelf_layout.setSpacing(8)
-        self._shelf_layout.addStretch(1)
-        shelf_scroll.setWidget(shelf_host2)
-        sly.addWidget(shelf_scroll)
+        # 流式布局：角色多时自动换行，滚动区竖向伸展（高度自适应，不再单行溢出）
+        self._shelf_layout = FlowLayout(shelf_host2, margin=0, spacing=8)
+        shelf_host2.setLayout(self._shelf_layout)
+        self._shelf_scroll.setWidget(shelf_host2)
+        sly.addWidget(self._shelf_scroll, 1)
         bly.addWidget(shelf_host, 1)
 
+        # 垃圾桶：平时隐藏（省空间），拖拽进行时浮现（拖出面板释放也可移除）
         self._trash_zone = TrashZone(self._palette)
         self._trash_zone._on_remove = self._on_remove_member
+        self._trash_zone.setVisible(False)
         bly.addWidget(self._trash_zone, 0, Qt.AlignBottom)
         ply.addWidget(bottom)
+
+        # 全局拖拽监听：拖起 remove 型像素小人时浮出垃圾桶
+        QApplication.instance().installEventFilter(self)
 
     # ── 背景面板/分隔线主题 ──
 
@@ -319,8 +404,33 @@ class PixelTeamStudioCard(QWidget):
             f"border: 1px solid {rgba(pal['panel_border'])}; border-radius: 14px; }}"
             f"QFrame#ptsSep {{ background: {rgba(pal['panel_border'])}; border: none; }}"
             f"QLabel {{ background: transparent; }}"
+            + self._scrollbar_qss(pal)
         )
         self.update()
+
+    @staticmethod
+    def _scrollbar_qss(pal: dict) -> str:
+        """像素风细滚动条（与 8-bit 视觉统一，替代系统默认粗条）"""
+        handle = rgba(pal["text_secondary"], 90)
+        handle_hover = rgba(pal["accent"], 160)
+        return (
+            f"QScrollBar:vertical {{ background: transparent; width: 8px; margin: 0; }}"
+            f"QScrollBar::handle:vertical {{ background: {handle}; border-radius: 4px; "
+            f"min-height: 24px; }}"
+            f"QScrollBar::handle:vertical:hover {{ background: {handle_hover}; }}"
+            f"QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical "
+            f"{{ height: 0; }}"
+            f"QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical "
+            f"{{ background: transparent; }}"
+            f"QScrollBar:horizontal {{ background: transparent; height: 8px; margin: 0; }}"
+            f"QScrollBar::handle:horizontal {{ background: {handle}; border-radius: 4px; "
+            f"min-width: 24px; }}"
+            f"QScrollBar::handle:horizontal:hover {{ background: {handle_hover}; }}"
+            f"QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal "
+            f"{{ width: 0; }}"
+            f"QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal "
+            f"{{ background: transparent; }}"
+        )
 
     # ── 团队面板区 ──
 
@@ -341,13 +451,15 @@ class PixelTeamStudioCard(QWidget):
                 panel._on_remove = self._on_remove_member
                 panel._on_activate = self._on_member_activated
                 panel._on_message = self._on_member_message
+                panel.broadcast_requested.connect(self._on_broadcast_team)
+                panel.dissolve_requested.connect(self._on_dissolve_team)
                 self._panels[rid] = panel
                 self._teams_layout.insertWidget(self._teams_layout.count() - 1, panel)
             panel.set_team(rid, team.get("label", ""), team.get("is_active", False), len(team["members"]))
             panel.sync_members(team.get("members", []))
-        if self._empty_hint is not None:
+        if self._empty_hint is not None and self._empty_host is not None:
             has_teams = bool(teams)
-            self._empty_hint.setVisible(not has_teams)
+            self._empty_host.setVisible(not has_teams)
             self._teams_scroll.setVisible(has_teams)
 
     def _apply_new_team_btn_style(self):
@@ -368,6 +480,7 @@ class PixelTeamStudioCard(QWidget):
 
     def _on_new_team_clicked(self):
         menu = QMenu(self.window())
+        menu.setToolTipsVisible(True)  # 模板描述存 tooltip，必须显式开启才显示
         menu.setStyleSheet(
             f"QMenu {{ background: {rgba(self._palette['panel_bg'])}; "
             f"color: {rgba(self._palette['text'])}; border-radius: 8px; padding: 4px; }}"
@@ -404,9 +517,79 @@ class PixelTeamStudioCard(QWidget):
     def _on_agent_activated(self, agent_name: str):
         active = team_data.get_active_team()
         if not active:
-            self._set_status("无激活团队：请先「＋ 新建团队」或拖拽小人到任意团队")
+            # 无激活团队：弹团队选择菜单，一步到位不再只提示
+            self._pick_team_and_add(agent_name)
             return
         self._on_add_member(agent_name, active["run_id"], active["label"])
+
+    def _pick_team_and_add(self, agent_name: str):
+        """弹团队选择菜单（仅列非空有效 run_id 的团队），选中即加入"""
+        teams = [t for t in team_data.get_teams() if t.get("run_id")]
+        if not teams:
+            self._set_status("还没有团队：请先「＋ 新建团队」")
+            return
+        menu = QMenu(self.window())
+        menu.setStyleSheet(
+            f"QMenu {{ background: {rgba(self._palette['panel_bg'])}; "
+            f"color: {rgba(self._palette['text'])}; border-radius: 8px; padding: 4px; }}"
+            f"QMenu::item {{ padding: 6px 24px 6px 14px; border-radius: 6px; }}"
+            f"QMenu::item:selected {{ background: {rgba(self._palette['accent'], 60)}; }}"
+        )
+        menu.addAction(f"把 {agent_name} 加入哪个团队？").setEnabled(False)
+        menu.addSeparator()
+        for t in teams:
+            mark = "⭐ " if t.get("is_active") else ""
+            act = menu.addAction(f"{mark}{t.get('label', '?')}（{len(t.get('members', []))} 成员）")
+            if act is not None:
+                act._target_team = t
+        chosen = menu.exec_(QCursor.pos())
+        if chosen is None or not hasattr(chosen, "_target_team"):
+            return
+        t = chosen._target_team
+        self._on_add_member(agent_name, t["run_id"], t.get("label", ""))
+
+    # ── 团队级操作 ──
+
+    def _on_broadcast_team(self, run_id: str, team_label: str):
+        """团队面板右键广播：弹多行输入框，逐成员发送"""
+        if not run_id:
+            return
+        dlg = MessageBoxBase(self.window())
+        title = SubtitleLabel(f"广播消息到「{team_label or run_id[:8]}」", dlg)
+        dlg.viewLayout.addWidget(title)
+        hint = BodyLabel("消息将逐个发送到团队每个成员会话（不切窗口）", dlg)
+        dlg.viewLayout.addWidget(hint)
+        editor = PlainTextEdit(dlg)
+        editor.setPlaceholderText("输入要广播的消息…")
+        editor.setFixedHeight(120)
+        editor.setStyleSheet(
+            f"PlainTextEdit {{ background: {rgba(self._palette['card_bg'])}; "
+            f"color: {rgba(self._palette['text'])}; border: 1px solid {rgba(self._palette['border'])}; "
+            f"border-radius: 8px; padding: 6px; }}"
+        )
+        dlg.viewLayout.addWidget(editor)
+        editor.setFocus()
+        if not dlg.exec():
+            return
+        text = editor.toPlainText().strip()
+        if not text:
+            return
+        ok = team_data.broadcast_to_team(run_id, text)
+        self._set_status(f"广播完成：{ok} 个成员已送达" if ok else "广播失败：无可用成员窗口")
+
+    def _on_dissolve_team(self, run_id: str, team_label: str):
+        """团队面板右键解散：确认后逐成员移除（窗口保留）"""
+        label = team_label or run_id[:8]
+        box = MessageBox(self.window())
+        box.setWindowTitle("解散团队")
+        box.setText(f"确定解散团队「{label}」？\n所有成员将离开团队（窗口保留，独立模式）。")
+        box.setYesButtonText("解散")
+        box.setNoButtonText("取消")
+        if not box.exec():
+            return
+        ok = team_data.dissolve_team(run_id)
+        self._set_status(f"已解散「{label}」：{ok} 个成员移除" if ok else "解散失败：无可用成员")
+        self._refresh()
 
     # ── 成员操作 ──
 
@@ -524,9 +707,14 @@ class PixelTeamStudioCard(QWidget):
         self._refresh()
         self._set_status("已刷新")
 
-    def _set_status(self, text: str):
-        if self._status_label is not None:
-            self._status_label.setText(text)
+    def _set_status(self, text: str, sticky: bool = False):
+        if self._status_label is None:
+            return
+        self._status_label.setText(text)
+        if sticky or not text:
+            self._status_timer.stop()
+        else:
+            self._status_timer.start()  # 临时消息 5s 后淡出
 
     def _refresh(self):
         if not self.isVisible():
@@ -589,6 +777,11 @@ class PixelTeamStudioCard(QWidget):
         for panel in self._panels.values():
             for tile in panel._tiles.values():
                 tile.advance_bounce()
+
+    def _advance_empty_sprites(self):
+        if self.isVisible() and self._empty_host is not None and self._empty_host.isVisible():
+            if self._empty_sprites is not None:
+                self._empty_sprites.advance()
 
     # ── 关闭 ──
 

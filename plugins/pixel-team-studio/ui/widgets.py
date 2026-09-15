@@ -323,9 +323,10 @@ class MemberTile(_DragSource):
             f"QLabel#memberState {{ color: {rgba(pal['text_secondary'])}; font-size: 11px; "
             f"background: transparent; }}"
             f"QPushButton#msgBtn {{ border: none; border-radius: 12px; "
-            f"background: {rgba(pal['accent'], 46)}; color: {rgba(pal['accent'])}; "
+            f"background: transparent; color: {rgba(pal['accent'], 140)}; "
             f"font-size: 13px; }}"
-            f"QPushButton#msgBtn:hover {{ background: {rgba(pal['accent'], 110)}; }}"
+            f"MemberTile:hover QPushButton#msgBtn {{ background: {rgba(pal['accent'], 46)}; "
+            f"color: {rgba(pal['accent'])}; }}"
         )
         self.update()
 
@@ -509,9 +510,14 @@ class TrashZone(QFrame):
 class TeamPanel(QFrame):
     """单个团队卡片（竖排列表中一行）：标题行 + 成员流式网格
 
-    标题行：激活标(⭐/◇) + 团队名 + 成员数徽章 + 忙碌统计徽章 + run_id 缩写。
-    成员区 FlowLayout 自动换行；接受 add 拖放——drop 到本卡片即加入本团队。
+    标题行：激活标(⭐/◇) + 团队名 + 成员数徽章 + 忙碌统计徽章 + run_id 缩写
+    + 折叠箭头。
+    成员区 FlowLayout 自动换行；接受 add 拖放——drop 到本卡片即加入本团队；
+    右键标题行 → 团队级操作（广播消息 / 解散团队）。
     """
+
+    broadcast_requested = pyqtSignal(str, str)  # (run_id, team_label)
+    dissolve_requested = pyqtSignal(str, str)  # (run_id, team_label)
 
     def __init__(self, palette: Optional[dict] = None, parent=None):
         super().__init__(parent)
@@ -521,6 +527,7 @@ class TeamPanel(QFrame):
         self._is_active = False
         self._busy_count = 0
         self._member_count = 0
+        self._collapsed = False
         self.setAcceptDrops(True)
 
         lay = QVBoxLayout(self)
@@ -556,6 +563,14 @@ class TeamPanel(QFrame):
         self._run_label = QLabel("", head)
         self._run_label.setObjectName("teamRun")
         hly.addWidget(self._run_label)
+
+        self._fold_btn = QPushButton("▾", head)
+        self._fold_btn.setObjectName("foldBtn")
+        self._fold_btn.setFixedSize(22, 22)
+        self._fold_btn.setCursor(Qt.PointingHandCursor)
+        self._fold_btn.setToolTip("折叠/展开成员区")
+        self._fold_btn.clicked.connect(self.toggle_collapsed)
+        hly.addWidget(self._fold_btn)
 
         lay.addWidget(head)
 
@@ -596,6 +611,7 @@ class TeamPanel(QFrame):
         self._count_badge.setText(f"{self._member_count} 成员")
         if self._busy_count > 0:
             self._busy_badge.setText(f"⚡ {self._busy_count} 忙碌")
+            self._busy_badge.setObjectName("teamBusyBadge")
             self._busy_badge.setVisible(True)
         else:
             self._busy_badge.setVisible(False)
@@ -604,17 +620,13 @@ class TeamPanel(QFrame):
 
     # ── 样式 ──
 
-    def _apply_style(self):
+    def _panel_qss(self, border: str, bg: str, left_bar: str = "") -> str:
+        """面板整表 QSS 构建器（_apply_style 与拖拽 hover 共用，避免子控件规则丢失）"""
         pal = self._palette
-        if self._is_active:
-            border = rgba(pal["accent"], 170)
-            bg = rgba(pal["card_bg_active"])
-        else:
-            border = rgba(pal["border"])
-            bg = rgba(pal["card_bg"])
-        self.setStyleSheet(
-            f"TeamPanel {{ border: 1px solid {border}; border-radius: 12px; "
-            f"background: {bg}; }}"
+        bar = f" border-left: 3px solid {left_bar};" if left_bar else ""
+        return (
+            f"TeamPanel {{ border: 1px solid {border};{bar} "
+            f"border-radius: 12px; background: {bg}; }}"
             f"QLabel {{ background: transparent; }}"
             f"QLabel#teamTitle {{ color: {rgba(pal['text'])}; font-size: 13px; "
             f"font-weight: 700; }}"
@@ -623,8 +635,61 @@ class TeamPanel(QFrame):
             f"QLabel#teamEmpty {{ color: {rgba(pal['text_secondary'])}; font-size: 11px; }}"
             f"QLabel#teamBadge {{ color: {rgba(pal['text_secondary'])}; font-size: 10px; "
             f"background: {rgba(pal['badge_bg'])}; border-radius: 8px; padding: 2px 8px; }}"
+            f"QLabel#teamBusyBadge {{ color: {rgba(pal['warning'])}; font-size: 10px; "
+            f"font-weight: 600; background: {rgba(pal['warning'], 36)}; "
+            f"border-radius: 8px; padding: 2px 8px; }}"
+            f"QPushButton#foldBtn {{ border: none; border-radius: 6px; "
+            f"background: transparent; color: {rgba(pal['text_secondary'])}; "
+            f"font-size: 12px; }}"
+            f"QPushButton#foldBtn:hover {{ background: {rgba(pal['hover_bg'])}; "
+            f"color: {rgba(pal['text'])}; }}"
         )
+
+    def _apply_style(self):
+        pal = self._palette
+        if self._is_active:
+            border = rgba(pal["accent"], 170)
+            bg = rgba(pal["card_bg_active"])
+            left = rgba(pal["accent"])  # 激活团队左侧竖条强化辨识
+        else:
+            border = rgba(pal["border"])
+            bg = rgba(pal["card_bg"])
+            left = ""
+        self.setStyleSheet(self._panel_qss(border, bg, left))
         self.update()
+
+    # ── 折叠/展开 ──
+
+    def toggle_collapsed(self):
+        self.set_collapsed(not self._collapsed)
+
+    def set_collapsed(self, collapsed: bool):
+        if collapsed == self._collapsed:
+            return
+        self._collapsed = collapsed
+        self._members_host.setVisible(not collapsed)
+        self._fold_btn.setText("▸" if collapsed else "▾")
+        self._fold_btn.setToolTip("展开成员区" if collapsed else "折叠成员区")
+
+    def contextMenuEvent(self, event):
+        """标题区右键：团队级操作（广播消息 / 解散团队）"""
+        menu = QMenu(self)
+        menu.setStyleSheet(
+            f"QMenu {{ background: {rgba(self._palette['panel_bg'])}; "
+            f"color: {rgba(self._palette['text'])}; border-radius: 8px; padding: 4px; }}"
+            f"QMenu::item {{ padding: 5px 22px 5px 14px; border-radius: 6px; }}"
+            f"QMenu::item:selected {{ background: {rgba(self._palette['accent'], 60)}; }}"
+        )
+        act_broadcast = menu.addAction(f"📣 广播消息到 {self._member_count} 个成员…")
+        act_broadcast.setEnabled(self._member_count > 0)
+        menu.addSeparator()
+        act_dissolve = menu.addAction("解散团队（逐成员移除，窗口保留）")
+        act_dissolve.setEnabled(self._member_count > 0)
+        chosen = menu.exec_(event.globalPos())
+        if chosen is act_broadcast:
+            self.broadcast_requested.emit(self._run_id, self._label)
+        elif chosen is act_dissolve:
+            self.dissolve_requested.emit(self._run_id, self._label)
 
     def apply_palette(self, palette: dict):
         self._palette = palette
@@ -678,10 +743,7 @@ class TeamPanel(QFrame):
         data = _parse_mime(event.mimeData())
         if data and data.get("action") == "add":
             event.acceptProposedAction()
-            self.setStyleSheet(
-                f"TeamPanel {{ border: 2px dashed {rgba(self._palette['success'], 200)}; "
-                f"border-radius: 12px; background: {rgba(self._palette['success'], 30)}; }}"
-            )
+            self._apply_drop_hover_style()
 
     def dragLeaveEvent(self, event):
         self._apply_style()
@@ -698,7 +760,14 @@ class TeamPanel(QFrame):
         agent = data.get("agent_name", "")
         QTimer.singleShot(0, lambda: self._on_add(agent, self._run_id, self._label))
 
-    _on_add: Any = lambda self, a, r, l: None  # noqa: E731
+    def _apply_drop_hover_style(self):
+        """拖拽悬停高亮（与 _apply_style 共用构建器，保留子控件规则）"""
+        pal = self._palette
+        self.setStyleSheet(
+            self._panel_qss(rgba(pal["success"], 200), rgba(pal["success"], 30), rgba(pal["success"]))
+        )
+
+    _on_add: Any = lambda self, a, rid, lb: None  # noqa: E731
     _on_remove: Any = lambda self, w: None  # noqa: E731
     _on_activate: Any = lambda self, w: None  # noqa: E731
     _on_message: Any = lambda self, w, t: None  # noqa: E731
