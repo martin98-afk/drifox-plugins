@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1789518960.8246424,
+  "fetched_at": 1789536560.6492016,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -48,7 +48,7 @@
     "gateway-wechat": 7,
     "gateway-wecom": 2,
     "git-dashboard": 16,
-    "git-panel": 50,
+    "git-panel": 51,
     "git-status": 3,
     "git-workflow": 3,
     "gpt-image-2": 6,
@@ -81,7 +81,7 @@
     "ponytail": 9,
     "project-dashboard": 29,
     "project-side-rail": 14,
-    "prompt-enhancer": 45,
+    "prompt-enhancer": 46,
     "python-pro": 1,
     "quick-screenshot": 21,
     "rdr2": 6,

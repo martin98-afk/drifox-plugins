@@ -1579,7 +1579,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 50,
+            "downloads": 51,
             "keywords": [
                 "git",
                 "source-control",
@@ -2702,7 +2702,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 45,
+            "downloads": 46,
             "keywords": [
                 "prompt",
                 "enhance",
