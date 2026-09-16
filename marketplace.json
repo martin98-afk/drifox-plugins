@@ -829,7 +829,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 16,
+            "downloads": 17,
             "keywords": [
                 "desktop",
                 "automation",
@@ -2225,7 +2225,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
