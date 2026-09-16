@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1789553515.2100267,
+  "fetched_at": 1789571124.1498127,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -25,7 +25,7 @@
     "context-usage-stats": 5,
     "context7": 4,
     "cron-tasks": 40,
-    "desktop-automation": 16,
+    "desktop-automation": 17,
     "doc-coauthoring": 1,
     "dsh-presets": 1,
     "dsh-router": 1,
@@ -67,7 +67,7 @@
     "mcp-builder": 1,
     "memory-match": 3,
     "midnight-aurora": 8,
-    "minesweeper": 6,
+    "minesweeper": 7,
     "minimax-h3": 5,
     "nuwa-skill": 11,
     "office-docs": 1,
