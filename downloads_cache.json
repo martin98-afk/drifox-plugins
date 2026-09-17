@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1789603128.8638792,
+  "fetched_at": 1789615960.1073997,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -76,7 +76,7 @@
     "openai": 4,
     "openhanako-adapter": 14,
     "openrouter-provider": 2,
-    "pixel-team-studio": 15,
+    "pixel-team-studio": 16,
     "playground": 3,
     "ponytail": 9,
     "project-dashboard": 29,
