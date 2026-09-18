@@ -216,7 +216,7 @@
         {
             "name": "autoloop",
             "description": "AutoLoop 自动循环模式 — 规划→执行→归档三阶段长任务自动执行（对话引擎插件化首例，经 UI 服务门面驱动自建 ConversationCore）",
-            "version": "1.1.0",
+            "version": "1.1.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -247,7 +247,7 @@
                 "三阶段"
             ],
             "drifox": {
-                "min_version": "0.5.0"
+                "min_version": "0.6.2"
             },
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
@@ -315,7 +315,7 @@
         {
             "name": "browser",
             "description": "内置浏览器 — Chrome 体验多标签浏览 + 外部链接接管 + AI 智能体浏览控制（MCP）。",
-            "version": "1.4.2",
+            "version": "1.4.3",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -340,7 +340,7 @@
                 "automation"
             ],
             "drifox": {
-                "min_version": "0.5.0"
+                "min_version": "0.6.2"
             },
             "icon": {
                 "light": "icon.svg",
@@ -1846,7 +1846,7 @@
         {
             "name": "ip-switcher",
             "description": "IP 切换监控 — 免费模型限流自动换 IP（429 检测 + 代理池轮换 + 仪表盘）。",
-            "version": "0.1.1",
+            "version": "0.1.2",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -1868,7 +1868,7 @@
                 "tool"
             ],
             "drifox": {
-                "min_version": "0.5.0"
+                "min_version": "0.6.2"
             },
             "icon": {
                 "light": "icon.svg",
@@ -2533,7 +2533,7 @@
         {
             "name": "pixel-team-studio",
             "description": "像素智能体团队工作室 — 实时可视化智能体团队与成员状态，拖拽像素小人组建团队，双击切窗口/右键直接给成员发消息",
-            "version": "0.4.1",
+            "version": "0.4.2",
             "author": "马丁",
             "license": "MIT",
             "categories": [
@@ -2549,6 +2549,9 @@
                 "ui": true
             },
             "downloads": 16,
+            "drifox": {
+                "min_version": "0.6.2"
+            },
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -2752,7 +2755,7 @@
         {
             "name": "quick-screenshot",
             "description": "输入框工具栏一键选区截图：左键点按钮拖框选取屏幕区域，松手自动复制到系统剪贴板，Ctrl+V 进输入框即可作为附件发送；右键按钮先隐藏 DriFox 主窗再截图，可截身后的画面",
-            "version": "0.2.0",
+            "version": "0.2.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -2792,7 +2795,7 @@
                 "选区截图"
             ],
             "drifox": {
-                "min_version": "0.5.0"
+                "min_version": "0.6.2"
             },
             "icon": {
                 "light": "icon.svg",
@@ -3927,7 +3930,7 @@
         {
             "name": "workbuddy",
             "description": "把 WorkBuddy「专家全能模式」的问答体验完整搬进 DriFox：BuildSystemPrompt 钩子注入专家提示词；present_files 产物呈现 + Tab 式产物面板；Stop 钩子记忆更新提醒 + wb_memory 记忆读写工具，还原 WorkBuddy 的记忆与产物体验。",
-            "version": "1.4.1",
+            "version": "1.4.2",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -3957,7 +3960,7 @@
                 "产物面板"
             ],
             "drifox": {
-                "min_version": "0.5.0"
+                "min_version": "0.6.2"
             },
             "icon": {
                 "light": "icon.svg",
