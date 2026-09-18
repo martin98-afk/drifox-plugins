@@ -258,7 +258,7 @@ class AutoLoopWorker(QThread):
         # 确保 ConversationCore 的 SessionManager 有当前会话
         sm = self._conversation_core.session_manager
         if not sm.get_current_session():
-            from app.core.chat_session import ChatSession
+            from app.core.conversation.chat_session import ChatSession
 
             auto_loop_session = ChatSession(name="AutoLoop")
             sm.sessions.append(auto_loop_session)
