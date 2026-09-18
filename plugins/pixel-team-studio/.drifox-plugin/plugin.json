@@ -5,13 +5,16 @@
     },
     "name": "pixel-team-studio",
     "description": "像素智能体团队工作室 — 实时可视化智能体团队与成员状态，拖拽像素小人组建团队，双击切窗口/右键直接给成员发消息",
-    "version": "0.4.1",
+    "version": "0.4.2",
     "author": {
         "name": "马丁"
     },
     "homepage": "https://github.com/martin98-afk/DriFox",
     "license": "MIT",
     "type": "user",
+    "drifox": {
+        "min_version": "0.6.2"
+    },
     "components": {
         "ui": true
     }

@@ -200,7 +200,7 @@ def get_member_task_count(member: Dict[str, Any]) -> int:
 def list_agents() -> List[Dict[str, str]]:
     """所有可组建团队的 @智能体角色：[{name, description, mode}]"""
     try:
-        from app.core.agent import AgentManager
+        from app.core.conversation.agent import AgentManager
 
         am = AgentManager.get_instance()
         agents = []
