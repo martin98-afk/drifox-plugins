@@ -333,7 +333,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 56,
+            "downloads": 57,
             "keywords": [
                 "browser",
                 "web",
@@ -2548,7 +2548,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 16,
+            "downloads": 17,
             "drifox": {
                 "min_version": "0.6.2"
             },
@@ -2786,7 +2786,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 22,
+            "downloads": 23,
             "keywords": [
                 "screenshot",
                 "clipboard",
