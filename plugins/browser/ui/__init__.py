@@ -56,7 +56,7 @@ def register_ui(registry):
 
     # 2) M2 修复：清理 function handlers 中残留的旧引用（避免热重载后 handler
     #    被旧模块的闭包持有，导致 _CURRENT_CARD 指向已 deleteLater 的实例）
-    from app.core.builtin_commands import FunctionCommandHandlers
+    from app.core.commands.builtin_commands import FunctionCommandHandlers
 
     for cmd in ("browser-new", "browser-devtools", "browser-incognito"):
         FunctionCommandHandlers._handlers.pop(cmd, None)

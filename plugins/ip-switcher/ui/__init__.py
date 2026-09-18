@@ -51,7 +51,7 @@ def register_ui(registry):
 
     # 2) 清理 function handlers 残留
     try:
-        from app.core.builtin_commands import FunctionCommandHandlers
+        from app.core.commands.builtin_commands import FunctionCommandHandlers
 
         FunctionCommandHandlers._handlers.pop("ip-switcher", None)
     except Exception:

@@ -97,7 +97,7 @@ def register_ui(registry):
 
     try:
         from .artifact_panel import ArtifactPanelCard
-        from app.core.builtin_commands import FunctionCommandHandlers
+        from app.core.commands.builtin_commands import FunctionCommandHandlers
         import _state
     except Exception:
         logger.exception("[workbuddy] UI 模块导入失败")
