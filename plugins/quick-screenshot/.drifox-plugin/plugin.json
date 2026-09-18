@@ -1,6 +1,6 @@
 {
     "name": "quick-screenshot",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "description": "输入框工具栏一键选区截图：左键点按钮拖框选取屏幕区域，松手自动复制到系统剪贴板，Ctrl+V 进输入框即可作为附件发送；右键按钮先隐藏 DriFox 主窗再截图，可截身后的画面",
     "icon": {
         "light": "icon.svg",
@@ -12,7 +12,7 @@
     "license": "MIT",
     "type": "user",
     "drifox": {
-        "min_version": "0.5.0"
+        "min_version": "0.6.2"
     },
     "keywords": [
         "screenshot",
