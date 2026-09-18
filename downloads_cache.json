@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1789716611.392097,
+  "fetched_at": 1789733973.0849087,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -11,7 +11,7 @@
     "autoloop": 12,
     "beautiful-article-skills": 3,
     "breakout": 6,
-    "browser": 55,
+    "browser": 56,
     "calendar": 25,
     "canvas-design": 1,
     "caveman": 6,
@@ -83,7 +83,7 @@
     "project-side-rail": 14,
     "prompt-enhancer": 46,
     "python-pro": 1,
-    "quick-screenshot": 21,
+    "quick-screenshot": 22,
     "rdr2": 6,
     "react-pro": 2,
     "security-guidance": 2,
@@ -116,7 +116,7 @@
     "webapp-testing": 2,
     "webdav-backup": 10,
     "win-powershell": 29,
-    "workbuddy": 8,
+    "workbuddy": 9,
     "workflow": 3
   }
 }
