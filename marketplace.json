@@ -333,7 +333,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 55,
+            "downloads": 56,
             "keywords": [
                 "browser",
                 "web",
@@ -2786,7 +2786,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 21,
+            "downloads": 22,
             "keywords": [
                 "screenshot",
                 "clipboard",
@@ -3949,7 +3949,7 @@
                 "ui": true,
                 "skills": true
             },
-            "downloads": 8,
+            "downloads": 9,
             "keywords": [
                 "workbuddy",
                 "问答模式",
