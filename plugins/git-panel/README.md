@@ -122,6 +122,17 @@ _run_git (git_core.py)  ←── 唯一 subprocess 执行点（QThread 外执�
 - context_provider 机制：`DriFox/app/main_widget.py`
 - 同类插件：[git-dashboard](../git-dashboard/)（可视化仪表盘，与本面板互补）
 
+## LLM 调用通道（重要）
+本插件的 AI 生成提交描述走宿主 `services["create_engine_session"]`（EP3 契约），
+经 ModelAdapter / Serializer / Transport 三层分派发出请求。
+
+**不要**自建 openai client 直发 `chat.completions.create`：那会绕过三层分派，
+导致服务商伪装头缺失（CodeBuddy `X-Product` + 动态 `Authorization`、OpenCode
+`x-opencode-session`）→ 401 / 400 MissingSessionID，且 GPT-5 系应走
+`/v1/responses`、思考参数映射与智能重试全部失效。
+
+取配置仍走 `get_provider_config`；两者分工：前者管「发给谁」，后者管「怎么发」。
+
 ## 密钥获取（重要）
 插件需要「切到指定服务商跑一次 LLM 调用」时，**必须**经宿主公开服务取配置：
 ```python

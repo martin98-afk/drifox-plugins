@@ -19,10 +19,11 @@ import os
 import re
 import subprocess
 import sys
+import threading
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from typing import Callable, List, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 from .llm_config import (
     DEFAULT_COMMIT_PROMPT,
@@ -71,6 +72,17 @@ from .elided_label import _ElidedLabel
 from .git_core import GitRepo, GitResult
 
 PLUGIN_NAME = "git-panel"
+
+# AI 生成提交描述的采样/上限（与原一次性调用逐点一致：temperature=0.3 / max_tokens=500）。
+# 思考模式显式关闭：EngineSession 的 model_config_override 是顶层浅合并，
+# override 里没有的键会从「当前窗口模型配置」漏进来（思考模式/思考等级等），
+# 增强模型不支持思考时会在 extra_body 里塞无效参数 → 特殊服务商 400。
+# 交给主程序注入：o1/o3 等拒收 temperature 的模型由 transport 的 skip_params 自动剔除。
+_COMMIT_AI_PARAMS = {"温度": 0.3, "最大Token": 500, "思考模式": False}
+# turn() 内部超时（秒）与硬看门狗缓冲：daemon 线程下内部超时收尾可能整链未发生
+# （cron-tasks 实测），超时后放弃等待直接报错，避免按钮永久卡在「生成中…」
+_AI_TURN_TIMEOUT = 120.0
+_AI_WATCHDOG_GRACE = 30.0
 
 
 # ========================================================================
@@ -2100,40 +2112,78 @@ class _AISignals(QObject):
 
 
 class _AIGenerateTask(QRunnable):
-    """后台调 LLM 根据暂存 diff 生成提交描述（一次性对话，同 prompt-enhancer 范式）"""
+    """后台调 LLM 根据暂存 diff 生成提交描述。
 
-    def __init__(self, system: str, user: str, llm_config: dict, signals):
+    经宿主 EngineSession（EP3 契约）驱动，而非自建 openai client 直发
+    chat.completions.create —— 后者绕过 ModelAdapter / Serializer / Transport
+    三层分派，导致服务商伪装头缺失（CodeBuddy X-Product + 动态 Authorization、
+    OpenCode x-opencode-session）→ 401 / 400 MissingSessionID，且 GPT-5 系
+    应走 /v1/responses、思考参数映射与智能重试全部失效。
+
+    改走 create_engine_session 后以上链路自动生效，插件零协议知识。
+    """
+
+    def __init__(self, system: str, user: str, llm_config: dict, signals, services=None):
         super().__init__()
         self._system = system
         self._user = user
         self._llm = llm_config
         self._signals = signals
+        self._services = services
         self.setAutoDelete(True)
 
     def run(self):
-        try:
-            from app.utils.http_client import build_openai_client, chat_completion_text
 
-            client = build_openai_client(
-                api_key=self._llm.get("API_KEY", ""),
-                base_url=self._llm.get("API_URL"),
-            )
-            # 流式发起+聚合：CodeBuddy 等端点仅支持流式请求，非流式直接 400（11101）
-            result = chat_completion_text(
-                client,
-                model=self._llm.get("模型名称", "gpt-4o"),
-                messages=[
-                    {"role": "system", "content": self._system},
-                    {"role": "user", "content": self._user},
-                ],
-                temperature=0.3,
-                max_tokens=500,
-            )
-            result = strip_thinking((result or "").strip())
-            self._signals.done.emit(result)
-        except Exception as e:
-            logger.error(f"[git-panel] AI 生成提交描述失败: {e}")
-            self._signals.error.emit(str(e))
+        holder: dict = {}
+        done = threading.Event()
+
+        def _turn():
+            try:
+                create = (self._services or {}).get("create_engine_session")
+                if not callable(create):
+                    holder["error"] = "主程序未提供 create_engine_session 服务，请升级 DriFox 至 0.5.10+"
+                    return
+                session: Any = create(
+                    "git-panel",
+                    model_config_override=self._llm,
+                    # 全局 hook 全跳过：BuildSystemPrompt 等注入会混进提交描述指令污染输出
+                    hook_policy_id="none",
+                )
+                try:
+                    result = session.turn(
+                        system=self._system,
+                        user=self._user,
+                        tools=[],
+                        timeout=_AI_TURN_TIMEOUT,
+                    )
+                finally:
+                    session.cleanup()
+                if getattr(result, "timed_out", False):
+                    holder["error"] = f"生成超时（>{int(_AI_TURN_TIMEOUT)}s）"
+                elif getattr(result, "cancelled", False):
+                    holder["error"] = "已取消"
+                elif getattr(result, "error", None):
+                    holder["error"] = str(result.error)
+                else:
+                    holder["text"] = getattr(result, "text", "") or ""
+            except Exception as e:  # 顶层屏障：后台线程静默死亡比报错更糟
+                logger.error(f"[git-panel] AI 生成提交描述失败: {e}")
+                holder["error"] = f"{type(e).__name__}: {e}"
+            finally:
+                done.set()
+
+        threading.Thread(target=_turn, daemon=True, name="git-panel-turn").start()
+
+        # 硬看门狗：不信任 turn() 内部超时（cron-tasks 实测 daemon 线程下超时收尾
+        # 可能整链不发生），到期放弃等待直接报错，避免按钮永久卡在「生成中…」
+        if not done.wait(_AI_TURN_TIMEOUT + _AI_WATCHDOG_GRACE):
+            self._signals.error.emit(f"生成超时（>{int(_AI_TURN_TIMEOUT)}s），已放弃等待")
+            return
+        err = holder.get("error")
+        if err:
+            self._signals.error.emit(str(err))
+        else:
+            self._signals.done.emit(strip_thinking(holder.get("text", "")))
 
 
 class GitPanelCard(QWidget):
@@ -3066,6 +3116,7 @@ class GitPanelCard(QWidget):
             return
         system = load_plugin_text_config("commit_prompt", DEFAULT_COMMIT_PROMPT)
         user = f"暂存变更 diff（超长时已截断）：\n{diff_text[:6000]}"
+        llm = {**llm, **_COMMIT_AI_PARAMS}
         self._ai_task_running = True
         self._ai_btn.setEnabled(False)
         self._ai_btn.setText("生成中…")
@@ -3074,7 +3125,7 @@ class GitPanelCard(QWidget):
         signals = _AISignals()
         signals.done.connect(self._on_ai_done)
         signals.error.connect(self._on_ai_error)
-        task = _AIGenerateTask(system, user, llm, signals)
+        task = _AIGenerateTask(system, user, llm, signals, services=ctx.get("services"))
         pool = getattr(main_widget, "_gen_thread_pool", None) or QThreadPool.globalInstance()
         pool.start(task)
 

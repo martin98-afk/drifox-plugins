@@ -54,6 +54,18 @@ prompt-enhancer/
 └── README.md
 ```
 
+## LLM 调用通道（重要）
+插件的请求发出走宿主 `services["create_engine_session"]`（EP3 契约），经
+ModelAdapter / Serializer / Transport 三层分派，服务商伪装头、responses 协议、
+思考参数映射、智能重试全部自动生效，插件零协议知识。
+
+**不要**自建 openai client 直发 `chat.completions.create`：那会绕过三层分派，
+导致服务商伪装头缺失（CodeBuddy `X-Product` + 动态 `Authorization`、OpenCode
+`x-opencode-session`）→ 401 / 400 MissingSessionID，且 GPT-5 系应走
+`/v1/responses`、思考参数映射与智能重试全部失效。
+
+取配置走 `get_provider_config`；两者分工：前者管「发给谁」，后者管「怎么发」。
+
 ## 密钥获取（重要）
 插件需要「切到指定服务商跑一次 LLM 调用」时，**必须**经宿主公开服务取配置：
 ```python
