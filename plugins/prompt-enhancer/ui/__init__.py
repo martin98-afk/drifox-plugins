@@ -14,7 +14,9 @@
 实现要点：
 - 通过 UI 扩展点 context["main_widget"] 读取输入框（input_area）与当前模型配置；
 - 通过 PluginConfigStore 读写插件配置（enhance_prompt / enhance_model）；
-- 一次性对话范式复用 app.utils.http_client.build_openai_client（参考 topic_summary.py）；
+- 请求发出走宿主 services["create_engine_session"]（EP3 契约）：经 ModelAdapter /
+  Serializer / Transport 三层分派，服务商伪装头、responses 协议、思考参数映射、
+  智能重试全部自动生效，插件零协议知识；
 - 后台 QRunnable + 信号桥接，结果在主线程注回输入框，避免 UI 卡死。
 
 模型配置来自宿主 services["get_provider_config"]（主程序读内存态已解锁明文，
@@ -25,6 +27,7 @@
 import json
 import os
 import re
+import threading
 from typing import Any, Dict, List, Optional, Tuple
 
 from loguru import logger
@@ -43,6 +46,17 @@ except Exception:  # noqa: BLE001
     TextEdit = None  # type: ignore
 
 PLUGIN_NAME = "prompt-enhancer"
+
+# 增强任务的采样/上限（与原一次性调用逐点一致：temperature=0.3 / max_tokens=2000）。
+# 思考模式显式关闭：EngineSession 的 model_config_override 是顶层浅合并，
+# override 里没有的键会从「当前窗口模型配置」漏进来（思考模式/思考等级等），
+# 增强模型不支持思考时会在 extra_body 里塞无效参数 → 特殊服务商 400。
+# 交给主程序注入：o1/o3 等拒收 temperature 的模型由 transport 的 skip_params 自动剔除。
+_ENHANCE_PARAMS = {"温度": 0.3, "最大Token": 2000, "思考模式": False}
+# turn() 内部超时（秒）与硬看门狗缓冲：daemon 线程下内部超时收尾可能整链未发生
+# （cron-tasks 实测），超时后放弃等待直接报错，避免按钮永久卡在「优化中」
+_TURN_TIMEOUT = 120.0
+_WATCHDOG_GRACE = 30.0
 
 DEFAULT_ENHANCE_PROMPT = (
     "你是一个提示词优化专家。请把用户输入的粗略想法改写成清晰、结构化、高信息密度的提示词："
@@ -596,6 +610,7 @@ def _on_enhance_clicked(context: Dict[str, Any]) -> None:
     if not llm_config:
         _notify(main_widget, "提示词增强", "未找到模型配置，请先在设置中配置模型", "warning")
         return
+    llm_config = {**llm_config, **_ENHANCE_PARAMS}
 
     _busy_windows[window_id] = True
     _show_progress(main_widget, window_id, "正在优化提示词…")
@@ -612,6 +627,7 @@ def _on_enhance_clicked(context: Dict[str, Any]) -> None:
         enhance_prompt=enhance_prompt,
         llm_config=llm_config,
         signals=signals,
+        services=context.get("services"),
     )
     pool = getattr(main_widget, "_gen_thread_pool", None) or QThreadPool.globalInstance()
     pool.start(task)
@@ -623,38 +639,78 @@ class _EnhanceSignals(QObject):
 
 
 class _EnhanceTask(QRunnable):
-    def __init__(self, text, enhance_prompt, llm_config, signals):
+    """一次性增强任务 — 经宿主 EngineSession（EP3 契约）驱动。
+
+    原实现自建 openai client 直发 chat.completions.create，绕过
+    ModelAdapter / Serializer / Transport 三层分派，导致：
+    - 服务商伪装头缺失（CodeBuddy X-Product + 动态 Authorization、
+      OpenCode x-opencode-session）→ 401 / 400 MissingSessionID
+    - GPT-5 系应走 /v1/responses、Code Assist 应走原生协议 → 400
+    - 思考参数映射 / max_tokens 钳制 / 15 次智能重试全部失效
+
+    改走 create_engine_session 后以上链路自动生效，插件零协议知识。
+    """
+
+    def __init__(self, text, enhance_prompt, llm_config, signals, services=None):
         super().__init__()
         self.text = text
         self.enhance_prompt = enhance_prompt
         self.llm_config = llm_config
         self.signals = signals
+        self.services = services
         self.setAutoDelete(True)
 
     def run(self):
-        try:
-            from app.utils.http_client import build_openai_client, chat_completion_text
+        holder: Dict[str, Any] = {}
+        done = threading.Event()
 
-            client = build_openai_client(
-                api_key=self.llm_config.get("API_KEY", ""),
-                base_url=self.llm_config.get("API_URL"),
-            )
-            # 流式发起+聚合：CodeBuddy 等端点仅支持流式请求，非流式直接 400（11101）
-            result = chat_completion_text(
-                client,
-                model=self.llm_config.get("模型名称", "gpt-4o"),
-                messages=[
-                    {"role": "system", "content": self.enhance_prompt},
-                    {"role": "user", "content": self.text},
-                ],
-                temperature=0.3,
-                max_tokens=2000,
-            ).strip()
-            result = _strip_thinking(result)
-            self.signals.done.emit(result)
-        except Exception as e:
-            logger.exception(f"[PromptEnhancer] 增强失败: {e}")
-            self.signals.error.emit(str(e))
+        def _turn():
+            try:
+                create = (self.services or {}).get("create_engine_session")
+                if not callable(create):
+                    holder["error"] = "主程序未提供 create_engine_session 服务，请升级 DriFox 至 0.5.10+"
+                    return
+                session: Any = create(
+                    "prompt-enhancer",
+                    model_config_override=self.llm_config,
+                    # 全局 hook 全跳过：BuildSystemPrompt 等注入会混进增强指令污染输出
+                    hook_policy_id="none",
+                )
+                try:
+                    result = session.turn(
+                        system=self.enhance_prompt,
+                        user=self.text,
+                        tools=[],
+                        timeout=_TURN_TIMEOUT,
+                    )
+                finally:
+                    session.cleanup()
+                if getattr(result, "timed_out", False):
+                    holder["error"] = f"优化超时（>{int(_TURN_TIMEOUT)}s）"
+                elif getattr(result, "cancelled", False):
+                    holder["error"] = "已取消"
+                elif getattr(result, "error", None):
+                    holder["error"] = str(result.error)
+                else:
+                    holder["text"] = getattr(result, "text", "") or ""
+            except Exception as e:  # 顶层屏障：后台线程静默死亡比报错更糟
+                logger.exception(f"[PromptEnhancer] 增强失败: {e}")
+                holder["error"] = f"{type(e).__name__}: {e}"
+            finally:
+                done.set()
+
+        threading.Thread(target=_turn, daemon=True, name="pe-turn").start()
+
+        # 硬看门狗：不信任 turn() 内部超时（cron-tasks 实测 daemon 线程下超时收尾
+        # 可能整链不发生），到期放弃等待直接报错，避免按钮永久卡在「优化中」
+        if not done.wait(_TURN_TIMEOUT + _WATCHDOG_GRACE):
+            self.signals.error.emit(f"优化超时（>{int(_TURN_TIMEOUT)}s），已放弃等待")
+            return
+        err = holder.get("error")
+        if err:
+            self.signals.error.emit(str(err))
+        else:
+            self.signals.done.emit(_strip_thinking(holder.get("text", "")))
 
 
 def _strip_thinking(text: str) -> str:
