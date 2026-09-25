@@ -1498,7 +1498,7 @@
                 "gateways": true,
                 "tools": true
             },
-            "downloads": 7,
+            "downloads": 8,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -2680,7 +2680,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 14,
+            "downloads": 15,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -3674,7 +3674,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 16,
+            "downloads": 17,
             "keywords": [
                 "voice",
                 "dictation",
