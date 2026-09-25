@@ -10,7 +10,7 @@
 协议参考: openhanako lib/bridge/wechat-adapter.ts（Apache-2.0）与
 https://github.com/Tencent/openclaw-weixin（MIT）。
 
-SDK 延迟导入纪律：模块顶层不 eager import 平台 SDK，复用宿主 aiohttp/httpx。
+SDK 延迟导入纪律：模块顶层不 eager import 平台 SDK，复用宿主 httpx。
 """
 
 from __future__ import annotations
@@ -155,9 +155,12 @@ def render_markdown_plain(md: str) -> str:
 
 
 def check_wechat_requirements() -> bool:
-    """检查微信网关依赖是否满足"""
+    """检查微信网关依赖是否满足。
+
+    适配器全程只用 httpx（见 connect() 与 _api_post）；aiohttp 是从 gateway-qq
+    拷贝时的残留，打包宿主未收集 aiohttp，留着会让检查恒 False、插件直接不加载。
+    """
     try:
-        import aiohttp  # noqa: F401
         import httpx  # noqa: F401
 
         return True
