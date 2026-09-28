@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1790582282.711805,
+  "fetched_at": 1790612871.2450027,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -11,7 +11,7 @@
     "autoloop": 12,
     "beautiful-article-skills": 3,
     "breakout": 6,
-    "browser": 59,
+    "browser": 60,
     "calendar": 25,
     "canvas-design": 1,
     "caveman": 6,
