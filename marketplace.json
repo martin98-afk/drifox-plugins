@@ -2225,7 +2225,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 7,
+            "downloads": 8,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2644,7 +2644,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 29,
+            "downloads": 30,
             "keywords": [
                 "dashboard",
                 "stats",

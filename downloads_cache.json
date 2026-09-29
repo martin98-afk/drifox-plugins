@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1790633534.078524,
+  "fetched_at": 1790647646.5133922,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -67,7 +67,7 @@
     "mcp-builder": 1,
     "memory-match": 3,
     "midnight-aurora": 8,
-    "minesweeper": 7,
+    "minesweeper": 8,
     "minimax-h3": 5,
     "nuwa-skill": 11,
     "office-docs": 1,
@@ -79,7 +79,7 @@
     "pixel-team-studio": 19,
     "playground": 3,
     "ponytail": 9,
-    "project-dashboard": 29,
+    "project-dashboard": 30,
     "project-side-rail": 15,
     "prompt-enhancer": 47,
     "python-pro": 1,
