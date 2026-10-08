@@ -633,13 +633,15 @@ class _EnhanceTask(QRunnable):
 
     def run(self):
         try:
-            from app.utils.http_client import build_openai_client
+            from app.utils.http_client import build_openai_client, chat_completion_text
 
             client = build_openai_client(
                 api_key=self.llm_config.get("API_KEY", ""),
                 base_url=self.llm_config.get("API_URL"),
             )
-            resp = client.chat.completions.create(
+            # 流式发起+聚合：CodeBuddy 等端点仅支持流式请求，非流式直接 400（11101）
+            result = chat_completion_text(
+                client,
                 model=self.llm_config.get("模型名称", "gpt-4o"),
                 messages=[
                     {"role": "system", "content": self.enhance_prompt},
@@ -647,8 +649,7 @@ class _EnhanceTask(QRunnable):
                 ],
                 temperature=0.3,
                 max_tokens=2000,
-            )
-            result = resp.choices[0].message.content.strip()
+            ).strip()
             result = _strip_thinking(result)
             self.signals.done.emit(result)
         except Exception as e:
