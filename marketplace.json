@@ -365,7 +365,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 25,
+            "downloads": 26,
             "keywords": [
                 "calendar",
                 "date",
@@ -688,7 +688,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 25,
+            "downloads": 26,
             "keywords": [
                 "welcome",
                 "stats",
@@ -792,7 +792,7 @@
                 "tools": true,
                 "hook_policies": true
             },
-            "downloads": 40,
+            "downloads": 41,
             "keywords": [
                 "cron",
                 "schedule",
@@ -1579,7 +1579,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 53,
+            "downloads": 54,
             "keywords": [
                 "git",
                 "source-control",
@@ -2283,7 +2283,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 11,
+            "downloads": 12,
             "keywords": [
                 "skill",
                 "agents",
@@ -2382,7 +2382,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 10,
+            "downloads": 11,
             "keywords": [
                 "omml",
                 "docx",
@@ -2705,7 +2705,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 51,
+            "downloads": 52,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -2786,7 +2786,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 26,
+            "downloads": 27,
             "keywords": [
                 "screenshot",
                 "clipboard",
@@ -3912,7 +3912,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 29,
+            "downloads": 30,
             "keywords": [
                 "powershell",
                 "windows",
