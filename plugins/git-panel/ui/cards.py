@@ -2112,13 +2112,15 @@ class _AIGenerateTask(QRunnable):
 
     def run(self):
         try:
-            from app.utils.http_client import build_openai_client
+            from app.utils.http_client import build_openai_client, chat_completion_text
 
             client = build_openai_client(
                 api_key=self._llm.get("API_KEY", ""),
                 base_url=self._llm.get("API_URL"),
             )
-            resp = client.chat.completions.create(
+            # 流式发起+聚合：CodeBuddy 等端点仅支持流式请求，非流式直接 400（11101）
+            result = chat_completion_text(
+                client,
                 model=self._llm.get("模型名称", "gpt-4o"),
                 messages=[
                     {"role": "system", "content": self._system},
@@ -2127,7 +2129,7 @@ class _AIGenerateTask(QRunnable):
                 temperature=0.3,
                 max_tokens=500,
             )
-            result = strip_thinking((resp.choices[0].message.content or "").strip())
+            result = strip_thinking((result or "").strip())
             self._signals.done.emit(result)
         except Exception as e:
             logger.error(f"[git-panel] AI 生成提交描述失败: {e}")

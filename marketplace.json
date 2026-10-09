@@ -1563,7 +1563,7 @@
         {
             "name": "git-panel",
             "description": "Git 控制面板 — 文件变更、暂存/取消暂存、提交、Stash、分支管理、提交历史、Diff 预览、AI 生成提交描述",
-            "version": "2.0.1",
+            "version": "2.0.2",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
