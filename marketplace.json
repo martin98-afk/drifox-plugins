@@ -150,7 +150,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "video",
                 "explainer",
@@ -1579,7 +1579,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 52,
+            "downloads": 53,
             "keywords": [
                 "git",
                 "source-control",
@@ -2705,7 +2705,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 48,
+            "downloads": 51,
             "keywords": [
                 "prompt",
                 "enhance",
