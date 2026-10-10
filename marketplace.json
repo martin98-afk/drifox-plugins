@@ -120,7 +120,7 @@
             "components": {
                 "providers": true
             },
-            "downloads": 4,
+            "downloads": 6,
             "keywords": [
                 "服务商"
             ],
@@ -654,7 +654,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 7,
+            "downloads": 9,
             "keywords": [
                 "command-code",
                 "commandcode",
@@ -1579,7 +1579,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 54,
+            "downloads": 55,
             "keywords": [
                 "git",
                 "source-control",
@@ -1704,7 +1704,7 @@
             "components": {
                 "providers": true
             },
-            "downloads": 3,
+            "downloads": 5,
             "keywords": [
                 "服务商"
             ],
@@ -2352,7 +2352,7 @@
             "components": {
                 "providers": true
             },
-            "downloads": 2,
+            "downloads": 4,
             "keywords": [
                 "服务商"
             ],
@@ -2517,7 +2517,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "openrouter",
                 "evolved"
@@ -2705,7 +2705,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 52,
+            "downloads": 53,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -3391,6 +3391,7 @@
                 "gateways": false,
                 "engines": false
             },
+            "downloads": 2,
             "keywords": [
                 "tencent",
                 "hunyuan",
