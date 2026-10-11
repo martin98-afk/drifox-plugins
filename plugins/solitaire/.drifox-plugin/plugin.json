@@ -5,7 +5,7 @@
     },
     "name": "solitaire",
     "description": "经典接龙纸牌游戏（Klondike）——拖拽移动、双击自动收牌，在 DriFox 中直接玩",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "author": {
         "name": "DriFox Contributor"
     },
