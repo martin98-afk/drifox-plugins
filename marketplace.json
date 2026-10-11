@@ -150,6 +150,7 @@
             "components": {
                 "providers": true
             },
+            "downloads": 1,
             "keywords": [
                 "Anthropic",
                 "Claude",
@@ -1826,7 +1827,7 @@
             "components": {
                 "providers": true
             },
-            "downloads": 1,
+            "downloads": 3,
             "keywords": [
                 "xAI",
                 "Grok",
