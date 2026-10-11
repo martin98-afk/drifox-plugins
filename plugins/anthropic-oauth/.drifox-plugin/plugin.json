@@ -1,4 +1,8 @@
 {
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
     "name": "anthropic-oauth",
     "description": "Anthropic Claude 服务商（OAuth 登录制）— 用 claude.ai 账号浏览器授权登录，以 Pro/Max 订阅额度直连 Claude 系列模型，无需 API Key",
     "version": "0.1.0",
