@@ -83,7 +83,7 @@ class CardWidget(QWidget):
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
             self._press_pos = event.pos()
-            self._controller.on_card_pressed(self)
+            self._controller.on_card_pressed(self, event.globalPos())
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):

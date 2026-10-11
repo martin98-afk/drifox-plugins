@@ -26,9 +26,12 @@ from PyQt5.QtWidgets import (
 )
 from qfluentwidgets import FluentIcon, IconWidget, StrongBodyLabel, \
     TransparentToolButton, isDarkTheme
+from loguru import logger
 
 from .game_logic import Board, SUITS
 from .widgets import CARD_H, CARD_W, CardWidget, DropZone
+
+_DEBUG = "[SOL-DBG]"
 
 # ── 桌面布局常数 ──
 MARGIN = 12
@@ -63,6 +66,17 @@ def _ctx_text_color(ctx: dict, secondary: bool = False) -> str:
     return val if val else _text_color(secondary)
 
 
+class _HelpOverlay(QLabel):
+    """玩法说明遮罩：点击任意处关闭"""
+
+    clicked = pyqtSignal()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self.clicked.emit()
+        super().mousePressEvent(event)
+
+
 class SolitaireCard(QWidget):
     """接龙浮动卡片：UI 渲染 + 拖拽控制器"""
 
@@ -80,6 +94,7 @@ class SolitaireCard(QWidget):
         # 拖拽状态
         self._drag: Optional[dict] = None
         self._ghost: Optional[QLabel] = None
+        self._press_gpos = None
 
         # 计时
         self._elapsed = QElapsedTimer()
@@ -90,6 +105,7 @@ class SolitaireCard(QWidget):
 
         self._setup_ui()
         self._new_game()
+        logger.info(f"{_DEBUG} v0.1.1 instantiated id={id(self):x}")
 
     # ── 上下文注入（UIPluginRegistry 契约）──
 
@@ -136,11 +152,17 @@ class SolitaireCard(QWidget):
         ic.setFixedSize(22, 22)
         hly.addWidget(ic)
 
-        self._title_label = StrongBodyLabel("接龙 Solitaire", header)
+        self._title_label = StrongBodyLabel("接龙 v0.1.1", header)
         self._title_label.setStyleSheet(
             f"color: {_text_color()}; background: transparent;")
         hly.addWidget(self._title_label)
         hly.addStretch(1)
+
+        help_btn = TransparentToolButton(FluentIcon.INFO, header)
+        help_btn.setFixedSize(24, 24)
+        help_btn.setToolTip("玩法说明")
+        help_btn.clicked.connect(self._show_help)
+        hly.addWidget(help_btn)
 
         close_btn = TransparentToolButton(FluentIcon.CLOSE, header)
         close_btn.setFixedSize(24, 24)
@@ -272,19 +294,30 @@ class SolitaireCard(QWidget):
                 self._add_card(("foundation", suit), 0, top, True,
                                x, TOP_Y)
 
-        # tableau
+        # tableau：顺序创建，列底牌最后 z 序最高，完整显示；
+        # 其上每张只露出顶部 step 条（rank 角标可见），经典接龙阶梯视觉
         for col in range(7):
             pile = board.tableau_col(col)
             steps = self._col_offsets(pile)
             x = MARGIN + col * (CARD_W + GAP)
             for i, tc in enumerate(pile):
                 y = TAB_Y + steps[i]
-                cw = self._add_card(("tableau", col), i, tc.card,
-                                    tc.face_up, x, y)
-                if i == len(pile) - 1:
-                    cw.raise_()
+                self._add_card(("tableau", col), i, tc.card,
+                               tc.face_up, x, y)
 
         self._moves_label.setText(f"步数 {board.moves}")
+        # [SOL-DBG] 临时诊断：每列牌数 / widget 数 / 抽样列的 y 与可见性
+        col_info = [len(board.tableau_col(c)) for c in range(7)]
+        sample = None
+        for c in range(7):
+            ws = [w for w in self._card_widgets if w.pile == ("tableau", c)]
+            if len(ws) > 2:
+                ws.sort(key=lambda w: w.idx)
+                sample = [(w.idx, w.y(), w.isVisible(), w.isHidden())
+                          for w in ws]
+                break
+        logger.info(f"{_DEBUG} refresh cols={col_info} "
+                    f"widgets={len(self._card_widgets)} sample={sample}")
         if board.is_won and not self._finished:
             self._finished = True
             self._timer.stop()
@@ -335,8 +368,9 @@ class SolitaireCard(QWidget):
 
     # ── 事件：拖拽 ──
 
-    def on_card_pressed(self, cw: CardWidget):
-        """按下即响应：牌堆牌背点击翻牌"""
+    def on_card_pressed(self, cw: CardWidget, global_pos):
+        """按下即响应：牌堆牌背点击翻牌，同时记录按下坐标供拖拽阈值判定"""
+        self._press_gpos = global_pos
         if cw.pile == ("stock",):
             self._on_stock_clicked()
 
@@ -349,6 +383,11 @@ class SolitaireCard(QWidget):
 
     def _maybe_start_drag(self, cw: CardWidget, global_pos):
         if not cw.is_face_up or cw.pile == ("stock",):
+            return
+        # 阈值：按下后移动超过 DRAG_THRESHOLD 才算拖拽，避免点击误触
+        if self._press_gpos is None:
+            return
+        if (global_pos - self._press_gpos).manhattanLength() < DRAG_THRESHOLD:
             return
         src = self._source_of(cw)
         if src is None:
@@ -379,9 +418,8 @@ class SolitaireCard(QWidget):
         ghost.show()
         ghost.raise_()
 
-        for w in seq_widgets:
-            w.hide()
-
+        # 注意：不 hide 原牌——hide 会释放 Qt 隐式鼠标 grab，
+        # 后续 move/release 不再投递，拖拽会卡死。原牌留在原地。
         self._ghost = ghost
         self._drag = {
             "src": src,
@@ -389,6 +427,7 @@ class SolitaireCard(QWidget):
             "seq": seq_widgets,
             "offset": tl - mouse,
         }
+        logger.info(f"{_DEBUG} drag start src={src} n={len(cards)}")
 
     def on_card_release(self, cw: CardWidget, global_pos):
         if self._drag is None:
@@ -406,11 +445,10 @@ class SolitaireCard(QWidget):
                     drag["src"], target[1])["ok"]
 
         ghost.deleteLater()
-        for w in drag["seq"]:
-            w.show()
         if moved:
             self._refresh()
-        # 未移动：show 已恢复原位，无需处理
+        # 未移动：原牌一直在原地，无需恢复
+        logger.info(f"{_DEBUG} release target={target} moved={moved}")
 
     def _seq_widgets_of(self, cw: CardWidget):
         """返回拖拽序列对应的 widget 列表与拖影内间距"""
@@ -441,6 +479,38 @@ class SolitaireCard(QWidget):
             if band.contains(pos):
                 return ("tableau", col)
         return None
+
+    # ── 玩法说明遮罩 ──
+
+    def _clear_help(self):
+        for w in self._board_area.findChildren(_HelpOverlay):
+            w.deleteLater()
+
+    def _show_help(self):
+        self._clear_help()
+        overlay = _HelpOverlay(self._board_area)
+        overlay.setText(
+            "<b>玩法说明</b><br><br>"
+            "• 按住明牌拖到目标列：红黑交替、点数递减，"
+            "序列可整体拖动；空列只能放 K<br>"
+            "• 双击单张明牌：自动送上对应花色的收牌堆<br>"
+            "• 点左上牌堆翻牌；翻完后点空牌堆把废牌重新洗回<br>"
+            "• 四个收牌堆按花色 A → K 收齐即通关<br><br>"
+            "<i>点击任意处关闭</i>"
+        )
+        overlay.setGeometry(0, 0, BOARD_W, BOARD_H)
+        overlay.setStyleSheet("""
+            QLabel {
+                background: rgba(0, 0, 0, 0.78);
+                color: rgba(255, 255, 255, 0.92);
+                font-size: 13px;
+                border-radius: 10px;
+                padding: 28px 40px;
+            }
+        """)
+        overlay.clicked.connect(overlay.deleteLater)
+        overlay.show()
+        overlay.raise_()
 
     # ── 游戏控制 ──
 
