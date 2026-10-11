@@ -89,11 +89,12 @@ _AI_WATCHDOG_GRACE = 30.0
 _AI_MAX_ATTEMPTS = 3
 _AI_RETRY_BACKOFF = (2.0, 4.0)  # 第 2/3 次尝试前的等待秒数
 
-# 提交模式下拉（VSCode 风格）：选中即记忆，主按钮按当前模式执行
+# 提交模式下拉（VSCode 风格）：选中即记忆，主按钮按当前模式执行。
+# 顺序即菜单顺序，前两项为提交方式组、末项为提交后动作组（菜单构建时插分隔线）
 _COMMIT_MODE_LABELS = {
     "commit": "提交",
-    "commit_push": "提交并推送",
     "stage_commit": "暂存全部并提交",
+    "commit_push": "提交并推送",
 }
 
 
@@ -2665,7 +2666,13 @@ class GitPanelCard(QWidget):
         self._ai_btn.setToolTip("根据暂存区变更由 AI 生成提交描述（失败自动重试）")
         self._ai_btn.setCursor(Qt.PointingHandCursor)
         self._ai_btn.clicked.connect(self._on_ai_generate)
-        igl.addWidget(self._ai_btn, 0, 0, Qt.AlignTop | Qt.AlignRight)
+        # 透明容器包一层：给按钮顶部/右侧留呼吸边距（直接用 alignment 会贴死框顶）
+        ai_holder = QWidget(input_wrap)
+        ai_holder.setStyleSheet("background: transparent;")
+        ahl = QHBoxLayout(ai_holder)
+        ahl.setContentsMargins(0, 5, 3, 0)
+        ahl.addWidget(self._ai_btn)
+        igl.addWidget(ai_holder, 0, 0, Qt.AlignTop | Qt.AlignRight)
         r2.addWidget(input_wrap)
 
         # 提交行：占满一行 + 右侧下拉切换提交模式（VSCode Commit 按钮同构）。
@@ -2701,6 +2708,9 @@ class GitPanelCard(QWidget):
 
         self._mode_menu = RoundMenu(parent=self._commit_bar)
         for mode, label in _COMMIT_MODE_LABELS.items():
+            if mode == "commit_push":
+                # VSCode 式分组：提交方式 | 提交后动作
+                self._mode_menu.addSeparator()
             act = Action(label, self._mode_menu, triggered=lambda _=False, m=mode: self._set_commit_mode(m))
             act.setCheckable(True)
             act.setChecked(mode == self._commit_mode)
@@ -3271,10 +3281,14 @@ class GitPanelCard(QWidget):
         self._commit_drop.setFont(QFont(ff, 12))
 
     def _show_commit_menu(self):
-        """下拉箭头：在箭头下方弹出提交模式菜单"""
-        self._mode_menu.exec(
-            self._commit_drop.mapToGlobal(QPoint(-self._commit_bar.width() + self._commit_drop.width(), self._commit_drop.height()))
-        )
+        """下拉箭头：菜单位于 ▾ 正下方，右缘对齐箭头右缘，宽度自适应内容"""
+        menu = self._mode_menu
+        menu.view.setMinimumWidth(0)  # 收缩到内容宽，勿撑满条宽
+        menu.adjustSize()  # 先算准尺寸，否则 width()==0 对齐坐标偏
+        g = self._commit_drop.mapToGlobal(QPoint(0, 0))
+        x = g.x() + self._commit_drop.width() - menu.width()
+        y = g.y() + self._commit_drop.height()
+        menu.exec(QPoint(x, y))
 
     def _set_commit_mode(self, mode: str):
         """切换提交模式（下拉选择，主按钮文字与执行行为跟随）"""
