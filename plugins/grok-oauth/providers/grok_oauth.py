@@ -6,9 +6,8 @@
     Authorization 头为可调用值：chat_worker 每次请求传入 llm_config，按
     refresh_token 从本地缓存取短效 access_token（临期自动刷新）。
 
-登录：xAI OAuth + PKCE（grok_auth.login）——本端起 127.0.0.1:56121 临时回调
-服务，弹浏览器打开 auth.x.ai 授权页，用户授权后自动回传授权码换 token，
-全程无需手动复制。
+登录：xAI OAuth Device Flow（grok_auth.login）——弹浏览器打开授权页，
+用户登录后确认页面上的机器码，本端轮询令牌端点自动换 token。
 
 协议通道：xAI Responses API（POST {base}/responses）。default_params 预置
 「使用ResponsesAPI: True」，chat_worker 经 model adapter 判定后走原生
@@ -119,11 +118,11 @@ _EXTRA_HEADERS = {
 
 
 def _auto_login():
-    """登录钩子（编辑卡后台线程调用）：本地回调授权，回填长效 refresh_token。"""
+    """登录钩子（编辑卡后台线程调用）：Device Flow 授权，回填长效 refresh_token。"""
     from loguru import logger
 
     ca = _load_auth_module()
-    logger.info("[Grok OAuth] 打开 auth.x.ai 授权页，等待本地回调 127.0.0.1:56121")
+    logger.info("[Grok OAuth] 发起 Device Flow 登录（请求 auth.x.ai 设备码）")
     try:
         result = ca.login(timeout_sec=600)
     except Exception as e:
@@ -204,8 +203,8 @@ def register(registry):
             capabilities={
                 "extra_headers": _EXTRA_HEADERS,
                 "login_hook": _auto_login,
-                # 本端起 127.0.0.1:56121 回调服务，浏览器授权后自动完成
-                "login_hint": "已打开 xAI 授权页：登录 SuperGrok / X Premium+ 账号并授权，DriFox 会自动接收回调完成登录（最长等待 10 分钟，期间请勿关闭授权页）",
+                # 浏览器页展示/确认机器码，本端轮询自动完成
+                "login_hint": "已打开 xAI 授权页：登录 SuperGrok / X Premium+ 账号，在页面输入或确认机器码即可，DriFox 会自动完成登录（最长等待 15 分钟）",
                 "context_limit": 500000,
                 "max_output_tokens": 32768,
                 "absolute_limit": 32768,
