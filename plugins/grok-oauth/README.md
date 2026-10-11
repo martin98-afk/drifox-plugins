@@ -6,14 +6,13 @@ xAI Grok 服务商插件（OAuth 登录制）：用 SuperGrok / X Premium+ 订�
 
 - **SuperGrok**（grok.com 订阅）或 **X Premium+**（绑定 X 账号）订阅（免费层无 OAuth 编程权益）
 - 网络可达 `auth.x.ai` 与 `cli-chat-proxy.grok.com`
-- 本地 `127.0.0.1:56121` 端口空闲（登录回调用，Grok CLI / OpenCode 登录也用它）
 
 ## 登录步骤
 
 1. DriFox「设置 → 模型服务商」新增配置，服务商选 **Grok OAuth**
 2. 点「登录」：自动打开 auth.x.ai 授权页
-3. 登录 SuperGrok / X Premium+ 账号并点授权
-4. xAI 自动回调本机 `127.0.0.1:56121`，DriFox 自动完成登录（无需复制任何内容）
+3. 登录 SuperGrok / X Premium+ 账号，在页面**输入或确认机器码**（codex 式 Device Flow）
+4. DriFox 轮询自动完成登录，无需复制任何内容
 5. 长效 `refresh_token` 自动回填到 API Key 输入框 → **保存配置**
 
 ## 工作方式
