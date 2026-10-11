@@ -23,7 +23,7 @@ def register_ui(registry):
     from .session_tree import SessionTreeCard
 
     # 注册浮动卡片
-    # container="left"：停靠在 Tab 窗口左侧停靠区（与 project-side-rail 同侧），
+    # container="left"：停靠在 Tab 窗口左侧停靠区，
     # 宽度可由 dockSplitter 拖拽调整
     registry.register_floating_card(
         plugin_name="session-tree",
