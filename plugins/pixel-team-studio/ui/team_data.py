@@ -16,7 +16,7 @@ from loguru import logger
 def _main_window():
     """获取第一个存活的主窗口实例（团队操作以它为准）"""
     try:
-        from app.core.window_registry import alive_window_instances
+        from app.core.infra.window_registry import alive_window_instances
 
         wins = alive_window_instances()
         for win in wins:
@@ -30,7 +30,7 @@ def _main_window():
 def _find_window(window_id: str):
     """按 window_id 查找存活窗口实例"""
     try:
-        from app.core.window_registry import alive_window_instances
+        from app.core.infra.window_registry import alive_window_instances
 
         for win in alive_window_instances():
             if win is not None and getattr(win, "_window_id", "") == window_id:
@@ -41,7 +41,7 @@ def _find_window(window_id: str):
 
 
 def _team_manager():
-    from app.core.team_manager import TeamManager
+    from app.core.team.team_manager import TeamManager
 
     return TeamManager.get_instance()
 
