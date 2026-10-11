@@ -163,20 +163,31 @@ def _auto_login():
 
 
 def _fetch_models(config):
-    """模型列表获取钩子：按本配置的 rt 换 token 拉 /v1/models-v2（账号绑定目录）。"""
+    """模型列表获取钩子：按本配置的 rt 换 token 拉 /v1/models-v2（账号绑定目录）。
+
+    走认证模块的显式代理 opener（打包版 urllib 默认 opener 不走系统代理，
+    实测直连被墙）；头组与聊天请求同契约。
+    """
     refresh_token = str((config or {}).get("API_KEY", "") or "").strip()
     if not refresh_token:
         raise RuntimeError("尚未登录：请先点击「登录」")
+    ca = _load_auth_module()
     token = _exchange_access_token(refresh_token)["access_token"]
     req = urllib.request.Request(
         f"{_API_ENDPOINT}/models-v2",
         headers={
             "Authorization": f"Bearer {token}",
             "Accept": "application/json",
-            "User-Agent": "grok-cli/1.0 (DriFox)",
+            "User-Agent": "grok-cli/1.0.13 (DriFox)",
+            "X-XAI-Token-Auth": "xai-grok-cli",
+            "x-authenticateresponse": "authenticate-response",
+            "x-grok-client-identifier": "grok-cli",
+            "x-grok-client-version": "1.0.13",
+            "x-grok-client-mode": "interactive",
+            "x-grok-req-id": str(uuid.uuid4()),
         },
     )
-    with urllib.request.urlopen(req, timeout=30) as resp:
+    with ca._OPENER.open(req, timeout=30) as resp:
         payload = json.loads(resp.read().decode("utf-8"))
     return _extract_model_ids(payload) or list(_MODELS)
 
