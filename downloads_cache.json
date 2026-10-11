@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1791736120.7873023,
+  "fetched_at": 1791750521.7161934,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -39,6 +39,7 @@
     "expert-teams": 1,
     "fe-fw": 8,
     "feature-dev": 3,
+    "floating-chat": 0,
     "frontend-design": 1,
     "frontend-pro": 2,
     "game2048": 6,
