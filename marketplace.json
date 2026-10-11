@@ -1808,6 +1808,39 @@
             }
         },
         {
+            "name": "grok-oauth",
+            "description": "xAI Grok 服务商（OAuth 登录制）— 用 SuperGrok / X Premium+ 订阅账号浏览器授权登录，直连 Grok 系列模型，无需 API Key",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "provider"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/grok-oauth",
+                "ref": "main"
+            },
+            "components": {
+                "providers": true
+            },
+            "keywords": [
+                "xAI",
+                "Grok",
+                "SuperGrok",
+                "OAuth",
+                "服务商"
+            ],
+            "drifox": {
+                "min_version": "0.5.12"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "groq",
             "description": "Groq 服务商插件 — 提供 Groq 高速推理模型接入。",
             "version": "1.0.0",
