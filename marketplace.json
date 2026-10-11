@@ -159,6 +159,10 @@
             ],
             "drifox": {
                 "min_version": "0.5.12"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -677,6 +681,10 @@
             ],
             "drifox": {
                 "min_version": "0.5.12"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
