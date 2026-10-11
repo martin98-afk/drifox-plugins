@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.11.3 (2026-10-11)
+### 🔗 webdav-backup v0.8.1：设置卡新增「应用密码怎么拿」外链
+- **动机**：坚果云必须用「应用密码」而非登录密码，原说明只是纯文字路径（账户信息 → 安全选项 → 添加应用密码），用户要自己摸索
+- **改动**：`config_schema` 在「密码」字段后新增 `type: "link"` 字段，指向坚果云帮助中心官方图文教程 `https://help.jianguoyun.com/?p=2064`（第三方应用授权 WebDAV 开启方法）；密码字段 description 同步改为引导至该链接
+- **范围**：`server_url` 输入框保留（Nextcloud / 群晖 / 自建 WebDAV 地址各不相同，删字段会把插件退化为坚果云专用）
+- **验证**：经主程序 `parse_config_schema` 实测解析通过（9 字段，link 字段 url 合法）；`tools/validate_plugins.py --strict` 中 webdav-backup 为 OK
+
 ## 2.11.2 (2026-10-11)
 ### 🎛 webdav-backup v0.8.0：卡片重排为左右分栏，恢复现场迁入 `.drifox/restore`，收尾指引可视化
 - **范围收窄**：移除「团队 / 项目 / 截图 / 本地备份」4 类备份选项（`config.py` 白名单同步删除，仅剩 8 类）；旧配置中的 `inc_teams` 等残留键不再被读取
