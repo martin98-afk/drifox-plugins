@@ -28,6 +28,7 @@ from PyQt5.QtWidgets import (
     QMenu,
     QPushButton,
     QScrollArea,
+    QSplitter,
     QVBoxLayout,
     QWidget,
 )
@@ -368,8 +369,21 @@ class PixelTeamStudioCard(QWidget):
         trly.addWidget(self._new_team_btn)
         ply.addWidget(tabs_row)
 
+        # ── 主体：上下可拖拽分割（上=团队区/空状态，下=智能体库）──
+        splitter = QSplitter(Qt.Vertical, self._panel)
+        splitter.setObjectName("ptsSplitter")
+        splitter.setHandleWidth(6)
+        splitter.setChildrenCollapsible(False)
+
+        # 上半部容器：团队面板区与空状态提示互斥切换
+        top_host = QWidget(splitter)
+        top_host.setStyleSheet("background: transparent;")
+        tly = QVBoxLayout(top_host)
+        tly.setContentsMargins(0, 0, 0, 0)
+        tly.setSpacing(0)
+
         # ── 团队面板区（竖排列表，滚动）──
-        self._teams_scroll = QScrollArea(self._panel)
+        self._teams_scroll = QScrollArea(top_host)
         self._teams_scroll.setWidgetResizable(True)
         self._teams_scroll.setFrameShape(QFrame.NoFrame)
         self._teams_scroll.setStyleSheet("QScrollArea { background: transparent; border: none; }")
@@ -380,7 +394,7 @@ class PixelTeamStudioCard(QWidget):
         self._teams_layout.setSpacing(10)
         self._teams_layout.addStretch(1)
         self._teams_scroll.setWidget(teams_host)
-        ply.addWidget(self._teams_scroll, 1)
+        tly.addWidget(self._teams_scroll, 1)
 
         # 无团队提示（有团队时与滚动区互斥隐藏）：像素小人排队插画 + 文案
         empty_host = QWidget(self._panel)
@@ -399,16 +413,13 @@ class PixelTeamStudioCard(QWidget):
         empty_v.addWidget(self._empty_hint)
         empty_v.addStretch(1)
         self._empty_host = empty_host
-        ply.addWidget(empty_host, 1)
+        tly.addWidget(empty_host, 1)
 
-        # ── 分隔线 ──
-        sep = QFrame(self._panel)
-        sep.setFixedHeight(1)
-        sep.setObjectName("ptsSep")
-        ply.addWidget(sep)
+        splitter.addWidget(top_host)
 
-        # ── 底部：智能体库 + 垃圾桶 ──
-        bottom = QWidget(self._panel)
+        # ── 下半部：智能体库 + 垃圾桶 ──
+        bottom = QWidget(splitter)
+        bottom.setMinimumHeight(120)
         bottom.setStyleSheet("background: transparent;")
         bly = QHBoxLayout(bottom)
         bly.setContentsMargins(0, 0, 0, 0)
@@ -441,7 +452,14 @@ class PixelTeamStudioCard(QWidget):
         self._trash_zone._on_remove = self._on_remove_member
         self._trash_zone.setVisible(False)
         bly.addWidget(self._trash_zone, 0, Qt.AlignBottom)
-        ply.addWidget(bottom)
+        splitter.addWidget(bottom)
+
+        # 初始高度：智能体库给足一行完整小人卡（标题+112px），余量全归团队区
+        # setSizes 首帧按容器高度等比压缩，给大权重让库区实际落点接近 170px
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 0)
+        splitter.setSizes([1000, 170])
+        ply.addWidget(splitter, 1)
 
         # 全局拖拽监听：拖起 remove 型像素小人时浮出垃圾桶
         QApplication.instance().installEventFilter(self)
@@ -455,7 +473,8 @@ class PixelTeamStudioCard(QWidget):
         self._panel.setStyleSheet(
             f"QFrame#ptsPanel {{ background: {rgba(pal['panel_bg'])}; "
             f"border: 1px solid {rgba(pal['panel_border'])}; border-radius: 14px; }}"
-            f"QFrame#ptsSep {{ background: {rgba(pal['panel_border'])}; border: none; }}"
+            f"QSplitter#ptsSplitter::handle:vertical {{ background: {rgba(pal['panel_border'])}; border-radius: 3px; }}"
+            f"QSplitter#ptsSplitter::handle:vertical:hover {{ background: {rgba(pal['accent'], 150)}; }}"
             f"QLabel {{ background: transparent; }}"
             + self._scrollbar_qss(pal)
         )
