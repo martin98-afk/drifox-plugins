@@ -1,5 +1,17 @@
 # Changelog
 
+## 2.11.5 (2026-10-11)
+### ✨ voice-input v0.5.0：新增 macOS 录音后端，修 WAV 解析漏读填充块致时长统计失败
+- **症状**：macOS 上点麦克风按钮无任何反应，日志报 `module 'ctypes' has no attribute 'windll'`
+- **根因**：`ui/recorder.py` 全文件基于 Windows winmm（`ctypes.windll.winmm.mciSendStringW`）。`ctypes.windll` 是 Windows 专属属性，macOS 的 ctypes 无此符号，模块顶层绑定即抛 `AttributeError`，`ui/__init__.py` 的 try/except 接住后静默 return，按钮点了永远没反应
+- **修复**：新增 `ui/recorder_mac.py` —— ctypes 直调 libobjc + AVFoundation 构造 `AVAudioRecorder`（16kHz/16bit/单声道，与 winmm 参数一致），零第三方依赖。不走 pyobjc 的原因：宿主 PyInstaller 只收集了 objc/Foundation/AppKit/CoreFoundation/Quartz，**AVFoundation 未打包**，`import AVFoundation` 必失败；ctypes 直调系统框架不依赖打包结果。`ui/__init__.py` 新增 `_make_recorder()` 按 `sys.platform` 分派（winmm 模块顶层绑 win 专属符号，非 Windows 必须绕开其 import）
+- **附带修复**：`AVAudioRecorder` 会在 `fmt` 块前插 `JUNK` + `FLLR` 填充块，实测 data 块偏移到 4096 字节，而原 `wav_utils` 只读前 64 字节头 → 时长统计恒为「读取失败」。头部读取改 8192 字节，解析循环补「body 越界收尾」防死循环
+- **重构**：WAV 头解析与电平统计抽到 `ui/wav_utils.py`（两端共用），`recorder.py` 从 206 行瘦到 99 行
+- **macOS 权限前置**：TCC 麦克风授权由宿主 app 决定，缺 `NSMicrophoneUsageDescription` 时系统不弹窗直接拒绝、录音全程数字静音（peak=0）。插件侧新增授权状态探测与首次使用提示，被拒时抛带指引的 `RuntimeError`（宿主侧配套见主仓 build.py）
+- **平台声明**：manifest 新增 `platforms: ["windows", "darwin"]`（Linux 未实现），市场卡片对不兼容平台置灰
+- **回归测试**：新增 `tests/test_voice_input_wav_utils.py` 10 用例（标准 winmm 布局 / AVAudioRecorder 填充块布局 / 截断头不挂死 / 时长按实际文件大小 / 静音与信号电平 / 非 16bit 降级）。已验证测试有效性：把头部读取退回 64 字节后 2 例精确失败，恢复后 10/10 通过
+- **验证**：`ruff check plugins/voice-input/` 通过；`validate_plugins.py --strict` 中 voice-input 为 OK；macOS 真机跑通 start → 1.2 秒 → stop_and_save 全链路（WAV 42996 字节、时长 1.2s、格式 16000Hz/1ch/16bit）
+
 ## 2.11.4 (2026-10-11)
 ### 🐛 webdav-backup v0.8.2：403 配额/限流被误报为「认证失败」，误导排查方向
 - **症状**：坚果云上传返回 403，界面提示「认证失败(401/403)：请确认使用「应用密码」而非登录密码」，而凭证完全正常
