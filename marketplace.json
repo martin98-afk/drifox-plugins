@@ -133,6 +133,35 @@
             }
         },
         {
+            "name": "anthropic-oauth",
+            "description": "Anthropic Claude 服务商（OAuth 登录制）— 用 claude.ai 账号浏览器授权登录，以 Pro/Max 订阅额度直连 Claude 系列模型，无需 API Key",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "provider"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/anthropic-oauth",
+                "ref": "main"
+            },
+            "components": {
+                "providers": true
+            },
+            "keywords": [
+                "Anthropic",
+                "Claude",
+                "OAuth",
+                "服务商",
+                "Claude Code"
+            ],
+            "drifox": {
+                "min_version": "0.5.12"
+            }
+        },
+        {
             "name": "anything2explainer",
             "description": "把任意主题做成一条黑底 MG 风格、有配音字幕与章节进度条的科普讲解视频（中文/英文，Remotion 代码动画）。含可编译模板、图元库、TTS/分镜/渲染工具、风格与动效规范、多 agent 分工协议与 QC 判据，以及《RAG 与知识库》完整样片作为质量标尺。",
             "version": "1.0.0",
@@ -618,6 +647,36 @@
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "codex-oauth",
+            "description": "OpenAI Codex 服务商（OAuth 登录制）— 用 ChatGPT 账号浏览器授权登录，以订阅额度直连 Codex Responses API（gpt-6.1-sol / gpt-6-luna 等），无需 API Key",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "provider"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/codex-oauth",
+                "ref": "main"
+            },
+            "components": {
+                "providers": true
+            },
+            "keywords": [
+                "OpenAI",
+                "Codex",
+                "ChatGPT",
+                "OAuth",
+                "服务商",
+                "GPT"
+            ],
+            "drifox": {
+                "min_version": "0.5.12"
             }
         },
         {
@@ -3141,7 +3200,7 @@
         {
             "name": "solitaire",
             "description": "经典接龙纸牌游戏（Klondike）——拖拽移动、双击自动收牌，在 DriFox 中直接玩",
-            "version": "0.1.0",
+            "version": "0.1.1",
             "author": "DriFox Contributor",
             "license": "GPL-3.0-or-later",
             "categories": [
