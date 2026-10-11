@@ -1266,7 +1266,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1579,7 +1579,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 55,
+            "downloads": 56,
             "keywords": [
                 "git",
                 "source-control",
@@ -2551,7 +2551,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 19,
+            "downloads": 20,
             "drifox": {
                 "min_version": "0.6.2"
             },
@@ -2708,7 +2708,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 53,
+            "downloads": 54,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -3681,7 +3681,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 19,
+            "downloads": 20,
             "keywords": [
                 "voice",
                 "dictation",
@@ -3881,7 +3881,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 10,
+            "downloads": 13,
             "keywords": [
                 "webdav",
                 "backup",
