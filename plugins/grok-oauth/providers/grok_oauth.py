@@ -237,6 +237,7 @@ def register(registry):
             capabilities={
                 "extra_headers": _EXTRA_HEADERS,
                 "login_hook": _auto_login,
+                "models_hook": _fetch_models,
                 # 浏览器页展示/确认机器码，本端轮询自动完成
                 "login_hint": "已打开 xAI 授权页：登录 SuperGrok / X Premium+ 账号，在页面输入或确认机器码即可，DriFox 会自动完成登录（最长等待 15 分钟）",
                 "context_limit": 500000,
