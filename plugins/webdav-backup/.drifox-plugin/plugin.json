@@ -5,7 +5,7 @@
     },
     "name": "webdav-backup",
     "description": "WebDAV 备份 — 将 DriFox 数据（会话/配置/插件数据）全量备份到坚果云、Nextcloud 等 WebDAV 网盘，支持定时自动备份、可选 AES-256 加密、历史版本管理与一键恢复",
-    "version": "0.8.0",
+    "version": "0.8.1",
     "author": {
         "name": "DriFox Contributors"
     },
@@ -52,7 +52,14 @@
                 "label": "密码",
                 "type": "password",
                 "default": "",
-                "description": "坚果云必须使用「应用密码」：网页端 账户信息 → 安全选项 → 添加应用密码；Nextcloud 填账号密码或应用专用密码"
+                "description": "坚果云不要填登录密码，需用「应用密码」生成（见下方链接）；Nextcloud 填账号密码或应用专用密码"
+            },
+            {
+                "key": "jianguoyun_app_password_guide",
+                "label": "应用密码怎么拿",
+                "type": "link",
+                "url": "https://help.jianguoyun.com/?p=2064",
+                "placeholder": "坚果云官方图文步骤"
             },
             {
                 "key": "remote_dir",
