@@ -1,0 +1,23 @@
+# 发布指挥团 —— /team --load=release-captain
+# 场景：版本发布。门禁官一票否决核查，打包师出产物冒烟，清单官逐步机械执行发布动作。
+schema_version: 1
+template_name: release-captain
+description: 发布指挥团：门禁审查 → 构建冒烟 → 清单执行，发布节奏不乱
+# ── v2 预埋字段（schema v1 静默忽略，主程序升级后自动生效）──
+display_name: 发布指挥团
+category: 发布交付
+leader: leader
+default_init_prompt: 开始发布流程。门禁官先过门禁清单（CHANGELOG/版本号/CI/遗留风险），打包师构建产物并冒烟验证，最后清单官按发布清单逐步机械执行（危险操作逐条留痕）。门禁不过不放行；你（leader）逐项验收并做最终放行决策。本次发布：<在此填写版本号与范围>
+agents:
+  - agent_name: leader
+    description: 发布指挥官：定发布清单与节奏，逐项验收，做最终放行决策
+    profession: 发布指挥官
+  - agent_name: release-gatekeeper
+    description: 门禁官·戌关：只读核查门禁清单（CHANGELOG/版本号/CI红线），一票否决制
+    profession: 门禁官
+  - agent_name: release-builder
+    description: 打包师·庚装：执行构建产出制品并冒烟验证，产物附完整构建证据
+    profession: 打包师
+  - agent_name: checklist-runner
+    description: 清单官·辛递：严格按清单逐步机械执行发布动作，每步留痕、异常即停
+    profession: 清单官

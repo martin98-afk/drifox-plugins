@@ -1174,6 +1174,57 @@
             }
         },
         {
+            "name": "expert-teams",
+            "description": "场景化专家团模板包：缺陷狩猎、深度调研、重构小队、发布指挥、文档工坊五个预设团队，12 个专属职业智能体（追因师、修复匠、谋篇师、测绘师等），提示词设计借鉴 WorkBuddy 专家团规范（人格化职业、误派预检、快速失败、邮箱回传），/team --load 一键拉起。",
+            "version": "0.2.0",
+            "author": "马丁",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "agent",
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/expert-teams",
+                "ref": "main"
+            },
+            "components": {
+                "tools": false,
+                "commands": false,
+                "agents": true,
+                "skills": false,
+                "hooks": false,
+                "mcp": false,
+                "lsp": false,
+                "themes": false,
+                "ui": false,
+                "providers": false,
+                "team_templates": true,
+                "model_adapters": false,
+                "loop_policies": false,
+                "storages": false,
+                "serializers": false,
+                "gateways": false,
+                "engines": false
+            },
+            "keywords": [
+                "team",
+                "团队",
+                "专家团",
+                "multi-agent",
+                "team_templates",
+                "workflow"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "fe-fw",
             "description": "银翼圣焰主题 — 火焰纹章 万缕千丝 灵感深色主题，火焰橙红 + 命运女神紫双色组合，银白救世主文字色。",
             "version": "1.0.0",

@@ -1,0 +1,20 @@
+# 深度调研团 —— /team --load=deep-research
+# 场景：技术选型、方案评估。谋篇师先把课题变成可分派的取证地图，取证员多路查证并交叉验证。
+schema_version: 1
+template_name: deep-research
+description: 深度调研团：提纲设计 → 多路取证 → 收敛成报告，适合选型与评估
+# ── v2 预埋字段（schema v1 静默忽略，主程序升级后自动生效）──
+display_name: 深度调研团
+category: 调研分析
+leader: leader
+default_init_prompt: 开始调研。先让谋篇师把课题解析成研究问题并产出调研框架与取证清单，再按清单分派取证员多路收集证据（含反方取证），最后你汇总对比、按判定规则给出结论。你（leader）负责框架传递与冲突裁决，禁止代写成员产出。本次课题：<在此粘贴调研问题>
+agents:
+  - agent_name: leader
+    description: 调研主持人：解析课题，把框架完整传递给取证员，裁决冲突证据并收敛结论
+    profession: 调研主持人
+  - agent_name: research-framer
+    description: 谋篇师·文枢：只读产出调研框架、评估维度与可并行分派的取证清单
+    profession: 谋篇师
+  - agent_name: evidence-scout
+    description: 取证员·书梯：只读多路收集证据并交叉验证，每条结论带可核对出处
+    profession: 取证员
