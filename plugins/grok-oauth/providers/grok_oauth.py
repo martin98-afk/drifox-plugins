@@ -24,6 +24,7 @@ import json
 import threading
 import time
 import urllib.request
+import uuid
 from pathlib import Path
 
 from app.plugins.registries.provider_registry import ProviderDef
@@ -109,11 +110,33 @@ def _auth_header(llm_config: dict) -> str:
         return ""  # 换取失败回退空头（报错由请求层透出）
 
 
-# UA 与 Grok CLI 对齐（.cli 代理通道社区实践）；Authorization 为可调用值
-# （chat_worker 每请求传入 llm_config 按配置取）。
+def _model_override(llm_config: dict) -> str:
+    """x-grok-model-override：当前请求模型（llm_config 的「模型名称」字段）。"""
+    model = str((llm_config or {}).get("模型名称") or "").strip()
+    return model or "grok-4.7"
+
+
+def _req_id(_llm_config: dict) -> str:
+    """x-grok-req-id：每请求新生成（chat_worker 对可调用值逐请求求值）。"""
+    return str(uuid.uuid4())
+
+
+# cli-chat-proxy（OAuth 订阅通道）头契约：服务端按 x-grok-client-version 做
+# 版本门槛（缺失报 426 "Your Grok CLI version (none) is outdated"），最低
+# 1.0.13（2026-10 校准）；头组形态对齐 pi-xai-oauth 的 wire.ts。
+# Authorization 为可调用值（chat_worker 每请求传入 llm_config 按配置取）。
 _EXTRA_HEADERS = {
     "Authorization": _auth_header,
-    "User-Agent": "grok-cli/1.0 (DriFox)",
+    "User-Agent": "grok-cli/1.0.13 (DriFox)",
+    "X-XAI-Token-Auth": "xai-grok-cli",
+    "x-authenticateresponse": "authenticate-response",
+    "x-grok-client-identifier": "grok-cli",
+    "x-grok-client-version": "1.0.13",
+    "x-grok-client-mode": "interactive",
+    # 会话/请求遥测 ID：conv 进程级常量，req 每请求新生成
+    "x-grok-conv-id": str(uuid.uuid4()),
+    "x-grok-req-id": _req_id,
+    "x-grok-model-override": _model_override,
 }
 
 
