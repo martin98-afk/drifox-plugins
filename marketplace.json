@@ -1299,6 +1299,57 @@
             }
         },
         {
+            "name": "floating-chat",
+            "description": "随时呼出的对话悬浮窗：全局热键一键弹出，不打开主窗也能快速问大模型。独立会话不污染主对话，输入即问、流式作答、一键打开完整会话",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/floating-chat",
+                "ref": "main"
+            },
+            "components": {
+                "tools": false,
+                "commands": true,
+                "agents": false,
+                "skills": false,
+                "hooks": false,
+                "mcp": false,
+                "lsp": false,
+                "themes": false,
+                "ui": true,
+                "providers": false,
+                "team_templates": false,
+                "model_adapters": false,
+                "loop_policies": false,
+                "storages": false,
+                "serializers": false,
+                "gateways": false,
+                "engines": false
+            },
+            "keywords": [
+                "chat",
+                "floating",
+                "quick",
+                "hotkey",
+                "window",
+                "悬浮对话",
+                "快速提问"
+            ],
+            "drifox": {
+                "min_version": "0.6.2"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "frontend-design",
             "description": "Anthropic 官方前端设计 — 创作有辨识度的网页 UI：大胆配色、刻意字体、意图动效、风格统一。helloianneo 必装 Top 10 第 1 名。",
             "version": "1.0.0",
