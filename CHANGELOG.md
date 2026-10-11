@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.11.4 (2026-10-11)
+### 🐛 webdav-backup v0.8.2：403 配额/限流被误报为「认证失败」，误导排查方向
+- **症状**：坚果云上传返回 403，界面提示「认证失败(401/403)：请确认使用「应用密码」而非登录密码」，而凭证完全正常
+- **根因**：`engine.py` 把 401 与 403 合并处理（`if e.status in (401, 403)`）并统一套用认证文案。坚果云在配额/限流类拒绝时返回 403 + `<s:exception>TrafficRateExhausted</s:exception>`（本周期上传流量超额），被错误归因到密码
+- **诊断证据**：用磁盘真实凭证直连，PROPFIND/MKCOL/PUT/GET/DELETE 全链路通过；用真实备份大小（124MB）PUT 复现 403，响应体明确为 `TrafficRateExhausted`；云端 10 份备份合计约 900MB（免费版额度 1GB），且 `drifox-backup-20261011-093108.zip` 经 Range 读尾部校验确认是**上传中断的残包**
+- **修复**：`WebDAVError` 新增 `detail`（响应体片段，保留 1000 字符）与 `dav_exception`（从 `<s:exception>` 抽取的 DAV 专有异常名）；`webdav.py` 抛错时填充两字段；`engine.py` 新增 `_describe_webdav_error()` 统一映射——401 才归因认证，403 按 `TrafficRateExhausted` / `OverQuota` 区分流量与空间，未知 403 带出服务器原文，507 归因空间不足。`run_test` / `run_backup` / `run_restore` / `run_list` 四条路径统一走该映射
+- **回归测试**：新增 `tests/test_webdav_backup_error_map.py` 9 用例（异常名抽取、401/403/507/无状态码映射、旧构造签名兼容）。已验证测试有效性：在修复前代码上 9/9 失败，修复后 9/9 通过
+- **验证**：`ruff check --select F,E9` 通过；`validate_plugins.py --strict` 中 webdav-backup 为 OK
+
 ## 2.11.3 (2026-10-11)
 ### 🔗 webdav-backup v0.8.1：设置卡新增「应用密码怎么拿」外链
 - **动机**：坚果云必须用「应用密码」而非登录密码，原说明只是纯文字路径（账户信息 → 安全选项 → 添加应用密码），用户要自己摸索

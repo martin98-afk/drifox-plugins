@@ -196,6 +196,30 @@ def _update_state(**kv: Any) -> None:
     cfg_mod.save_state(state)
 
 
+def _describe_webdav_error(e: WebDAVError) -> str:
+    """把 WebDAV 错误映射成可直接照做的中文提示。
+
+    401 才是凭证问题；403 涵盖配额/限流/只读目录等多种情况，
+    按服务器返回的 DAV 专有异常名区分（坚果云把机器可读原因放在
+    <s:exception> 里），不能一律归因到密码。
+    """
+    if e.status == 401:
+        return "认证失败(401)：用户名或密码不正确。坚果云请确认使用的是「应用密码」而非登录密码"
+    if e.dav_exception == "TrafficRateExhausted":
+        return (
+            "上传流量超额(403 TrafficRateExhausted)：坚果云本计算周期的上传流量已用完。"
+            "可降低备份频率/保留份数（减小包体积），或等下一个周期额度重置后重试"
+        )
+    if e.dav_exception == "OverQuota":
+        return "存储空间不足(403 OverQuota)：网盘剩余空间不够，请清理云端旧备份或扩容后重试"
+    if e.status == 403:
+        extra = f"（{e.dav_exception}）" if e.dav_exception else ""
+        return f"服务器拒绝(403){extra}：可能是配额/流量限制或目录只读。服务器返回：{e.detail[:300] or '无详情'}"
+    if e.status == 507:
+        return "存储空间不足(507)：网盘剩余空间不够，请清理云端旧备份或扩容后重试"
+    return str(e)
+
+
 def run_test() -> Dict[str, Any]:
     """测试连接（不写 state）"""
     c = cfg_mod.load_config()
@@ -205,10 +229,7 @@ def run_test() -> Dict[str, Any]:
         info = _make_client(c).test()
         return {"ok": True, "message": f"连接成功：{info.get('host', '')}"}
     except WebDAVError as e:
-        msg = str(e)
-        if e.status in (401, 403):
-            msg = "认证失败(401/403)：坚果云请确认使用「应用密码」而非登录密码"
-        return {"ok": False, "message": msg}
+        return {"ok": False, "message": _describe_webdav_error(e)}
     except Exception as e:  # 顶层屏障：结果必须可序列化回 UI
         return {"ok": False, "message": f"未知错误: {e}"}
 
@@ -235,7 +256,7 @@ def run_list() -> Dict[str, Any]:
         items.sort(key=lambda x: x["name"], reverse=True)
         return {"ok": True, "items": items, "message": ""}
     except WebDAVError as e:
-        return {"ok": False, "message": str(e), "items": []}
+        return {"ok": False, "message": _describe_webdav_error(e), "items": []}
 
 
 def run_backup() -> Dict[str, Any]:
@@ -296,9 +317,7 @@ def run_backup() -> Dict[str, Any]:
         _update_state(last_backup_status="error", last_error=str(e), last_backup_warning="")
         return {"ok": False, "message": str(e), "skipped": skipped}
     except WebDAVError as e:
-        msg = str(e)
-        if e.status in (401, 403):
-            msg = "认证失败(401/403)：坚果云请确认使用「应用密码」而非登录密码"
+        msg = _describe_webdav_error(e)
         _update_state(last_backup_status="error", last_error=msg, last_backup_warning="")
         return {"ok": False, "message": msg, "skipped": skipped}
     except Exception as e:  # 顶层屏障
@@ -437,7 +456,7 @@ def run_restore(backup_name: str, encryption_password: str = "") -> Dict[str, An
     except crypto.DecryptionError as e:
         return {"ok": False, "message": str(e)}
     except WebDAVError as e:
-        return {"ok": False, "message": str(e)}
+        return {"ok": False, "message": _describe_webdav_error(e)}
     except Exception as e:  # 顶层屏障
         return {"ok": False, "message": f"恢复失败: {e}"}
     finally:

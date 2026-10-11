@@ -19,14 +19,31 @@ from urllib.request import Request, urlopen
 
 _DAV_NS = "{DAV:}"
 _TIMEOUT = 30
+# 响应体保留长度：要够长以覆盖 <s:exception>（坚果云把机器可读原因放这里）
+_DETAIL_KEEP = 1000
+# DAV 专有异常名，如坚果云 <s:exception>TrafficRateExhausted</s:exception>
+_DAV_EXCEPTION_RE = re.compile(r"<(?:\w+:)?exception>\s*([^<\s]+)\s*</", re.IGNORECASE)
+
+
+def _extract_dav_exception(detail: str) -> str:
+    """从错误响应体中抽取 DAV 专有异常名（无则空串）"""
+    m = _DAV_EXCEPTION_RE.search(detail or "")
+    return m.group(1) if m else ""
 
 
 class WebDAVError(Exception):
-    """WebDAV 操作失败（带 HTTP 状态码）"""
+    """WebDAV 操作失败（带 HTTP 状态码与服务器原因）
 
-    def __init__(self, message: str, status: int = 0):
+    status: HTTP 状态码
+    detail: 响应体原文片段（截断保留，供上层给出准确提示）
+    dav_exception: DAV 专有异常名，如 TrafficRateExhausted（坚果云上传流量超额）
+    """
+
+    def __init__(self, message: str, status: int = 0, detail: str = "", dav_exception: str = ""):
         super().__init__(message)
         self.status = status
+        self.detail = detail
+        self.dav_exception = dav_exception
 
 
 class WebDAVClient:
@@ -66,10 +83,16 @@ class WebDAVClient:
         except HTTPError as e:
             detail = ""
             try:
-                detail = e.read().decode("utf-8", "replace")[:200]
+                detail = e.read().decode("utf-8", "replace")[:_DETAIL_KEEP]
             except Exception:
                 pass
-            raise WebDAVError(f"HTTP {e.code} {method} {urlsplit(url).path}: {detail or e.reason}", status=e.code) from e
+            path = urlsplit(url).path
+            raise WebDAVError(
+                f"HTTP {e.code} {method} {path}: {detail[:200] or e.reason}",
+                status=e.code,
+                detail=detail,
+                dav_exception=_extract_dav_exception(detail),
+            ) from e
         except URLError as e:
             raise WebDAVError(f"网络错误 {method} {urlsplit(url).path}: {e.reason}") from e
         except OSError as e:
