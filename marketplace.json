@@ -3139,6 +3139,30 @@
             }
         },
         {
+            "name": "solitaire",
+            "description": "经典接龙纸牌游戏（Klondike）——拖拽移动、双击自动收牌，在 DriFox 中直接玩",
+            "version": "0.1.0",
+            "author": "DriFox Contributor",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/solitaire",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true,
+                "ui": true
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "ssh-toolkit",
             "description": "SSH 远程工具包：连接管理、命令执行、文件传输(SFTP)、端口转发、目录浏览，基于 paramiko 实现，AI 自动调用。",
             "version": "0.1.3",
