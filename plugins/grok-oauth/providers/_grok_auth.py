@@ -49,8 +49,60 @@ POLL_INTERVAL = 5.0  # 官方响应 interval 缺省时的兜底
 SLOW_DOWN_DELTA = 5.0  # slow_down 时轮询间隔增量（RFC 8628）
 
 
+def _normalize_proxy_server(server: str) -> str:
+    """归一化注册表 ProxyServer 值。
+
+    支持两种格式："127.0.0.1:10808"（简单式）与
+    "http=127.0.0.1:10808;https=127.0.0.1:10808"（协议式，取 https 段）。
+    """
+    server = (server or "").strip()
+    if not server:
+        return ""
+    if "=" in server:
+        parts = dict(p.split("=", 1) for p in server.split(";") if "=" in p)
+        server = parts.get("https") or parts.get("http") or ""
+    if not server:
+        return ""
+    return server if "://" in server else f"http://{server}"
+
+
+def _build_opener() -> urllib.request.OpenerDirector:
+    """显式代理 opener：getproxies（环境变量/系统代理）→ winreg 直读兜底 → 直连。
+
+    打包版环境（Py3.14）实测默认 opener 不走系统代理直连被墙 42s 超时，
+    同机系统 Python 正常，故 winreg 二次兜底。
+    """
+    proxies = dict(urllib.request.getproxies() or {})
+    if not proxies.get("https") and not proxies.get("http"):
+        try:
+            import winreg
+
+            key = winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Windows\CurrentVersion\Internet Settings",
+            )
+            try:
+                enable, _ = winreg.QueryValueEx(key, "ProxyEnable")
+                server, _ = winreg.QueryValueEx(key, "ProxyServer")
+            finally:
+                winreg.CloseKey(key)
+            if enable and server:
+                addr = _normalize_proxy_server(str(server))
+                if addr:
+                    proxies = {"http": addr, "https": addr}
+        except Exception:
+            pass
+    if proxies:
+        return urllib.request.build_opener(urllib.request.ProxyHandler(proxies))
+    return urllib.request.build_opener()
+
+
+# 模块级单例：登录/轮询/刷新共享（代理地址进程内变更需重载插件生效，可接受）
+_OPENER = _build_opener()
+
+
 def _post_form(url: str, body: Dict[str, Any], timeout: float = DEFAULT_TIMEOUT) -> Dict[str, Any]:
-    """标准 OAuth2 form POST。"""
+    """标准 OAuth2 form POST（显式代理 opener，见 _build_opener）。"""
     req = urllib.request.Request(
         url,
         data=urllib.parse.urlencode(body).encode("utf-8"),
@@ -62,7 +114,7 @@ def _post_form(url: str, body: Dict[str, Any], timeout: float = DEFAULT_TIMEOUT)
         },
     )
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        with _OPENER.open(req, timeout=timeout) as resp:
             return json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         # OAuth2 错误响应（400 + JSON body：authorization_pending / slow_down 等）走这里
@@ -75,8 +127,9 @@ def _post_form(url: str, body: Dict[str, Any], timeout: float = DEFAULT_TIMEOUT)
             return payload
         raise RuntimeError(f"xAI 端点拒绝: HTTP {exc.code}: {raw[:200]}") from exc
     except (urllib.error.URLError, OSError) as exc:
+        reason = getattr(exc, "reason", None) or exc
         raise RuntimeError(
-            f"xAI 连接失败（{exc.__class__.__name__}）：请检查网络/代理是否能访问 auth.x.ai"
+            f"xAI 连接失败（{exc.__class__.__name__}: {reason}）：请检查网络/代理是否能访问 auth.x.ai"
         ) from exc
 
 
