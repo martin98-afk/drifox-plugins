@@ -1,12 +1,12 @@
 {
   "schema": 1,
-  "fetched_at": 1791716169.4974809,
+  "fetched_at": 1791736120.7873023,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
     "algorithmic-art": 1,
     "anthropic": 6,
-    "anthropic-oauth": 0,
+    "anthropic-oauth": 1,
     "anything2explainer": 4,
     "archify": 4,
     "autoloop": 12,
@@ -55,7 +55,7 @@
     "git-status": 3,
     "git-workflow": 3,
     "gpt-image-2": 6,
-    "grok-oauth": 1,
+    "grok-oauth": 3,
     "groq": 5,
     "guizang-ppt-skill": 6,
     "hashline-edit": 7,
