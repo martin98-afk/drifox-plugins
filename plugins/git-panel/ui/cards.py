@@ -59,7 +59,6 @@ from qfluentwidgets import (
     IconWidget,
     InfoBar,
     InfoBarPosition,
-    PrimarySplitPushButton,
     MaskDialogBase,
     RoundMenu,
     ScrollArea,
@@ -2387,9 +2386,9 @@ class GitPanelCard(QWidget):
             "QPlainTextEdit:focus { border-color: rgba(98,160,234,0.6); }"
         )
 
-        # 提交模式按钮（PrimarySplitPushButton 自带主色样式，只需跟字体）
+        # 提交条（实心蓝自拼，颜色/字体随主题重应用）
         try:
-            self._commit_btn.setFont(QFont(ff, max(10, fs - 2)))
+            self._apply_commit_bar_style()
         except RuntimeError:
             pass
 
@@ -2669,20 +2668,45 @@ class GitPanelCard(QWidget):
         igl.addWidget(self._ai_btn, 0, 0, Qt.AlignTop | Qt.AlignRight)
         r2.addWidget(input_wrap)
 
-        # 提交行：占满一行 + 右侧下拉切换提交模式（VSCode Commit 按钮同构）
+        # 提交行：占满一行 + 右侧下拉切换提交模式（VSCode Commit 按钮同构）。
+        # 不用 PrimarySplitPushButton：其 sizePolicy 固定不拉伸，且主题色（teal）
+        # 与面板蓝色语言冲突；自拼实心蓝条，颜色复用面板 accent
         self._commit_mode = "commit"
-        self._commit_btn = PrimarySplitPushButton("提交", row2)
+        self._commit_bar = QFrame(row2)
+        self._commit_bar.setObjectName("commitBar")
+        ch = QHBoxLayout(self._commit_bar)
+        ch.setContentsMargins(0, 0, 0, 0)
+        ch.setSpacing(0)
+        self._commit_btn = QPushButton("提交", self._commit_bar)
+        self._commit_btn.setObjectName("commitMain")
+        self._commit_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self._commit_btn.setFixedHeight(30)
+        self._commit_btn.setCursor(Qt.PointingHandCursor)
+        self._commit_btn.setToolTip("提交暂存区变更；右侧箭头可切换提交模式")
         self._commit_btn.clicked.connect(self._on_commit)
-        mode_menu = RoundMenu(parent=row2)
+        ch.addWidget(self._commit_btn, 1)
+
+        sep = QFrame(self._commit_bar)
+        sep.setFixedSize(1, 14)
+        sep.setStyleSheet("background: rgba(255,255,255,0.30); border: none;")
+        ch.addWidget(sep)
+
+        self._commit_drop = QPushButton("▾", self._commit_bar)
+        self._commit_drop.setObjectName("commitDrop")
+        self._commit_drop.setFixedSize(32, 30)
+        self._commit_drop.setCursor(Qt.PointingHandCursor)
+        self._commit_drop.setToolTip("切换提交模式")
+        self._commit_drop.clicked.connect(self._show_commit_menu)
+        ch.addWidget(self._commit_drop)
+
+        self._mode_menu = RoundMenu(parent=self._commit_bar)
         for mode, label in _COMMIT_MODE_LABELS.items():
-            act = Action(label, mode_menu, triggered=lambda _=False, m=mode: self._set_commit_mode(m))
+            act = Action(label, self._mode_menu, triggered=lambda _=False, m=mode: self._set_commit_mode(m))
             act.setCheckable(True)
             act.setChecked(mode == self._commit_mode)
-            mode_menu.addAction(act)
-        self._commit_btn.setFlyout(mode_menu)
-        self._commit_btn.setToolTip("提交暂存区变更；右侧箭头可切换提交模式")
-        r2.addWidget(self._commit_btn)
+            self._mode_menu.addAction(act)
+        self._apply_commit_bar_style()
+        r2.addWidget(self._commit_bar)
 
         # 初始单行高度（_retheme 提供 QSS 字体后由 _adjust_input_height 精调）
         QTimer.singleShot(0, self._adjust_input_height)
@@ -3225,13 +3249,40 @@ class GitPanelCard(QWidget):
 
     # ── Git 操作 ──
 
+    def _apply_commit_bar_style(self):
+        """提交条样式：整条实心蓝圆角（随深浅色取面板 accent），白字居中，跟主题字体"""
+        ff, fs = self._cached_ff, self._cached_fs
+        dark = isDarkTheme()
+        bg = "#62a0ea" if dark else "#2878dc"
+        self._commit_bar.setStyleSheet(
+            f"#commitBar {{ background: {bg}; border: none; border-radius: 6px; }}"
+            f"#commitMain {{ background: transparent; border: none; color: white; "
+            f"padding: 0px 12px; font-family: '{ff}'; font-size: {max(fs - 2, 11)}px; }}"
+            "#commitMain:hover { background: rgba(255,255,255,0.12); "
+            "border-radius: 6px 0px 0px 6px; }"
+            "#commitMain:pressed { background: rgba(255,255,255,0.22); }"
+            "#commitDrop { background: transparent; border: none; border-radius: 0px; "
+            "color: white; font-size: 14px; padding: 0px; }"
+            "#commitDrop:hover { background: rgba(255,255,255,0.12); "
+            "border-radius: 0px 6px 6px 0px; }"
+            "#commitDrop:pressed { background: rgba(255,255,255,0.22); }"
+        )
+        self._commit_btn.setFont(QFont(ff, max(10, fs - 2)))
+        self._commit_drop.setFont(QFont(ff, 12))
+
+    def _show_commit_menu(self):
+        """下拉箭头：在箭头下方弹出提交模式菜单"""
+        self._mode_menu.exec(
+            self._commit_drop.mapToGlobal(QPoint(-self._commit_bar.width() + self._commit_drop.width(), self._commit_drop.height()))
+        )
+
     def _set_commit_mode(self, mode: str):
         """切换提交模式（下拉选择，主按钮文字与执行行为跟随）"""
         if mode not in _COMMIT_MODE_LABELS:
             return
         self._commit_mode = mode
         self._commit_btn.setText(_COMMIT_MODE_LABELS[mode])
-        for act in self._commit_btn.flyout.actions():
+        for act in self._mode_menu.actions():
             act.setChecked(act.text() == _COMMIT_MODE_LABELS[mode])
 
     def _on_commit(self):
