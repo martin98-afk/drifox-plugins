@@ -33,14 +33,16 @@ def _load_plugin_modules():
     sys.modules["ui_plugin_git_panel"] = module
     spec.loader.exec_module(module)
     import ui_plugin_git_panel.git_core as gc
+    import ui_plugin_git_panel.diff_renderer as diff_renderer_mod
     import ui_plugin_git_panel.cards as cards_mod
-    return gc.GitRepo, cards_mod
+    return gc.GitRepo, diff_renderer_mod, cards_mod
 
 
-GitRepo, cards = _load_plugin_modules()
+GitRepo, diff_renderer, cards = _load_plugin_modules()
 
 from PyQt5.QtCore import QEventLoop, QTimer  # noqa: E402
 from PyQt5.QtWidgets import QApplication  # noqa: E402
+from qfluentwidgets import isDarkTheme  # noqa: E402
 
 _APP = QApplication([])
 
@@ -88,6 +90,20 @@ class P1UITestBase(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.tmp, ignore_errors=True)
 
+    def tearDown(self):
+        """排空延迟删除队列，避免残留控件跨用例污染。
+
+        deleteLater() 只是投递 DeferredDelete 事件，裸 processEvents() 不保证
+        在本次调用中处理完；残留的顶层窗口会被下一个用例的
+        cards._dialog_parent() 回退分支选中作为对话框父窗口，父窗口销毁时
+        连带销毁对话框 → 下个用例拿到已删除的 C++ 对象（Abort）。
+        这里用 sendPostedEvents 强制在用例边界清空。
+        """
+        from PyQt5.QtCore import QCoreApplication, QEvent
+
+        QCoreApplication.sendPostedEvents(None, QEvent.DeferredDelete)
+        _APP.processEvents()
+
     def _write(self, name, content):
         p = os.path.join(self.repo, name)
         with open(p, "w", encoding="utf-8") as f:
@@ -104,11 +120,11 @@ class TestWordLevelDiff(P1UITestBase):
         ok = wait_until(lambda: "加载中" not in dlg._diff_area.toPlainText())
         self.assertTrue(ok, "diff 异步加载超时")
         html = dlg._diff_area.toHtml()
-        # 词级新增高亮（浅绿底，Qt 会将 0.28 归一化为 0.278431）
-        self.assertIn("rgba(80,227,194,0.278431)", html)
-        # 行级颜色
-        self.assertIn("color:#50e3c2", html)
-        self.assertIn("color:#f14c4c", html)
+        # 词级新增高亮：断言随实际主题选中的调色板颜色，而非写死深色值
+        # （offscreen 环境为浅色主题，写死深色色值会误报失败）
+        pal = diff_renderer._palette(isDarkTheme())
+        self.assertIn(pal["add"], html)
+        self.assertIn(pal["del"], html)
         dlg.close()
         dlg.deleteLater()
         _APP.processEvents()
@@ -157,7 +173,9 @@ class TestCommitDetailDialog(P1UITestBase):
         self.assertIn("feat: update base", dlg._msg_lb.text())
         self.assertIn("T <t@t.t>", dlg._meta_lb.text())
         html = dlg._diff_area.toHtml()
-        self.assertIn("color:#50e3c2", html)  # diff 词级渲染
+        # diff 词级渲染：按实际主题调色板断言（浅色/深色环境均成立）
+        pal = diff_renderer._palette(isDarkTheme())
+        self.assertIn(pal["add"], html)
         dlg.close()
         dlg.deleteLater()
         _APP.processEvents()
@@ -208,7 +226,9 @@ class TestConflictRow(P1UITestBase):
             f.write("ours\n")
         cls.g.add(["."])
         cls.g.commit("ours")
-        _git(cls.repo, "pull", "origin", "main")
+        # --no-rebase：显式 merge 策略（裸 pull 在 git 2.27+ 无配置机器上
+        # 会直接报错不进入合并，测试须与机器配置无关）
+        _git(cls.repo, "pull", "--no-rebase", "origin", "main")
 
     def test_status_items_conflict_code(self):
         items = self.g.status_items()
@@ -306,8 +326,9 @@ class TestInfoBar(P1UITestBase):
         card.show()
         card._show_info_bar("success", "测试成功", "")
         self.assertGreaterEqual(card._info_bar_layout.count(), 1)
-        # 等待自动关闭后清理
-        wait_until(lambda: card._info_bar_layout.count() == 0, timeout_ms=6000)
+        # 等待自动关闭后清理（success 的 duration=6s，等待窗口须留余量：
+        # 恰好 6000ms 时自动关闭计时器与轮询超时同刻竞争，必然取到 count()!=0）
+        wait_until(lambda: card._info_bar_layout.count() == 0, timeout_ms=12000)
         self.assertEqual(card._info_bar_layout.count(), 0)
         card.deleteLater()
         _APP.processEvents()

@@ -169,7 +169,8 @@ def _run_git(cwd: str, *args: str) -> Tuple[str, str, int]:
             encoding="utf-8",
             errors="replace",
             timeout=GIT_TIMEOUT,
-            creationflags=subprocess.CREATE_NO_WINDOW,
+            # Windows 下隐藏控制台窗口（POSIX 无此常量，兜底 0）
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
         )
         return r.stdout.strip(), r.stderr.strip(), r.returncode
     except subprocess.TimeoutExpired:
