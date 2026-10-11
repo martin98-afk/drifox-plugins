@@ -10,22 +10,32 @@ from __future__ import annotations
 
 import traceback
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Callable, List, Optional
 
 from loguru import logger
 from PyQt5.QtCore import QObject, QThread, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QVBoxLayout,
+    QWidget,
+)
 from qfluentwidgets import (
+    BodyLabel,
     CaptionLabel,
     CheckBox,
     ElevatedCardWidget,
     FluentIcon,
     IconWidget,
     LineEdit,
+    MessageBoxBase,
     PrimaryPushButton,
     PushButton,
     StrongBodyLabel,
+    SubtitleLabel,
     TransparentToolButton,
     isDarkTheme,
 )
@@ -223,6 +233,95 @@ class CloudFileRow(QFrame):
 
 
 # ============================================================
+#  恢复收尾指引对话框
+# ============================================================
+
+
+class _RestoreGuideDialog(MessageBoxBase):
+    """恢复存在被占用文件时的手动收尾指引：编号步骤 + 脚本路径 + 打开所在文件夹"""
+
+    def __init__(self, result: dict, parent=None):
+        # MessageBoxBase 依赖 parent 尺寸（无 parent 时 setGeometry 会炸）；兜底挂到当前活动窗口
+        if parent is None:
+            from PyQt5.QtWidgets import QApplication, QWidget
+
+            parent = QApplication.activeWindow() or QWidget()
+        super().__init__(parent)
+        self._script = str(result.get("finish_script") or "")
+
+        self.widget.setMinimumWidth(480)
+        title = SubtitleLabel("恢复需要手动收尾", self)
+        self.viewLayout.addWidget(title)
+
+        applied = int(result.get("applied", 0) or 0)
+        pending_n = len(result.get("pending", []) or [])
+        summary = BodyLabel(
+            f"已成功覆盖 {applied} 个文件；另有 {pending_n} 个正被 DriFox 占用，需要你在退出后手动完成。",
+            self,
+        )
+        summary.setWordWrap(True)
+        self.viewLayout.addWidget(summary)
+
+        self.viewLayout.addSpacing(6)
+        script_name = Path(self._script).name if self._script else "restore-<时间戳>.bat"
+        for idx, text in enumerate(
+            (
+                "完全退出 DriFox，确认进程已结束。",
+                f"双击运行 {script_name}，看到 Done 提示后按任意键关闭窗口。",
+                "重新打开 DriFox，恢复的数据即生效。",
+            ),
+            start=1,
+        ):
+            row = QHBoxLayout()
+            row.setSpacing(8)
+            step_no = CaptionLabel(str(idx), self)
+            step_no.setFixedSize(20, 20)
+            step_no.setAlignment(Qt.AlignCenter)
+            step_no.setStyleSheet(
+                f"border-radius: 10px;"
+                f"color: {_color('BUTTON_TEXT_ON_ACCENT', '#ffffff', '#1A1F2B')};"
+                f"background: {_color('SYSTEM_ACCENT', '#2878dc', '#66c6ff')};"
+                f"{font_size_css(12)} {FONT_CSS};"
+            )
+            row.addWidget(step_no, 0, Qt.AlignTop)
+            body = BodyLabel(text, self)
+            body.setWordWrap(True)
+            row.addWidget(body, 1)
+            self.viewLayout.addLayout(row)
+
+        if self._script:
+            self.viewLayout.addSpacing(6)
+            path_label = CaptionLabel(self._script, self)
+            path_label.setWordWrap(True)
+            path_label.setStyleSheet(
+                f"background: {_color('HOVER_BG', 'rgba(0,0,0,0.04)', 'rgba(255,255,255,0.08)')};"
+                f"border-radius: 6px; padding: 8px 10px;"
+                f"color: {_color('TEXT_SECONDARY', 'rgba(0,0,0,0.7)', 'rgba(255,255,255,0.75)')};"
+                f"{font_size_css(12)} {FONT_CSS};"
+            )
+            path_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
+            self.viewLayout.addWidget(path_label)
+
+        rollback = str(result.get("rollback_dir") or "")
+        if rollback:
+            note = CaptionLabel(
+                f"同一目录下另有覆盖前旧文件副本（{Path(rollback).name}），确认恢复无误后可自行删除。",
+                self,
+            )
+            note.setWordWrap(True)
+            note.setStyleSheet(_caption_css())
+            self.viewLayout.addWidget(note)
+
+        self.yesButton.setText("打开所在文件夹")
+        self.yesButton.clicked.connect(self._reveal)
+        self.cancelButton.setText("稍后再说")
+
+    def _reveal(self):
+        if self._script:
+            engine.reveal_path(Path(self._script))
+
+
+# ============================================================
 #  主卡片
 # ============================================================
 
@@ -309,7 +408,7 @@ class WebDavBackupCard(QFrame):
         hero.addWidget(close_btn, 0, Qt.AlignVCenter)
         root.addLayout(hero)
 
-        # ── 操作卡 ──
+        # ── 工具条：立即备份 / 测试连接 / 刷新列表（恢复后追加「重启 DriFox」） ──
         ops = _make_section_card()
         ops_lay = QVBoxLayout(ops)
         ops_lay.setContentsMargins(16, 14, 16, 14)
@@ -327,8 +426,15 @@ class WebDavBackupCard(QFrame):
         self._test_btn.clicked.connect(self._on_test)
         btn_row.addWidget(self._test_btn)
 
+        self._refresh_btn = PushButton(FluentIcon.SYNC, "刷新列表")
+        self._refresh_btn.setFixedHeight(34)
+        self._refresh_btn.clicked.connect(self.refresh_all)
+        btn_row.addWidget(self._refresh_btn)
+
+        # 测试结果靠右显示，不挤占按钮行左段
         self._test_result = CaptionLabel("")
         self._test_result.setStyleSheet(_caption_css())
+        btn_row.addStretch(1)
         btn_row.addWidget(self._test_result)
 
         # 恢复完成后显示（走主程序重启逻辑：拉起新进程 + 优雅退出）
@@ -338,11 +444,6 @@ class WebDavBackupCard(QFrame):
         self._restart_btn.hide()
         btn_row.addWidget(self._restart_btn)
 
-        self._refresh_btn = PushButton(FluentIcon.SYNC, "刷新列表")
-        self._refresh_btn.setFixedHeight(34)
-        self._refresh_btn.clicked.connect(self.refresh_all)
-        btn_row.addWidget(self._refresh_btn)
-        btn_row.addStretch(1)
         ops_lay.addLayout(btn_row)
 
         self._summary_label = CaptionLabel("")
@@ -351,31 +452,44 @@ class WebDavBackupCard(QFrame):
         ops_lay.addWidget(self._summary_label)
         root.addWidget(ops)
 
-        # ── 备份范围卡（勾选即存；连接配置在设置卡，此处只管范围） ──
-        root.addWidget(self._build_scope_card())
+        # ── 左右分栏：左云端备份列表 / 右备份选项 ──
+        split = QHBoxLayout()
+        split.setSpacing(14)
+        split.addWidget(self._build_list_card(), 115)
+        split.addWidget(self._build_scope_card(), 85)
+        root.addLayout(split, 1)
 
-        # ── 云端备份卡 ──
-        hist = _make_section_card()
-        hist_lay = QVBoxLayout(hist)
-        hist_lay.setContentsMargins(16, 14, 16, 14)
-        hist_lay.setSpacing(8)
+        # ── 状态行 ──
+        self._status_label = CaptionLabel("")
+        self._status_label.setStyleSheet(_caption_css())
+        self._status_label.setWordWrap(True)
+        root.addWidget(self._status_label)
 
-        hist_head = QHBoxLayout()
-        hist_title = StrongBodyLabel("云端备份")
-        hist_title.setStyleSheet(_section_title_css())
-        hist_head.addWidget(hist_title)
-        hist_head.addStretch(1)
+    # ── 云端备份卡（左栏） ───────────────────────────────
+
+    def _build_list_card(self) -> QWidget:
+        card = _make_section_card()
+        lay = QVBoxLayout(card)
+        lay.setContentsMargins(16, 14, 16, 14)
+        lay.setSpacing(8)
+
+        head = QHBoxLayout()
+        title = StrongBodyLabel("云端备份")
+        title.setStyleSheet(_section_title_css())
+        head.addWidget(title)
+        head.addStretch(1)
         self._count_label = CaptionLabel("")
         self._count_label.setStyleSheet(_caption_css())
-        hist_head.addWidget(self._count_label)
-        hist_lay.addLayout(hist_head)
+        head.addWidget(self._count_label)
+        lay.addLayout(head)
 
-        hist_lay.addWidget(CardSeparator())
+        lay.addWidget(CardSeparator())
 
         from qfluentwidgets import ScrollArea
 
         self._list_scroll = ScrollArea(self)
         self._list_scroll.setWidgetResizable(True)
+        self._list_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._list_scroll.setStyleSheet(
             "ScrollArea { background: transparent; border: none; }"
             "ScrollArea > QWidget > QWidget { background: transparent; }"
@@ -387,22 +501,16 @@ class WebDavBackupCard(QFrame):
         self._list_lay.setSpacing(2)
         self._list_lay.addStretch(1)
         self._list_scroll.setWidget(self._list_container)
-        self._list_scroll.setMinimumHeight(220)
-        hist_lay.addWidget(self._list_scroll, 1)
+        self._list_scroll.setMinimumHeight(180)
+        lay.addWidget(self._list_scroll, 1)
 
         self._empty_label = CaptionLabel("暂无云端备份")
         self._empty_label.setAlignment(Qt.AlignCenter)
         self._empty_label.setStyleSheet(_caption_css())
-        hist_lay.addWidget(self._empty_label)
-        root.addWidget(hist, 1)
+        lay.addWidget(self._empty_label)
+        return card
 
-        # ── 状态行 ──
-        self._status_label = CaptionLabel("")
-        self._status_label.setStyleSheet(_caption_css())
-        self._status_label.setWordWrap(True)
-        root.addWidget(self._status_label)
-
-    # ── 备份范围卡 ──────────────────────────────────────
+    # ── 备份范围卡（右栏） ──────────────────────────────
 
     def _build_scope_card(self) -> QWidget:
         card = _make_section_card()
@@ -421,27 +529,30 @@ class WebDavBackupCard(QFrame):
         lay.addLayout(head)
 
         self._scope_checks: dict = {}
-        grid = QGridLayout()
-        grid.setHorizontalSpacing(16)
-        grid.setVerticalSpacing(4)
-        for i, (field, dirname) in enumerate(cfg_mod.INCLUDE_FIELDS.items()):
+        checks_lay = QVBoxLayout()
+        checks_lay.setSpacing(2)
+        for field, dirname in cfg_mod.INCLUDE_FIELDS.items():
             cb = CheckBox(f"{cfg_mod.INCLUDE_LABELS[dirname]} ({dirname})")
             cb.setMinimumHeight(28)  # 防容器高度不足时行被压扁重叠
             cb.toggled.connect(self._on_scope_changed)
-            grid.addWidget(cb, i // 2, i % 2)
+            checks_lay.addWidget(cb)
             self._scope_checks[field] = (cb, dirname)
-        lay.addLayout(grid)
+        lay.addLayout(checks_lay)
 
-        extra_row = QHBoxLayout()
-        extra_label = CaptionLabel("额外包含")
+        extra_label = CaptionLabel("额外包含（清单外目录，逗号分隔）")
         extra_label.setStyleSheet(_caption_css())
-        extra_row.addWidget(extra_label)
+        lay.addWidget(extra_label)
         self._scope_extra = LineEdit()
-        self._scope_extra.setPlaceholderText("目录名，逗号分隔，如：memory, gateway")
+        self._scope_extra.setPlaceholderText("如：memory, gateway")
         self._scope_extra.setClearButtonEnabled(True)
         self._scope_extra.editingFinished.connect(self._on_scope_changed)
-        extra_row.addWidget(self._scope_extra, 1)
-        lay.addLayout(extra_row)
+        lay.addWidget(self._scope_extra)
+
+        hint = CaptionLabel("勾选即存。数据目录根部散文件（app.config / *.db）始终包含。")
+        hint.setStyleSheet(_caption_css())
+        hint.setWordWrap(True)
+        lay.addWidget(hint)
+        lay.addStretch(1)
 
         self._scope_hint_timer = QTimer(self)
         self._scope_hint_timer.setSingleShot(True)
@@ -636,13 +747,26 @@ class WebDavBackupCard(QFrame):
 
     def _on_restore_done(self, result: dict):
         ok = bool(result.get("ok"))
-        msg = str(result.get("message", ""))
-        rb = result.get("rollback_dir")
-        if ok and rb:
-            msg += f" 回滚副本：{rb}"
-        self._set_status(msg)
-        if ok:
-            self._restart_btn.show()
+        self._set_status(str(result.get("message", "")))
+        if not ok:
+            return
+        self._restart_btn.show()
+
+        script = str(result.get("finish_script") or "")
+        if not script:
+            return  # 全部文件已覆盖，无需手动收尾
+
+        # 需要用户在 DriFox 之外执行脚本：自动定位 + 明确指引，避免用户找不到文件
+        engine.reveal_path(Path(script))
+        # 延后一帧再弹窗：避开 worker.finished 信号链内的嵌套事件循环
+        QTimer.singleShot(0, lambda: self._show_restore_guide(result))
+    def _show_restore_guide(self, result: dict):
+        try:
+            _RestoreGuideDialog(result, self.window()).exec()
+        except Exception as e:
+            logger.warning(f"[webdav-backup] 收尾指引弹窗失败: {e}")
+            script = result.get("finish_script") or ""
+            self._set_status(f"{result.get('message', '')} 请退出 DriFox 后手动运行：{script}")
 
     def _on_delete(self, name: str):
         self._set_status(f"正在删除 {name}…")

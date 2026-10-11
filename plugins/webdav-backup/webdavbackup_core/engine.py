@@ -3,10 +3,18 @@
 
 备份：收集 app_data → zip（排除日志/缓存/大文件）→ 可选 AES 加密 → 上传 → 清理旧版本 → 写 state
 恢复：下载 → 解密校验 → staging 解包（zip-slip 防护）→ 本地回滚副本 → 覆盖应用
+
+恢复现场统一放 <app_data>/restore/（不落系统 temp）：
+- restore-<ts>.bat       被占用文件的完成脚本（双击应用暂存文件）
+- pending-<ts>/          被占用而无法直接覆盖的文件，保持数据目录相对结构
+- rollback-<ts>/         本次覆盖前的旧文件副本，确认无误后可自行删除
 """
 from __future__ import annotations
 
+import os
 import shutil
+import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -26,12 +34,45 @@ EXCLUDE_DIR_NAMES = {
 EXCLUDE_SUFFIXES = {".lock", ".tmp", ".pyc", ".pyo", ".log"}
 MAX_FILE_SIZE = 200 * 1024 * 1024  # 坚果云免费版单文件上限附近，超过直接跳过
 
+# 恢复现场目录名（相对数据目录根）
+RESTORE_ROOT_NAME = "restore"
+
 # 进程内互斥：调度器与手动/工具触发同时备份时只放一个进去
 _BACKUP_LOCK = threading.Lock()
 
 
 def _now_str() -> str:
     return datetime.now().strftime("%Y%m%d-%H%M%S")
+
+
+def get_restore_root() -> Path:
+    """恢复现场根目录 <app_data>/restore/（不存在则建）"""
+    root = cfg_mod.get_app_data_root() / RESTORE_ROOT_NAME
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def reveal_path(target: Path) -> bool:
+    """在系统文件管理器中定位文件（Win：资源管理器选中；macOS：Finder 显示；Linux：打开父目录）
+
+    尽力而为，失败返回 False，不影响调用方流程。
+    """
+    try:
+        target = Path(target)
+        if os.name == "nt":
+            if target.exists():
+                subprocess.Popen(["explorer", "/select,", str(target)])
+            elif target.parent.exists():
+                subprocess.Popen(["explorer", str(target.parent)])
+        elif sys.platform == "darwin":
+            subprocess.Popen(["open", "-R", str(target)])
+        elif target.parent.exists():
+            subprocess.Popen(["xdg-open", str(target.parent)])
+        else:
+            return False
+        return True
+    except Exception:
+        return False
 
 
 def _collect_files(app_data: Path, include_dirs: set, include_extra: list) -> tuple:
@@ -54,6 +95,9 @@ def _collect_files(app_data: Path, include_dirs: set, include_extra: list) -> tu
         parts = rel.parts
         rel_posix = rel.as_posix()
         if parts[0] in EXCLUDE_DIR_NAMES or (set(parts) & EXCLUDE_DIR_NAMES):
+            continue
+        # 恢复现场目录（回滚副本 / 暂存文件）是恢复过程产物，任何情况下都不入包
+        if parts[0] == RESTORE_ROOT_NAME:
             continue
         # 白名单：顶层散文件始终收集；目录内容须命中白名单目录或额外路径
         if len(parts) > 1 and parts[0] not in include_dirs and not in_extra(rel_posix):
@@ -268,19 +312,25 @@ def run_backup() -> Dict[str, Any]:
 
 
 def _write_finish_bat(pending_dir: Path, app_data: Path) -> Path:
-    """生成一键完成脚本：robocopy 把暂存文件移入数据目录，完成后自删"""
-    bat = Path(tempfile.gettempdir()) / f"finish_restore-{_now_str()}.bat"
+    """生成一键完成脚本：robocopy 把暂存文件移入数据目录，完成后自删
+
+    落在 <app_data>/restore/ 下（与 pending / rollback 同处，方便用户查找）。
+    """
+    bat = get_restore_root() / f"restore-{_now_str()}.bat"
     content = (
         "@echo off\r\n"
         "chcp 65001 >nul\r\n"
         "echo Applying remaining DriFox restore files...\r\n"
+        "echo.\r\n"
         f'robocopy "{pending_dir}" "{app_data.resolve()}" /E /MOVE /NFL /NDL /NJH /NJS\r\n'
         "if errorlevel 8 (\r\n"
+        "  echo.\r\n"
         "  echo RESTORE FAILED - please check the paths above.\r\n"
         "  pause\r\n"
         "  exit /b 1\r\n"
         ")\r\n"
         f'rd /s /q "{pending_dir}" 2>nul\r\n'
+        "echo.\r\n"
         "echo Done. You can start DriFox now.\r\n"
         "pause\r\n"
         'del "%~f0"\r\n'
@@ -348,15 +398,16 @@ def run_restore(backup_name: str, encryption_password: str = "") -> Dict[str, An
         with tempfile.TemporaryDirectory(prefix="webdav-backup-") as td:
             staging = Path(td) / "payload"
             staging.mkdir()
-            # 回滚副本放系统临时目录固定前缀下，不自动清理（路径在结果中给出，确认无误后自行删除）
-            rollback_dir = Path(tempfile.gettempdir()) / f"webdav-rollback-{_now_str()}"
+            # 回滚副本放数据目录下的 restore/ 现场（不自动清理，路径在结果中给出，确认无误后自行删除）
+            restore_root = get_restore_root()
+            rollback_dir = restore_root / f"rollback-{_now_str()}"
             rollback_dir.mkdir(parents=True, exist_ok=True)
             applied, moved_count, pending = _apply(app_data, data, staging, rollback_dir, skipped)
 
             finish_bat = None
             if pending:
                 # 被占用的文件暂存（保持 zip 内相对结构），生成关闭 DriFox 后的一键完成脚本
-                pending_dir = Path(tempfile.gettempdir()) / f"webdav-restore-pending-{_now_str()}"
+                pending_dir = restore_root / f"pending-{_now_str()}"
                 for rel, _dst in pending:
                     dest = pending_dir / rel
                     dest.parent.mkdir(parents=True, exist_ok=True)
@@ -366,9 +417,8 @@ def run_restore(backup_name: str, encryption_password: str = "") -> Dict[str, An
         _update_state(last_restore_at=datetime.now().isoformat(timespec="seconds"), last_restore_file=name)
         if pending:
             msg = (
-                f"恢复部分完成：{name}\n"
-                f"已应用 {applied - len(pending)} 个文件；另有 {len(pending)} 个正被占用，已暂存待应用。\n"
-                f"请完全退出 DriFox 后，双击运行：{finish_bat}\n完成后再启动 DriFox。"
+                f"恢复部分完成：{name}，已应用 {applied} 个文件，"
+                f"{len(pending)} 个正被占用需手动收尾（详见弹窗指引）"
             )
         else:
             msg = f"恢复完成：{name}（应用 {applied} 个文件）。请重启 DriFox 生效。"
@@ -377,9 +427,10 @@ def run_restore(backup_name: str, encryption_password: str = "") -> Dict[str, An
         return {
             "ok": True,
             "message": msg,
-            "applied": applied - len(pending),
+            "applied": applied,
             "pending": [rel for rel, _ in pending],
             "finish_script": str(finish_bat) if finish_bat else None,
+            "restore_dir": str(restore_root),
             "skipped": skipped,
             "rollback_dir": str(rollback_dir) if moved_count else None,
         }
