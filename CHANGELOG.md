@@ -1,5 +1,13 @@
 # Changelog
 
+## 2.11.2 (2026-10-11)
+### 🎛 webdav-backup v0.8.0：卡片重排为左右分栏，恢复现场迁入 `.drifox/restore`，收尾指引可视化
+- **范围收窄**：移除「团队 / 项目 / 截图 / 本地备份」4 类备份选项（`config.py` 白名单同步删除，仅剩 8 类）；旧配置中的 `inc_teams` 等残留键不再被读取
+- **布局重排**：英雄头下方独立工具条承载「立即备份 / 测试连接 / 刷新列表」（测试结果靠右、恢复后追加「重启 DriFox」）；主区改为左右分栏——左侧云端备份列表（区域内滚动，卡片高度不再随份数增长），右侧备份范围勾选改单列 + 额外包含 + 说明尾注
+- **恢复现场迁出 temp**：统一落 `<数据目录>/restore/`——完成脚本 `restore-<ts>.bat`（原 `finish_restore-*.bat`）、待应用文件 `pending-<ts>/`、旧文件副本 `rollback-<ts>/`；`restore/` 目录显式排除出备份范围
+- **收尾指引**：恢复存在被占用文件时自动用资源管理器定位脚本，并弹 `MessageBoxBase` 对话框给出三步编号指引、脚本绝对路径与回滚副本说明，按钮「打开所在文件夹 / 稍后再说」；弹窗失败时回退为状态行文字提示。新增 `engine.reveal_path()`（Win `explorer /select`、macOS `open -R`、Linux `xdg-open`）与 `engine.get_restore_root()`
+- **验证**：`ruff check --select F,E9` 通过；离屏构造自检 20 项全通过（白名单 8 项、恢复现场常量、去 tempfile 化、卡片左右栏构造、对话框文本与按钮文案）；`tools/validate_plugins.py --strict` 中 webdav-backup 为 OK
+
 ## 2.11.1 (2026-09-15)
 ### 🐛 prompt-enhancer v0.3.0 / git-panel v2.0.1：修复密钥加密后插件拿到密文 API Key 导致 401
 - **根因**：两插件直读 `~/.drifox/app.config` 的 `LLM.SavedProviders[*].API_KEY`。主程序引入 `SecretMode` 后，`password` 模式该字段是 `enc:v2:…` 密文、`keyring` 模式是空串（密钥已入系统凭证库），插件把密文当 Bearer token 发出 → `401 log in fail: Please carry the API secret key (1004)`。只有主程序内存态持有解密后的明文

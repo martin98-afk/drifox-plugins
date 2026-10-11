@@ -21,18 +21,14 @@ INCLUDE_FIELDS = {
     "inc_plugin_data": "plugin_data",
     "inc_plugins": "plugins",
     "inc_skills": "skills",
-    "inc_teams": "teams",
     "inc_workflows": "workflows",
-    "inc_projects": "projects",
     "inc_archived": "archived",
     "inc_workspaces": "workspaces",
-    "inc_screenshots": "screenshots",
-    "inc_backups": "backups",
 }
 
 # 范围默认值（设置在 UI 卡勾选，schema 无此字段时的兑底；大体积/可再生目录默认关）
 INCLUDE_DEFAULTS = {
-    dirname: dirname not in ("plugins", "workspaces", "screenshots", "backups")
+    dirname: dirname not in ("plugins", "workspaces")
     for dirname in INCLUDE_FIELDS.values()
 }
 
@@ -43,13 +39,9 @@ INCLUDE_LABELS = {
     "plugin_data": "插件配置",
     "plugins": "已装插件",
     "skills": "技能",
-    "teams": "团队",
     "workflows": "工作流",
-    "projects": "项目",
     "archived": "归档",
     "workspaces": "工作区",
-    "screenshots": "截图",
-    "backups": "本地备份",
 }
 
 _STATE_LOCK = threading.Lock()
