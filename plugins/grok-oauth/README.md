@@ -23,6 +23,8 @@ xAI Grok 服务商插件（OAuth 登录制）：用 SuperGrok / X Premium+ 订�
 
 ## 已知限制
 
+- **思考过程不可见（上游协议限制）**：模型确实按思考强度执行推理（服务端返回 reasoning 项），但 xAI 订阅通道只下发**加密思考内容**（`encrypted_content`），明文思考流（`reasoning_text.delta` 等）不存在，UI 无法展示思考过程
+- **勿关闭「思考模式」开关**：grok-4.x 不支持 `effort: "none"`（实测 400 `invalid-argument`），DriFox 的思考模式关闭会触发该参数导致请求报错；保持思考模式开启即可
 - 订阅通道协议为社区实践（复用 Grok CLI 公开 client_id），**未经 xAI 官方承诺**：权益判定以账号为准，若请求返回 403，多为订阅档位权益限制（SuperGrok Heavy 才开放编程模型的时期曾出现）
 - refresh_token 轮换后以本地缓存的新值为准；若缓存目录被清理且旧 token 已轮换失效，需重新登录
 - 非官方客户端协议实现，存在违反服务条款与封号风险，**请自行评估**
