@@ -672,6 +672,7 @@
             "components": {
                 "providers": true
             },
+            "downloads": 2,
             "keywords": [
                 "OpenAI",
                 "Codex",
@@ -1719,7 +1720,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 18,
+            "downloads": 19,
             "keywords": [
                 "git",
                 "dashboard",
@@ -1750,7 +1751,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 63,
+            "downloads": 64,
             "keywords": [
                 "git",
                 "source-control",
@@ -2888,7 +2889,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 56,
+            "downloads": 57,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -3886,7 +3887,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 22,
+            "downloads": 23,
             "keywords": [
                 "voice",
                 "dictation",
@@ -4090,7 +4091,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 15,
+            "downloads": 16,
             "keywords": [
                 "webdav",
                 "backup",
