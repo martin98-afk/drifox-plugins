@@ -1719,7 +1719,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 17,
+            "downloads": 18,
             "keywords": [
                 "git",
                 "dashboard",
@@ -1750,7 +1750,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 62,
+            "downloads": 63,
             "keywords": [
                 "git",
                 "source-control",
@@ -2373,7 +2373,7 @@
                 "commands": true,
                 "ui": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2888,7 +2888,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 55,
+            "downloads": 56,
             "keywords": [
                 "prompt",
                 "enhance",
