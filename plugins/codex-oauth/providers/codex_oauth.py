@@ -13,8 +13,8 @@ user_code 自动复制到剪贴板，用户粘贴后轮询回填 refresh_token�
 「使用ResponsesAPI: True」，chat_worker 经 model adapter 判定后走原生 responses
 通道（思考内容只在 /v1/responses 返回）。
 
-模型池：随 ChatGPT 订阅而异，无公开列表端点，内置 2026-10 现役列表
-（gpt-5.x 已于 2026-08/10 陆续退出 ChatGPT 登录通道）。
+模型池：/models 端点按 OAuth 凭证拉取（models_hook，账号绑定目录，随订阅
+档位而异）；内置列表仅兜底。
 
 风险提示：非官方客户端协议实现，存在违反服务条款与封号风险，自行评估。
 """
@@ -22,6 +22,7 @@ import hashlib
 import json
 import threading
 import time
+import urllib.request
 from pathlib import Path
 
 from app.plugins.registries.provider_registry import ProviderDef
@@ -151,12 +152,68 @@ def _auto_login():
 
 # 内置模型池（2026-10 ChatGPT 登录通道现役；gpt-5.x 已于 2026-08/10 陆续退役）。
 # 实际可用性随订阅档位而异（Free/Go 走 luna 系，Plus/Pro 走 sol 系）。
+# 兜底专用：权威池以 models_hook 拉取的 /models 为准。
 _MODELS = [
     "gpt-6.1-sol",
     "gpt-6-sol",
     "gpt-6.1-luna",
     "gpt-6-luna",
 ]
+
+
+def _ranked_slugs(entries) -> list:
+    """从目录 models 列表取可见 slug：跳过 visibility=hide/hidden，
+    按 (priority, slug) 排序去重。不按 supported_in_api 过滤——该标记描述
+    公开 API 可用性，Codex OAuth 通道对标记为 False 的 slug 仍接受。"""
+    sortable = []
+    for item in entries if isinstance(entries, list) else []:
+        if not isinstance(item, dict):
+            continue
+        slug = str(item.get("slug", "") or "").strip()
+        if not slug:
+            continue
+        if str(item.get("visibility", "") or "").strip().lower() in ("hide", "hidden"):
+            continue
+        try:
+            priority = int(item.get("priority"))
+        except (TypeError, ValueError):
+            priority = 10000
+        sortable.append((priority, slug))
+    sortable.sort()
+    return list(dict.fromkeys(slug for _, slug in sortable))
+
+
+def _fetch_models(config):
+    """模型列表获取钩子：按本配置的 rt 换 token 拉 /models（权威池，随订阅而异）。
+
+    端点契约（对齐 hermes-agent 实测）：
+    - GET {base}/models?client_version=<v>，先 99.0.0 再 0.0.0（ungated 哨兵），
+      第一个返回 200 且 models 非空的胜出；
+    - 必须带 ChatGPT-Account-Id，否则 HTTP 200 但 {"models": []} 伪装成无模型。
+    """
+    refresh_token = str((config or {}).get("API_KEY", "") or "").strip()
+    if not refresh_token:
+        raise RuntimeError("尚未登录：请先点击「登录」")
+    entry = _exchange_access_token(refresh_token)
+    headers = {
+        "Authorization": f"Bearer {entry['access_token']}",
+        "Accept": "application/json",
+        "User-Agent": "codex_cli_rs/0.62.0 (Windows 11; x86_64) DriFox",
+    }
+    if entry.get("account_id"):
+        headers["ChatGPT-Account-Id"] = entry["account_id"]
+    models: list = []
+    for client_version in ("99.0.0", "0.0.0"):
+        req = urllib.request.Request(
+            f"{_API_ENDPOINT}/models?client_version={client_version}", headers=headers
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+        entries = (payload.get("models") or []) if isinstance(payload, dict) else []
+        models = _ranked_slugs(entries)
+        if models:
+            break
+    return models or list(_MODELS)
 
 
 def register(registry):
@@ -179,6 +236,7 @@ def register(registry):
             capabilities={
                 "extra_headers": _EXTRA_HEADERS,
                 "login_hook": _auto_login,
+                "models_hook": _fetch_models,
                 # 设备码页强制手输 code（不认 URL 预填），告知 code 已在剪贴板
                 "login_hint": "已打开 OpenAI 授权页，user_code 已复制到剪贴板：粘贴后点 Continue（最长等待 10 分钟）",
                 "context_limit": 272000,
