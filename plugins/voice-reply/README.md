@@ -33,7 +33,21 @@
 | 音色 | `FunAudioLLM/CosyVoice2-0.5B:alex` | 硅基流动格式 `模型名:音色名` |
 | API Key | 空 | 环境变量 `TTS_API_KEY` 可覆盖 |
 
-在线合成固定请求 wav 格式：Windows 走 `winsound`、macOS 走 `afplay` 播放，音频文件落在系统临时目录、播完即删。
+在线合成固定请求 wav 格式：Windows 走 winmm `mciSendStringW`、macOS 走 `afplay` 播放，音频文件落在系统临时目录、播完即删。日志会打印 wav 摘要（采样率/声道/位深/时长），便于排查「提示播放中但听不到」。
+
+> 为什么不用 `winsound.PlaySound`：它播放失败时**不抛异常、静默无声**，且对 WAV 兼容面窄，
+> 表现为「提示播放中但听不到」且日志干净、无从诊断。改用 winmm mci：命令返回码非 0 即失败，
+> 可 `mciGetErrorStringW` 转人话，且支持显式 stop/close。
+
+### 无声排查
+
+```bash
+uv run python tools/diag_voice_reply.py
+```
+
+脚本会读实际配置 → 打一次 API → 打印 HTTP 状态 / 返回字节数 / wav 摘要 →
+分别用 winsound、winmm mci、系统默认播放器播放同一文件并打印结果，据此可判定
+是「音频数据有问题」还是「播放后端有问题」。
 
 ## 工作原理
 
@@ -44,9 +58,11 @@
 3. 在线引擎：QThread worker 合成（urllib，50 秒超时）→ wav 落临时文件 → 播放；播放中再点 = 终止播放并复位；
 4. 播完 / 打断 / 失败三条路径均复位按钮为扬声器图标。
 
+音频播放由 `ui/audio_player.py` 承担（Windows winmm mci / macOS afplay，纯 ctypes）。
+
 ## 依赖
 
-无需安装任何依赖。本地引擎用系统自带能力，在线引擎用标准库 `urllib` + 系统 `winsound`/`afplay`。
+无需安装任何依赖。本地引擎用系统自带能力，在线引擎用标准库 `urllib` + 系统 winmm/`afplay`。
 
 > Windows 本地语音要求系统已安装中文语音包（一般 Windows 10/11 自带），验证：
 >

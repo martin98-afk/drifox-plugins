@@ -6,7 +6,7 @@
 - API Key / URL / 模型 / 音色由调用方（ui/__init__.py）读插件配置后传入，
   本模块不碰存储。
 - 线程模型：QThread + run()，信号回主线程；synthesize_wav 纯函数便于单测。
-- 音频固定请求 wav（RIFF），Windows winsound / macOS afplay 均可零依赖播放；
+- 音频固定请求 wav（RIFF），Windows winmm mci / macOS afplay 零依赖播放；
   响应非 RIFF 头时按 JSON 错误解析并人话化。
 - 播放超时：50 秒兜底（文本上限 500 字，正常合成 + 播放远小于此）。
 """
@@ -15,14 +15,13 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
-import sys
-import tempfile
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from loguru import logger
 from PyQt5.QtCore import QThread, pyqtSignal
+
+from .audio_player import describe_wav, play_wav, stop_playback, write_temp_wav
 
 # 合成请求总超时（秒）。500 字合成通常 2~5 秒返回，超时兜防线程悬挂
 _TIMEOUT_SEC = 50.0
@@ -95,24 +94,6 @@ def _extract_error_message(raw: str) -> str:
     return str(payload.get("message") or "")
 
 
-def play_wav(path: str, proc_slot: dict) -> None:
-    """阻塞播放一个 wav 文件（在 worker 线程内调用）。
-
-    proc_slot["proc"]：macOS afplay 子进程句柄，供主线程 stop() 终止；
-    Windows 走 winsound 全局播放，stop 侧用 PlaySound(None, SND_PURGE) 停止。
-    """
-    if sys.platform == "darwin":
-        proc = subprocess.Popen(["afplay", path])
-        proc_slot["proc"] = proc
-        proc.wait()
-        return
-    # Windows：SND_SYNC 在 worker 线程内阻塞播完；主线程 PURGE 可打断
-    import winsound
-
-    proc_slot["winsound"] = True
-    winsound.PlaySound(path, winsound.SND_FILENAME | winsound.SND_SYNC)
-
-
 class ApiTtsWorker(QThread):
     """在线合成 + 播放 worker。信号语义：
 
@@ -138,21 +119,12 @@ class ApiTtsWorker(QThread):
         self._proc_slot: dict = {}
 
     def stop(self) -> None:
-        """主线程调用：打断合成（标志位）+ 打断播放（PURGE / 终止子进程）。"""
+        """主线程调用：打断合成（标志位）+ 打断播放（mci stop / 终止 afplay）。"""
         self._stop_requested = True
-        slot = self._proc_slot
-        if slot.get("proc") is not None:
-            try:
-                slot["proc"].terminate()
-            except Exception:  # noqa: BLE001 — 进程已退出等场景忽略
-                pass
-        if slot.get("winsound") and sys.platform == "win32":
-            try:
-                import winsound
-
-                winsound.PlaySound(None, winsound.SND_PURGE)
-            except Exception as e:  # noqa: BLE001 — 停止失败不影响主流程
-                logger.warning(f"[voice-reply] 打断播放失败: {e}")
+        try:
+            stop_playback(self._proc_slot)
+        except Exception as e:  # noqa: BLE001 — 停止失败不影响主流程
+            logger.warning(f"[voice-reply] 打断播放失败: {e}")
 
     @property
     def stop_requested(self) -> bool:
@@ -172,14 +144,13 @@ class ApiTtsWorker(QThread):
         if self._stop_requested:
             return
 
-        # wav 落临时文件再播（winsound/afplay 都吃文件路径）
+        # 落临时文件再播（winmm mci / afplay 都吃文件路径）
         self.status.emit("播放中…")
-        fd, wav_path = tempfile.mkstemp(suffix=".wav", prefix="voice_reply_")
+        logger.info(f"[voice-reply] 音频信息: {describe_wav(data)}")
+        wav_path = write_temp_wav(data)
         try:
-            with os.fdopen(fd, "wb") as f:
-                f.write(data)
             play_wav(wav_path, self._proc_slot)
-        except Exception as e:  # noqa: BLE001 — 播放器缺失/设备占用等
+        except Exception as e:  # noqa: BLE001 — 设备占用/格式不支持等
             logger.error(f"[voice-reply] 播放失败: {e}")
             if not self._stop_requested:
                 self.failed.emit(f"播放失败：{e}")
