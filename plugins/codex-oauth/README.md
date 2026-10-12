@@ -19,7 +19,7 @@ OpenAI Codex 服务商插件（OAuth 登录制）：用 ChatGPT 账号浏览器�
 - API Key 字段存**长效 refresh_token**；聊天时自动换取**短效 access_token**（临期 5 分钟自动刷新，本地缓存）
 - 请求走 `https://chatgpt.com/backend-api/codex` 的 **Responses API** 形态（自动开启「使用ResponsesAPI」）
 - 请求头伪装 Codex CLI（`originator` / `User-Agent` / `ChatGPT-Account-Id`）
-- 模型池为内置静态列表（`gpt-6.1-sol` / `gpt-6-sol` / `gpt-6.1-luna` / `gpt-6-luna`），实际可用性随订阅档位而异
+- 模型池从 `chatgpt.com/backend-api/codex/models` 按账号实时拉取（编辑卡「获取模型列表」或自动刷新触发），实际可用性随订阅档位而异；拉取失败时回退内置列表（`gpt-6.1-sol` / `gpt-6-sol` / `gpt-6.1-luna` / `gpt-6-luna`）
 
 ## 已知限制
 
