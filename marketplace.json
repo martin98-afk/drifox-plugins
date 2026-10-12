@@ -898,7 +898,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 17,
+            "downloads": 18,
             "keywords": [
                 "desktop",
                 "automation",
@@ -1720,7 +1720,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 19,
+            "downloads": 20,
             "keywords": [
                 "git",
                 "dashboard",
@@ -1751,7 +1751,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 64,
+            "downloads": 65,
             "keywords": [
                 "git",
                 "source-control",
@@ -3887,7 +3887,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 23,
+            "downloads": 24,
             "keywords": [
                 "voice",
                 "dictation",
@@ -3942,7 +3942,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 6,
+            "downloads": 8,
             "keywords": [
                 "voice",
                 "tts",
