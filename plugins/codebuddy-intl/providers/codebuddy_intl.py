@@ -21,6 +21,7 @@ codebuddy/cache 分流，防 token 串号。
 
 import hashlib
 import json
+import os
 import threading
 import time
 from pathlib import Path
@@ -32,6 +33,7 @@ _ENDPOINT = "https://www.codebuddy.ai"
 _CACHE_DIR = get_app_data_dir() / "codebuddy_intl" / "cache"
 _CACHE_DIR.mkdir(parents=True, exist_ok=True)
 _REFRESH_SKEW_SEC = 6 * 3600  # 剩 6h 视为临期（access_token 实测 72h 级）
+_REFRESH_INTERVAL_SEC = 6 * 3600  # 守护轮间隔（access_token 72h 级，6h 一轮足够）
 
 _CACHE_LOCK = threading.Lock()
 _CACHE: dict = {}  # refresh_token -> {"access_token","refresh_token","expires_at","identity"}
@@ -268,7 +270,96 @@ def _fetch_balance(config):
     return {"balance": round(left, 1), "currency": ""}
 
 
+# ── 守护线程：临期刷新 + 每日自动签到（移植国内版，幂等安全）──────────
+# 与解释器拆解竞态的防护对齐国内版先例：
+# - 退出信标：aboutToQuit 置位，线程在分段睡眠间隙退出，不再 exec auth 模块
+# - 预热：启动时先加载一次 auth 模块（sys.modules 缓存），退出期 exec 命中
+#   缓存 import，避免「拆解中首次 import email/urllib」的 Windows 退出竞态
+# - 测试/CI（DRIFOX_NO_CODEBUDDY_REFRESH=1）不启动
+_STOP_EVENT = threading.Event()
+_THREAD_STARTED = False
+
+
+def _maintain_account(ba, entry: dict) -> str:
+    """维护单号：临期刷新 access_token + 每日自动签到（幂等）。返回动作摘要。
+
+    签到判定：active 且今日未签才领取（活动关闭/已签均跳过，天然安全——
+    daily-checkin 端点仅在活动开启时被触达）。刷新后 refresh_token 可能
+    轮换：缓存落新值、旧文件删除，配置里的旧 rt 仅作冷启动兜底。
+    """
+    rt = str(entry.get("refresh_token", "") or "").strip()
+    if not rt:
+        return "skip:no-rt"
+    at = str(entry.get("access_token", "") or "")
+    action = "idle"
+    if entry.get("expires_at", 0) <= time.time() + 24 * 3600:
+        new = ba.refresh(rt)
+        if new.get("access_token"):
+            at = new["access_token"]
+            new_rt = new.get("refresh_token") or rt
+            _cache_put(new_rt, at, ba.identity_headers(at))
+            if _cache_path(rt) != _cache_path(new_rt):
+                _cache_path(rt).unlink(missing_ok=True)
+            rt = new_rt
+            action = "refreshed"
+    if not at:
+        return action or "skip:no-at"
+    status = ba.checkin_status(at)
+    if (
+        isinstance(status, dict)
+        and status.get("active")
+        and not (status.get("today_checked_in") or status.get("todayCheckedIn"))
+    ):
+        ba.checkin_claim(at)
+        return "checked-in" if action == "idle" else "refreshed+checked-in"
+    return action
+
+
+def _refresh_loop():
+    """守护循环：遍历缓存内全部号维护；一轮 6h，分段睡眠支持秒级退出。"""
+    try:
+        _load_auth_module()  # 预热：退出期不再首次加载 auth 模块
+    except Exception:
+        pass
+    while not _STOP_EVENT.is_set():
+        try:
+            ba = _load_auth_module()
+            for path in sorted(_CACHE_DIR.glob("*.json")):
+                try:
+                    entry = json.loads(path.read_text(encoding="utf-8"))
+                    _maintain_account(ba, entry)
+                except Exception:
+                    continue  # 单号失败不影响其余号
+        except Exception:
+            pass  # 守护线程不允许退出
+        for _ in range(_REFRESH_INTERVAL_SEC):
+            if _STOP_EVENT.is_set():
+                return
+            time.sleep(1)
+
+
+def _bootstrap():
+    """注册时启动守护线程（热重载重复启动无害：daemon 且幂等写）。"""
+    global _THREAD_STARTED
+    if _THREAD_STARTED:
+        return
+    if os.environ.get("DRIFOX_NO_CODEBUDDY_REFRESH") == "1":
+        return
+    _THREAD_STARTED = True
+    _STOP_EVENT.clear()
+    threading.Thread(target=_refresh_loop, daemon=True).start()
+    try:
+        from PyQt5.QtCore import QCoreApplication
+
+        app = QCoreApplication.instance()
+        if app is not None:
+            app.aboutToQuit.connect(_STOP_EVENT.set)
+    except Exception:
+        pass
+
+
 def register(registry):
+    _bootstrap()
     registry.register(
         ProviderDef(
             name="CodeBuddy International",
