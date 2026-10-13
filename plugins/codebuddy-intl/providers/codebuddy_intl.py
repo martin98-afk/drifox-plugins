@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
-"""服务商插件 — 腾讯 CodeBuddy 国际版（www.codebuddy.ai 模型池）。
+"""服务商插件 — 腾讯 CodeBuddy 国际版（www.codebuddy.ai 动态路由）。
+
+动态路由：模型列表只暴露 craft 路由槽位（default-model / fast-model /
+balanced-model / primary-model），网关按账号档位与任务动态分配实际模型
+（gpt-6-luna / claude 系），用户不接触具体模型 ID，也不踩 11102 门控。
 
 伪装 CodeBuddy VSCode 插件（craft 形态）接入国际版网关：身份标识
 （X-Domain / X-Product / X-Agent-Intent / X-IDE-* 系 / User-Agent）经
@@ -152,45 +156,57 @@ _EXTRA_HEADERS = {
     "X-User-Id": _make_identity_header("X-User-Id"),
 }
 
-# 内置兜底模型目录（远端不可用时可用；权威列表以登录后 /v3/config 为准。
-# 2026-10-13 真机校准；claude 系按账号档位门控，不可用时调用报 11102）
-_MODELS = ["gpt-6-luna", "claude-opus-4.8", "claude-haiku-4.5"]
+# 路由槽位（动态路由：用户只选槽位，网关动态分配实际模型）。
+# 2026-10-13 真机校准：槽位真源 = /v3/config data.agents[craft].models；
+# auto-chat 直传报 11102（agent 内部兜底别名），不暴露。
+_MODELS = ["default-model", "fast-model", "balanced-model", "primary-model"]
 
-# per-model 能力声明（2026-10-13 /v3/config 真机校准 + reasoning_effort 真机验证）。
-# 服务商插件对自家网关的权威值，优先级高于 models.dev（gpt-6-luna 全局命中
-# 1.05M 但网关实为 1M；claude 带点 ID 在 models.dev 不命中，官方带杠命名）。
-# 全系 onlyReasoning=true：思考常开，luna 不可关闭；思考内容不透传 delta。
+# per-model 能力声明（2026-10-13 /v3/config 槽位详情真机校准 + reasoning_effort
+# 真机验证：四槽位透传 low/xhigh 均 200，reasoning_tokens 拉开差距；default-model
+# 详情无 reasoning 字段但透传同样生效，故思考声明与详情字段解耦）。
+# 限额/多模态随 models_hook 动态回写（_sync_slot_capabilities），静态值为兜底。
 _THINKING_IE = "reasoning_effort"
+_ROUTE_EFFORTS = ["low", "medium", "high", "xhigh"]
 _MODEL_CAPABILITIES = {
-    "gpt-6-luna": {
-        "context_limit": 1000000,
-        "max_output_tokens": 128000,
-        "absolute_limit": 128000,
-        "supports_thinking": True,
-        "thinking_param": _THINKING_IE,
-        "reasoning_effort_values": ["low", "medium", "high", "xhigh"],
-        "supports_vision": True,
-        "note": "CodeBuddy 网关 contextWindow 挡位 [272K/600K/1M]，默认 272K；思考不可关",
-    },
-    "claude-opus-4.8": {
-        "context_limit": 400000,
-        "max_output_tokens": 131072,
-        "absolute_limit": 131072,
-        "supports_thinking": True,
-        "thinking_param": _THINKING_IE,
-        "reasoning_effort_values": ["low", "medium", "high", "xhigh"],
-        "supports_vision": True,
-        "note": "企业版档位门控（11102）；contextWindow 挡位 [400K/1M]",
-    },
-    "claude-haiku-4.5": {
+    "default-model": {
         "context_limit": 176000,
         "max_output_tokens": 24000,
         "absolute_limit": 24000,
         "supports_thinking": True,
         "thinking_param": _THINKING_IE,
-        "reasoning_effort_values": ["low", "medium", "high"],
+        "reasoning_effort_values": _ROUTE_EFFORTS,
         "supports_vision": True,
-        "note": "企业版档位门控（11102）",
+        "note": "Auto 路由槽位（isDefault）：不带 effort 思考关，透传 effort 思考开",
+    },
+    "fast-model": {
+        "context_limit": 200000,
+        "max_output_tokens": 32000,
+        "absolute_limit": 32000,
+        "supports_thinking": True,
+        "thinking_param": _THINKING_IE,
+        "reasoning_effort_values": _ROUTE_EFFORTS,
+        "supports_vision": True,
+        "note": "Fast 路由槽位（credits x0.34）：响应快，适合简单任务",
+    },
+    "balanced-model": {
+        "context_limit": 256000,
+        "max_output_tokens": 32000,
+        "absolute_limit": 32000,
+        "supports_thinking": True,
+        "thinking_param": _THINKING_IE,
+        "reasoning_effort_values": _ROUTE_EFFORTS,
+        "supports_vision": True,
+        "note": "Balanced 路由槽位（credits x0.59）：速度与质量兼顾",
+    },
+    "primary-model": {
+        "context_limit": 272000,
+        "max_output_tokens": 72000,
+        "absolute_limit": 72000,
+        "supports_thinking": True,
+        "thinking_param": _THINKING_IE,
+        "reasoning_effort_values": _ROUTE_EFFORTS,
+        "supports_vision": True,
+        "note": "Primary 路由槽位（credits x3.31）：高质量输出，复杂任务",
     },
 }
 
@@ -214,19 +230,51 @@ def _auto_login():
     return {"api_key": api_key, "info": info + "，API Key 已回填请保存"}
 
 
+def _sync_slot_capabilities(details: dict) -> None:
+    """把 /v3/config 槽位限额与多模态回写 ProviderDef.model_capabilities（就地）。
+
+    models_hook 被「获取模型列表」/自动刷新调用时同步服务端最新值：
+    context_limit←maxInputTokens、max_output_tokens/absolute_limit←maxOutputTokens、
+    supports_vision←supportsImages。思考三键以静态真机校准为准：四槽位
+    reasoning_effort 透传均 200 且生效，详情是否带 reasoning 字段不作关闭依据。
+    """
+    try:
+        from app.plugins.registries.provider_registry import ProviderRegistry
+
+        pdef = ProviderRegistry.get_instance().get("CodeBuddy International")
+    except Exception:
+        return
+    if pdef is None:
+        return
+    caps = pdef.model_capabilities
+    for mid, m in details.items():
+        if not mid.endswith("-model") or not isinstance(m, dict):
+            continue
+        entry = caps.get(mid)
+        if not isinstance(entry, dict):
+            entry = {}
+            caps[mid] = entry
+        try:
+            ctx = int(m.get("maxInputTokens") or 0)
+            out = int(m.get("maxOutputTokens") or 0)
+        except (TypeError, ValueError):
+            continue
+        if ctx > 0:
+            entry["context_limit"] = ctx
+        if out > 0:
+            entry["max_output_tokens"] = out
+            entry["absolute_limit"] = out
+        if "supportsImages" in m:
+            entry["supports_vision"] = bool(m.get("supportsImages"))
+
+
 def _fetch_models(config):
-    """模型列表获取钩子（签名对齐 balance_fetcher）：按本配置的号拉 /v3/config。
+    """模型列表获取钩子（签名对齐 balance_fetcher）：返回 craft 路由槽位。
 
-    目录结构（2026-10-13 真机实测）：data.models 是全量模型详情，
-    data.agents[name=craft].models 只含路由槽位别名（default/fast/balanced/
-    primary-model，`*-model` 后缀），auto-chat 为聊天兜底别名——均不暴露。
-    真实对话模型 ID 可直传（gpt-6-luna 真机 200），但并非全部可用（claude 系
-    11102 按账号档位门控）。
-
-    列表策略：仅 data.models 中对话级真实模型——排除槽位别名（`*-model` /
-    auto-chat）、IDE 补全与嵌入类小模型（supportsToolCall=False 或
-    maxOutputTokens<16000）。claude 系列出但调用报 11102 时错误信息可见，
-    用户自行剔除或升级档位。
+    动态路由语义（2026-10-13 真机校准）：槽位真源 = data.agents[name=craft].models
+    （`*-model` 后缀），详情 = data.models 按 id 匹配；服务端结构变化时兜底取
+    详情表中 `*-model` 后缀条目。auto-chat 直传报 11102，不暴露。用户选槽位，
+    网关按账号档位动态分配实际模型，11102 门控由服务端消化。
     """
     refresh_token = str((config or {}).get("API_KEY", "") or "").strip()
     if not refresh_token:
@@ -234,22 +282,23 @@ def _fetch_models(config):
     ba = _load_auth_module()
     token = _exchange_access_token(refresh_token)
     cfg = ba.fetch_config(token)
-    picked: list = []
-    for m in cfg.get("models") or []:
-        if not isinstance(m, dict):
-            continue
-        mid = str(m.get("id") or "").strip()
-        if not mid or mid.endswith("-model") or mid == "auto-chat":
-            continue  # 路由槽位别名，不暴露
-        if m.get("supportsToolCall") is False:
-            continue
-        try:
-            max_out = int(m.get("maxOutputTokens") or 0)
-        except TypeError, ValueError:
-            max_out = 0
-        if max_out >= 16000:
-            picked.append(mid)
-    return picked or list(_MODELS)
+    details = {
+        str(m.get("id") or "").strip(): m
+        for m in (cfg.get("models") or [])
+        if isinstance(m, dict) and str(m.get("id") or "").strip()
+    }
+    slots: list = []
+    for a in cfg.get("agents") or []:
+        if isinstance(a, dict) and a.get("name") == "craft":
+            slots = [str(s).strip() for s in (a.get("models") or []) if str(s or "").strip()]
+            break
+    if not slots:
+        slots = [mid for mid in details if mid.endswith("-model")]
+    picked = [s for s in slots if s in details and details[s].get("supportsToolCall") is not False]
+    if not picked:
+        return list(_MODELS)
+    _sync_slot_capabilities(details)
+    return picked
 
 
 def _fetch_balance(config):
@@ -366,8 +415,8 @@ def register(registry):
             icon="codebuddy",
             api_url="https://www.codebuddy.ai/v2",
             auth_type="bearer",
-            default_model="gpt-6-luna",
-            default_params={"温度": 0.7, "最大Token": 32768},
+            default_model="default-model",
+            default_params={"温度": 0.7, "最大Token": 176000},
             register_url="https://www.codebuddy.ai/",
             models=_MODELS,
             model_capabilities=_MODEL_CAPABILITIES,
@@ -381,17 +430,15 @@ def register(registry):
                 "login_hook": _auto_login,
                 "models_hook": _fetch_models,
                 # ── 族级能力（2026-10-13 真机校准）─────────────────────
-                # 思考：全系 onlyReasoning=true；reasoning_effort 真机验证
-                # 被网关接受（low/xhigh 均 200，usage 含 reasoning_tokens）。
-                # 挡位取 luna/opus 并集；思考内容不透传 delta（仅 token 计数）
+                # 思考：reasoning_effort 四槽位真机验证被网关接受（low/xhigh
+                # 均 200，reasoning_tokens 拉开差距）；思考内容不透传 delta。
                 "supports_thinking": True,
                 "thinking_param": "reasoning_effort",
                 "reasoning_effort_values": ["low", "medium", "high", "xhigh"],
-                # 上下文/输出：族级保守值（真实模型集最低 haiku 176K/24K），
-                # luna(1M/128K) 与 opus(400K/131K) 命中 models.dev 时动态覆盖
+                # 上下文/输出：族级保守兜底（per-model 已按槽位校准并动态回写）
                 "context_limit": 176000,
                 "max_output_tokens": 24000,
-                "absolute_limit": 131072,
+                "absolute_limit": 72000,
                 "supports_vision": True,
             },
         )
