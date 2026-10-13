@@ -630,6 +630,41 @@
             }
         },
         {
+            "name": "codebuddy-intl",
+            "description": "腾讯 CodeBuddy 国际版服务商（OAuth 登录制）— 浏览器授权登录，以订阅额度直连 www.codebuddy.ai 网关（Claude / GPT 系模型池，登录后动态拉取），无需 API Key",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "provider"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/codebuddy-intl",
+                "ref": "main"
+            },
+            "components": {
+                "providers": true
+            },
+            "keywords": [
+                "CodeBuddy",
+                "国际版",
+                "OAuth",
+                "Claude",
+                "GPT",
+                "Gemini",
+                "服务商"
+            ],
+            "drifox": {
+                "min_version": "0.5.12"
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "codegraph-tools",
             "description": "CodeGraph 语义级代码智能工具（codegraph_explore）：搜索/调用链/影响分析/索引管理，依赖 codegraph-py 库",
             "version": "1.0.0",
