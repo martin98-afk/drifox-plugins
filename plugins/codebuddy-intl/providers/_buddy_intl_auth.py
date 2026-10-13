@@ -44,12 +44,16 @@ LOGIN_POLL_INTERVAL = 1.0
 CODE_OK = 0
 CODE_TOKEN_NOT_READY = 11217
 CODE_ACCOUNT_NOT_READY = 12151
+CODE_ALREADY_CLAIMED = 10001
+CODE_ALREADY_CLAIMED_ALT = 1001
 
 AUTH_STATE_PATH = "/v2/plugin/auth/state"
 AUTH_TOKEN_PATH = "/v2/plugin/auth/token"
 LOGIN_ACCOUNT_PATH = "/v2/plugin/login/account"
 TOKEN_REFRESH_PATH = "/v2/plugin/auth/token/refresh"
 USER_RESOURCE_PATH = "/v2/billing/meter/get-user-resource"
+CHECKIN_ACTIVITY_STATUS_PATH = "/v2/billing/meter/checkin-activity-status"
+DAILY_CHECKIN_PATH = "/v2/billing/meter/daily-checkin"
 
 # 匿名请求头：登录链（auth/state、auth/token）显式声明无凭据上下文
 _ANON_HEADERS = {
@@ -279,6 +283,25 @@ def user_resources(access_token: str) -> list:
         raise RuntimeError(f"get-user-resource 响应异常: {payload}")
     root = payload.get("data") if isinstance(payload.get("data"), dict) else payload
     return (((root.get("Response") or {}).get("Data") or {}).get("Accounts")) or []
+
+
+def checkin_status(access_token: str) -> Dict[str, Any]:
+    """查询签到活动状态（2026-10-13 国际版真机验证 200，字段与国内版同构蛇形）：
+    active / today_checked_in / streak_days / daily_credit。
+    """
+    return _payload_data(_request("POST", CHECKIN_ACTIVITY_STATUS_PATH, body={}, access_token=access_token))
+
+
+def checkin_claim(access_token: str) -> Dict[str, Any]:
+    """领取今日积分；幂等：业务码 10001/1001（今日已签）返回 already_claimed。"""
+    payload = _request("POST", DAILY_CHECKIN_PATH, body={}, access_token=access_token)
+    code = payload.get("code", -1)
+    if code in (CODE_ALREADY_CLAIMED, CODE_ALREADY_CLAIMED_ALT):
+        return {"already_claimed": True, "raw": payload}
+    if code != CODE_OK:
+        raise RuntimeError(f"签到失败: {payload}")
+    data = _payload_data(payload)
+    return {"already_claimed": False, "credit": data.get("credit"), "raw": payload}
 
 
 def _main() -> None:

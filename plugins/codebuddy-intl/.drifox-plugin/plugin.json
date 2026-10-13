@@ -5,7 +5,7 @@
     },
     "name": "codebuddy-intl",
     "description": "腾讯 CodeBuddy 国际版服务商（OAuth 登录制）— 浏览器授权登录，以订阅额度直连 www.codebuddy.ai 网关（Claude / GPT 系模型池，登录后动态拉取），无需 API Key",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "author": {
         "name": "DriFox Contributors"
     },

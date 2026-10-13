@@ -8,6 +8,7 @@ import base64
 import importlib.util
 import json
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -139,8 +140,13 @@ def test_refresh_raises_on_business_error(auth, monkeypatch):
 
 
 def _install_provider(monkeypatch, tmp_path):
-    """加载 provider 模块：缓存目录指到 tmp，auth 模块复用 fixture 实例。"""
+    """加载 provider 模块：缓存目录指到 tmp，auth 模块复用 fixture 实例。
+
+    默认禁守护线程（DRIFOX_NO_CODEBUDDY_REFRESH=1）：测试不起真线程，
+    _THREAD_STARTED 单例不被污染（bootstrap 开关用例因此始终有效）。
+    """
     monkeypatch.setattr("app.utils.utils.get_app_data_dir", lambda: tmp_path)
+    monkeypatch.setenv("DRIFOX_NO_CODEBUDDY_REFRESH", "1")
     mod = _load_module("codebuddy_intl_test_provider", _PROVIDER_FILE)
     return mod
 
@@ -334,6 +340,143 @@ def test_auth_module_has_user_resources_endpoint(auth):
     """认证模块暴露 user_resources（billing 通道与国内版同构）"""
     assert auth.USER_RESOURCE_PATH == "/v2/billing/meter/get-user-resource"
     assert callable(auth.user_resources)
+
+
+# ── 签到（checkin）──────────────────────────────────────
+
+
+def test_checkin_status_passes_payload(auth, monkeypatch):
+    """签到状态：POST checkin-activity-status，返回 data 段（真机蛇形字段）"""
+    captured = {}
+
+    def fake_request(method, path, body=None, access_token="", refresh_token="", timeout=30.0):
+        captured.update(method=method, path=path, access_token=access_token)
+        return {"code": 0, "data": {"active": True, "today_checked_in": False, "daily_credit": 100}}
+
+    monkeypatch.setattr(auth, "_request", fake_request)
+    status = auth.checkin_status("at")
+    assert captured["method"] == "POST"
+    assert captured["path"] == auth.CHECKIN_ACTIVITY_STATUS_PATH
+    assert status["active"] is True
+    assert status["today_checked_in"] is False
+
+
+def test_checkin_claim_idempotent_codes(auth, monkeypatch):
+    """领取：业务码 10001/1001 → already_claimed；0 → credit"""
+    for code in (10001, 1001):
+        monkeypatch.setattr(auth, "_request", lambda *a, **k: {"code": code})
+        assert auth.checkin_claim("at")["already_claimed"] is True
+    monkeypatch.setattr(auth, "_request", lambda *a, **k: {"code": 0, "data": {"credit": 100}})
+    result = auth.checkin_claim("at")
+    assert result["already_claimed"] is False
+    assert result["credit"] == 100
+    monkeypatch.setattr(auth, "_request", lambda *a, **k: {"code": 500, "message": "bad"})
+    with pytest.raises(RuntimeError, match="签到失败"):
+        auth.checkin_claim("at")
+
+
+# ── 守护线程维护逻辑 ────────────────────────────────────
+
+
+class _FakeAuth:
+    """_maintain_account 的 auth 桩：记录调用，可编程返回"""
+
+    def __init__(self, refresh_result=None, status=None, claim_error=None):
+        self.refresh_result = refresh_result
+        self.status = status or {}
+        self.claim_error = claim_error
+        self.claimed = 0
+        self.refreshed_with = []
+
+    def refresh(self, rt):
+        self.refreshed_with.append(rt)
+        if isinstance(self.refresh_result, Exception):
+            raise self.refresh_result
+        return self.refresh_result or {}
+
+    def identity_headers(self, at):
+        return {"X-User-Id": "u1"}
+
+    def checkin_status(self, at):
+        return self.status
+
+    def checkin_claim(self, at):
+        self.claimed += 1
+        if self.claim_error:
+            raise self.claim_error
+        return {"already_claimed": False, "credit": 100}
+
+
+def test_maintain_account_refresh_then_checkin(monkeypatch, tmp_path):
+    """临期 + 活动开启未签 → 刷新 + 领取；refresh_token 轮换落新删旧"""
+    mod = _install_provider(monkeypatch, tmp_path)
+    ba = _FakeAuth(
+        refresh_result={"access_token": "new-at", "refresh_token": "new-rt"},
+        status={"active": True, "today_checked_in": False},
+    )
+    old_path = mod._cache_path("rt-old")
+    old_path.parent.mkdir(parents=True, exist_ok=True)
+    old_path.write_text(
+        json.dumps({"refresh_token": "rt-old", "access_token": "old-at", "expires_at": 0}), encoding="utf-8"
+    )
+    action = mod._maintain_account(ba, {"refresh_token": "rt-old", "access_token": "old-at", "expires_at": 0})
+    assert action == "refreshed+checked-in"
+    assert ba.claimed == 1
+    # 新缓存落盘、旧文件已删
+    assert mod._cache_path("new-rt").exists()
+    assert not old_path.exists()
+
+
+def test_maintain_account_skips_when_not_active(monkeypatch, tmp_path):
+    """活动关闭（active=false，当前账号实况）→ 不领取、不刷新（未临期）"""
+    mod = _install_provider(monkeypatch, tmp_path)
+    ba = _FakeAuth(status={"active": False, "today_checked_in": False})
+    entry = {"refresh_token": "rt", "access_token": "at", "expires_at": time.time() + 72 * 3600}
+    assert mod._maintain_account(ba, entry) == "idle"
+    assert ba.claimed == 0
+    assert ba.refreshed_with == []
+
+
+def test_maintain_account_already_checked_in(monkeypatch, tmp_path):
+    """活动开启但今日已签 → 跳过领取（幂等）"""
+    mod = _install_provider(monkeypatch, tmp_path)
+    ba = _FakeAuth(status={"active": True, "today_checked_in": True})
+    entry = {"refresh_token": "rt", "access_token": "at", "expires_at": time.time() + 72 * 3600}
+    assert mod._maintain_account(ba, entry) == "idle"
+    assert ba.claimed == 0
+
+
+def test_maintain_account_claim_failure_isolated(monkeypatch, tmp_path):
+    """领取抛错 → 异常上抛由循环层隔离（单号失败不影响其余号）"""
+    mod = _install_provider(monkeypatch, tmp_path)
+    ba = _FakeAuth(status={"active": True, "today_checked_in": False}, claim_error=RuntimeError("x"))
+    entry = {"refresh_token": "rt", "access_token": "at", "expires_at": time.time() + 72 * 3600}
+    with pytest.raises(RuntimeError):
+        mod._maintain_account(ba, entry)
+
+
+def test_bootstrap_guard_and_loop_isolation(monkeypatch, tmp_path):
+    """_bootstrap：测试开关不起线程；循环层单号失败隔离"""
+    mod = _install_provider(monkeypatch, tmp_path)
+    monkeypatch.setenv("DRIFOX_NO_CODEBUDDY_REFRESH", "1")
+    started_before = mod._THREAD_STARTED
+    mod._bootstrap()
+    assert mod._THREAD_STARTED == started_before  # 开关生效，未启动
+
+    # 循环体语义：sorted glob + 逐文件 try/except，坏文件不影响好号
+    ba = _FakeAuth(status={"active": False})
+    monkeypatch.setattr(mod, "_load_auth_module", lambda: ba)
+    good = {"refresh_token": "rt-good", "access_token": "at", "expires_at": time.time() + 72 * 3600}
+    (mod._CACHE_DIR / "bad.json").write_text("not-json", encoding="utf-8")
+    (mod._CACHE_DIR / "good.json").write_text(json.dumps(good), encoding="utf-8")
+    results = []
+    for path in sorted(mod._CACHE_DIR.glob("*.json")):
+        try:
+            results.append(mod._maintain_account(ba, json.loads(path.read_text(encoding="utf-8"))))
+        except Exception:
+            results.append("error")
+    assert "error" in results  # 坏文件被隔离
+    assert "idle" in results  # 好号仍被维护
 
 
 # ── token 缓存轮转 ──────────────────────────────────────
