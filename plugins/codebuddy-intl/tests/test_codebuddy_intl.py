@@ -151,11 +151,12 @@ def _install_provider(monkeypatch, tmp_path):
     return mod
 
 
-def test_fetch_models_real_ids_only(monkeypatch, tmp_path, auth):
-    """仅真实模型 ID：滤槽位别名（*-model/auto-chat）、补全类、supportsToolCall=False
+def test_fetch_models_route_slots_only(monkeypatch, tmp_path, auth):
+    """动态路由：仅返回 craft 路由槽位；排除 auto-chat（11102）与非槽位条目
 
-    2026-10-13 真机校准：craft 目录只是路由槽位，真实 ID（gpt-6-luna 等）
-    可直传（真机 200）；claude 系账号门控仍列出。"""
+    2026-10-13 真机校准：槽位真源 = agents[craft].models，网关按账号动态
+    分配实际模型，用户不接触模型 ID；结构变化时兜底取详情表 `*-model` 后缀。
+    """
     mod = _install_provider(monkeypatch, tmp_path)
     monkeypatch.setattr(mod, "_load_auth_module", lambda: auth)
     monkeypatch.setattr(mod, "_exchange_access_token", lambda rt: "at")
@@ -165,26 +166,48 @@ def test_fetch_models_real_ids_only(monkeypatch, tmp_path, auth):
         lambda at: {
             # 对齐真机响应结构的关键样本
             "models": [
-                {"id": "default-model", "supportsToolCall": True, "maxOutputTokens": 24000},
-                {"id": "primary-model", "supportsToolCall": True, "maxOutputTokens": 72000},
-                {"id": "auto-chat", "supportsToolCall": True, "maxOutputTokens": 32000},
+                {"id": "default-model", "supportsToolCall": True, "maxInputTokens": 176000, "maxOutputTokens": 24000, "supportsImages": True},
+                {"id": "fast-model", "supportsToolCall": True, "maxInputTokens": 200000, "maxOutputTokens": 32000, "supportsImages": True},
+                {"id": "balanced-model", "supportsToolCall": True, "maxInputTokens": 256000, "maxOutputTokens": 32000, "supportsImages": True},
+                {"id": "primary-model", "supportsToolCall": True, "maxInputTokens": 272000, "maxOutputTokens": 72000, "supportsImages": True},
+                {"id": "auto-chat", "supportsToolCall": True, "maxInputTokens": 168000, "maxOutputTokens": 32000, "supportsImages": False},
                 {"id": "gpt-6-luna", "supportsToolCall": True, "maxOutputTokens": 128000},
                 {"id": "claude-opus-4.8", "supportsToolCall": True, "maxOutputTokens": 131072},
-                {"id": "claude-haiku-4.5", "supportsToolCall": True, "maxOutputTokens": 24000},
-                # IDE 补全/嵌入类：输出上限过小或显式不支持工具 → 排除
                 {"id": "completion-1.0", "maxOutputTokens": 256},
                 {"id": "nes-1.2", "supportsToolCall": True, "maxOutputTokens": 8192},
-                {"id": "enhance-1.0", "supportsToolCall": True},
-                {"id": "gpt-image-2.5-sunburst", "supportsToolCall": False},
             ],
-            "agents": [{"name": "craft", "models": ["default-model", "primary-model"]}],
+            "agents": [
+                {"name": "craft", "models": ["default-model", "fast-model", "balanced-model", "primary-model"]},
+                {"name": "agent", "models": ["default-model", "auto-chat"]},
+            ],
         },
     )
     assert mod._fetch_models({"API_KEY": "rt"}) == [
-        "gpt-6-luna",
-        "claude-opus-4.8",
-        "claude-haiku-4.5",
+        "default-model",
+        "fast-model",
+        "balanced-model",
+        "primary-model",
     ]
+
+
+def test_fetch_models_slots_fallback_from_details(monkeypatch, tmp_path, auth):
+    """服务端结构变化（agents 无 craft）→ 兜底取详情表 `*-model` 后缀条目"""
+    mod = _install_provider(monkeypatch, tmp_path)
+    monkeypatch.setattr(mod, "_load_auth_module", lambda: auth)
+    monkeypatch.setattr(mod, "_exchange_access_token", lambda rt: "at")
+    monkeypatch.setattr(
+        auth,
+        "fetch_config",
+        lambda at: {
+            "models": [
+                {"id": "default-model", "supportsToolCall": True, "maxOutputTokens": 24000},
+                {"id": "new-slot-model", "supportsToolCall": True, "maxOutputTokens": 32000},
+                {"id": "gpt-6-luna", "supportsToolCall": True, "maxOutputTokens": 128000},
+            ],
+            "agents": [],
+        },
+    )
+    assert mod._fetch_models({"API_KEY": "rt"}) == ["default-model", "new-slot-model"]
 
 
 def test_fetch_models_fallback_without_config(monkeypatch, tmp_path, auth):
@@ -215,8 +238,69 @@ def test_declares_international_provider(fresh_provider_registry, monkeypatch, t
     assert provider.family == "codebuddy_intl"
     assert provider.api_url == "https://www.codebuddy.ai/v2"
     assert provider.auth_type == "bearer"
-    assert provider.default_model == "gpt-6-luna"
-    assert "auto" not in provider.models
+    # 动态路由：默认与列表均为路由槽位，不暴露具体模型 ID
+    assert provider.default_model == "default-model"
+    assert provider.models == ["default-model", "fast-model", "balanced-model", "primary-model"]
+
+
+def test_slot_capabilities_declare_thinking_and_vision(fresh_provider_registry, monkeypatch, tmp_path):
+    """四槽位 per-model 能力：思考开关+强度、多模态、限额（主程序据此渲染
+
+    思考配置项并自动补「思考模式」/「思考等级」（_merge_model_caps_into_config）。"""
+    mod = _install_provider(monkeypatch, tmp_path)
+    mod.register(fresh_provider_registry)
+    caps = fresh_provider_registry.get("CodeBuddy International").model_capabilities
+    assert set(caps) == {"default-model", "fast-model", "balanced-model", "primary-model"}
+    limits = {
+        "default-model": (176000, 24000),
+        "fast-model": (200000, 32000),
+        "balanced-model": (256000, 32000),
+        "primary-model": (272000, 72000),
+    }
+    for mid, (ctx, out) in limits.items():
+        entry = caps[mid]
+        assert entry["context_limit"] == ctx
+        assert entry["max_output_tokens"] == out
+        assert entry["supports_thinking"] is True
+        assert entry["thinking_param"] == "reasoning_effort"
+        assert entry["reasoning_effort_values"] == ["low", "medium", "high", "xhigh"]
+        assert entry["supports_vision"] is True
+
+
+def test_fetch_models_syncs_slot_capabilities(monkeypatch, tmp_path, auth, fresh_provider_registry):
+    """拉取成功后把槽位限额/多模态回写 ProviderDef.model_capabilities（思考键不动）"""
+    mod = _install_provider(monkeypatch, tmp_path)
+    monkeypatch.setattr(mod, "_load_auth_module", lambda: auth)
+    monkeypatch.setattr(mod, "_exchange_access_token", lambda rt: "at")
+    monkeypatch.setattr(
+        auth,
+        "fetch_config",
+        lambda at: {
+            "models": [
+                # 服务端调额：primary 降到 128K/32K；auto-chat 不回写（非槽位）
+                {"id": "primary-model", "supportsToolCall": True, "maxInputTokens": 128000, "maxOutputTokens": 32000, "supportsImages": False},
+                {"id": "auto-chat", "supportsToolCall": True, "maxInputTokens": 999000, "maxOutputTokens": 99000, "supportsImages": True},
+                # 缺限额字段的槽位：保留静态兜底值
+                {"id": "fast-model", "supportsToolCall": True},
+            ],
+            "agents": [{"name": "craft", "models": ["primary-model", "fast-model"]}],
+        },
+    )
+    reg = fresh_provider_registry
+    mod.register(reg)
+    pdef = reg.get("CodeBuddy International")
+    mod._fetch_models({"API_KEY": "rt"})
+    primary = pdef.model_capabilities["primary-model"]
+    assert primary["context_limit"] == 128000
+    assert primary["max_output_tokens"] == 32000
+    assert primary["supports_vision"] is False
+    # 思考三键以静态真机校准为准，不被详情字段冲掉
+    assert primary["supports_thinking"] is True
+    assert primary["reasoning_effort_values"] == ["low", "medium", "high", "xhigh"]
+    # auto-chat 非路由槽位，不回写
+    assert "auto-chat" not in pdef.model_capabilities
+    # 缺限额字段：保留静态值
+    assert pdef.model_capabilities["fast-model"]["context_limit"] == 200000
 
 
 def test_capabilities_carry_intl_disguise_headers(fresh_provider_registry, monkeypatch, tmp_path):
@@ -249,18 +333,17 @@ def test_capabilities_declare_thinking_and_context(fresh_provider_registry, monk
     assert caps["supports_thinking"] is True
     assert caps["thinking_param"] == "reasoning_effort"
     assert caps["reasoning_effort_values"] == ["low", "medium", "high", "xhigh"]
-    # 族级保守值：真实模型集最低（haiku 176K/24K），luna/opus 走 models.dev 覆盖
+    # 族级保守值：槽位最低（default-model 176K/24K），动态路由下作兑底
     assert caps["context_limit"] == 176000
     assert caps["max_output_tokens"] == 24000
-    assert caps["absolute_limit"] == 131072
+    assert caps["absolute_limit"] == 72000
     assert caps["supports_vision"] is True
 
 
 def test_per_model_capabilities_pipeline(fresh_provider_registry, monkeypatch, tmp_path):
     """per-model 声明贯通主程序解析链：get_model_capabilities 命中插件权威值
 
-    2026-10-13 真机校准：claude 带点 ID 在 models.dev 不命中（官方带杠），
-    luna 网关 1M 与官方 API 1.05M 各自成立 → 插件 per-model 层压过一切。
+    动态路由槽位是私有命名，models.dev 不命中 → 插件 per-model 层压过一切。
     """
     from app.core.modelmeta.model_capabilities import (
         get_caps_max_output_tokens,
@@ -270,20 +353,18 @@ def test_per_model_capabilities_pipeline(fresh_provider_registry, monkeypatch, t
     mod = _install_provider(monkeypatch, tmp_path)
     mod.register(fresh_provider_registry)
 
-    opus = get_model_capabilities("claude-opus-4.8", "CodeBuddy International")
-    assert opus["context_limit"] == 400000
-    assert opus["max_output_tokens"] == 131072
-    assert opus["thinking_param"] == "reasoning_effort"
-    haiku = get_model_capabilities("claude-haiku-4.5", "CodeBuddy International")
-    assert haiku["context_limit"] == 176000
-    assert haiku["reasoning_effort_values"] == ["low", "medium", "high"]
-    luna = get_model_capabilities("gpt-6-luna", "CodeBuddy International")
-    assert luna["context_limit"] == 1000000
-    assert "canDisableThinking" not in luna or luna.get("supports_thinking") is True
+    primary = get_model_capabilities("primary-model", "CodeBuddy International")
+    assert primary["context_limit"] == 272000
+    assert primary["max_output_tokens"] == 72000
+    assert primary["thinking_param"] == "reasoning_effort"
+    assert primary["supports_vision"] is True
+    balanced = get_model_capabilities("balanced-model", "CodeBuddy International")
+    assert balanced["context_limit"] == 256000
+    assert balanced["reasoning_effort_values"] == ["low", "medium", "high", "xhigh"]
 
     # 输出上限链贯通（chat_worker._cap_max_output_tokens 的 L0 层）
-    llm_config = {"模型名称": "claude-opus-4.8", "provider_name": "CodeBuddy International"}
-    assert get_caps_max_output_tokens("claude-opus-4.8", llm_config) == 131072
+    llm_config = {"模型名称": "primary-model", "provider_name": "CodeBuddy International"}
+    assert get_caps_max_output_tokens("primary-model", llm_config) == 72000
 
 
 # ── 积分查询（balance_fetcher）──────────────────────────
