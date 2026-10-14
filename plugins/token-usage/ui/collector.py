@@ -79,13 +79,18 @@ def _is_stale() -> bool:
 
 
 class _CollectWorker(QObject):
-    """后台采集 worker"""
+    """后台采集 worker
+
+    收尾职责在 run() 内自主完成（写缓存/日志/状态清理/线程退出），
+    不依赖 finished 信号的跨线程投递——原因见 _finalize_collect docstring。
+    """
 
     finished = pyqtSignal(object)
 
-    def __init__(self, cache_key: tuple):
+    def __init__(self, cache_key: tuple, collector: "_Collector"):
         super().__init__()
         self._cache_key = cache_key
+        self._collector = collector
 
     def run(self):
         from .data import collect
@@ -95,7 +100,19 @@ class _CollectWorker(QObject):
         except Exception as e:  # 兜底：worker 绝不让线程静默死掉
             logger.error(f"[{_PLUGIN_NAME}] 采集异常: {e}")
             data = {"daily": {}, "sessions": 0, "error": str(e)}
+        _finalize_collect(data)
+        # 释放管理器引用：此后 is_running() 立即为 False，新采集不被旧线程阻拦
+        self._collector._thread = None
+        self._collector._worker = None
+        # 退出本采集线程的事件循环：quit() 线程安全，退出事件由本线程 exec 消费。
+        # 不能依赖 worker.finished -> thread.quit 信号连接：queued 投给 receiver
+        # 线程，receiver 线程已死时事件永久滞留，线程泄漏（见 _finalize_collect）。
+        QThread.currentThread().quit()
         self.finished.emit(data)
+        # 数据就绪后的 UI 通知：UIEventBus（宿主主线程单例）从任意线程发布安全；
+        # 无 UIEventBus 的旧宿主在非主线程触发时守卫跳过——缓存已写入，下次
+        # 打开页签 get_cached() 直接命中。
+        notify_refresh()
 
 
 class _Collector(QObject):
@@ -131,12 +148,11 @@ class _Collector(QObject):
                 return False
             _running = True
 
-        worker = _CollectWorker(build_cache_key())
+        worker = _CollectWorker(build_cache_key(), self)
         thread = QThread()
         worker.moveToThread(thread)
         thread.started.connect(worker.run)
         worker.finished.connect(self._on_done)
-        worker.finished.connect(thread.quit)
         worker.finished.connect(worker.deleteLater)
         thread.finished.connect(thread.deleteLater)
         self._thread, self._worker = thread, worker
@@ -145,23 +161,40 @@ class _Collector(QObject):
         return True
 
     def _on_done(self, data: dict):
-        """采集完成：写缓存 + 通知欢迎卡片重渲染"""
-        global _cache, _cache_key, _cache_ts, _running
-        with _lock:
-            _cache = data
-            _cache_key = build_cache_key()
-            _cache_ts = time.monotonic()
-            _running = False
+        """信号回调兜底（幂等）：缓存写入/状态清理已前移到 worker 线程的
+        _finalize_collect，这里只负责 receiver 线程存活场景下的重复通知。
+        receiver 线程已死时本方法不会执行，也不影响数据就绪。
+        """
         self._thread = None
         self._worker = None
-        if data.get("error"):
-            logger.warning(f"[{_PLUGIN_NAME}] 采集返回错误: {data['error']}")
-        else:
-            logger.info(
-                f"[{_PLUGIN_NAME}] 采集完成: {data.get('sessions', 0)} 会话 / "
-                f"{len(data.get('daily', {}))} 天有记录"
-            )
         notify_refresh()
+
+
+def _finalize_collect(data: dict) -> None:
+    """采集收尾：写缓存 + 日志 + 清运行态。在 worker 线程内直接调用。
+
+    ⚠️ 不能依赖 _on_done 信号回调做这件事（打包版踩过的死线程坑）：
+    _collector 的线程亲和 = 首次 get_collector() 的调用线程。市场安装流程中
+    register_ui 的预热 start() 经 QTimer.singleShot 在安装 worker 线程执行，
+    _collector 随之诞生在该线程；安装任务完成、worker 线程 exec() 退出后，
+    queued 给死线程的 finished 事件永不消费——缓存永不写入、_running 永不
+    清零，页签永远停在「正在统计 API 用量…」。
+    修法：缓存写入（锁保护，线程安全）与日志在 worker 线程就地完成，
+    不经任何跨线程信号。
+    """
+    global _cache, _cache_key, _cache_ts, _running
+    with _lock:
+        _cache = data
+        _cache_key = build_cache_key()
+        _cache_ts = time.monotonic()
+        _running = False
+    if data.get("error"):
+        logger.warning(f"[{_PLUGIN_NAME}] 采集返回错误: {data['error']}")
+    else:
+        logger.info(
+            f"[{_PLUGIN_NAME}] 采集完成: {data.get('sessions', 0)} 会话 / "
+            f"{len(data.get('daily', {}))} 天有记录"
+        )
 
 
 def invalidate() -> None:
@@ -188,6 +221,17 @@ def notify_refresh() -> None:
         return
     except Exception as e:
         logger.debug(f"[{_PLUGIN_NAME}] UIEventBus 不可用，回退直接刷新: {e}")
+
+    # 回退分支直接摸 Qt UI，只允许主线程执行；worker 线程触发时跳过
+    # （缓存已写好，下次打开页签 get_cached() 命中即有数据）。
+    try:
+        from PyQt5.QtWidgets import QApplication
+
+        app = QApplication.instance()
+        if app is not None and QThread.currentThread() is not app.thread():
+            return
+    except Exception:
+        pass
 
     try:
         from app.plugins.registries.ui_plugin_registry import UIPluginRegistry

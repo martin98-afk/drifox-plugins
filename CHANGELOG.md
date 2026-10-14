@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.11.8 (2026-10-14)
+### 🔧 token-usage v0.1.3：修打包版市场安装后用量页签永远卡「正在统计」
+- **症状**：打包版 DriFox 里从市场安装 token-usage 后，「🔢 用量」tab 永远停在「正在统计 API 用量…」；日志只有 `[token-usage] 采集已启动`，永远等不到「采集完成」。开发版（插件随仓库加载/热重载）不触发
+- **根因（QObject 线程亲和 + 死线程信号投递）**：`register_ui()` 尾部的预热 `start()` 在**市场安装 worker 线程**执行 —— 安装器用 `QTimer.singleShot(0, reload)` 触发重载，而 `QTimer` 归**调用线程**所有（安装 worker 线程有 `exec()` 事件循环，回调会执行但不在主线程）。于是 `_collector` 单例诞生在安装 worker 线程；采集 QThread 0.6s 跑完后 `finished.emit()` 是 queued 信号，投给 `_collector` 所在线程 —— 该线程任务完成后已 `quit()` 退出事件循环，**排队给死线程的事件永不消费**：`_on_done` 不执行 → 缓存永不写入、`_running` 永不清零 → 后续每次 `start()` 被 `is_running()` 拦截 → 页签永久加载占位
+- **取证路径**：打包宿主日志「采集已启动」有、「采集完成/异常/错误」全无 → worker 线程 CPU 时间 0.625s ≈ dev 实测 0.79s，说明 `collect()` 正常跑完 → 断点在 emit 之后的信号投递环节 → 逆向安装器线程模型（`_MarketplaceWorker` moveToThread + `QTimer.singleShot` 归属）闭合证据链
+- **修复**：数据就绪与信号投递解耦 —— ①缓存写入/日志/状态清理前移到 worker 线程的 `_finalize_collect()`（锁保护，就地生效，不经任何跨线程信号）；②采集线程退出改为 `run()` 内 `QThread.currentThread().quit()`（quit 线程安全，退出事件由本线程 exec 消费），不再依赖 `finished -> thread.quit` 的 queued 连接；③`notify_refresh()` 回退分支（直接摸 UIPluginRegistry）加主线程守卫，worker 线程触发时跳过（缓存已写好，下次打开页签 `get_cached()` 命中）；④`_on_done` 保留为幂等兜底（receiver 线程存活场景的重复通知，无害）
+- **回归测试**：新增 2 例（66 例总数）——`test_finalize_collect_writes_cache_without_signal`（收尾函数就地生效，无 Qt 信号参与）、`test_worker_run_finalizes_even_when_signal_never_delivered`（同步直调 `worker.run()` 等价「信号投进死线程」极端场景，断言缓存命中 + `_thread` 清零 + `is_running()` False）。注入变异（删除 `_finalize_collect` 调用）精确打红
+- **验证**：`ruff check` 通过；`tools/validate_plugins.py --strict` 中 token-usage 为 OK；`tools/generate_marketplace.py --check` 一致
+
 ## 2.11.7 (2026-10-14)
 ### 🔢 token-usage v0.1.0：欢迎卡片新增「🔢 用量」tab — 30 天四指标 + GitHub 风格年度热力图
 - **版本**：v0.1.1
