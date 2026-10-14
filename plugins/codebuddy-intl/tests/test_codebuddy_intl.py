@@ -152,11 +152,12 @@ def _install_provider(monkeypatch, tmp_path):
 
 
 def test_fetch_models_slots_and_real_ids(monkeypatch, tmp_path, auth):
-    """动态路由 + 真实模型 ID：槽位与详情表真实 ID 一并返回；剔除非工具调用类
+    """动态路由 + 真实模型 ID：craft 槽位与全表对话级模型一并返回
 
-    2026-10-13 真机校准：详情表 data.models 全量可见，craft.models 里的
-    `*-model` 槽位与 gpt-6-luna / claude 系真实 ID 同源，两类都暴露；
-    auto-chat 是 agent 内部兜底别名（直传报 11102），不在 craft 列表故不返回。
+    2026-10-14 真机校准：槽位真源 = agents[craft].models（只有 4 个 `*-model`），
+    真实模型 ID 只在 data.models 全表（gpt-6-luna / claude 系）→ 两个来源合并。
+    全表侧剔除非工具调用类（补全/嵌入/图像，out<16000）与内部专用别名
+    （auto-chat 直传报 11102、enhance-1.0 为 prompt 增强专用）。
     """
     mod = _install_provider(monkeypatch, tmp_path)
     monkeypatch.setattr(mod, "_load_auth_module", lambda: auth)
@@ -172,23 +173,14 @@ def test_fetch_models_slots_and_real_ids(monkeypatch, tmp_path, auth):
                 {"id": "balanced-model", "supportsToolCall": True, "maxInputTokens": 256000, "maxOutputTokens": 32000, "supportsImages": True},
                 {"id": "primary-model", "supportsToolCall": True, "maxInputTokens": 272000, "maxOutputTokens": 72000, "supportsImages": True},
                 {"id": "auto-chat", "supportsToolCall": True, "maxInputTokens": 168000, "maxOutputTokens": 32000, "supportsImages": False},
+                {"id": "enhance-1.0", "supportsToolCall": True, "maxOutputTokens": 32000},
                 {"id": "gpt-6-luna", "supportsToolCall": True, "maxOutputTokens": 128000},
                 {"id": "claude-opus-4.8", "supportsToolCall": True, "maxOutputTokens": 131072},
                 {"id": "completion-1.0", "maxOutputTokens": 256},
                 {"id": "nes-1.2", "supportsToolCall": True, "maxOutputTokens": 8192},
             ],
             "agents": [
-                {
-                    "name": "craft",
-                    "models": [
-                        "default-model",
-                        "fast-model",
-                        "balanced-model",
-                        "primary-model",
-                        "gpt-6-luna",
-                        "claude-opus-4.8",
-                    ],
-                },
+                {"name": "craft", "models": ["default-model", "fast-model", "balanced-model", "primary-model"]},
                 {"name": "agent", "models": ["default-model", "auto-chat"]},
             ],
         },
@@ -204,7 +196,7 @@ def test_fetch_models_slots_and_real_ids(monkeypatch, tmp_path, auth):
 
 
 def test_fetch_models_slots_fallback_from_details(monkeypatch, tmp_path, auth):
-    """服务端结构变化（agents 无 craft）→ 兜底取详情表 `*-model` 后缀条目"""
+    """服务端结构变化（agents 无 craft）→ 无槽位，仅返回全表真实模型 ID"""
     mod = _install_provider(monkeypatch, tmp_path)
     monkeypatch.setattr(mod, "_load_auth_module", lambda: auth)
     monkeypatch.setattr(mod, "_exchange_access_token", lambda rt: "at")
@@ -220,7 +212,7 @@ def test_fetch_models_slots_fallback_from_details(monkeypatch, tmp_path, auth):
             "agents": [],
         },
     )
-    assert mod._fetch_models({"API_KEY": "rt"}) == ["default-model", "new-slot-model"]
+    assert mod._fetch_models({"API_KEY": "rt"}) == ["gpt-6-luna"]
 
 
 def test_fetch_models_fallback_without_config(monkeypatch, tmp_path, auth):

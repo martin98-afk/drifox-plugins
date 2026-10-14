@@ -157,7 +157,7 @@ _EXTRA_HEADERS = {
 }
 
 # 路由槽位（动态路由：用户只选槽位，网关动态分配实际模型）。
-# 2026-10-13 真机校准：槽位真源 = /v3/config data.agents[craft].models；
+# 2026-10-14 真机校准：槽位真源 = /v3/config data.agents[craft].models；
 # auto-chat 直传报 11102（agent 内部兜底别名），不暴露。
 _MODELS = ["default-model", "fast-model", "balanced-model", "primary-model"]
 
@@ -209,6 +209,28 @@ _MODEL_CAPABILITIES = {
         "note": "Primary 路由槽位（credits x3.31）：高质量输出，复杂任务",
     },
 }
+
+# data.models 全表里不可作为对话模型暴露的内部别名（2026-10-14 真机校准）：
+# auto-chat 是 agent 内部兜底别名，直传报 11102；enhance-1.0 为 prompt 增强专用。
+# 其余小模型（nes-* / completion-1.0 / codewise-jump / 图像类）靠 out<16000 剔除。
+_HIDDEN_MODEL_IDS = {"auto-chat", "enhance-1.0"}
+# 对话级模型输出下限：低于此值为补全/嵌入/图像类小模型（真机表见上）
+_DIALOGUE_MIN_OUTPUT_TOKENS = 16000
+
+
+def _is_dialogue_model(mid: str, m: dict) -> bool:
+    """判断全表条目是否为可暴露的对话级模型（真实模型 ID 用）。
+
+    槽位别名（`*-model` 后缀）不走这条判据：它们由 agents[craft].models 单独
+    提供，此处排除以防与槽位列表重复。
+    """
+    if mid.endswith("-model") or mid in _HIDDEN_MODEL_IDS:
+        return False
+    try:
+        out = int(m.get("maxOutputTokens") or 0)
+    except (TypeError, ValueError):
+        out = 0
+    return out >= _DIALOGUE_MIN_OUTPUT_TOKENS
 
 
 def _auto_login():
@@ -273,11 +295,15 @@ def _sync_slot_capabilities(exposed: list, details: dict) -> None:
 def _fetch_models(config):
     """模型列表获取钩子（签名对齐 balance_fetcher）：craft 路由槽位 + 真实模型 ID。
 
-    2026-10-13 真机校准：详情表 data.models 全量可见，槽位真源 =
-    data.agents[name=craft].models（`*-model` 后缀），真实对话模型 ID（gpt-6-luna /
-    claude 系）与槽位同表。两类都暴露：槽位让网关按账号档位自动分配，真实 ID
-    让用户精确指定。auto-chat 直传报 11102（agent 内部兜底别名），不暴露。
-    服务端结构变化（agents 无 craft）时兜底取详情表 `*-model` 后缀条目。
+    2026-10-14 真机校准：两个来源合并——
+    1. 路由槽位：data.agents[name=craft].models（default/fast/balanced/primary-model），
+       网关按账号档位自动分配实际模型；
+    2. 真实模型 ID：data.models 全表中的对话级模型（gpt-6-luna / claude 系），
+       用户精确指定，档位不足时报 11102 自行剔除。
+
+    槽位不会出现在全表筛选结果里（其 id 带 `*-model` 后缀且属路由别名），两类
+    天然不重复。全表筛选剔除非工具调用类（补全/嵌入/图像小模型，out<16000）与
+    内部专用别名（auto-chat 报 11102、enhance-1.0 为 prompt 增强专用）。
     """
     refresh_token = str((config or {}).get("API_KEY", "") or "").strip()
     if not refresh_token:
@@ -295,10 +321,13 @@ def _fetch_models(config):
         if isinstance(a, dict) and a.get("name") == "craft":
             slots = [str(s).strip() for s in (a.get("models") or []) if str(s or "").strip()]
             break
-    if not slots:
-        slots = [mid for mid in details if mid.endswith("-model")]
-    # 槽位全部保留（含真实模型 ID），仅剔除非工具调用类（补全/嵌入小模型）
-    picked = [s for s in slots if s in details and details[s].get("supportsToolCall") is not False]
+    # 真实模型 ID：全表筛对话级（剔除非工具调用类与内部专用别名）
+    real_ids = [
+        mid
+        for mid, m in details.items()
+        if m.get("supportsToolCall") is not False and _is_dialogue_model(mid, m)
+    ]
+    picked = [s for s in slots if s in details] + real_ids
     if not picked:
         return list(_MODELS)
     _sync_slot_capabilities(picked, details)
