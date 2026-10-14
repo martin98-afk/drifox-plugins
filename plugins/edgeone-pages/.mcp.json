@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "edgeone-pages": {
+      "type": "http",
+      "url": "https://mcp-on-edge.edgeone.app/mcp-server",
+      "enabled": true,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {}
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "zhipu-webreader": {
+      "type": "http",
+      "url": "https://open.bigmodel.cn/api/mcp/web_reader/mcp",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {
+        "Authorization": "Bearer ${env.ZHIPU_WEBREADER_APIKEY}"
+      }
+    }
+  }
+}

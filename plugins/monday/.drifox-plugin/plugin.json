@@ -1,0 +1,27 @@
+{
+  "name": "monday",
+  "description": "monday.com — 查看和更新 monday.com 的看板、条目与更新。",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "liliMozi",
+    "url": "https://github.com/liliMozi/hana-connectors"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "user",
+  "drifox": {
+    "min_version": "0.5.0"
+  },
+  "keywords": [
+    "mcp",
+    "connector",
+    "monday"
+  ],
+  "components": {
+    "mcp": true
+  },
+  "homepage": "https://mcp.monday.com/mcp"
+}

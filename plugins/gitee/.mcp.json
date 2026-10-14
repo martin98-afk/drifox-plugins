@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "gitee": {
+      "type": "http",
+      "url": "https://api.gitee.com/mcp",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {
+        "Authorization": "Bearer ${env.GITEE_TOKEN}"
+      }
+    }
+  }
+}

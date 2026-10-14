@@ -1,0 +1,27 @@
+{
+  "name": "postman",
+  "description": "Postman — 管理 Postman 的工作区、集合、环境与 API。",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "liliMozi",
+    "url": "https://github.com/liliMozi/hana-connectors"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "user",
+  "drifox": {
+    "min_version": "0.5.0"
+  },
+  "keywords": [
+    "mcp",
+    "connector",
+    "postman"
+  ],
+  "components": {
+    "mcp": true
+  },
+  "homepage": "https://mcp.postman.com/mcp"
+}

@@ -1,0 +1,27 @@
+{
+  "name": "figma",
+  "description": "Figma — 读取 Figma 设计稿的结构、样式与变量。",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "liliMozi",
+    "url": "https://github.com/liliMozi/hana-connectors"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "user",
+  "drifox": {
+    "min_version": "0.5.0"
+  },
+  "keywords": [
+    "mcp",
+    "connector",
+    "figma"
+  ],
+  "components": {
+    "mcp": true
+  },
+  "homepage": "https://mcp.figma.com/mcp"
+}
