@@ -1,0 +1,35 @@
+{
+    "name": "token-usage",
+    "description": "欢迎卡片 Token 用量 — 30 天四指标 + GitHub 风格年度活动热力图，数据取自会话里的真实 API usage",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "0.1.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "homepage": "https://github.com/martin98-afk/DriFox",
+    "license": "MIT",
+    "type": "user",
+    "drifox": {
+        "min_version": "0.5.0"
+    },
+    "keywords": [
+        "welcome",
+        "token",
+        "usage",
+        "heatmap",
+        "activity",
+        "stats",
+        "api",
+        "Token",
+        "用量",
+        "热力图",
+        "活动",
+        "统计"
+    ],
+    "components": {
+        "ui": true
+    }
+}

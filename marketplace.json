@@ -5289,6 +5289,48 @@
             }
         },
         {
+            "name": "token-usage",
+            "description": "欢迎卡片 Token 用量 — 30 天四指标 + GitHub 风格年度活动热力图，数据取自会话里的真实 API usage",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui",
+                "stats"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/token-usage",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true
+            },
+            "keywords": [
+                "welcome",
+                "token",
+                "usage",
+                "heatmap",
+                "activity",
+                "stats",
+                "api",
+                "Token",
+                "用量",
+                "热力图",
+                "活动",
+                "统计"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "homepage": "https://github.com/martin98-afk/DriFox",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "tool-locator",
             "description": "开发期工具：查找可热重载工具插件的实现文件路径（tools/*.py），方便直接修改并热重载生效；工具不足时可加载 plugin-creator 技能自行开发新工具。",
             "version": "0.2.0",

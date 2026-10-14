@@ -1,5 +1,19 @@
 # Changelog
 
+## 2.11.7 (2026-10-14)
+### 🔢 token-usage v0.1.0：欢迎卡片新增「🔢 用量」tab — 30 天四指标 + GitHub 风格年度热力图
+- **版式**：照 GitHub 个人主页贡献图设计 —— 顶部标题 + 右上「刷新用量」，面板内先「过去 30 天」四指标（总/输入/输出 Token、请求次数），分隔线下「每日活动」365 天热力图（按周分列、7 行 = 周一至周日）+ 色阶图例。**纯 HTML 网格，不依赖 echarts**（无图表 vendor 加载开销）
+- **口径（增量，用户确认）**：输入 Token = 每轮 `prompt_tokens` **减去同会话上一轮**（首轮全额）；输出 Token = 每轮 `output` 之和；请求次数 = 带 `token_usage` 的消息条数。DriFox 每轮请求重发整个上下文，直接求和等于把同一份上下文重复计几十次（实测输入占比 99.4%，总 262M）；扣增量后输入占比降到 60.5%（总 3.8M / 输入 2.3M / 输出 1.5M），输入输出回到同量级。prompt 回退（上下文压缩后变小）按 0 计，不产生负数
+- **数据源**：`sessions.messages` 里的**真实 API usage**（`token_usage.input/output`），而非 `sessions.context_usage`（本地估算，算不出输入输出拆分）。该字段是 zstd 压缩 blob（4 字节 magic `ZSTD` + 版本 + frame，见主程序 `app/core/store/serde.py`），本插件两种格式都兼容
+- **异步采集**：全库解压扫描 476 会话 / 85MB 实测 0.6s，走 QThread（`collector.py`），主线程同步会卡 UI。首次打开显示「加载中」占位，完成后经 `UIEventBus.publish(EV_WELCOME_TAB_REFRESHED)` 触发卡片重渲染。缓存 key = `(db mtime_ns, 当天日期)`，error 结果带 60s TTL
+- **db 路径探测**：优先问宿主 `app.utils.utils.get_app_data_dir()`（覆盖 `DRIFOX_DATA_DIR` / 开发态 / 打包态 / macOS 四条分支），再退回 `.drifox/sessions.db`、`~/.drifox/sessions.db`；候选库需含 `sessions` 表才算有效，避开同名空壳库抢占真实库
+- **Chromium 83 兼容**（Qt 5.15.2 的 WebEngine）：不用 flex `gap`（间距走 margin）、不用 `aspect-ratio`（格子用 `width:100% + padding-bottom:100%` 撑正方形）、不用写死 px 列宽（列宽 `flex:1 1 0` 均分容器，卡片宽度是动态的 `parent_width - 20`，下限 320px）。月标签按「本月起始周 → 下月起始周」flex 跨度分配空间，窄容器（`@media (max-width:560px)`）隐藏「月」后缀只留数字，避免「10月11月」粘连
+- **色阶**：按当日总 Token 的**分位数**分 5 档（抗单日尖峰，样本 <8 时退化为等距切分）。暗色主题用实色（半透明蓝叠在深底上偏灰，档位区分不出来）
+- **刷新**：「刷新用量」挂 `.context-tag[data-type="tu-refresh"]`，经主程序 `dispatch_welcome_action` 派发回插件，丢弃缓存强制重采。旧主程序缺该扩展点时页签仍可用，只是刷新按钮无响应（有 warning）
+- **回归测试**：`tests/test_token_usage.py` 45 例，覆盖 zstd/裸 JSON/损坏数据三种格式、增量口径（含基线按会话独立、压缩回退按 0、跨会话隔离）、窗口补零、数字缩写、色阶分位、热力图周列对齐（周一起始、恰好 365 格）、CSS 有效性。**已验证测试有效性**：注入 11 处回归（CSS 双花括号、口径退回全量、基线跨会话共享、prompt 回退负数、列宽/格子写死 px、暗色色阶退回半透明、窄屏 media query 失效、zstd 解压失效等），10 处精确打红，1 处为无效变异
+- **踩坑记录**：CSS 模板最初写成 `.tu-wrap {{ ... }}`（f-string 残留写法）却配 `.replace()` 填充，双花括号从未折叠 → 整份样式表失效、页面全部退回浏览器默认样式，而字符串断言型测试完全查不出来。已补 `test_css_has_single_brace_rules` 锁死，并改用无头 Chrome 截图逐版核对（明/暗 × 720/420px 四种组合）
+- **验证**：`ruff check` 通过；`tools/validate_plugins.py --strict` 中 token-usage 为 OK；`tools/generate_marketplace.py --check` 一致（marketplace.json 已随 manifest 收录）
+
 ## 2.11.6 (2026-10-14)
 ### 🔊 voice-reply v1.4.0：朗读只读正文，剔除思考过程/工具结果/代码/机器串，上限 500 → 2000 字
 - **动机**：原实现取 `card.get_plain_text()`，对助手卡片等价于 `content_to_text(..., include_tool_results=True)` —— 工具调用结果（`[tool:read_file] ...`）与代码片段被一起朗读；思考过程虽不在块列表里，历史消息/扁平文本路径仍可能混入。用户原话：「朗读的内容需要过滤，只朗读正文，并且需要进行内容过滤」
