@@ -230,12 +230,13 @@ def _auto_login():
     return {"api_key": api_key, "info": info + "，API Key 已回填请保存"}
 
 
-def _sync_slot_capabilities(details: dict) -> None:
-    """把 /v3/config 槽位限额与多模态回写 ProviderDef.model_capabilities（就地）。
+def _sync_slot_capabilities(exposed: list, details: dict) -> None:
+    """把 /v3/config 限额与多模态回写 ProviderDef.model_capabilities（就地）。
 
-    models_hook 被「获取模型列表」/自动刷新调用时同步服务端最新值：
+    models_hook 被「获取模型列表」/自动刷新调用时同步服务端最新值，只写本次
+    暴露给用户的条目（exposed）——非工具调用类与未列入 craft 的模型不回写：
     context_limit←maxInputTokens、max_output_tokens/absolute_limit←maxOutputTokens、
-    supports_vision←supportsImages。思考三键以静态真机校准为准：四槽位
+    supports_vision←supportsImages。思考三键以静态真机校准为准：槽位
     reasoning_effort 透传均 200 且生效，详情是否带 reasoning 字段不作关闭依据。
     """
     try:
@@ -247,8 +248,9 @@ def _sync_slot_capabilities(details: dict) -> None:
     if pdef is None:
         return
     caps = pdef.model_capabilities
-    for mid, m in details.items():
-        if not mid.endswith("-model") or not isinstance(m, dict):
+    for mid in exposed:
+        m = details.get(mid)
+        if not isinstance(m, dict):
             continue
         entry = caps.get(mid)
         if not isinstance(entry, dict):
@@ -269,12 +271,13 @@ def _sync_slot_capabilities(details: dict) -> None:
 
 
 def _fetch_models(config):
-    """模型列表获取钩子（签名对齐 balance_fetcher）：返回 craft 路由槽位。
+    """模型列表获取钩子（签名对齐 balance_fetcher）：craft 路由槽位 + 真实模型 ID。
 
-    动态路由语义（2026-10-13 真机校准）：槽位真源 = data.agents[name=craft].models
-    （`*-model` 后缀），详情 = data.models 按 id 匹配；服务端结构变化时兜底取
-    详情表中 `*-model` 后缀条目。auto-chat 直传报 11102，不暴露。用户选槽位，
-    网关按账号档位动态分配实际模型，11102 门控由服务端消化。
+    2026-10-13 真机校准：详情表 data.models 全量可见，槽位真源 =
+    data.agents[name=craft].models（`*-model` 后缀），真实对话模型 ID（gpt-6-luna /
+    claude 系）与槽位同表。两类都暴露：槽位让网关按账号档位自动分配，真实 ID
+    让用户精确指定。auto-chat 直传报 11102（agent 内部兜底别名），不暴露。
+    服务端结构变化（agents 无 craft）时兜底取详情表 `*-model` 后缀条目。
     """
     refresh_token = str((config or {}).get("API_KEY", "") or "").strip()
     if not refresh_token:
@@ -294,10 +297,11 @@ def _fetch_models(config):
             break
     if not slots:
         slots = [mid for mid in details if mid.endswith("-model")]
+    # 槽位全部保留（含真实模型 ID），仅剔除非工具调用类（补全/嵌入小模型）
     picked = [s for s in slots if s in details and details[s].get("supportsToolCall") is not False]
     if not picked:
         return list(_MODELS)
-    _sync_slot_capabilities(details)
+    _sync_slot_capabilities(picked, details)
     return picked
 
 

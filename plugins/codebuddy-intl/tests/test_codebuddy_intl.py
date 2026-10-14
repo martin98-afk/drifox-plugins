@@ -151,11 +151,12 @@ def _install_provider(monkeypatch, tmp_path):
     return mod
 
 
-def test_fetch_models_route_slots_only(monkeypatch, tmp_path, auth):
-    """动态路由：仅返回 craft 路由槽位；排除 auto-chat（11102）与非槽位条目
+def test_fetch_models_slots_and_real_ids(monkeypatch, tmp_path, auth):
+    """动态路由 + 真实模型 ID：槽位与详情表真实 ID 一并返回；剔除非工具调用类
 
-    2026-10-13 真机校准：槽位真源 = agents[craft].models，网关按账号动态
-    分配实际模型，用户不接触模型 ID；结构变化时兜底取详情表 `*-model` 后缀。
+    2026-10-13 真机校准：详情表 data.models 全量可见，craft.models 里的
+    `*-model` 槽位与 gpt-6-luna / claude 系真实 ID 同源，两类都暴露；
+    auto-chat 是 agent 内部兜底别名（直传报 11102），不在 craft 列表故不返回。
     """
     mod = _install_provider(monkeypatch, tmp_path)
     monkeypatch.setattr(mod, "_load_auth_module", lambda: auth)
@@ -177,7 +178,17 @@ def test_fetch_models_route_slots_only(monkeypatch, tmp_path, auth):
                 {"id": "nes-1.2", "supportsToolCall": True, "maxOutputTokens": 8192},
             ],
             "agents": [
-                {"name": "craft", "models": ["default-model", "fast-model", "balanced-model", "primary-model"]},
+                {
+                    "name": "craft",
+                    "models": [
+                        "default-model",
+                        "fast-model",
+                        "balanced-model",
+                        "primary-model",
+                        "gpt-6-luna",
+                        "claude-opus-4.8",
+                    ],
+                },
                 {"name": "agent", "models": ["default-model", "auto-chat"]},
             ],
         },
@@ -187,6 +198,8 @@ def test_fetch_models_route_slots_only(monkeypatch, tmp_path, auth):
         "fast-model",
         "balanced-model",
         "primary-model",
+        "gpt-6-luna",
+        "claude-opus-4.8",
     ]
 
 
