@@ -71,6 +71,36 @@
 
 > **DriFox 运行时内置插件**（`plugin-manager`、`plugin-marketplace`、`context-usage-stats`、`file-tree` 等）随 DriFox 分发，不收录在本仓库市场，避免重复安装造成困惑。
 
+### HanaAgent 连接器迁移
+
+54 个远程 MCP 连接器，从 [HanaAgent 官方市场](https://github.com/liliMozi/hana-connectors)（official-global，批次 v2026.10.10）整体迁移而来。每个连接器指向服务方自营的远程 MCP 端点，不含服务端代码，也不托管凭据。统一命名为 `hana-conn-<id>`，工具名前缀 `mcp__hana-<id>__`。
+
+| 插件 | 描述 | 组件 | 版本 |
+|------|------|------|------|
+| [`hana-conn-github`](hana-conn-github/) | GitHub — 仓库、Issue、PR 与 Actions 管理（Bearer Token） | mcp | 1.0.0 |
+| [`hana-conn-gitlab`](hana-conn-gitlab/) | GitLab — 仓库、Issue、MR 管理（OAuth） | mcp | 1.0.0 |
+| [`hana-conn-gitee`](hana-conn-gitee/) | Gitee — 仓库、文件、Issue 与 PR（Bearer Token） | mcp | 1.0.0 |
+| [`hana-conn-context7`](hana-conn-context7/) | Context7 — 开源库最新文档与代码示例 | mcp | 1.0.0 |
+| [`hana-conn-notion`](hana-conn-notion/) | Notion — 页面与数据库搜索、读写（OAuth） | mcp | 1.0.0 |
+| [`hana-conn-linear`](hana-conn-linear/) | Linear — 任务与项目管理（OAuth） | mcp | 1.0.0 |
+| [`hana-conn-sentry`](hana-conn-sentry/) | Sentry — 错误与性能监控（OAuth） | mcp | 1.0.0 |
+| [`hana-conn-stripe`](hana-conn-stripe/) | Stripe — 支付与订阅管理（OAuth） | mcp | 1.0.0 |
+| [`hana-conn-figma`](hana-conn-figma/) | Figma — 设计文件读取与评论（OAuth） | mcp | 1.0.0 |
+| [`hana-conn-supabase`](hana-conn-supabase/) | Supabase — 数据库与后端服务（OAuth） | mcp | 1.0.0 |
+| [`hana-conn-cloudflare-bindings`](hana-conn-cloudflare-bindings/) | Cloudflare Workers 与 KV/R2/D1 管理（OAuth） | mcp | 1.0.0 |
+| [`hana-conn-vercel`](hana-conn-vercel/) | Vercel — 项目与部署管理（OAuth） | mcp | 1.0.0 |
+| [`hana-conn-amap`](hana-conn-amap/) | 高德地图 — 地点、路线、天气与周边（Query Key） | mcp | 1.0.0 |
+| [`hana-conn-baidu-map`](hana-conn-baidu-map/) | 百度地图 — 地点、路线、路况与天气（Query AK） | mcp | 1.0.0 |
+| [`hana-conn-tencent-map`](hana-conn-tencent-map/) | 腾讯位置服务 — 地点、周边与天气（Query Key） | mcp | 1.0.0 |
+| [`hana-conn-dingtalk-contacts`](hana-conn-dingtalk-contacts/) | 钉钉通讯录 — 组织成员与部门查询（专属链接） | mcp | 1.0.0 |
+| [`hana-conn-zhipu-websearch`](hana-conn-zhipu-websearch/) | 智谱联网搜索（Bearer Key） | mcp | 1.0.0 |
+
+> 上表列常用 17 个。全部 54 个见 `plugins/hana-conn-*` 目录，安装后在设置 → MCP 连接器中逐个启用。
+>
+> 认证方式分四类：**OAuth**（29 个，装后在设置里点授权，走动态注册 + PKCE，token 自动刷新）；**Bearer**（7 个，填环境变量如 `GITHUB_TOKEN`）；**Query Key**（4 个，需按各插件 README 把 key 拼进 `url`）；**专属链接**（6 个，需按 README 替换为账号签发的链接）。后两类是 DriFox 的 MCP 配置只支持 HTTP 头与环境变量注入所致，无法自动完成。
+>
+> `hana-conn-context7` 与既有 [`context7`](context7/) 功能重复：前者连官方远程端点，后者走本地 npx。两者 server 名已用前缀区分，可共存，按需启用其一。
+
 ## 组件覆盖矩阵
 
 | | commands | agents | skills | themes | hooks | mcp | lsp | ui | tools |

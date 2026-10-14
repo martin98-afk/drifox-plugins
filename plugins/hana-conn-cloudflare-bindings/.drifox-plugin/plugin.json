@@ -1,0 +1,27 @@
+{
+  "name": "hana-conn-cloudflare-bindings",
+  "description": "Cloudflare Workers — 管理 Cloudflare Workers 与 KV、R2、D1 等存储资源。",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "liliMozi",
+    "url": "https://github.com/liliMozi/hana-connectors"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "user",
+  "drifox": {
+    "min_version": "0.5.0"
+  },
+  "keywords": [
+    "mcp",
+    "connector",
+    "cloudflare-bindings"
+  ],
+  "components": {
+    "mcp": true
+  },
+  "homepage": "https://bindings.mcp.cloudflare.com/mcp"
+}

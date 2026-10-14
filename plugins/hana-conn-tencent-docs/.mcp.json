@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "hana-tencent-docs": {
+      "type": "http",
+      "url": "https://docs.qq.com/openapi/mcp",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {},
+      "auth": {
+        "type": "oauth",
+        "client_name": "DriFox",
+        "scope": ""
+      }
+    }
+  }
+}

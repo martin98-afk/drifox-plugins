@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "hana-intercom": {
+      "type": "http",
+      "url": "https://mcp.intercom.com/mcp",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {},
+      "auth": {
+        "type": "oauth",
+        "client_name": "DriFox",
+        "scope": ""
+      }
+    }
+  }
+}

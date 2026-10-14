@@ -1,0 +1,27 @@
+{
+  "name": "hana-conn-exa",
+  "description": "Exa — 面向 AI 的网页搜索与网页内容抓取。",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "liliMozi",
+    "url": "https://github.com/liliMozi/hana-connectors"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "user",
+  "drifox": {
+    "min_version": "0.5.0"
+  },
+  "keywords": [
+    "mcp",
+    "connector",
+    "exa"
+  ],
+  "components": {
+    "mcp": true
+  },
+  "homepage": "https://mcp.exa.ai/mcp"
+}

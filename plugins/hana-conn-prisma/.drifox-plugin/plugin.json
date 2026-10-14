@@ -1,0 +1,27 @@
+{
+  "name": "hana-conn-prisma",
+  "description": "Prisma — 管理 Prisma Postgres 数据库、备份与连接。",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "liliMozi",
+    "url": "https://github.com/liliMozi/hana-connectors"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "user",
+  "drifox": {
+    "min_version": "0.5.0"
+  },
+  "keywords": [
+    "mcp",
+    "connector",
+    "prisma"
+  ],
+  "components": {
+    "mcp": true
+  },
+  "homepage": "https://mcp.prisma.io/mcp"
+}

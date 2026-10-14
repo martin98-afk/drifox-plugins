@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "hana-baidu-ai-search": {
+      "type": "sse",
+      "url": "https://appbuilder.baidu.com/v2/ai_search/mcp/sse",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {}
+    }
+  }
+}

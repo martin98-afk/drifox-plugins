@@ -1,0 +1,27 @@
+{
+  "name": "hana-conn-amap",
+  "description": "高德地图 — 地点搜索、路线规划、天气与周边查询。",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "liliMozi",
+    "url": "https://github.com/liliMozi/hana-connectors"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "user",
+  "drifox": {
+    "min_version": "0.5.0"
+  },
+  "keywords": [
+    "mcp",
+    "connector",
+    "amap"
+  ],
+  "components": {
+    "mcp": true
+  },
+  "homepage": "https://mcp.amap.com/mcp"
+}

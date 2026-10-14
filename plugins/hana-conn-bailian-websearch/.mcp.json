@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "hana-bailian-websearch": {
+      "type": "http",
+      "url": "https://dashscope.aliyuncs.com/api/v1/mcps/WebSearch/mcp",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {
+        "Authorization": "Bearer ${env.BAILIAN_WEBSEARCH_APIKEY}"
+      }
+    }
+  }
+}

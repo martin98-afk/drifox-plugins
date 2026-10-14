@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "hana-modelscope": {
+      "type": "http",
+      "url": "https://www.modelscope.cn",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {}
+    }
+  }
+}

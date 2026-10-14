@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "hana-notion": {
+      "type": "http",
+      "url": "https://mcp.notion.com/mcp",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {},
+      "auth": {
+        "type": "oauth",
+        "client_name": "DriFox",
+        "scope": ""
+      }
+    }
+  }
+}
