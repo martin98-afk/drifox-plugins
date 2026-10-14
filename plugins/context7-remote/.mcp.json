@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "context7-remote": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "enabled": true,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {}
+    }
+  }
+}

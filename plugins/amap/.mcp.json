@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "amap": {
+      "type": "http",
+      "url": "https://mcp.amap.com/mcp",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {}
+    }
+  }
+}

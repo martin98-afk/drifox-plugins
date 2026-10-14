@@ -1,0 +1,27 @@
+{
+  "name": "bailian-amap",
+  "description": "高德地图（百炼） — 地点搜索、路线规划、天气与周边查询，经阿里云百炼接入。安装后填入百炼 API Key。",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "liliMozi",
+    "url": "https://github.com/liliMozi/hana-connectors"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "user",
+  "drifox": {
+    "min_version": "0.5.0"
+  },
+  "keywords": [
+    "mcp",
+    "connector",
+    "bailian-amap"
+  ],
+  "components": {
+    "mcp": true
+  },
+  "homepage": "https://dashscope.aliyuncs.com/api/v1/mcps/amap-maps/mcp"
+}
