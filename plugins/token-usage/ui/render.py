@@ -39,7 +39,11 @@ def _fs(size: int) -> int:
 
 
 def _palette(is_dark: bool) -> dict:
-    """明暗色板（对齐 context-stats 的观感）"""
+    """明暗色板
+
+    tooltip 的底色/边框直接取自 context-stats（echarts tooltip_bg/border），
+    两个插件的悬停提示观感保持一致。
+    """
     if is_dark:
         return {
             "text": "#e6e6e6",
@@ -48,6 +52,8 @@ def _palette(is_dark: bool) -> dict:
             "border": "rgba(255,255,255,0.12)",
             "panel": "rgba(255,255,255,0.035)",
             "accent": "#5aa2f5",
+            "tooltip_bg": "rgba(30,34,42,0.92)",
+            "tooltip_border": "rgba(98,160,234,0.5)",
             "empty": "rgba(255,255,255,0.07)",
             # 5 档色阶：深底上用不透明度递增强度（半透明蓝在 #1e1e1e 上偏灰）
             "levels": [
@@ -65,6 +71,8 @@ def _palette(is_dark: bool) -> dict:
         "border": "rgba(0,0,0,0.09)",
         "panel": "rgba(0,0,0,0.025)",
         "accent": "#2b7de9",
+        "tooltip_bg": "rgba(255,255,255,0.96)",
+        "tooltip_border": "rgba(40,120,220,0.45)",
         "empty": "rgba(0,0,0,0.055)",
         "levels": [
             "rgba(43,125,233,0.22)",
@@ -196,6 +204,10 @@ def _render_heatmap(daily: Dict[str, list], end: date, days: int, p: dict) -> st
     自适应：格子用「宽度自适应 + padding-bottom:100%」构成正方形（Chromium 83
     不支持 aspect-ratio），列宽 flex:1 1 0 均分容器 → 窗口任意宽度下都不横向
     溢出（卡片宽度是动态的：主程序按 parent_width - 20 算）。
+
+    tooltip：走 `data-tip` + CSS `::after content:attr(data-tip)`，不用原生
+    `title` —— 原生 tooltip 由 OS 绘制，浅色下是黑底 + 系统默认大字号，
+    样式完全不可控（Chromium 83 无 `::-webkit-tooltip` 可用）。
     """
     weeks, month_labels = _heatmap_cells(daily, end, days)
     thresholds = _thresholds([c["total"] for w in weeks for c in w if c["in_range"]], 4)
@@ -212,7 +224,7 @@ def _render_heatmap(daily: Dict[str, list], end: date, days: int, p: dict) -> st
             color = p["empty"] if lvl == 0 else p["levels"][min(lvl, len(p["levels"])) - 1]
             tip = f"{c['date']} · 总 {_fmt_k(c['total'])} · {c['requests']} 次请求"
             cells_html.append(
-                f'<span class="tu-cell" title="{html.escape(tip, quote=True)}" '
+                f'<span class="tu-cell" data-tip="{html.escape(tip, quote=True)}" '
                 f'style="background:{color};"></span>'
             )
         cells_html.append("</div>")
@@ -326,6 +338,22 @@ _CSS_TEMPLATE = """
 .tu-legend { display: flex; align-items: center; justify-content: flex-end; margin-top: 8px; }
 .tu-legend-label { font-size: {fs_tiny}px; color: {muted}; margin: 0 3px; }
 .tu-legend-cell { width: 10px; height: 10px; padding-bottom: 0; margin-bottom: 0; }
+/* tooltip：纯 CSS（::after + attr），不用原生 title —— 原生由 OS 绘制，
+   浅色下是黑底 + 系统大字号，样式不可控（Chromium 83 无 ::-webkit-tooltip）。
+   配色取自 context-stats 的 echarts tooltip_bg / tooltip_border，两插件观感一致。 */
+.tu-cell { position: relative; }
+.tu-cell:hover::after {
+  content: attr(data-tip);
+  position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%);
+  background: {tooltip_bg}; border: 1px solid {tooltip_border}; color: {text};
+  font-size: {fs_tiny}px; line-height: 1.5; white-space: nowrap;
+  padding: 4px 7px; border-radius: 5px; z-index: 20; pointer-events: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+}
+/* 右边缘列的 tooltip 会被容器裁掉，翻到左侧展开 */
+.tu-week:nth-last-child(-n+3) .tu-cell:hover::after {
+  left: auto; right: 0; transform: none;
+}
 """
 
 
@@ -340,6 +368,8 @@ def _css(is_dark: bool) -> str:
         ("muted", p["muted"]),
         ("faint", p["faint"]),
         ("accent", p["accent"]),
+        ("tooltip_bg", p["tooltip_bg"]),
+        ("tooltip_border", p["tooltip_border"]),
         ("fs_title", _fs(15)),
         ("fs_value", _fs(19)),
         ("fs_base", _fs(12)),

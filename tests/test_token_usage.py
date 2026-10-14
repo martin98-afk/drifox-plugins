@@ -10,6 +10,7 @@
 import importlib.util
 import json
 import sys
+import time
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -362,6 +363,63 @@ def test_heatmap_html_contains_title_tooltips(render_mod):
     assert "次请求" in html
 
 
+# ── tooltip（回归：曾用原生 title，浅色下是 OS 黑底大字号）──
+#
+# 原生 title 由操作系统绘制，样式完全不可控（Chromium 83 无 ::-webkit-tooltip），
+# 且明暗主题都跟随 OS 而非 Qt 主题。改为纯 CSS ::after + attr(data-tip)。
+
+
+def test_heatmap_uses_data_tip_not_native_title(render_mod):
+    """格子必须用 data-tip，不得回退原生 title"""
+    end = date(2026, 10, 14)
+    daily = {end.isoformat(): [1000, 100, 5]}
+    html = render_mod._render_heatmap(daily, end, 30, render_mod._palette(True))
+    assert "data-tip=" in html
+    assert 'title="' not in html, "不得使用原生 title（OS 绘制，样式不可控）"
+
+
+def test_tooltip_css_present(render_mod):
+    """tooltip 规则与配色占位符必须就位"""
+    for is_dark in (True, False):
+        css = render_mod._css(is_dark)
+        assert "content: attr(data-tip)" in css
+        assert ".tu-cell:hover::after" in css
+        assert ".tu-cell { position: relative; }" in css
+        assert "{tooltip_bg}" not in css
+        assert "{tooltip_border}" not in css
+
+
+def test_tooltip_palette_matches_context_stats(render_mod):
+    """tooltip 配色与 context-stats 的 echarts tooltip 同源，两插件观感一致"""
+    dark = render_mod._palette(True)
+    light = render_mod._palette(False)
+    # context-stats/ui/render.py 的 tooltip_bg / tooltip_border
+    assert dark["tooltip_bg"] == "rgba(30,34,42,0.92)"
+    assert dark["tooltip_border"] == "rgba(98,160,234,0.5)"
+    assert light["tooltip_bg"] == "rgba(255,255,255,0.96)"
+    assert light["tooltip_border"] == "rgba(40,120,220,0.45)"
+
+
+def test_tooltip_colours_injected_into_css(render_mod):
+    """tooltip_bg / tooltip_border 必须真的填进 CSS（未填 = 透明无边框）"""
+    css_dark = render_mod._css(True)
+    assert "rgba(30,34,42,0.92)" in css_dark
+    css_light = render_mod._css(False)
+    assert "rgba(255,255,255,0.96)" in css_light
+
+
+def test_tooltip_edge_columns_flip_anchor(render_mod):
+    """右边缘列的 tooltip 翻到左侧展开，避免被容器裁掉"""
+    css = render_mod._css(True)
+    assert "nth-last-child(-n+3)" in css
+    assert "right: 0" in css
+
+
+def test_tooltip_does_not_block_clicks(render_mod):
+    """tooltip 不能拦截鼠标（否则格子点不动）"""
+    assert "pointer-events: none" in render_mod._css(True)
+
+
 def test_heatmap_columns_share_width_flexibly(render_mod):
     """热力图列必须 flex 均分，不能写死 px 宽
 
@@ -476,7 +534,110 @@ def test_render_tolerates_missing_ctx(render_mod):
     assert '<div class="tu-grid">' in html
 
 
-# ── CSS 有效性（回归：占位符未折叠会让整份样式表失效）──
+@pytest.fixture(scope="module")
+def collector_mod(data_mod, ui_pkg):
+    spec = importlib.util.spec_from_file_location("tu_pkg.collector", _PLUGIN_UI / "collector.py")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["tu_pkg.collector"] = mod
+    # collector 顶层就 import PyQt5，测试环境无 Qt 时跳过
+    pytest.importorskip("PyQt5.QtCore")
+    spec.loader.exec_module(mod)
+    return mod
+
+
+# ── 缓存 key：写/读必须同源（回归：曾用 db mtime 做读取判据）──
+#
+# 症状：页签永远停在「加载中」。
+# 原因：读取时重新计算 key（db mtime + 日期），而采集期间有新会话写入 →
+#       mtime 变化 → 写缓存时的 key 与读缓存时的 key 不等 → 判定未命中 →
+#       每次都重新起线程，采集完 mtime 又变，永远追不上。
+# 修法：读取只看 TTL；db 是否变化由 _is_stale() 单独判。
+
+
+def test_collect_cache_hit_survives_db_change(collector_mod, monkeypatch):
+    """采集完成后 db 再变化，get_cached() 仍应命中（TTL 内）"""
+    monkeypatch.setattr(collector_mod, "_cache", {"daily": {"d": [1, 2, 3]}, "sessions": 1})
+    monkeypatch.setattr(collector_mod, "_cache_key", (1, "2026-01-01"))
+    monkeypatch.setattr(collector_mod, "_cache_ts", time.monotonic())
+    # 让 build_cache_key 返回完全不同的 key（模拟 mtime 已变）
+    monkeypatch.setattr(collector_mod, "build_cache_key", lambda: (999, "2026-10-14"))
+    assert collector_mod.get_cached() is not None
+
+
+def test_collect_cache_expires_by_ttl(collector_mod, monkeypatch):
+    """超过 TTL 即失效（避免长期展示陈旧数据）"""
+    monkeypatch.setattr(collector_mod, "_cache", {"daily": {}, "sessions": 0})
+    monkeypatch.setattr(collector_mod, "_cache_key", (1, "2026-01-01"))
+    monkeypatch.setattr(collector_mod, "_cache_ts", time.monotonic() - 999)
+    assert collector_mod.get_cached() is None
+
+
+def test_collect_cache_none_when_empty(collector_mod, monkeypatch):
+    monkeypatch.setattr(collector_mod, "_cache", None)
+    assert collector_mod.get_cached() is None
+
+
+def test_collect_error_cache_short_ttl(collector_mod, monkeypatch):
+    """错误结果短 TTL：过期视为未命中，允许自动重采"""
+    monkeypatch.setattr(collector_mod, "_cache", {"daily": {}, "sessions": 0, "error": "boom"})
+    monkeypatch.setattr(collector_mod, "_cache_key", (1, "2026-01-01"))
+    monkeypatch.setattr(collector_mod, "_cache_ts", time.monotonic() - (collector_mod._ERROR_TTL + 1))
+    assert collector_mod.get_cached() is None
+
+
+def test_is_stale_detects_db_change(collector_mod, monkeypatch):
+    """_is_stale 只比对 db key，与 TTL 判据分离"""
+    monkeypatch.setattr(collector_mod, "_cache", {"daily": {}, "sessions": 0})
+    monkeypatch.setattr(collector_mod, "_cache_key", (1, "2026-01-01"))
+    monkeypatch.setattr(collector_mod, "build_cache_key", lambda: (2, "2026-01-01"))
+    assert collector_mod._is_stale() is True
+    monkeypatch.setattr(collector_mod, "build_cache_key", lambda: (1, "2026-01-01"))
+    assert collector_mod._is_stale() is False
+
+
+def test_is_stale_false_when_no_cache(collector_mod, monkeypatch):
+    monkeypatch.setattr(collector_mod, "_cache", None)
+    assert collector_mod._is_stale() is False
+
+
+def test_get_cached_never_recomputes_db_key(collector_mod, monkeypatch):
+    """get_cached 不得调用 build_cache_key —— 那正是原 bug 的根
+
+    读取路径一旦重算 key，采集期间的写入就会让缓存永久判未命中。
+    """
+    monkeypatch.setattr(collector_mod, "_cache", {"daily": {}, "sessions": 0})
+    monkeypatch.setattr(collector_mod, "_cache_key", (1, "2026-01-01"))
+    monkeypatch.setattr(collector_mod, "_cache_ts", time.monotonic())
+
+    def _boom():
+        raise AssertionError("get_cached 不应重算 db key")
+
+    monkeypatch.setattr(collector_mod, "build_cache_key", _boom)
+    assert collector_mod.get_cached() is not None
+
+
+def test_invalidate_clears_cache(collector_mod, monkeypatch):
+    """invalidate 后立刻不可命中（与 TTL 无关，锁内直接清）
+
+    ⚠️ 必须让缓存本处于「TTL 内有效」状态，否则 get_cached() 会因 TTL 过期
+    返回 None，断言就变成假阳性——这正是本测试第一版的毛病。
+    """
+    monkeypatch.setattr(collector_mod, "_cache", {"daily": {}, "sessions": 0})
+    monkeypatch.setattr(collector_mod, "_cache_key", (1, "2026-01-01"))
+    monkeypatch.setattr(collector_mod, "_cache_ts", time.monotonic())
+    # 先确认此刻确实命中（TTL 内）
+    assert collector_mod.get_cached() is not None, "前置：缓存应在 TTL 内命中"
+    # 再 invalidate
+    collector_mod.invalidate()
+    assert collector_mod._cache is None
+    assert collector_mod._cache_key is None
+    assert collector_mod._cache_ts == 0.0
+    assert collector_mod.get_cached() is None
+
+
+def test_notify_refresh_survives_missing_host(collector_mod):
+    """宿主不可用时 notify_refresh 不得抛异常（插件跑在裸解释器里也安全）"""
+    collector_mod.notify_refresh()
 
 
 def test_css_has_no_unfilled_placeholders(render_mod):

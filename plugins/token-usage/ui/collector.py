@@ -46,14 +46,36 @@ def build_cache_key() -> tuple:
     return (mtime_ns, date.today().isoformat())
 
 
-def get_cached() -> Optional[dict]:
-    """缓存命中返回 data；未命中或 error 过期返回 None"""
+def get_cached(max_age: float = 60.0) -> Optional[dict]:
+    """缓存命中返回 data；未命中或过期返回 None
+
+    ⚠️ 不用 db mtime 做读取判据（踩过的坑）：mtime 会因为**采集期间**新会话
+    写入而变化，导致「写缓存时算一次 key、读缓存时又算一次」两次 key 不等，
+    缓存永远判定为未命中 —— 表现是页签永远停在「加载中」：
+    每次都重新起线程，采集完 mtime 又变了，永远追不上。
+    正确做法：写入时把 key 一起存下，读取时只比 TTL 与采集自否成功。
+
+    Args:
+        max_age: 缓存有效期（秒）。自动重采交给 db mtime 变化时
+                 由 start() 内部比对，见 _is_stale()。
+    """
     with _lock:
-        if _cache is None or _cache_key != build_cache_key():
+        if _cache is None:
             return None
-        if _cache.get("error") and time.monotonic() - _cache_ts >= _ERROR_TTL:
+        if _cache.get("error"):
+            # 错误结果短 TTL：避免临时失败被永久固化
+            if time.monotonic() - _cache_ts >= _ERROR_TTL:
+                return None
+            return _cache
+        if time.monotonic() - _cache_ts >= max_age:
             return None
         return _cache
+
+
+def _is_stale() -> bool:
+    """采集结果是否已过期（db 在采集完成后又变了 → 数据不全）"""
+    with _lock:
+        return _cache is not None and _cache_key != build_cache_key()
 
 
 class _CollectWorker(QObject):
@@ -101,8 +123,9 @@ class _Collector(QObject):
             return False
         if force:
             invalidate()
-        elif get_cached() is not None:
-            return False
+        else:
+            if get_cached() is not None and not _is_stale():
+                return False
         with _lock:
             if _running:
                 return False
