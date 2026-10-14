@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "hana-zhipu-zread": {
+      "type": "http",
+      "url": "https://open.bigmodel.cn/api/mcp/zread/mcp",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {
+        "Authorization": "Bearer ${env.ZHIPU_ZREAD_APIKEY}"
+      }
+    }
+  }
+}

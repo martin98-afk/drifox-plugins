@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "hana-github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {
+        "Authorization": "Bearer ${env.GITHUB_TOKEN}"
+      }
+    }
+  }
+}

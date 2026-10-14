@@ -1,0 +1,27 @@
+{
+  "name": "hana-conn-gitlab",
+  "description": "GitLab — 查看 GitLab.com 的项目、Issue、合并请求与流水线。",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "liliMozi",
+    "url": "https://github.com/liliMozi/hana-connectors"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "user",
+  "drifox": {
+    "min_version": "0.5.0"
+  },
+  "keywords": [
+    "mcp",
+    "connector",
+    "gitlab"
+  ],
+  "components": {
+    "mcp": true
+  },
+  "homepage": "https://gitlab.com/api/v4/mcp"
+}

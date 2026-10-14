@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "hana-neon": {
+      "type": "http",
+      "url": "https://mcp.neon.tech/mcp",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {},
+      "auth": {
+        "type": "oauth",
+        "client_name": "DriFox",
+        "scope": ""
+      }
+    }
+  }
+}

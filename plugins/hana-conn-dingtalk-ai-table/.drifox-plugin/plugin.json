@@ -1,0 +1,27 @@
+{
+  "name": "hana-conn-dingtalk-ai-table",
+  "description": "钉钉 AI 表格 — 读写钉钉 AI 表格中的数据。",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "liliMozi",
+    "url": "https://github.com/liliMozi/hana-connectors"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "user",
+  "drifox": {
+    "min_version": "0.5.0"
+  },
+  "keywords": [
+    "mcp",
+    "connector",
+    "dingtalk-ai-table"
+  ],
+  "components": {
+    "mcp": true
+  },
+  "homepage": "https://mcp-gw.dingtalk.com"
+}

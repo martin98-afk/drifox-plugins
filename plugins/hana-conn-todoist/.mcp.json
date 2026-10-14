@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "hana-todoist": {
+      "type": "http",
+      "url": "https://ai.todoist.net/mcp",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {},
+      "auth": {
+        "type": "oauth",
+        "client_name": "DriFox",
+        "scope": ""
+      }
+    }
+  }
+}

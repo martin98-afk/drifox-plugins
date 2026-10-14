@@ -1,0 +1,27 @@
+{
+  "name": "hana-conn-neon",
+  "description": "Neon — 管理 Neon Postgres 项目、分支与数据库查询。",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "liliMozi",
+    "url": "https://github.com/liliMozi/hana-connectors"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "user",
+  "drifox": {
+    "min_version": "0.5.0"
+  },
+  "keywords": [
+    "mcp",
+    "connector",
+    "neon"
+  ],
+  "components": {
+    "mcp": true
+  },
+  "homepage": "https://mcp.neon.tech/mcp"
+}

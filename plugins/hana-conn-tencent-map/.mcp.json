@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "hana-tencent-map": {
+      "type": "http",
+      "url": "https://mcp.map.qq.com/mcp?format=0",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {}
+    }
+  }
+}

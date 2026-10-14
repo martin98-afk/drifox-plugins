@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "hana-aws-knowledge": {
+      "type": "http",
+      "url": "https://knowledge-mcp.global.api.aws",
+      "enabled": true,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {}
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "hana-conn-todoist",
+  "description": "Todoist — 查看、添加和整理 Todoist 里的任务与项目。",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "liliMozi",
+    "url": "https://github.com/liliMozi/hana-connectors"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "user",
+  "drifox": {
+    "min_version": "0.5.0"
+  },
+  "keywords": [
+    "mcp",
+    "connector",
+    "todoist"
+  ],
+  "components": {
+    "mcp": true
+  },
+  "homepage": "https://ai.todoist.net/mcp"
+}

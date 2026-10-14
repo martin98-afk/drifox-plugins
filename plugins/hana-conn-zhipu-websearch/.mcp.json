@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "hana-zhipu-websearch": {
+      "type": "http",
+      "url": "https://open.bigmodel.cn/api/mcp/web_search_prime/mcp",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {
+        "Authorization": "Bearer ${env.ZHIPU_WEBSEARCH_APIKEY}"
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "hana-stripe": {
+      "type": "http",
+      "url": "https://mcp.stripe.com",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {},
+      "auth": {
+        "type": "oauth",
+        "client_name": "DriFox",
+        "scope": ""
+      }
+    }
+  }
+}
