@@ -53,12 +53,31 @@ uv run python tools/diag_voice_reply.py
 
 插件以 UI 组件形态注册消息卡片页脚动作（`register_footer_action`，与内置复制/分支按钮同排）：
 
-1. 点击按钮 → 取本条消息纯文本 → 轻度清洗 markdown 标记 → 截断至 500 字 → 按钮切 pause；
+1. 点击按钮 → 从消息卡片提取**正文** → 清洗 → 截断至 2000 字 → 按钮切 pause；
 2. 本地引擎：主线程直接播报（SAPI5 异步 300ms 轮询 RunningState 判结束，`say` 用 QProcess.finished），播放中再点 = `Skip` 打断；
 3. 在线引擎：QThread worker 合成（urllib，50 秒超时）→ wav 落临时文件 → 播放；播放中再点 = 终止播放并复位；
 4. 播完 / 打断 / 失败三条路径均复位按钮为扬声器图标。
 
 音频播放由 `ui/audio_player.py` 承担（Windows winmm mci / macOS afplay，纯 ctypes）。
+
+## 朗读范围：只读正文
+
+`ui/tts_text.py` 决定「哪些内容会变成声音」，纯函数实现、可离线单测（`tests/test_voice_reply_tts_text.py` 19 例）。
+
+**取正文**：按消息内容块类型过滤，只保留 `type == "text"` 块。思考过程（`reasoning`）、工具调用与结果（`tool_result`）、自定义渲染块（`custom`）、图片块一律不进朗读。拿不到块列表时退回 `get_plain_text()`，此时文本已混入工具结果，再用正则补刀（内联 `<think>…</think>` 整段删、`[tool:xxx]` 开头的行整行删）。
+
+**清洗**：朗读器会把符号读成人话、把机器串读成乱码，因此统一剔除：
+
+| 类别 | 处理 |
+|------|------|
+| 代码块 | 整体替换为「代码略」提示音 |
+| markdown 标记 | 行内代码去反引号；图片留 alt、链接留文字；粗体/斜体/删除线/标题/列表/引用/分隔线/表格竖线去标记 |
+| 链接 | 裸 URL、data URI 删除（保留句末标点） |
+| 机器串 | 超长 base64/哈希/路径、HTML 标签删除 |
+| emoji 与装饰符号 | 删除（多数 TTS 会读成「笑脸」「右箭头」） |
+| 控制字符 | 删除；连续标点折叠为单个停顿 |
+
+**上限**：2000 字，超出截断并补「……」。原 500 字常把长回复切断在句中。
 
 ## 依赖
 

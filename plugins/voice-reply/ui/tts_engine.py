@@ -8,7 +8,7 @@
 - 线程模型：QThread + run()，信号回主线程；synthesize_wav 纯函数便于单测。
 - 音频固定请求 wav（RIFF），Windows winmm mci / macOS afplay 零依赖播放；
   响应非 RIFF 头时按 JSON 错误解析并人话化。
-- 播放超时：50 秒兜底（文本上限 500 字，正常合成 + 播放远小于此）。
+- 播放超时：50 秒兜底（文本上限 2000 字，正常合成 + 播放远小于此）。
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ from PyQt5.QtCore import QThread, pyqtSignal
 
 from .audio_player import describe_wav, play_wav, stop_playback, write_temp_wav
 
-# 合成请求总超时（秒）。500 字合成通常 2~5 秒返回，超时兜防线程悬挂
+# 合成请求总超时（秒）。2000 字合成通常 10 秒内返回，超时兜防线程悬挂
 _TIMEOUT_SEC = 50.0
 
 
