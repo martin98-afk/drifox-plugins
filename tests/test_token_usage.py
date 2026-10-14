@@ -1,0 +1,509 @@
+# -*- coding: utf-8 -*-
+"""token-usage 离线单测：zstd 解压 + 净占用口径 + 窗口补零 + 色阶 + 热力图几何。
+
+不依赖 PyQt5 / 宿主 / 真实数据库：
+- 用 data.decode_messages 验三种存储格式（ZSTD / 裸 JSON / 垃圾数据）
+- 用合成 daily 验净占用口径（每会话取末次 usage）与窗口补零
+- 用 render 的纯函数验数字缩写、色阶分位、热力图周列对齐
+"""
+
+import importlib.util
+import json
+import sys
+from datetime import date, timedelta
+from pathlib import Path
+
+import pytest
+
+_PLUGIN_UI = Path(__file__).resolve().parent.parent / "plugins" / "token-usage" / "ui"
+
+
+@pytest.fixture(scope="module")
+def data_mod():
+    spec = importlib.util.spec_from_file_location("tu_data", _PLUGIN_UI / "data.py")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["tu_data"] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+@pytest.fixture(scope="module")
+def ui_pkg(data_mod):
+    """把 ui 目录注册成可相对导入的包（render 内部 from .data / . import collector）"""
+    import types
+
+    pkg = types.ModuleType("tu_pkg")
+    pkg.__path__ = [str(_PLUGIN_UI)]
+    sys.modules["tu_pkg"] = pkg
+    sys.modules["tu_pkg.data"] = data_mod
+    return pkg
+
+
+@pytest.fixture(scope="module")
+def render_mod(ui_pkg):
+    spec = importlib.util.spec_from_file_location("tu_pkg.render", _PLUGIN_UI / "render.py")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["tu_pkg.render"] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+# ── decode_messages：三种存储格式 ──
+
+
+def _zstd_blob(payload: bytes) -> bytes:
+    from compression import zstd
+
+    comp = zstd.ZstdCompressor(level=3)
+    comp.set_pledged_input_size(len(payload))
+    return b"ZSTD" + b"\x01" + comp.compress(payload) + comp.flush()
+
+
+def test_decode_zstd_blob(data_mod):
+    msgs = [{"role": "assistant", "token_usage": {"input": 100, "output": 20}}]
+    blob = _zstd_blob(json.dumps(msgs).encode("utf-8"))
+    assert data_mod.decode_messages(blob) == msgs
+
+
+def test_decode_plain_json_bytes(data_mod):
+    msgs = [{"role": "user", "content": "hi"}]
+    assert data_mod.decode_messages(json.dumps(msgs).encode("utf-8")) == msgs
+
+
+def test_decode_plain_json_str(data_mod):
+    msgs = [{"role": "user", "content": "hi"}]
+    assert data_mod.decode_messages(json.dumps(msgs)) == msgs
+
+
+def test_decode_garbage_returns_empty(data_mod):
+    assert data_mod.decode_messages(None) == []
+    assert data_mod.decode_messages(b"") == []
+    assert data_mod.decode_messages(123) == []
+    # 有 magic 但内容损坏 → 不抛异常，返回空
+    assert data_mod.decode_messages(b"ZSTD\x01garbage") == []
+    # 裸 JSON 但非法 → 返回空
+    assert data_mod.decode_messages(b"{not json") == []
+
+
+def test_decode_non_list_returns_empty(data_mod):
+    assert data_mod.decode_messages(json.dumps({"a": 1}).encode("utf-8")) == []
+
+
+# ── 净占用口径 ──
+
+
+def _patch_db(monkeypatch, data_mod, sessions):
+    """把 find_db / sqlite3.connect 换成内存 sqlite，注入合成 sessions.messages"""
+    import sqlite3
+    import tempfile
+    from pathlib import Path
+
+    tmpdir = Path(tempfile.mkdtemp())
+    db_path = tmpdir / "sessions.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.execute(
+        "CREATE TABLE sessions (session_id TEXT, messages BLOB, project TEXT)"
+    )
+    for i, msgs in enumerate(sessions):
+        conn.execute(
+            "INSERT INTO sessions VALUES (?, ?, ?)",
+            (f"s{i}", json.dumps(msgs).encode("utf-8"), "demo"),
+        )
+    conn.commit()
+    conn.close()
+
+    monkeypatch.setattr(data_mod, "_found_db_path", db_path, raising=False)
+    monkeypatch.setattr(data_mod, "_host_db_path", lambda: db_path)
+    return db_path
+
+
+def test_collect_uses_incremental_input(data_mod, monkeypatch):
+    """输入按增量扣基线；输出逐轮相加；请求数记全部条数
+
+    会话1 prompt 1000 → 5000：首轮全额 1000，次轮增量 4000，合计 5000
+    """
+    sessions = [
+        [
+            {"role": "user", "timestamp": "2026-10-10 10:00:00"},
+            {
+                "role": "assistant",
+                "timestamp": "2026-10-10 10:01:00",
+                "token_usage": {"input": 1000, "output": 100},
+            },
+            {
+                "role": "assistant",
+                "timestamp": "2026-10-10 10:05:00",
+                "token_usage": {"input": 5000, "output": 300},
+            },
+        ],
+        [
+            {
+                "role": "assistant",
+                "timestamp": "2026-10-11 09:00:00",
+                "token_usage": {"input": 200, "output": 20},
+            },
+        ],
+    ]
+    _patch_db(monkeypatch, data_mod, sessions)
+    result = data_mod.collect()
+    assert result["error"] is None
+    assert result["sessions"] == 2
+    assert result["daily"]["2026-10-10"] == [5000, 400, 2]
+    assert result["daily"]["2026-10-11"] == [200, 20, 1]
+
+
+def test_collect_incremental_baseline_is_per_session(data_mod, monkeypatch):
+    """增量基线按会话独立：每会话首轮都是全额，不跨会话相减
+
+    两个单轮会话：3000 与 1000。若基线跨会话共享，第二轮会算成
+    max(0, 1000-3000)=0，总数变 3000 而非 4000。
+    """
+    sessions = [
+        [
+            {
+                "role": "assistant",
+                "timestamp": "2026-10-10 10:00:00",
+                "token_usage": {"input": 3000, "output": 10},
+            },
+        ],
+        [
+            {
+                "role": "assistant",
+                "timestamp": "2026-10-10 11:00:00",
+                "token_usage": {"input": 1000, "output": 5},
+            },
+        ],
+    ]
+    _patch_db(monkeypatch, data_mod, sessions)
+    result = data_mod.collect()
+    # 两会话首轮都全额计：3000 + 1000，若跨会话相减会得到 3000
+    assert result["daily"]["2026-10-10"] == [4000, 15, 2]
+
+
+def test_collect_prompt_shrink_counts_zero_not_negative(data_mod, monkeypatch):
+    """prompt 回退（上下文压缩后变小）时增量按 0 计，不产生负数"""
+    sessions = [
+        [
+            {
+                "role": "assistant",
+                "timestamp": "2026-10-10 10:00:00",
+                "token_usage": {"input": 50000, "output": 10},
+            },
+            {
+                "role": "assistant",
+                "timestamp": "2026-10-10 10:30:00",
+                "token_usage": {"input": 8000, "output": 10},
+            },
+        ],
+    ]
+    _patch_db(monkeypatch, data_mod, sessions)
+    result = data_mod.collect()
+    # 首轮 50000 全额，第二轮压缩后 8000 → 增量 0（不是 -42000）
+    assert result["daily"]["2026-10-10"] == [50000, 20, 2]
+
+
+def test_collect_skips_messages_without_timestamp(data_mod, monkeypatch):
+    _patch_db(
+        monkeypatch,
+        data_mod,
+        [[{"role": "assistant", "token_usage": {"input": 999, "output": 9}}]],
+    )
+    result = data_mod.collect()
+    assert result["daily"] == {}
+    assert result["sessions"] == 0
+
+
+def test_collect_reports_missing_db(data_mod, monkeypatch):
+    from pathlib import Path
+
+    monkeypatch.setattr(data_mod, "_found_db_path", None, raising=False)
+    monkeypatch.setattr(data_mod, "_host_db_path", lambda: None)
+    monkeypatch.setattr(data_mod, "_DEV_CANDIDATES", [Path("Z:/nope/sessions.db")])
+    result = data_mod.collect()
+    assert result["error"] == "未找到会话数据库"
+    assert result["daily"] == {}
+
+
+# ── 窗口补零与汇总 ──
+
+
+def _daily_today_plus(days_ago: int, inp: int, out: int, req: int) -> dict:
+    d = (date.today() - timedelta(days=days_ago)).isoformat()
+    return {d: [inp, out, req]}
+
+
+def test_sum_window_pads_missing_days(data_mod):
+    daily = _daily_today_plus(0, 100, 10, 2)
+    s = data_mod.sum_window(daily, 30)
+    assert s["input"] == 100 and s["output"] == 10
+    assert s["total"] == 110 and s["requests"] == 2
+    assert s["active_days"] == 1
+
+
+def test_sum_window_excludes_out_of_range(data_mod):
+    daily = _daily_today_plus(40, 999, 99, 9)  # 30 天窗口外
+    s = data_mod.sum_window(daily, 30)
+    assert s["total"] == 0 and s["requests"] == 0
+
+
+def test_last_n_days_length_and_order(data_mod):
+    rows = data_mod.last_n_days({}, 30)
+    assert len(rows) == 30
+    # 从旧到新，最后一个是今天
+    assert rows[-1][0] == date.today().isoformat()
+    assert rows[0][0] == (date.today() - timedelta(days=29)).isoformat()
+    assert rows[0][1:] == (0, 0, 0)
+
+
+def test_active_day_totals_only_with_requests(data_mod):
+    daily = _daily_today_plus(0, 100, 10, 0)  # 有 token 但零请求 → 不算活跃
+    daily.update(_daily_today_plus(1, 50, 5, 1))
+    totals = data_mod.active_day_totals(daily, 30)
+    assert totals == [55]
+
+
+# ── 数字缩写 ──
+
+
+@pytest.mark.parametrize(
+    "n,expected",
+    [
+        (0, "0"),
+        (999, "999"),
+        (1000, "1K"),
+        (1234, "1.2K"),
+        (50500, "50.5K"),
+        (130000, "130K"),
+        (1_000_000, "1M"),
+        (2_500_000, "2.5M"),
+        (3_000_000_000, "3B"),
+    ],
+)
+def test_fmt_k(render_mod, n, expected):
+    assert render_mod._fmt_k(n) == expected
+
+
+# ── 色阶分位 ──
+
+
+def test_thresholds_empty_when_no_activity(render_mod):
+    assert render_mod._thresholds([0, 0, 0], 4) == []
+
+
+def test_thresholds_small_sample_falls_back(render_mod):
+    # 样本 < 8 走等距切分
+    th = render_mod._thresholds([10, 20, 100], 4)
+    assert len(th) == 4
+    assert th == sorted(th)
+
+
+def test_thresholds_large_sample_deduped_and_ordered(render_mod):
+    vals = list(range(1, 100))
+    th = render_mod._thresholds(vals, 4)
+    assert th == sorted(th)
+    assert len(set(th)) == len(th)
+
+
+def test_level_of_zero_is_empty(render_mod):
+    assert render_mod._level_of(0, [10, 20]) == 0
+
+
+def test_level_of_beyond_max_is_top(render_mod):
+    assert render_mod._level_of(999, [10, 20]) == 3  # thresholds 2 档 + 1
+
+
+# ── 热力图几何 ──
+
+
+def test_heatmap_starts_on_monday(render_mod):
+    end = date(2026, 10, 14)
+    weeks, _ = render_mod._heatmap_cells({}, end, 365)
+    first = weeks[0][0]["date"]
+    assert date.fromisoformat(first).weekday() == 0
+
+
+def test_heatmap_has_exactly_365_in_range_cells(render_mod):
+    end = date(2026, 10, 14)
+    weeks, _ = render_mod._heatmap_cells({}, end, 365)
+    in_range = [c for w in weeks for c in w if c["in_range"]]
+    assert len(in_range) == 365
+    assert in_range[0]["date"] == (end - timedelta(days=364)).isoformat()
+    assert in_range[-1]["date"] == end.isoformat()
+
+
+def test_heatmap_month_labels_are_ordered(render_mod):
+    end = date(2026, 10, 14)
+    weeks, labels = render_mod._heatmap_cells({}, end, 365)
+    assert labels, "应至少有一个月标签"
+    idxs = [i for i, _ in labels]
+    assert idxs == sorted(idxs)
+    assert len(labels) == len(set(idxs)), "每月只打一次标"
+    # 每个标签都应落在实际列数范围内
+    assert all(0 <= i < len(weeks) for i in idxs)
+
+
+def test_heatmap_marks_active_cells(render_mod):
+    end = date(2026, 10, 14)
+    daily = {end.isoformat(): [1000, 100, 5]}
+    weeks, _ = render_mod._heatmap_cells(daily, end, 30)
+    last = weeks[-1]
+    today_cell = [c for c in last if c["date"] == end.isoformat()][0]
+    assert today_cell["total"] == 1100
+    assert today_cell["requests"] == 5
+    assert today_cell["in_range"] is True
+
+
+def test_heatmap_html_contains_title_tooltips(render_mod):
+    end = date(2026, 10, 14)
+    daily = {end.isoformat(): [1000, 100, 5]}
+    html = render_mod._render_heatmap(daily, end, 30, render_mod._palette(True))
+    assert '<div class="tu-grid">' in html
+    assert "2026-10-14" in html
+    assert "次请求" in html
+
+
+def test_heatmap_columns_share_width_flexibly(render_mod):
+    """热力图列必须 flex 均分，不能写死 px 宽
+
+    卡片宽度是动态的（主程序按 parent_width - 20 算，下限 320px），
+    列宽写死 px 会在窄窗口溢出、宽窗口留白。
+    回归锚点：曾把 .tu-week 改成 flex:0 0 12px。
+    """
+    css = render_mod._css(True)
+    assert ".tu-week { flex: 1 1 0" in css
+    assert "flex: 0 0" not in css, "列宽不得写死"
+    # 格子靠百分比 + padding-bottom 撑正方形（Chromium 83 无 aspect-ratio）
+    assert ".tu-cell { display: block; width: 100%; padding-bottom: 100%" in css
+
+
+def test_heatmap_no_fixed_px_column_width(render_mod):
+    """列/格子的**宽度**不得写死 px（会导致窄窗口横向溢出）
+
+    只查 px 宽度；百分比（width:100%）、列间距（margin-right）都是对的。
+    """
+    import re
+
+    end = date(2026, 10, 14)
+    html = render_mod._render_heatmap({}, end, 30, render_mod._palette(True))
+    css = render_mod._css(True)
+    for rule_start, rule_end in ((".tu-week {", ".tu-cell {"), (".tu-cell {", ".tu-week:last")):
+        rule = css[css.index(rule_start) : css.index(rule_end)]
+        fixed = re.search(r"(?<!min-)\bwidth:\s*\d+px", rule)
+        assert fixed is None, f"宽度不得写死 px: {rule.strip()}"
+    # 格子 span 的内联样式只允许带 background（尺寸一律走 CSS 类）
+    for cell in html.split('<span class="tu-cell"')[1:]:
+        inline = cell.split('style="')[1].split('"')[0]
+        assert inline.startswith("background:"), f"格子内联样式应只有背景色: {inline}"
+
+
+def test_month_labels_split_number_and_suffix(render_mod):
+    """数字与「月」分两个 span：窄容器用 media query 隐藏后缀防粘连"""
+    labels = [(0, "10月"), (4, "11月"), (9, "12月")]
+    spans = render_mod._month_label_spans(labels, 12)
+    joined = "".join(spans)
+    assert "10" in joined and "11" in joined and "12" in joined
+    assert joined.count("tu-month-suffix") == 3
+    # 后缀在独立 span 内
+    assert ">月</span>" in joined
+    # 媒体查询规则必须存在于 CSS 中
+    assert "max-width: 560px" in render_mod._css(True)
+    assert "tu-month-suffix { display: none" in render_mod._css(True)
+
+
+def test_month_label_flex_growth_matches_span(render_mod):
+    """每个标签的 flex-grow = 本月起始周 → 下月起始周的跨度"""
+    labels = [(0, "10月"), (4, "11月"), (9, "12月")]
+    spans = render_mod._month_label_spans(labels, 12)
+    assert "flex:4 1 0" in spans[0]  # 0 → 4
+    assert "flex:5 1 0" in spans[1]  # 4 → 9
+    assert "flex:3 1 0" in spans[2]  # 9 → n_cols(12) 收尾
+
+
+# ── 完整渲染 ──
+
+
+def test_render_html_empty_state(render_mod):
+    html = render_mod.render_html({"is_dark": True}, {"daily": {}, "sessions": 0})
+    assert "暂无 API 用量记录" in html
+    # 空态不画格子（.tu-grid 的 CSS 规则仍在，故查实际格子元素）
+    assert '<div class="tu-grid">' not in html
+    assert '<div class="tu-week">' not in html
+
+
+def test_render_html_full_layout(render_mod):
+    end = date.today()
+    daily = {
+        end.isoformat(): [2300000, 2700, 2200],
+        (end - timedelta(days=2)).isoformat(): [100000, 500, 20],
+    }
+    html = render_mod.render_html({"is_dark": True}, {"daily": daily, "sessions": 2})
+    # 四指标都在
+    for label in ("总 Token", "输入 Token", "输出 Token", "请求次数"):
+        assert label in html
+    # 30 天窗口说明 + 热力图标题
+    assert "过去 30 天" in html
+    assert "每日活动" in html
+    assert "过去一年" in html
+    # 刷新按钮挂 context-tag（主程序点击链）
+    assert 'data-type="tu-refresh"' in html
+    assert "刷新用量" in html
+    # 样式内联（Chromium 83 下 <style> 可用）
+    assert "<style>" in html
+
+
+def test_render_html_input_output_split(render_mod):
+    end = date.today()
+    daily = {end.isoformat(): [50500, 4900, 90]}
+    html = render_mod.render_html({"is_dark": False}, {"daily": daily, "sessions": 1})
+    assert "50.5K" in html  # 输入
+    assert "4.9K" in html  # 输出
+    assert "55.4K" in html  # 总
+    assert "90" in html
+
+
+def test_render_light_and_dark_differ(render_mod):
+    end = date.today()
+    daily = {end.isoformat(): [1000, 100, 5]}
+    dark = render_mod.render_html({"is_dark": True}, {"daily": daily, "sessions": 1})
+    light = render_mod.render_html({"is_dark": False}, {"daily": daily, "sessions": 1})
+    assert dark != light
+
+
+def test_render_tolerates_missing_ctx(render_mod):
+    end = date.today()
+    daily = {end.isoformat(): [1000, 100, 5]}
+    html = render_mod.render_html(None, {"daily": daily, "sessions": 1})
+    assert '<div class="tu-grid">' in html
+
+
+# ── CSS 有效性（回归：占位符未折叠会让整份样式表失效）──
+
+
+def test_css_has_no_unfilled_placeholders(render_mod):
+    css = render_mod._css(True)
+    assert "{fs_" not in css
+    for key in ("border", "panel", "text", "muted", "faint", "accent"):
+        assert "{" + key + "}" not in css
+
+
+def test_css_has_single_brace_rules(render_mod):
+    """CSS 规则必须用单花括号
+
+    历史坑：模板写成 `.tu-wrap {{ ... }}`（f-string 残留写法），
+    配 `.replace()` 填充导致双花括号从未折叠，整份样式表失效——
+    页面全部退回浏览器默认样式，而字符串断言型测试完全查不出来。
+    """
+    css = render_mod._css(True)
+    assert "{{" not in css
+    assert "}}" not in css
+    assert ".tu-cell {" in css
+    assert ".tu-metrics { display: flex" in css
+
+
+def test_dark_palette_levels_are_opaque(render_mod):
+    """暗色色阶用实色：半透明蓝叠在深底上偏灰，档位区分不出来"""
+    levels = render_mod._palette(True)["levels"]
+    assert len(levels) == 5
+    for c in levels:
+        assert c.startswith("#"), f"暗色档位应为实色: {c}"
+        assert "rgba" not in c
