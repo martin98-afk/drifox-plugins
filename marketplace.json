@@ -1000,7 +1000,7 @@
             "components": {
                 "providers": true
             },
-            "downloads": 6,
+            "downloads": 8,
             "keywords": [
                 "CodeBuddy",
                 "国际版",
@@ -3683,7 +3683,7 @@
             "components": {
                 "mcp": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "mcp",
                 "connector",
@@ -5307,6 +5307,7 @@
             "components": {
                 "ui": true
             },
+            "downloads": 3,
             "keywords": [
                 "welcome",
                 "token",
@@ -5592,7 +5593,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 8,
+            "downloads": 9,
             "keywords": [
                 "voice",
                 "tts",
