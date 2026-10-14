@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.11.6 (2026-10-14)
+### 🔊 voice-reply v1.4.0：朗读只读正文，剔除思考过程/工具结果/代码/机器串，上限 500 → 2000 字
+- **动机**：原实现取 `card.get_plain_text()`，对助手卡片等价于 `content_to_text(..., include_tool_results=True)` —— 工具调用结果（`[tool:read_file] ...`）与代码片段被一起朗读；思考过程虽不在块列表里，历史消息/扁平文本路径仍可能混入。用户原话：「朗读的内容需要过滤，只朗读正文，并且需要进行内容过滤」
+- **正文口径**：新增 `ui/tts_text.py`（纯函数、无 Qt 依赖），优先读卡片 `_content_data` 块列表，**只保留 `type == "text"` 块** —— `reasoning`（思考过程）、`tool_result`（工具调用与结果）、`custom`（echarts 等自定义渲染块）、图片块一律不进朗读。块列表不可用时退回 `get_plain_text()`，此时文本已混入工具结果，靠正则补刀（内联 `<think>…</think>` 整段删、`[tool:xxx]` 开头的行整行删）
+- **清洗口径**（朗读器会把符号读成人话、把机器串读成乱码）：代码块整体替换为「代码略」提示音；行内代码去反引号、图片留 alt、链接留文字；粗体/斜体/删除线/标题/有序与无序列表/引用/分隔线/表格竖线去标记（新增删除线、有序列表序号、引用尖括号、分隔线、脚注引用）；裸 URL 与 data URI 删除（尾部排除中文标点，避免吞掉句末「。」）；超长 base64/哈希/路径串、HTML 标签、emoji 与装饰符号、控制字符删除；连续标点折叠为单个停顿
+- **上限调整**：`_MAX_TEXT_LEN` 500 → `MAX_TEXT_LEN` 2000（`ui/tts_text.py`），原上限常把长回复切断在句中。`tts_engine.py` 超时注释同步（50 秒兜底对 2000 字仍宽裕）
+- **空正文提示**：文案从「本条消息没有可朗读的文本」改为「…没有可朗读的正文」（只含思考/工具结果的消息现在会命中这条）
+- **回归测试**：新增 `tests/test_voice_reply_tts_text.py` 19 例，覆盖块类型过滤（reasoning/tool_result/custom/image 不进场）、纯思考与纯工具消息为空、兜底路径的 think 段与 `[tool:]` 行补刀、URL/data URI/base64/HTML/emoji/控制字符清洗、markdown 结构标记清除、2000 字截断。已验证测试有效性：分别破坏「块类型过滤」「URL 清洗」「base64 清洗」「emoji 清洗」「think 段清洗」「工具行清洗」「引用标记清洗」共 7 个点，各自精确打红 1 例，恢复后 19/19 通过
+- **验证**：`ruff check` 通过；`tools/validate_plugins.py --strict` 中 voice-reply 为 OK；`tools/generate_marketplace.py --check` 一致（marketplace.json 版本号已随 manifest 同步到 1.4.0）
+
 ## 2.11.5 (2026-10-11)
 ### ✨ voice-input v0.5.0：新增 macOS 录音后端，修 WAV 解析漏读填充块致时长统计失败
 - **症状**：macOS 上点麦克风按钮无任何反应，日志报 `module 'ctypes' has no attribute 'windll'`

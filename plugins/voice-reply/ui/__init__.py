@@ -14,16 +14,22 @@
 - 本地系统语音（默认）：Windows SAPI5（win32com）/ macOS `say`，免费零配置
 - 在线 API：OpenAI 兼容 POST /audio/speech（默认预填硅基流动 CosyVoice2，
   极低价；也可指向自部署免费服务如 openai-edge-tts），wav 落临时文件，
-  Windows winsound / macOS afplay 播放
+  Windows winmm mci / macOS afplay 播放
+
+朗读文本策略（ui/tts_text.py，纯函数便于单测）：只取正文 text 块 —— 思考过程、
+工具调用与结果、自定义渲染块、图片块一律不进朗读；再清洗 markdown 标记、
+URL、data URI、超长 base64 串、HTML 标签、emoji 等朗读器会读成符号或乱码的
+内容；最后截断至 2000 字。
 """
 
 from __future__ import annotations
 
-import re
 import sys
 from typing import Any, Dict
 
 from loguru import logger
+
+from .tts_text import build_speakable_text
 
 PLUGIN_NAME = "voice-reply"
 _ACTION_ID = f"{PLUGIN_NAME}:speak"
@@ -32,9 +38,6 @@ _TOOLTIP_PLAYING = "停止播放"
 # 按钮定位锚点：宿主按注册快照设 tooltip，改图标时用它认领按钮。
 # 两张卡可同时挂载按钮，播放态锚点唯一（同时只有一条在播）。
 _TOOLTIPS = (_TOOLTIP_IDLE, _TOOLTIP_PLAYING)
-
-# 播报文本上限（字），避免语音队列/合成请求过长
-_MAX_TEXT_LEN = 500
 
 # 在线引擎默认端点（OpenAI 兼容；极低价，也可改为任意兼容服务）
 _DEFAULT_API_URL = "https://api.siliconflow.cn/v1/audio/speech"
@@ -198,29 +201,6 @@ def _read_config() -> Dict[str, str]:
     except Exception as e:  # noqa: BLE001 — 配置不可用走默认值
         logger.warning(f"[voice-reply] 读取插件配置失败，按默认: {e}")
         return {"engine": "local", "api_url": "", "api_model": "", "api_voice": "", "api_key": ""}
-
-
-_MARKDOWN_PATTERNS = [
-    (re.compile(r"```.*?```", re.S), "，代码略，"),  # 代码块整体略读
-    (re.compile(r"`([^`]*)`"), r"\1"),  # 行内代码去反引号
-    (re.compile(r"!\[([^\]]*)\]\([^)]*\)"), r"\1"),  # 图片留 alt
-    (re.compile(r"\[([^\]]*)\]\([^)]*\)"), r"\1"),  # 链接留文字
-    (re.compile(r"(\*\*|__)(.*?)\1"), r"\2"),  # 粗体
-    (re.compile(r"(\*|_)(.*?)\1"), r"\2"),  # 斜体
-    (re.compile(r"^#{1,6}\s*", re.M), ""),  # 标题井号
-    (re.compile(r"^\s*[-*+]\s+", re.M), ""),  # 列表符号
-    (re.compile(r"\|"), "，"),  # 表格竖线
-    (re.compile(r"\n{2,}"), "。\n"),  # 多空行收成句号停顿
-]
-
-
-def _clean_for_tts(text: str) -> str:
-    """轻度清洗 markdown 标记，避免朗读器读出符号。"""
-    for pattern, repl in _MARKDOWN_PATTERNS:
-        text = pattern.sub(repl, text)
-    text = re.sub(r"[ \t]+", " ", text)
-    text = re.sub(r"，{2,}", "，", text)  # 表格竖线等替换产生的连续逗号
-    return text.strip()
 
 
 # ============================================================
@@ -407,7 +387,7 @@ def _reset_worker(worker) -> None:
 
 
 def _on_click(ctx: Dict[str, Any]) -> None:
-    """页脚按钮回调：取本条消息纯文本播报；播放中再点停止。
+    """页脚按钮回调：取本条消息正文播报；播放中再点停止。
 
     播放态判定：在线引擎看 worker 是否存活；本地引擎看按钮是否处于 pause 态
     （本地播完即复位，无跨请求状态）。
@@ -425,16 +405,10 @@ def _on_click(ctx: Dict[str, Any]) -> None:
         _reset_playing_button()
         return
 
-    try:
-        text = (card.get_plain_text() if card is not None else "") or ""
-    except Exception:  # noqa: BLE001 — 卡片接口异常按空文本处理
-        text = ""
-    text = _clean_for_tts(text.strip())
+    text = build_speakable_text(card)
     if len(text) < 3:
-        _notify(ctx.get("main_widget"), "warning", "语音播报", "本条消息没有可朗读的文本")
+        _notify(ctx.get("main_widget"), "warning", "语音播报", "本条消息没有可朗读的正文")
         return
-    if len(text) > _MAX_TEXT_LEN:
-        text = text[:_MAX_TEXT_LEN] + "……"
 
     if cfg.get("engine") == "api":
         _start_api(cfg, text, ctx, btn)
