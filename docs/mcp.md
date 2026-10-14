@@ -54,15 +54,42 @@ mcp 让插件声明 [Model Context Protocol (MCP)](https://modelcontextprotocol.
 | `<server>.command` | stdio 必填 | 启动命令（如 `uvx`、`npx`） |
 | `<server>.args` | ❌ | 命令参数列表 |
 | `<server>.env` | ❌ | 注入的环境变量 |
-| `<server>.type` | ✅ | `stdio`（本地进程） \| `http`（远程 HTTP） |
-| `<server>.url` | http 必填 | HTTP 端点 URL |
-| `<server>.headers` | ❌ | HTTP 头 |
+| `<server>.type` | ✅ | `stdio`（本地进程） \| `http`（远程 HTTP） \| `sse`（远程 SSE） |
+| `<server>.url` | http/sse 必填 | 端点 URL，支持 `${env.VAR}` 占位符 |
+| `<server>.headers` | ❌ | HTTP 头，值支持 `${env.VAR}` 占位符 |
 | `<server>.enabled` | ❌ | `false` 时不自动启动，用户可手动启用 |
 
-### 两种 type
+### 三种 type
 
 - **`stdio`**：DriFox 启动一个子进程，通过 stdin/stdout 通信
-- **`http`**：通过 HTTP 连接到远程 MCP 服务器
+- **`http`**：通过 streamable HTTP 连接到远程 MCP 服务器
+- **`sse`**：通过 Server-Sent Events 连接到远程 MCP 服务器
+
+### `${env.VAR}` 凭据占位符
+
+`url` 与 `headers` 的值可以写 `${env.变量名}`，连接时替换为进程环境变量的值。
+变量未设置时保留字面量，并在连接前直接报错，不会带着假值去连远端。
+
+```json
+{
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "headers": { "Authorization": "Bearer ${env.GITHUB_TOKEN}" },
+      "enabled": false
+    },
+    "amap": {
+      "type": "http",
+      "url": "https://mcp.amap.com/mcp?key=${env.AMAP_KEY}",
+      "enabled": false
+    }
+  }
+}
+```
+
+前者注入请求头，后者拼在 URL 查询参数上——两类远程 MCP 的常见鉴权方式。
+**密钥不要写进 `.mcp.json` 提交到 git**，用环境变量注入。
 
 ## 服务器名
 

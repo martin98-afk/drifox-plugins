@@ -2,7 +2,7 @@
   "mcpServers": {
     "modelscope": {
       "type": "http",
-      "url": "https://www.modelscope.cn",
+      "url": "${env.MODELSCOPE_MCP_URL}",
       "enabled": false,
       "command": "",
       "args": [],

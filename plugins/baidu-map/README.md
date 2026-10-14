@@ -11,20 +11,17 @@
 
 ## 认证
 
-本连接器的官方 MCP 端点在 URL 上以查询参数接收密钥。DriFox 的 MCP 配置
-只支持 HTTP 头与环境变量两种注入方式，无法自动拼接该参数，需手动补全。
+本连接器的官方 MCP 端点以 URL 查询参数接收密钥。密钥已写成 `${env.BAIDU_MAP_AK}`
+占位符，无需改动配置文件，设好环境变量即可。
 
-到下方「获取地址」申请密钥，然后把 `.mcp.json` 里 `url` 改成:
+1. 打开下方「获取地址」申请密钥
+2. 设置环境变量后重启 DriFox
 
+```powershell
+$env:BAIDU_MAP_AK = "你的密钥"
 ```
-https://mcp.map.baidu.com/mcp?ak=你的密钥
-```
 
-改完在设置 → MCP 连接器里重新启用本插件。
-
-## 获取地址
-
-https://lbsyun.baidu.com/apiconsole/key
+未设置该变量时，DriFox 会在连接前直接提示缺少哪个环境变量，不会带着空值去连远端。
 
 ## 上游
 

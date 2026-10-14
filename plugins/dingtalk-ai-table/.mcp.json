@@ -2,7 +2,7 @@
   "mcpServers": {
     "dingtalk-ai-table": {
       "type": "http",
-      "url": "https://mcp-gw.dingtalk.com",
+      "url": "${env.DINGTALK_AI_TABLE_MCP_URL}",
       "enabled": false,
       "command": "",
       "args": [],

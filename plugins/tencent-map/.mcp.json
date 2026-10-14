@@ -2,8 +2,8 @@
   "mcpServers": {
     "tencent-map": {
       "type": "http",
-      "url": "https://mcp.map.qq.com/mcp?format=0",
-      "enabled": false,
+      "url": "https://mcp.map.qq.com/mcp?format=0&key=${env.TENCENT_MAP_KEY}",
+      "enabled": true,
       "command": "",
       "args": [],
       "env": {},

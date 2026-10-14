@@ -2,7 +2,7 @@
   "mcpServers": {
     "dingtalk-contacts": {
       "type": "http",
-      "url": "https://mcp-gw.dingtalk.com",
+      "url": "${env.DINGTALK_CONTACTS_MCP_URL}",
       "enabled": false,
       "command": "",
       "args": [],

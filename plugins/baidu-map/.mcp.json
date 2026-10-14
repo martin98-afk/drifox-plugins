@@ -2,8 +2,8 @@
   "mcpServers": {
     "baidu-map": {
       "type": "http",
-      "url": "https://mcp.map.baidu.com/mcp",
-      "enabled": false,
+      "url": "https://mcp.map.baidu.com/mcp?ak=${env.BAIDU_MAP_AK}",
+      "enabled": true,
       "command": "",
       "args": [],
       "env": {},
