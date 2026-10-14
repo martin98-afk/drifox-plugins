@@ -2,7 +2,7 @@
   "mcpServers": {
     "dingtalk-todo": {
       "type": "http",
-      "url": "https://mcp-gw.dingtalk.com",
+      "url": "${env.DINGTALK_TODO_MCP_URL}",
       "enabled": false,
       "command": "",
       "args": [],

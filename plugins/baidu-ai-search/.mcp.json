@@ -2,8 +2,8 @@
   "mcpServers": {
     "baidu-ai-search": {
       "type": "sse",
-      "url": "https://appbuilder.baidu.com/v2/ai_search/mcp/sse",
-      "enabled": false,
+      "url": "https://appbuilder.baidu.com/v2/ai_search/mcp/sse?api_key=${env.BAIDU_AI_SEARCH_API_KEY}",
+      "enabled": true,
       "command": "",
       "args": [],
       "env": {},

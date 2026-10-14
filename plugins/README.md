@@ -96,7 +96,7 @@
 
 > 上表列常用 16 个。全部 54 个安装后在设置 → MCP 连接器中逐个启用，未在上表出现的直接到 `plugins/` 下按 id 找目录。
 >
-> 认证方式分四类：**OAuth**（29 个，装后在设置里点授权，走动态注册 + PKCE，token 自动刷新）；**Bearer**（7 个，填环境变量如 `GITHUB_TOKEN`）；**Query Key**（4 个，需按各插件 README 把 key 拼进 `url`）；**专属链接**（6 个，需按 README 替换为账号签发的链接）。后两类是 DriFox 的 MCP 配置只支持 HTTP 头与环境变量注入所致，无法自动完成。
+> 认证方式分三类：**OAuth**（29 个，装后在设置里点授权，走动态注册 + PKCE，token 自动刷新）；**环境变量**（11 个，Bearer 写进 `headers`、Query Key 拼进 `url`，均为 `${env.VAR}` 占位符，变量未设置时连接前直接报错）；**免认证**（14 个，装上即用）。
 >
 > `context7-remote` 与既有 [`context7`](context7/) 功能重复：前者连官方远程端点，后者走本地 npx。server 名已区分，可共存，按需启用其一。上游 context7 因目录名被占用而改用此名。
 
