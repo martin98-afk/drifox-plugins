@@ -640,6 +640,62 @@ def test_notify_refresh_survives_missing_host(collector_mod):
     collector_mod.notify_refresh()
 
 
+# ── 采集收尾不依赖信号投递（回归：打包版市场安装后永远卡「正在统计」）──
+#
+# 症状：通过市场安装插件后，用量页签永远停在加载占位，日志只有「采集已启动」。
+# 根因：register_ui 的预热 start() 在市场安装 worker 线程执行（QTimer.singleShot
+#       回调归调用线程所有），_collector 单例诞生在该线程；采集完成后
+#       finished.emit 是 queued 信号，投给已退出 exec() 的死线程，永不消费——
+#       缓存永不写入、_running 永不清零，后续 start() 全被 is_running() 拦截。
+# 修法：写缓存/日志/状态清理在 worker.run 内就地完成（_finalize_collect），
+#       线程退出由 run 内 quit() 自主完成；信号回调仅剩幂等兜底。
+
+
+def test_finalize_collect_writes_cache_without_signal(collector_mod, monkeypatch):
+    """_finalize_collect 就地生效：缓存命中、_running 清零，全程无 Qt 信号参与"""
+    monkeypatch.setattr(collector_mod, "_cache", None)
+    monkeypatch.setattr(collector_mod, "_cache_key", None)
+    monkeypatch.setattr(collector_mod, "_cache_ts", 0.0)
+    monkeypatch.setattr(collector_mod, "_running", True)
+    monkeypatch.setattr(collector_mod, "build_cache_key", lambda: (7, "2026-10-14"))
+
+    data = {"daily": {"2026-10-14": [10, 2, 1]}, "sessions": 1, "error": None}
+    collector_mod._finalize_collect(data)
+
+    assert collector_mod.get_cached() == data
+    assert collector_mod._cache_key == (7, "2026-10-14")
+    assert collector_mod._running is False
+
+
+def test_worker_run_finalizes_even_when_signal_never_delivered(collector_mod, monkeypatch):
+    """worker.run 完成 → 缓存与运行态立即就绪；信号从未投递也不受影响
+
+    直接在测试线程同步调 run()（不经过 moveToThread/事件循环），等价于
+    「finished 事件投进死线程永不消费」的极端场景：只要 run 跑完，数据必须可用。
+    """
+    monkeypatch.setattr(collector_mod, "_cache", None)
+    monkeypatch.setattr(collector_mod, "_cache_key", None)
+    monkeypatch.setattr(collector_mod, "_cache_ts", 0.0)
+    monkeypatch.setattr(collector_mod, "_running", True)
+    monkeypatch.setattr(collector_mod, "build_cache_key", lambda: (9, "2026-10-14"))
+
+    data = {"daily": {"2026-10-13": [5, 1, 1]}, "sessions": 1, "error": None}
+    import sys
+
+    data_mod = sys.modules["tu_pkg.data"]
+    monkeypatch.setattr(data_mod, "collect", lambda: data)
+
+    collector = collector_mod._Collector()
+    collector._thread = object()  # 模拟运行中：is_running() True 挡住新采集
+    worker = collector_mod._CollectWorker((9, "2026-10-14"), collector)
+    worker.run()
+
+    assert collector_mod.get_cached() == data
+    assert collector_mod._running is False
+    assert collector._thread is None, "worker 收尾必须清 _thread，否则 is_running 永远 True"
+    assert collector.is_running() is False
+
+
 def test_css_has_no_unfilled_placeholders(render_mod):
     css = render_mod._css(True)
     assert "{fs_" not in css
