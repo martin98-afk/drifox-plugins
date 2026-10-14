@@ -2,12 +2,20 @@
   "mcpServers": {
     "dingtalk-contacts": {
       "type": "http",
-      "url": "${env.DINGTALK_CONTACTS_MCP_URL}",
+      "url": "${cred.url}",
       "enabled": false,
       "command": "",
       "args": [],
       "env": {},
-      "headers": {}
+      "headers": {},
+      "credential": {
+        "label": "钉钉通讯录链接",
+        "placeholder": "粘贴专属 MCP 链接",
+        "getUrl": "https://mcp.dingtalk.com",
+        "inject": {
+          "type": "url"
+        }
+      }
     }
   }
 }

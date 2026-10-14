@@ -2,12 +2,21 @@
   "mcpServers": {
     "baidu-map": {
       "type": "http",
-      "url": "https://mcp.map.baidu.com/mcp?ak=${env.BAIDU_MAP_AK}",
-      "enabled": true,
+      "url": "https://mcp.map.baidu.com/mcp",
+      "enabled": false,
       "command": "",
       "args": [],
       "env": {},
-      "headers": {}
+      "headers": {},
+      "credential": {
+        "label": "AK",
+        "placeholder": "百度地图 AK",
+        "getUrl": "https://lbsyun.baidu.com/apiconsole/key",
+        "inject": {
+          "type": "query",
+          "name": "ak"
+        }
+      }
     }
   }
 }

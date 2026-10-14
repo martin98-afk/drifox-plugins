@@ -7,8 +7,16 @@
       "command": "",
       "args": [],
       "env": {},
-      "headers": {
-        "Authorization": "Bearer ${env.BAILIAN_WEBSEARCH_APIKEY}"
+      "headers": {},
+      "credential": {
+        "label": "API Key",
+        "placeholder": "阿里云百炼 API Key",
+        "getUrl": "https://bailian.console.aliyun.com/?tab=model#/api-key",
+        "inject": {
+          "type": "header",
+          "name": "Authorization",
+          "scheme": "Bearer"
+        }
       }
     }
   }

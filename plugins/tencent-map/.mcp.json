@@ -2,12 +2,21 @@
   "mcpServers": {
     "tencent-map": {
       "type": "http",
-      "url": "https://mcp.map.qq.com/mcp?format=0&key=${env.TENCENT_MAP_KEY}",
-      "enabled": true,
+      "url": "https://mcp.map.qq.com/mcp?format=0",
+      "enabled": false,
       "command": "",
       "args": [],
       "env": {},
-      "headers": {}
+      "headers": {},
+      "credential": {
+        "label": "Key",
+        "placeholder": "腾讯位置服务 Key",
+        "getUrl": "https://lbs.qq.com/dev/console/application/mine",
+        "inject": {
+          "type": "query",
+          "name": "key"
+        }
+      }
     }
   }
 }
