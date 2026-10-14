@@ -668,3 +668,63 @@ def test_dark_palette_levels_are_opaque(render_mod):
     for c in levels:
         assert c.startswith("#"), f"暗色档位应为实色: {c}"
         assert "rgba" not in c
+
+
+# ── 色阶方向：越深 = 越多（明暗两版必须一致）──
+#
+# 回归：暗色版最初做成「越亮 = 越多」，与浅色的「越深 = 越多」语义相反。
+# 用户反馈「颜色反了，应该越深代表越多」。
+
+
+def _lum(c: str) -> float:
+    """颜色相对亮度（#rrggbb 与 rgba() 都支持，半透明按不透明度折算到白底/黑底不适用，
+    这里直接取 RGB 值的感知亮度，足以判断单调性）"""
+    c = c.strip()
+    if c.startswith("#"):
+        h = c.lstrip("#")
+        r, g, b = (int(h[i : i + 2], 16) for i in (0, 2, 4))
+        a = 1.0
+    else:
+        inner = c[c.find("(") + 1 : c.rfind(")")]
+        parts = [p.strip() for p in inner.split(",")]
+        r, g, b = (int(float(p)) for p in parts[:3])
+        a = float(parts[3]) if len(parts) > 3 else 1.0
+    # 半透明色按 alpha 朝白底混合，得到"看起来"的亮度
+    blended = tuple(v * a + 255 * (1 - a) for v in (r, g, b))
+    return 0.2126 * blended[0] + 0.7152 * blended[1] + 0.0722 * blended[2]
+
+
+@pytest.mark.parametrize("is_dark", [True, False])
+def test_heatmap_levels_go_dark_with_more_usage(render_mod, is_dark):
+    """5 档色阶必须亮度单调递减：档1(少) 最亮 → 档5(多) 最深"""
+    levels = render_mod._palette(is_dark)["levels"]
+    assert len(levels) == 5
+    lums = [_lum(c) for c in levels]
+    for i in range(1, len(lums)):
+        assert lums[i] < lums[i - 1], (
+            f"色阶方向反了（{'暗色' if is_dark else '浅色'}）: "
+            f"档{i + 1} 应比档{i} 更深，实测亮度 {lums[i]:.1f} >= {lums[i - 1]:.1f}"
+        )
+
+
+def test_heatmap_dark_top_level_visible_against_background(render_mod):
+    """暗色最高档不能沉进背景（#1e1e1e 亮度约 30）
+
+    这是「越深越多」在深色底上的固有约束：一味求深会让用量最高的日子最不显眼。
+    要求档5 与背景的亮度差 >= 30（约 2 倍背景亮度）。
+    """
+    bg = _lum("#1e1e1e")
+    top = _lum(render_mod._palette(True)["levels"][-1])
+    assert top - bg >= 30, f"最高档太暗，与背景差仅 {top - bg:.1f}"
+
+
+def test_heatmap_levels_are_distinguishable(render_mod):
+    """相邻档位之间要能看出差别（亮度差 >= 15）"""
+    for is_dark in (True, False):
+        lums = [_lum(c) for c in render_mod._palette(is_dark)["levels"]]
+        for i in range(1, len(lums)):
+            gap = lums[i - 1] - lums[i]
+            assert gap >= 15, (
+                f"相邻档位区分度不足（{'暗色' if is_dark else '浅色'}）: "
+                f"档{i}→档{i + 1} 亮度差仅 {gap:.1f}"
+            )

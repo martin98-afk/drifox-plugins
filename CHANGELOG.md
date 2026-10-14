@@ -9,13 +9,14 @@
 - **异步采集**：全库解压扫描 476 会话 / 85MB 实测 0.6s，走 QThread（`collector.py`），主线程同步会卡 UI。首次打开显示「加载中」占位，完成后经 `UIEventBus.publish(EV_WELCOME_TAB_REFRESHED)` 触发卡片重渲染。error 结果带 60s TTL
 - **db 路径探测**：优先问宿主 `app.utils.utils.get_app_data_dir()`（覆盖 `DRIFOX_DATA_DIR` / 开发态 / 打包态 / macOS 四条分支），再退回 `.drifox/sessions.db`、`~/.drifox/sessions.db`；候选库需含 `sessions` 表才算有效，避开同名空壳库抢占真实库
 - **Chromium 83 兼容**（Qt 5.15.2 的 WebEngine）：不用 flex `gap`（间距走 margin）、不用 `aspect-ratio`（格子用 `width:100% + padding-bottom:100%` 撑正方形）、不用写死 px 列宽（列宽 `flex:1 1 0` 均分容器，卡片宽度是动态的 `parent_width - 20`，下限 320px）。月标签按「本月起始周 → 下月起始周」flex 跨度分配空间，窄容器（`@media (max-width:560px)`）隐藏「月」后缀只留数字，避免「10月11月」粘连
-- **色阶**：按当日总 Token 的**分位数**分 5 档（抗单日尖峰，样本 <8 时退化为等距切分）。暗色主题用实色（半透明蓝叠在深底上偏灰，档位区分不出来）
+- **色阶**：按当日总 Token 的**分位数**分 5 档（抗单日尖峰，样本 <8 时退化为等距切分）。**明暗两版统一为「越深 = 越多」**（档1 最亮 → 档5 最深），暗色档5 与背景保持 2.3 倍亮度差避免沉进背景
 - **刷新**：「刷新用量」挂 `.context-tag[data-type="tu-refresh"]`，经主程序 `dispatch_welcome_action` 派发回插件，丢弃缓存强制重采。旧主程序缺该扩展点时页签仍可用，只是刷新按钮无响应（有 warning）
-- **回归测试**：`tests/test_token_usage.py` 60 例，覆盖 zstd/裸 JSON/损坏数据三种格式、增量口径（含基线按会话独立、压缩回退按 0、跨会话隔离）、缓存 TTL 与 staleness 判据、窗口补零、数字缩写、色阶分位、热力图周列对齐（周一起始、恰好 365 格）、CSS 有效性、tooltip 规则与配色。**已验证测试有效性**：注入 18 处回归（CSS 双花括号、口径退回全量、基线跨会话共享、prompt 回退负数、列宽/格子写死 px、暗色色阶退回半透明、窄屏 media query 失效、zstd 解压失效、缓存读时重算 key、TTL 失效、invalidate 空转、tooltip 退回原生 title / CSS 丢失 / 配色未注入 / 拦截鼠标等），17 处精确打红，1 处为无效变异
+- **回归测试**：`tests/test_token_usage.py` 64 例，覆盖 zstd/裸 JSON/损坏数据三种格式、增量口径（含基线按会话独立、压缩回退按 0、跨会话隔离）、缓存 TTL 与 staleness 判据、窗口补零、数字缩写、色阶分位与**方向单调性**（明暗两版均须越深越多，且档间亮度差 ≥15）、热力图周列对齐（周一起始、恰好 365 格）、CSS 有效性、tooltip 规则与配色。**已验证测试有效性**：注入 22 处回归（CSS 双花括号、口径退回全量、基线跨会话共享、prompt 回退负数、列宽/格子写死 px、暗色色阶退回半透明、色阶方向反转、档位沉底/挤叠、窄屏 media query 失效、zstd 解压失效、缓存读时重算 key、TTL 失效、invalidate 空转、tooltip 退回原生 title / CSS 丢失 / 配色未注入 / 拦截鼠标等），21 处精确打红，1 处为无效变异
 - **踩坑记录 1（CSS 双花括号）**：CSS 模板最初写成 `.tu-wrap {{ ... }}`（f-string 残留写法）却配 `.replace()` 填充，双花括号从未折叠 → 整份样式表失效、页面全部退回浏览器默认样式，而字符串断言型测试完全查不出来。已补 `test_css_has_single_brace_rules` 锁死，并改用无头 Chrome 截图逐版核对
 - **修复 1（永远卡在「加载中」）**：缓存 key 自相矛盾 —— `get_cached()` 读取时重算 `(db mtime_ns, 日期)`，而采集完成写入的 key 是那一刻的 mtime；对话持续写库使 mtime 不断变化，两次 key 永远不等 → 每次都判未命中 → 每次重起线程 → 采集完 mtime 又变，永远追不上。读路径改为只按 TTL（60s）判，db 变化交给新增的 `_is_stale()` 单独判断，写/读不再共用易变 key。诊断依据：日志里「采集已启动」有而「采集完成」无
 - **修复 2（tooltip 在浅色下不可控）**：原先用原生 `title` 属性，由操作系统绘制，浅色主题下是黑底 + 系统默认大字号，且明暗跟随 OS 而非 Qt 主题。改为纯 CSS `::after` + `attr(data-tip)`，配色直接取自 context-stats 的 echarts `tooltip_bg` / `tooltip_border`，两插件观感一致；右边缘 3 列的 tooltip 翻到左侧展开避免被容器裁掉；`pointer-events: none` 保证不拦截点击
-- **踩坑记录 2（核对脚本自己出错两次）**：验证 tooltip 时，给全部 371 个格子加 force 类导致提示叠成一团；改选第 820 格则永远选不中（共 371 格）。最终改用页内 JS 输出 `getComputedStyle` 诊断到 DOM 再截图，确认 `content` / `position` / `backgroundColor` 全部生效才收工
+- **修复 3（暗色色阶方向反了）**：暗色版最初做成「越亮 = 越多」，与浅色的「越深 = 越多」语义相反（用户反馈「颜色反了，应该越深代表越多」）。改为明暗同语义：档1 最亮 → 档5 最深，两版亮度均单调递减（暗 174.8 → 69.2，浅 212.7 → 74.5）。深色底上有固有约束——越深越接近背景（#1e1e1e 亮度 30），一味求深会让用量最高的日子最不显眼，故档5 停在 #1f4a86（与背景差 39，约 2.3 倍背景亮度），档间亮度差保持约 25 以维持 5 档可分辨
+- **踩坑记录 3（核对脚本自己出错两次）**：验证 tooltip 时，给全部 371 个格子加 force 类导致提示叠成一团；改选第 820 格则永远选不中（共 371 格）。最终改用页内 JS 输出 `getComputedStyle` 诊断到 DOM 再截图，确认 `content` / `position` / `backgroundColor` 全部生效才收工
 - **验证**：`ruff check` 通过；`tools/validate_plugins.py --strict` 中 token-usage 为 OK；`tools/generate_marketplace.py --check` 一致（marketplace.json 已随 manifest 收录）
 
 ## 2.11.6 (2026-10-14)
