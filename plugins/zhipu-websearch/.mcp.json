@@ -7,8 +7,16 @@
       "command": "",
       "args": [],
       "env": {},
-      "headers": {
-        "Authorization": "Bearer ${env.ZHIPU_WEBSEARCH_APIKEY}"
+      "headers": {},
+      "credential": {
+        "label": "API Key",
+        "placeholder": "智谱开放平台 API Key",
+        "getUrl": "https://bigmodel.cn/usercenter/proj-mgmt/apikeys",
+        "inject": {
+          "type": "header",
+          "name": "Authorization",
+          "scheme": "Bearer"
+        }
       }
     }
   }

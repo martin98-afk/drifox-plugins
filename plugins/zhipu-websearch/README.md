@@ -11,18 +11,13 @@
 
 ## 认证
 
-本连接器需要服务方颁发的访问令牌。令牌通过环境变量注入，仓库内只保留占位符。
+本连接器需要服务方颁发的 API Key。在 DriFox 里直接填，不必配环境变量：
 
-1. 打开下方「获取地址」申请令牌
-2. 设为环境变量后重启 DriFox，或在设置 → MCP 连接器 → 本插件里直接填写
+1. 设置 → MCP 连接器 → 找到本连接器
+2. 点「获取 Key」跳到申请页，拿到后粘贴进输入框
+3. 点「保存」，随后打开开关即自动连接
 
-```powershell
-$env:ZHIPU_WEBSEARCH_APIKEY = "你的令牌"
-```
-
-## 获取地址
-
-https://bigmodel.cn/usercenter/proj-mgmt/apikeys
+申请地址：https://bigmodel.cn/usercenter/proj-mgmt/apikeys
 
 ## 上游
 
