@@ -4176,7 +4176,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 32,
+            "downloads": 33,
             "keywords": [
                 "dashboard",
                 "stats",
@@ -5312,7 +5312,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 9,
+            "downloads": 10,
             "keywords": [
                 "welcome",
                 "token",
