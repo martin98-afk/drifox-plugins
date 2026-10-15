@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+### 🔧 project-dashboard v0.2.4：修「切到项目看板 tab 却显示会话内容」+ QThread 析构致命错误
+- **症状**：欢迎卡片点「📊 项目看板」tab，body 显示的是会话列表；日志只有 `[project-dashboard] UI components registered`，`collect done` / `collect error` 从未出现
+- **根因一（Python 模块名撞车，主因）**：宿主 `UIPluginRegistry.load_plugin` 把每个插件的 ui 目录逐个 `sys.path.insert(0, ...)`，后加载者排前面。本插件 `ui/__init__.py` 用顶层裸名 `from collector import build_cache_key`，而 token-usage（本机同期装）也有 `ui/collector.py` → 本插件拿到的是**对方的** collector（其 `build_cache_key()` 无参，本插件传 `project_root`）→ `TypeError` 冒到宿主 `_render_welcome_body` 的 `except Exception: pass` → 函数末尾回退 `_render_sessions_body` → 用户看到会话列表。全程零日志
+- **取证**：照抄宿主加载顺序与 `str(Path/"ui")` 路径形式的最小夹具：`sys.path[0:2] = [token-usage/ui, project-dashboard/ui]`，`collector 解析到 = .../token-usage/ui/collector.py`，`build_cache_key 签名 = () -> tuple`，`render 抛 TypeError: takes 0 positional arguments but 1 was given`
+- **根因二（QThread 析构 UB，潜伏）**：`start()` 把 `w.finished` 同时接到 `_on_done`（首行 `self._thread = None` → QThread 失去最后引用即刻析构）与 `t.quit`（异步生效，此刻 `exec()` 仍在跑）→ Qt `qFatal: QThread: Destroyed while thread is still running`，缓存写入等后续代码到不了。这是 token-usage 在 v0.1.3（`a9cd0d34`）修过的同一类坑，project-dashboard 未跟上
+- **修复一**：`ui/__init__.py` 与 `ui/collector.py` 的本插件子模块引用全部改相对导入（`from .dashboard import` / `from .collector import`），并删除 `register_ui` 里的 `sys.path.insert(0, ui_dir)` —— 宿主 spec 按文件路径加载 `ui/__init__.py`，`submodule_search_locations` 自动带上 ui 目录，相对导入可用
+- **修复二**：对齐 token-usage 的线程模型 —— ①采集线程退出改由 `worker.run()` 内 `QThread.currentThread().quit()`（先 quit 再 emit，`quit` 由本线程 exec 消费，线程安全）；②缓存写入/日志前移到 worker 线程的 `_finalize_collect()`（就地生效，不经跨线程信号）；③`_on_done` 降级为幂等兜底；④采集完成通知优先走 `UIEventBus(EV_WELCOME_TAB_REFRESHED)`（任意线程发布安全），回退分支加主线程守卫
+- **回归测试**：新增 `tests/test_project_dashboard.py` 12 例 —— AST 断言禁止顶层裸名导入/禁止 `register_ui` 动 `sys.path`、`run()` 内 `quit` 必须早于 `emit`；模块解析断言（`collector`/`dashboard` 必须指向本插件）；撞车场景端到端（project-dashboard + token-usage 同载，render_func 不得抛异常）；`_finalize_collect` 无信号收尾；`worker.run()` 直调（等价信号投进死线程）后缓存仍就绪；`_scan_files` 跳过噪音目录；`build_options` 四宫格结构可 JSON 序列化
+- **测试有效性**：注入 3 处变异（`from .dashboard` 还原为 `from dashboard`、`register_ui` 恢复 `sys.path.insert`、`quit` 挪到 `emit` 之后）全部精确打红，还原后 12 例全绿
+- **实机/夹具验证**：修复前夹具 `TypeError` + 回退会话列表；修复后 `collector 解析到本插件`、`build_cache_key 签名 (project_root: str, ...)`、`render` 正常返回占位并在采集后出图（`CHART-OK`）；`_finalize_collect` → `_release` → `_on_done` → `run` EXIT 顺序无 Qt FATAL
+- **已知存量问题（未处理，非本次引入）**：`dashboard.py` 的 `names`/`files` 两个未使用变量（ruff F841，基线即有）；`tests/test_context_stats.py` 6 例失败（干净基线同样失败）
+- **验证**：`ruff check` 本插件无新增告警；`tools/validate_plugins.py --strict` 中 project-dashboard 为 OK；`tests/test_project_dashboard.py` 12 例 + `tests/test_token_usage.py` 68 例全绿
+
 ## 2.11.9 (2026-10-15)
 ### 🔧 token-usage v0.1.4：修热力图悬停提示超出可视区被裁剪
 - **症状**：欢迎卡片「🔢 用量」tab 里悬停热力图格子，tooltip 被容器裁掉 —— 截图显示右侧近边缘列的提示右半截消失

@@ -91,6 +91,8 @@ def register_ui(registry: UIPluginRegistry) -> None:
 
 - 不导入 `app.core` 或 `app.widgets` 内部模块（仅通过 `UIPluginRegistry` 实例回调）
 - `render_func` 主线程同步调用 → 数据采集全部异步（QThread worker 单例，幂等启动）
+- **子模块一律相对导入**：宿主把每个插件的 `ui` 目录逐个 `sys.path.insert(0, ...)`（后加载者排前面），任何顶层裸名导入（`from collector import` / `from dashboard import`）都可能解析到**别的插件**的同名文件。实测与 token-usage 撞车导致 `render_func` 抛 `TypeError`、被宿主 `_render_welcome_body` 的 except 吞掉后回退渲染会话列表（v0.2.4 修复，见 `tests/test_project_dashboard.py`）
+- **QThread 生命周期**：线程退出由 `worker.run()` 内 `QThread.currentThread().quit()` 负责（先 quit 再 emit），缓存写入在 worker 线程的 `_finalize_collect()` 就地完成，不依赖 `finished -> thread.quit` 的 queued 连接 —— 后者会让 QThread 在仍运行时被析构（`qFatal: QThread: Destroyed while thread is still running`）
 - git 命令通过 `subprocess.run()` 完成，单次超时 8 秒，失败静默降级；Windows 下加 `CREATE_NO_WINDOW` 隐藏子进程控制台窗口
 - 性能：语言/文件类型扫描仅对已知文本扩展名读取行数（二进制/未知扩展名只计数），行数统计用线程池并行；`build_cache_key` 的 HEAD 查询带 5s TTL 缓存，避免主线程频繁启动 git 子进程
 - 项目根解析：主程序渲染 welcome tab 只注入 `is_dark`，插件用候选链解析 project_root（活跃窗口 provider → 全部窗口 provider → 全局兼容 provider），逐级 `find_git_root` 验证，全部无效返回空串显示友好提示；**不回退 `os.getcwd()`**（软件启动目录/源码根本身可能是 git 仓库，会把启动目录误当项目根展示其 git 信息，见 v0.2.2 修复）；error 采集结果缓存 60s TTL，避免错误被永久固定
