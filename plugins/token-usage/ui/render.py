@@ -27,6 +27,43 @@ _HEATMAP_DAYS = 365
 
 _ACTION_REFRESH = "tu-refresh"
 
+# tooltip 自举 JS：内联事件属性 + 首次触发时惰性定义全局 show 函数。
+#
+# 为什么不用 CSS 伪元素（旧实现 .tu-cell:hover::after）：伪元素无法测量自身
+# 宽度，居中展开只能靠 nth-child 硬编码「边缘列翻转」（旧实现只兜右 3 列），
+# 而卡片宽度是动态的（parent_width - 20），列宽随之变化 —— 靠近边缘的列
+# 必定溢出可视区被 html{overflow:hidden} 裁掉（用户截图反馈）。
+# 也不用原生 title：OS 绘制，浅色主题下黑底大字号，样式不可控。
+#
+# 为什么函数写在事件属性里（而非 <script>）：宿主经 innerHTML 注入片段，
+# HTML 规范下 <script> 不执行（同 calendar 插件 onclick 切换月视图）。
+# 委托在 .tu-grid 上（一个属性覆盖全部格子），比逐格挂 handler 省 HTML 体积。
+_TIP_SHOW_JS = (
+    "(function(e){"
+    "var d=document.getElementById('tu-tip');"
+    "var c=e.target&&e.target.closest?e.target.closest('.tu-cell'):null;"
+    "if(!c||!c.getAttribute('data-tip')){if(d)d.style.display='none';return;}"
+    "if(!d){d=document.createElement('div');d.id='tu-tip';document.body.appendChild(d);}"
+    "d.textContent=c.getAttribute('data-tip');"
+    "d.style.display='block';"
+    "var r=c.getBoundingClientRect(),w=d.offsetWidth,h=d.offsetHeight;"
+    "var x=Math.max(4,Math.min(r.left+r.width/2-w/2,window.innerWidth-w-4));"
+    "var y=r.top-h-8;"
+    "if(y<4)y=r.bottom+8;"
+    "if(y+h>window.innerHeight-4)y=window.innerHeight-h-4;"
+    "d.style.left=x+'px';d.style.top=y+'px';"
+    "})(event||window.event)"
+)
+
+_TIP_HIDE_JS = (
+    "(function(e){"
+    "var to=e.relatedTarget;"
+    "if(to&&to.closest&&to.closest('.tu-cell[data-tip]'))return;"
+    "var d=document.getElementById('tu-tip');"
+    "if(d)d.style.display='none';"
+    "})(event||window.event)"
+)
+
 
 def _fs(size: int) -> int:
     """字号跟随 DriFox 全局 UI 字号设置（宿主 scale_font_size）"""
@@ -208,9 +245,10 @@ def _render_heatmap(daily: Dict[str, list], end: date, days: int, p: dict) -> st
     不支持 aspect-ratio），列宽 flex:1 1 0 均分容器 → 窗口任意宽度下都不横向
     溢出（卡片宽度是动态的：主程序按 parent_width - 20 算）。
 
-    tooltip：走 `data-tip` + CSS `::after content:attr(data-tip)`，不用原生
-    `title` —— 原生 tooltip 由 OS 绘制，浅色下是黑底 + 系统默认大字号，
-    样式完全不可控（Chromium 83 无 `::-webkit-tooltip` 可用）。
+    tooltip：`data-tip` 存文案，`.tu-grid` 内联事件委托（onmouseover /
+    onmouseout）定位自绘的 #tu-tip（fixed，挂 body）。不用 CSS 伪元素 ——
+    伪元素测不到宽度，边缘列在动态卡片宽度下必被裁（见 _TIP_SHOW_JS 注释）；
+    不用原生 `title` —— OS 绘制，浅色下黑底大字号，样式不可控。
     """
     weeks, month_labels = _heatmap_cells(daily, end, days)
     thresholds = _thresholds([c["total"] for w in weeks for c in w if c["in_range"]], 4)
@@ -236,7 +274,7 @@ def _render_heatmap(daily: Dict[str, list], end: date, days: int, p: dict) -> st
     return (
         '<div class="tu-heat">'
         + label_html
-        + '<div class="tu-grid">'
+        + f'<div class="tu-grid" onmouseover="{_TIP_SHOW_JS}" onmouseout="{_TIP_HIDE_JS}">'
         + "".join(cells_html)
         + "</div>"
         '<div class="tu-legend">'
@@ -341,21 +379,16 @@ _CSS_TEMPLATE = """
 .tu-legend { display: flex; align-items: center; justify-content: flex-end; margin-top: 8px; }
 .tu-legend-label { font-size: {fs_tiny}px; color: {muted}; margin: 0 3px; }
 .tu-legend-cell { width: 10px; height: 10px; padding-bottom: 0; margin-bottom: 0; }
-/* tooltip：纯 CSS（::after + attr），不用原生 title —— 原生由 OS 绘制，
-   浅色下是黑底 + 系统大字号，样式不可控（Chromium 83 无 ::-webkit-tooltip）。
-   配色取自 context-stats 的 echarts tooltip_bg / tooltip_border，两插件观感一致。 */
-.tu-cell { position: relative; }
-.tu-cell:hover::after {
-  content: attr(data-tip);
-  position: absolute; bottom: 130%; left: 50%; transform: translateX(-50%);
+/* tooltip：JS 自绘（#tu-tip 挂 body、fixed 定位、由 _TIP_SHOW_JS 实测钳制）。
+   不用原生 title —— 原生由 OS 绘制，浅色下是黑底 + 系统大字号，样式不可控
+   （Chromium 83 无 ::-webkit-tooltip）。配色取自 context-stats 的 echarts
+   tooltip_bg / tooltip_border，两插件观感一致。 */
+#tu-tip {
+  display: none; position: fixed; left: 0; top: 0; z-index: 9999;
   background: {tooltip_bg}; border: 1px solid {tooltip_border}; color: {text};
   font-size: {fs_tiny}px; line-height: 1.5; white-space: nowrap;
-  padding: 4px 7px; border-radius: 5px; z-index: 20; pointer-events: none;
+  padding: 4px 7px; border-radius: 5px; pointer-events: none;
   box-shadow: 0 2px 6px rgba(0,0,0,0.18);
-}
-/* 右边缘列的 tooltip 会被容器裁掉，翻到左侧展开 */
-.tu-week:nth-last-child(-n+3) .tu-cell:hover::after {
-  left: auto; right: 0; transform: none;
 }
 """
 

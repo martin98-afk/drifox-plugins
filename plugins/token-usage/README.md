@@ -82,9 +82,22 @@ Qt 5.15.2 的 WebEngine 是 Chromium 83，下列特性**不可用**：
 | `aspect-ratio`（84+） | 格子固定 px 尺寸（`_fs(10)`） |
 | `min()` / `clamp()`（79+ 有 min，80+ 有 clamp，但混用易出问题） | 尺寸全用 px |
 | 模板 `<style>` | 本插件样式内联在片段尾部 `<style>` 里（与 calendar 同款） |
+| 片段内 `<script>` | 不执行（宿主经 innerHTML 注入，HTML 规范）；交互走内联事件属性 |
 
 热力图几何：53 周列 × (10px 格子 + 2px 间距) ≈ 634px，基准字号下正好落在
 欢迎卡片正文宽度内不横向滚动；用户放大字号时 `.tu-heat { overflow-x: auto }` 兜底。
+
+### tooltip 定位（格子悬停提示）
+
+不用原生 `title`（OS 绘制，浅色下黑底大字号，Chromium 83 无 `::-webkit-tooltip`），
+也不用 CSS 伪元素 `:hover::after`：伪元素测不到自身宽度，只能靠 `nth-child`
+硬编码「边缘列翻转」，而卡片宽度是动态的（`parent_width - 20`），近边缘列
+仍会溢出被 `html{overflow:hidden}` 裁掉。
+
+现方案：`data-tip` 存文案 + `.tu-grid` 内联委托事件（`onmouseover` /
+`onmouseout`）驱动 JS 自绘的 `#tu-tip`（`position: fixed` 挂 `body`）。
+展示时用 `getBoundingClientRect()` 实测格子与 tooltip 尺寸，把左右上下
+都钳制进视口（`Math.min/Math.max`），侧边列、底部行都不会溢出。
 
 ## 缓存策略
 

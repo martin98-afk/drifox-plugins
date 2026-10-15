@@ -354,19 +354,21 @@ def test_heatmap_marks_active_cells(render_mod):
     assert today_cell["in_range"] is True
 
 
-def test_heatmap_html_contains_title_tooltips(render_mod):
+def test_heatmap_html_contains_cell_tooltips(render_mod):
     end = date(2026, 10, 14)
     daily = {end.isoformat(): [1000, 100, 5]}
     html = render_mod._render_heatmap(daily, end, 30, render_mod._palette(True))
-    assert '<div class="tu-grid">' in html
+    assert 'class="tu-grid"' in html
     assert "2026-10-14" in html
     assert "次请求" in html
 
 
-# ── tooltip（回归：曾用原生 title，浅色下是 OS 黑底大字号）──
+# ── tooltip（回归：曾用原生 title → 纯 CSS 伪元素 → JS 自绘视口钳制）──
 #
-# 原生 title 由操作系统绘制，样式完全不可控（Chromium 83 无 ::-webkit-tooltip），
-# 且明暗主题都跟随 OS 而非 Qt 主题。改为纯 CSS ::after + attr(data-tip)。
+# 演化史：①原生 title 由 OS 绘制，浅色下黑底大字号；②改纯 CSS ::after 后伪元素
+# 无法测量自身宽度，只能靠 nth-child 硬编码边缘列翻转（只兜右 3 列），卡片宽度
+# 动态变化时仍会溢出被 html{overflow:hidden} 裁掉（用户截图反馈）；③改为 JS 自绘
+# #tu-tip，getBoundingClientRect 实测 + 视口双向钳制。
 
 
 def test_heatmap_uses_data_tip_not_native_title(render_mod):
@@ -378,15 +380,47 @@ def test_heatmap_uses_data_tip_not_native_title(render_mod):
     assert 'title="' not in html, "不得使用原生 title（OS 绘制，样式不可控）"
 
 
-def test_tooltip_css_present(render_mod):
-    """tooltip 规则与配色占位符必须就位"""
-    for is_dark in (True, False):
-        css = render_mod._css(is_dark)
-        assert "content: attr(data-tip)" in css
-        assert ".tu-cell:hover::after" in css
-        assert ".tu-cell { position: relative; }" in css
-        assert "{tooltip_bg}" not in css
-        assert "{tooltip_border}" not in css
+def test_tooltip_is_js_drawn_not_pseudo_element(render_mod):
+    """必须用 JS 自绘 #tu-tip，不得回退 CSS 伪元素（伪元素测不到宽度，边缘列必被裁）"""
+    css = render_mod._css(True)
+    assert "#tu-tip {" in css, "#tu-tip 样式规则缺失（无样式 = 裸文本块）"
+    assert "position: fixed" in css
+    assert "attr(data-tip)" not in css, "不得回退 CSS 伪元素 tooltip"
+    assert ":hover::after" not in css, "不得回退 :hover::after 伪元素 tooltip"
+    # 旧实现的 nth-child 边缘列硬编码也一并死去，防回潮
+    assert "nth-last-child(-n+3)" not in css
+
+
+def test_heatmap_binds_delegated_mouse_events(render_mod):
+    """工具提示必须挂在 .tu-grid 的委托事件上（一个属性覆盖全部格子）"""
+    end = date(2026, 10, 14)
+    daily = {end.isoformat(): [1000, 100, 5]}
+    html = render_mod._render_heatmap(daily, end, 30, render_mod._palette(True))
+    assert 'class="tu-grid"' in html
+    assert "onmouseover=" in html
+    assert "onmouseout=" in html
+    # 宿主 innerHTML 注入下 <script> 不执行，必须走内联事件属性（同 calendar 先例）
+    assert "<script" not in html
+
+
+def test_tooltip_js_clamps_to_viewport(render_mod):
+    """定位必须实测宽度 + 视口双向钳制（纯 CSS 方案失败的根因）"""
+    js = render_mod._TIP_SHOW_JS
+    assert "getBoundingClientRect" in js, "必须实测格子几何"
+    assert "offsetWidth" in js and "offsetHeight" in js, "必须实测 tooltip 自身尺寸"
+    assert "innerWidth" in js and "innerHeight" in js, "必须按视口钳制"
+    assert "Math.min" in js and "Math.max" in js, "钳制需要 min/max"
+
+
+def test_tooltip_js_hides_on_leave_and_on_non_tip(render_mod):
+    """mouseout 离格即隐藏；入住非 tip 元素（如图例格）也要隐藏"""
+    show, hide = render_mod._TIP_SHOW_JS, render_mod._TIP_HIDE_JS
+    assert "display='none'" in hide or 'display="none"' in hide
+    # relatedTarget 仍在带 data-tip 的格子内则不隐藏（在格间移动不闪）
+    assert "relatedTarget" in hide
+    assert ".tu-cell[data-tip]" in hide, "入住元素判据必须限定带 data-tip 的格子"
+    # 悬停到无 data-tip 的元素（图例色块）时展示函数主动隐藏
+    assert "'none'" in show
 
 
 def test_tooltip_palette_matches_context_stats(render_mod):
@@ -406,13 +440,6 @@ def test_tooltip_colours_injected_into_css(render_mod):
     assert "rgba(30,34,42,0.92)" in css_dark
     css_light = render_mod._css(False)
     assert "rgba(255,255,255,0.96)" in css_light
-
-
-def test_tooltip_edge_columns_flip_anchor(render_mod):
-    """右边缘列的 tooltip 翻到左侧展开，避免被容器裁掉"""
-    css = render_mod._css(True)
-    assert "nth-last-child(-n+3)" in css
-    assert "right: 0" in css
 
 
 def test_tooltip_does_not_block_clicks(render_mod):
@@ -484,7 +511,7 @@ def test_render_html_empty_state(render_mod):
     html = render_mod.render_html({"is_dark": True}, {"daily": {}, "sessions": 0})
     assert "暂无 API 用量记录" in html
     # 空态不画格子（.tu-grid 的 CSS 规则仍在，故查实际格子元素）
-    assert '<div class="tu-grid">' not in html
+    assert 'class="tu-grid"' not in html
     assert '<div class="tu-week">' not in html
 
 
@@ -531,7 +558,7 @@ def test_render_tolerates_missing_ctx(render_mod):
     end = date.today()
     daily = {end.isoformat(): [1000, 100, 5]}
     html = render_mod.render_html(None, {"daily": daily, "sessions": 1})
-    assert '<div class="tu-grid">' in html
+    assert 'class="tu-grid"' in html
 
 
 @pytest.fixture(scope="module")

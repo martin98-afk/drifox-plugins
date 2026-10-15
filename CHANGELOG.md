@@ -1,5 +1,18 @@
 # Changelog
 
+## 2.11.9 (2026-10-15)
+### 🔧 token-usage v0.1.4：修热力图悬停提示超出可视区被裁剪
+- **症状**：欢迎卡片「🔢 用量」tab 里悬停热力图格子，tooltip 被容器裁掉 —— 截图显示右侧近边缘列的提示右半截消失
+- **根因（纯 CSS 伪元素无法测量自身几何）**：tooltip 走 `.tu-cell:hover::after` + `content:attr(data-tip)` 居中展开，伪元素测不到自身宽度，只能靠 `.tu-week:nth-last-child(-n+3)` 硬编码「右侧 3 列翻到左边」。但卡片宽度是动态的（主程序按 `parent_width - 20` 算，下限 320px），列宽随宽度变化，近边缘列（如截图中的第 51 列）仍在兜底范围之外 → 提示右半截溢出，被骨架的 `html{overflow:hidden}` 裁掉。左侧边缘列同样无兜底
+- **取证**：离线探针逐列 hover 53 列并读几何 —— 旧实现全部走伪元素（`getComputedStyle(cell,'::after').width` ≈ 140-145px），右边缘仅 3 列翻转；用户截图被裁的列落在翻转范围之外，闭合证据链
+- **修复（JS 自绘 + 视口双向钳制）**：`data-tip` 只存文案；`.tu-grid` 上加内联委托事件（`onmouseover` / `onmouseout`），驱动 JS 自绘的 `#tu-tip`（`position: fixed` 挂 `body`）。展示时 `getBoundingClientRect()` 实测格子与 tooltip 尺寸，左右用 `Math.max(4, Math.min(centered, innerWidth - w - 4))` 钳制、上方放不下则翻到下方、下方也超界则贴底 —— 侧边列、底行、窄窗口都不会溢出。删除旧的伪元素规则与 `nth-last-child` 硬编码
+- **为什么用内联事件属性而非 `<script>`**：宿主经 `innerHTML` 注入插件片段，HTML 规范下 `<script>` 不执行（同 calendar 插件用 `onclick` 切月视图），故事件挂在 `.tu-grid` 属性上（一个属性覆盖全部格子，省 HTML 体积）。已验证内联属性含 `<`/`>`/`&&`/引号时穿过宿主 markdown→HTML 管线不被转义破坏
+- **为什么用 `fixed` + `body`**：宿主骨架的 `html`/`body` 无 `transform`/`perspective`/`filter`（已核实），`fixed` 相对视口可靠；挂在 `body` 下则不被 `#content-placeholder` 的局部 overflow 裁切
+- **回归测试**：68 例（原 66 + tooltip 新断言组）——新增 `test_tooltip_is_js_drawn_not_pseudo_element`（必须用 `#tu-tip`，禁止回退 `:hover::after` / `attr(data-tip)` / `nth-last-child`）、`test_heatmap_binds_delegated_mouse_events`（委托事件就位、片段内不得出现 `<script>`）、`test_tooltip_js_clamps_to_viewport`（必须实测 `getBoundingClientRect`/`offsetWidth`/`innerWidth` 且含 min/max 钳制）、`test_tooltip_js_hides_on_leave_and_on_non_tip`（mouseout 判据限定 `.tu-cell[data-tip]`，悬停非 tip 元素主动隐藏）；原 `test_tooltip_css_present` / `test_tooltip_edge_columns_flip_anchor` 换代为对应新断言
+- **测试有效性**：注入 8 处变异（退回伪元素、去掉视口钳制、写死尺寸不实测、摘掉事件委托、mouseout 判据放宽、去掉 `pointer-events:none`、非 tip 元素不隐藏、配色占位符未填），8 处全部精确打红
+- **实机验证**：①宿主同版本 QtWebEngine 5.15.2（Chromium 83.0.4103.122）离屏冒烟 —— 7 个采样列（含左右边缘）tooltip 全部落在视口内（左列钳到 x=4、右列钳到 `vw-4`），`fixed` 生效，mouseout 正确隐藏，无 JS 错误；②边界场景（模拟宿主 `updateContent` 整体替换 DOM）—— 重渲染后 tooltip 跟随新节点重新定位、离格隐藏、清空内容不残留；③playwright 53 列全量 hover，几何断言全部在视口内（`bad=0`）
+- **验证**：`ruff check` 通过；`tools/validate_plugins.py --strict` 中 token-usage 为 OK；`tools/generate_marketplace.py --check` 一致
+
 ## 2.11.8 (2026-10-14)
 ### 🔧 token-usage v0.1.3：修打包版市场安装后用量页签永远卡「正在统计」
 - **症状**：打包版 DriFox 里从市场安装 token-usage 后，「🔢 用量」tab 永远停在「正在统计 API 用量…」；日志只有 `[token-usage] 采集已启动`，永远等不到「采集完成」。开发版（插件随仓库加载/热重载）不触发
