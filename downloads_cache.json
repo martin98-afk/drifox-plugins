@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1792044197.5908194,
+  "fetched_at": 1792064954.3439887,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -125,7 +125,7 @@
     "ponytail": 9,
     "postman": 0,
     "prisma": 0,
-    "project-dashboard": 31,
+    "project-dashboard": 32,
     "prompt-enhancer": 57,
     "python-pro": 1,
     "quick-screenshot": 28,
@@ -158,7 +158,7 @@
     "tetris": 3,
     "theme-factory": 0,
     "todoist": 0,
-    "token-usage": 7,
+    "token-usage": 9,
     "tool-locator": 7,
     "twin-chat": 10,
     "ui-motion-skills": 4,
