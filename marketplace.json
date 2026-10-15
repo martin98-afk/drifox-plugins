@@ -2845,7 +2845,7 @@
             "components": {
                 "mcp": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "mcp",
                 "connector",
@@ -3686,7 +3686,7 @@
             "components": {
                 "mcp": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "mcp",
                 "connector",
@@ -5070,7 +5070,7 @@
             "components": {
                 "mcp": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "mcp",
                 "connector",
@@ -5155,6 +5155,7 @@
             "components": {
                 "mcp": true
             },
+            "downloads": 1,
             "keywords": [
                 "mcp",
                 "connector",
