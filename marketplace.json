@@ -1283,7 +1283,7 @@
                 "tools": true,
                 "hook_policies": true
             },
-            "downloads": 42,
+            "downloads": 43,
             "keywords": [
                 "cron",
                 "schedule",
@@ -2845,7 +2845,7 @@
             "components": {
                 "mcp": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "mcp",
                 "connector",
@@ -4176,7 +4176,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 30,
+            "downloads": 31,
             "keywords": [
                 "dashboard",
                 "stats",
@@ -5311,7 +5311,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 4,
+            "downloads": 7,
             "keywords": [
                 "welcome",
                 "token",
@@ -6041,6 +6041,7 @@
             "components": {
                 "mcp": true
             },
+            "downloads": 1,
             "keywords": [
                 "mcp",
                 "connector",

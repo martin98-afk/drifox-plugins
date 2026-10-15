@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1792026395.8412566,
+  "fetched_at": 1792044197.5908194,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -39,7 +39,7 @@
     "context-usage-stats": 5,
     "context7": 4,
     "context7-remote": 0,
-    "cron-tasks": 42,
+    "cron-tasks": 43,
     "desktop-automation": 18,
     "dingtalk-ai-table": 1,
     "dingtalk-calendar": 0,
@@ -86,7 +86,7 @@
     "guizang-ppt-skill": 6,
     "hashline-edit": 7,
     "hookify": 2,
-    "huggingface": 1,
+    "huggingface": 2,
     "intercom": 0,
     "internal-comms": 1,
     "ip-switcher": 3,
@@ -125,7 +125,7 @@
     "ponytail": 9,
     "postman": 0,
     "prisma": 0,
-    "project-dashboard": 30,
+    "project-dashboard": 31,
     "prompt-enhancer": 57,
     "python-pro": 1,
     "quick-screenshot": 28,
@@ -158,7 +158,7 @@
     "tetris": 3,
     "theme-factory": 0,
     "todoist": 0,
-    "token-usage": 4,
+    "token-usage": 7,
     "tool-locator": 7,
     "twin-chat": 10,
     "ui-motion-skills": 4,
@@ -178,6 +178,6 @@
     "workflow": 3,
     "zhipu-webreader": 0,
     "zhipu-websearch": 0,
-    "zhipu-zread": 0
+    "zhipu-zread": 1
   }
 }
