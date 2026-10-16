@@ -1,6 +1,20 @@
 # Changelog
 
 ## Unreleased
+### 🔧 gateway-feishu v1.2.3：修宿主打包环境 TLS 校验失败致长连接从未建立 + 日志盲区 + 断线补偿
+- **症状**：飞书机器人「发了没反应」。宿主日志显示 `[Base Platform] Started` / `[Feishu] Connected successfully (WebSocket)`，看起来一切正常，但进程 `lsof` 只有 localhost 两条连接、**零外部 TCP**；消息发出后 `[Gateway] Processing message` 一条不出现
+- **根因（CA 验证失败，真因）**：DriFox 打包环境（PyInstaller）下 OpenSSL 默认 CA 路径解析失效，`wss://msg-frontier.feishu.cn` 在 TLS 握手阶段即挂，报 `[SSL: CERTIFICATE_VERIFY_FAILED] self-signed certificate in certificate chain`。长连接从未建立 → 消息全丢。同源错误也命中宿主 `urllib`（Installer 上报下载量失败）
+- **假信号（误导排查的关键）**：`connect()` 的 `self._connected = True` 在起 WS 线程后**无条件置位**，不校验真实连接结果；`[Base Platform] Started` 也只在 `connect()` 返回 True 后打，而 True 来自上述硬编码。故「连接成功」日志与「实际零连接」并存，误导排查方向（期间误判两轮：先归因依赖装错平台、再归因连接被测试实例挤掉）
+- **修复一（CA 分层兜底）**：模块顶层 `_ensure_ca_bundle()` + `_ssl_context()` + `_patch_lark_ws_connect()`
+  - 探测顺序：`SSL_CERT_FILE` 已设 → 尊重；默认 context 能加载证书 → 不介入；有 truststore → 用系统信任库（可解企业代理自签 CA）；否则回退 certifi `cacert.pem` 写 `SSL_CERT_FILE`（实测 121 张根证书，宿主打包环境自带 `Contents/Frameworks/certifi/cacert.pem` 可用）
+  - lark SDK 的 `_ws_connect_kwargs()` 硬编码只返回 `{"proxy": None}`、不暴露 ssl 入口，故包装该模块级函数补 `ssl` 键（websockets 15 从 `**kwargs` 取 `kwargs["ssl"]`，见 `asyncio/client.py` 的 `setdefault("ssl", True)` 分支）
+- **修复二（日志桥接，可观测性）**：插件原用 `logging.getLogger(__name__)`，而宿主日志系统只给 loguru 配 sink（无 InterceptHandler）→ `[Feishu]` / lark SDK 的 `[Lark] connect failed, err: ...` **一条都不落盘**，排查全程盲猜。新增 `_bridge_lark_logging()`：给 root logger 挂转发器，把 `Lark` 一族记录按级转入 loguru（DEBUG 保留，因 sink 级别为 DEBUG；降 TRACE 会被过滤）
+- **修复三（被动断线补偿）**：lark SDK 的 auto_reconnect 只覆盖自身驱动协程内的重连窗口；驱动协程退出后 `start()` 返回、ws 线程结束、loop 关闭，而 `_connected` 仍为 True 无人复位 → 宿主停在「假连接」直到重启。新增 `_schedule_ws_reconnect()`（线性退避 2/4/6/8/10s，上限 `_max_reconnect_attempts`，可被 `_stop_event` 打断）+ 抽出 `_spawn_ws_thread()` 供首次连接与重连共用；`connect()` 重置退避计数
+- **附带**：`_on_feishu_message` 三处链路打点（收到原始消息 / 消息待分发含 `handler_set`/`loop_running` / 已投递至宿主 handler），用于区分「WS 没收到」与「收到后 handler 丢失」
+- **测试**：新增 `tests/test_feishu_host_selfheal.py` 12 例 —— CA 三分支（显式环境变量尊重 / 默认可用不介入 / 失效回退 certifi）+ truststore 优先分支；日志桥接（转发 / 级别保留 / 只转发 Lark 族不吸噪音 / 幂等）；重连（拉起新线程 / 尊重 stop_event / 达上限复位 `_connected` / connect 重置计数，末者走 AST 断言重置早于起线程）
+- **实机验证**：修复后宿主日志出现 `[Lark] connected to wss://msg-frontier.feishu.cn/ws/v2?...` + `ping success` + `receive pong`（此前从未落盘），`lsof` 确认 `198.18.0.1:55730->198.18.0.148:443 (ESTABLISHED)`；发消息后完整链路贯通：`收到原始消息` → `消息待分发 handler_set=True` → `已投递至宿主 handler` → `[Gateway] Processing message` → `AI completed, response_len=59`
+- **已知存量问题（未处理，非本次引入）**：`tests/test_gateway_feishu_lifecycle.py` 3 例失败（`test_disconnect_stops_ws_thread_and_loops` / `test_disconnect_is_idempotent` / `test_connect_defensive_cleanup_when_thread_alive`，报 `No module named 'lark_oapi'`）—— 把本次改动 stash 后基线同样失败
+- **验证**：新增 12 例全绿；`tools/validate_plugins.py --strict` 中 gateway-feishu 为 OK；`tools/generate_marketplace.py` 一致性通过
 ### 🔧 project-dashboard v0.2.4：修「切到项目看板 tab 却显示会话内容」+ QThread 析构致命错误
 - **症状**：欢迎卡片点「📊 项目看板」tab，body 显示的是会话列表；日志只有 `[project-dashboard] UI components registered`，`collect done` / `collect error` 从未出现
 - **根因一（Python 模块名撞车，主因）**：宿主 `UIPluginRegistry.load_plugin` 把每个插件的 ui 目录逐个 `sys.path.insert(0, ...)`，后加载者排前面。本插件 `ui/__init__.py` 用顶层裸名 `from collector import build_cache_key`，而 token-usage（本机同期装）也有 `ui/collector.py` → 本插件拿到的是**对方的** collector（其 `build_cache_key()` 无参，本插件传 `project_root`）→ `TypeError` 冒到宿主 `_render_welcome_body` 的 `except Exception: pass` → 函数末尾回退 `_render_sessions_body` → 用户看到会话列表。全程零日志
