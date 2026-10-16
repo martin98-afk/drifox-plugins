@@ -74,8 +74,11 @@ class _ConnectionsCard(_CARD_BASE):
     def __init__(self, parent=None):
         from qfluentwidgets import FluentIcon
 
+        # GLOB 在部分 qfluentwidgets 版本不存在（实测本机报 no attribute 'GLOB'），
+        # getattr 回退 SETTING，避免枚举名差异炸掉整卡构建
+        icon = getattr(FluentIcon, "GLOBE", None) or FluentIcon.SETTING
         super().__init__(
-            FluentIcon.GLOB,
+            icon,
             "SSH 远程连接",
             "审查 AI 保存的连接；删除将同时断开其活跃连接与端口转发",
             parent,
