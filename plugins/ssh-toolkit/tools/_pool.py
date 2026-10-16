@@ -63,6 +63,22 @@ def remove_connection_handle(handle):
     return False
 
 
+def close_by_name(name):
+    """按连接名关闭该名下全部活跃连接，返回关闭条数。
+
+    供设置页删除连接配置时调用：配置已删，池里残留的 client 若不关会一直
+    持有 socket，且 ensure_client 的懒连接会让旧配置复活。
+    """
+    keys = [h for h in POOL if h.split(":", 1)[0] == name]
+    for h in keys:
+        try:
+            POOL[h].close()
+        except Exception:
+            pass
+        POOL.pop(h, None)
+    return len(keys)
+
+
 def close_all():
     for client in POOL.values():
         try:
