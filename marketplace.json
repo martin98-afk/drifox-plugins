@@ -2272,7 +2272,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 34,
+            "downloads": 35,
             "platforms": [
                 "windows",
                 "linux",
@@ -4783,7 +4783,7 @@
                 "tools": true,
                 "ui": true
             },
-            "downloads": 16,
+            "downloads": 17,
             "platforms": [
                 "windows",
                 "linux",
@@ -5314,7 +5314,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 10,
+            "downloads": 11,
             "keywords": [
                 "welcome",
                 "token",
