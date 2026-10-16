@@ -1001,7 +1001,7 @@
             "components": {
                 "providers": true
             },
-            "downloads": 8,
+            "downloads": 9,
             "keywords": [
                 "CodeBuddy",
                 "国际版",
@@ -2463,7 +2463,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 65,
+            "downloads": 66,
             "keywords": [
                 "git",
                 "source-control",
@@ -4176,7 +4176,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 33,
+            "downloads": 34,
             "keywords": [
                 "dashboard",
                 "stats",
@@ -4212,7 +4212,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 57,
+            "downloads": 58,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -4783,7 +4783,7 @@
                 "tools": true,
                 "ui": true
             },
-            "downloads": 14,
+            "downloads": 16,
             "platforms": [
                 "windows",
                 "linux",
