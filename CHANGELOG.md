@@ -1,6 +1,19 @@
 # Changelog
 
 ## Unreleased
+### 🔧 gateway-dingtalk / gateway-discord：deps 按平台分目录 — 修顶层 Windows 产物 + 依赖残缺
+- **症状**：非 Windows 平台装这两个网关插件后，平台注册不进 `GatewayPlatformRegistry`（表现为「配置 enabled=true 但日志只有『无启用平台』」）
+- **根因（与 gateway-feishu `f1696ea8` 同源）**：`deps/` 是公共路径（所有平台都从这里加载），而仓库里提交的是在 Windows 上打包的产物 —— 顶层混放 `.pyd`，非 Windows 平台 import 时抛 `OSError: Cannot load native module`，插件模块加载失败
+- **本次排查额外发现两类更严重的缺陷**（两个插件都有）：
+  - **依赖残缺**：gateway-dingtalk 顶层 4 个包的**包目录完全缺失**，只剩 dist-info（`frozenlist` / `multidict` / `propcache` / `yarl`），其内容仅在 `deps/win32/` 里存在 → 任何平台（含 Windows）实际都跑不起来；gateway-discord 顶层的 `discord/` 是残缺纯 Python 部分（149 文件 vs `win32/discord/` 的 243 文件）→ 缺失的 94 个文件各平台都加载不了
+  - **孤立 dist-info**：包目录不存在却留着 dist-info，会让宿主 `missing_pip_deps` 误判「依赖已就绪」（该函数按顶层同名目录存在与否判定）→ 自动安装被跳过，插件永久缺依赖
+- **修复**（统一方案：顶层只留纯 Python，原生扩展按平台分目录）
+  - gateway-dingtalk：新增 `deps/darwin/`（7 包 11 个 `.so`：aiohttp 3.14.3 / charset-normalizer 3.5.1 / frozenlist 1.8.0 / multidict 6.7.1 / propcache 0.5.2 / websockets 17.0.1 / yarl 1.24.5）；顶层移走 3 个含 Windows 原生扩展的包 + 4 个孤立 dist-info
+  - gateway-discord：新增 `deps/darwin/`（7 包 9 个 `.so`：aiohttp 3.13.5 / audioop-lts 0.2.2 / discord.py 2.7.1 / frozenlist 1.8.0 / multidict 6.7.1 / propcache 0.5.2 / yarl 1.24.5）；顶层移走残缺 `discord/` 与 aiohttp + 5 个孤立 dist-info
+  - 两者 `deps/win32/` 均原样保留
+- **实机验证**（模拟宿主 `deps_loader` 注入顺序：`deps/darwin` 优先于 `deps/`）：两插件的全部依赖均解析到 `deps/darwin/`；C 扩展实测可用（`multidict._multidict` / `yarl._quoting` / `audioop.getsample`）；`dingtalk_stream` 与 `discord.py 2.7.1` 均正常 import
+- **注**：`darwin/discord/bin/libopus-0.x{64,86}.dll` 是上游 `discord.py` wheel 自带的跨平台辅助文件（其 `opus.py` 在 win32 走 `bin/*.dll`、其他平台走系统 libopus），保留以与上游一致
+- **Linux 支持说明**：两插件 manifest 均已声明 `dependencies.pip.linux`，由宿主 DepsInstaller 安装时自动补 `deps/linux/`（其 wheel tag 平台串台缺陷已由 DriFox 主仓库 `bbba3a30` 修复）。本次不改 Linux 因 deps 目录命名不含 CPU 架构（`deps/linux/` 装不下 x86_64 与 aarch64 两份 `.so`），需先扩展宿主约定
 ### 🔧 gateway-feishu v1.2.3：修宿主打包环境 TLS 校验失败致长连接从未建立 + 日志盲区 + 断线补偿
 - **症状**：飞书机器人「发了没反应」。宿主日志显示 `[Base Platform] Started` / `[Feishu] Connected successfully (WebSocket)`，看起来一切正常，但进程 `lsof` 只有 localhost 两条连接、**零外部 TCP**；消息发出后 `[Gateway] Processing message` 一条不出现
 - **根因（CA 验证失败，真因）**：DriFox 打包环境（PyInstaller）下 OpenSSL 默认 CA 路径解析失效，`wss://msg-frontier.feishu.cn` 在 TLS 握手阶段即挂，报 `[SSL: CERTIFICATE_VERIFY_FAILED] self-signed certificate in certificate chain`。长连接从未建立 → 消息全丢。同源错误也命中宿主 `urllib`（Installer 上报下载量失败）
