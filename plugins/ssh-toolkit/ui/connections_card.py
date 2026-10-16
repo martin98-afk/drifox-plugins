@@ -182,20 +182,40 @@ class _ConnectionsCard(_CARD_BASE):
             return
         logger.info(f"[ssh-toolkit] 设置页删除连接 {name}（断开 {closed} 条活跃连接）")
         self._reload()
+        if self.isExpand:
+            self._adjustViewSize()  # 展开态删行后收缩高度，避免留白
 
     # ── 展开几何（qfluentwidgets ExpandSettingCard 占位坑，同 git-panel 处理） ──
 
+    def _measure_content_height(self):
+        """内容区应有高度：手工累加，不依赖 viewLayout.sizeHint 汇总。
+
+        展开时列表刚重建，新行 widget 尚未 show，QBoxLayout 汇总会跳过它们
+        （viewLayout.sizeHint 只剩 margins 16px），据此锁高会把内容压成一条缝。
+        行 widget 自身的 sizeHint 与 show 状态无关，累加可得精确高度。
+        """
+        m = self.viewLayout.contentsMargins()
+        h = m.top() + m.bottom()
+        n = self._list_layout.count()
+        for i in range(n):
+            item = self._list_layout.itemAt(i)
+            w = item.widget()
+            h += w.sizeHint().height() if w is not None else item.sizeHint().height()
+        if n > 1:
+            h += self._list_layout.spacing() * (n - 1)
+        return h
+
     def _adjustViewSize(self):
-        """spaceWidget 占位归零：原版 _adjustViewSize 把 spaceWidget 设为内容等高，
-        展开高度 = 内容 + 等高空白，且折叠动画依赖占位高度导致收不回去。
-        归零后高度在「标题卡」与「标题卡+内容」间直切，牺牲折叠动画换取正确几何。"""
-        h = self.viewLayout.sizeHint().height()
+        """spaceWidget 占位归零 + 按手工测量高度直切展开/折叠。
+
+        原版 _adjustViewSize 把 spaceWidget 设为内容等高，展开高度 = 内容 + 等高空白，
+        且折叠动画依赖占位高度导致收不回去；归零后牺牲折叠动画换取正确几何。"""
         try:
             self.spaceWidget.setFixedHeight(0)
         except Exception:  # noqa: BLE001
             pass
         if self.isExpand:
-            self.setFixedHeight(self.card.height() + h)
+            self.setFixedHeight(self.card.height() + self._measure_content_height())
         else:
             self.setFixedHeight(self.card.height())
 
