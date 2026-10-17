@@ -190,7 +190,10 @@ def _patch_lark_ws_connect() -> None:
 
 _TRUSTSTORE_AVAILABLE = False
 _ensure_ca_bundle()
-_patch_lark_ws_connect()
+# [PERF] _patch_lark_ws_connect() 延迟到 connect() 内调用：其内部 import
+# lark_oapi.ws.client 实测 ~5.7s（SDK 模块树巨大，文件缓存热也慢），模块级执行
+# 会让宿主启动预热的 warmup.gateways 扫描整段卡死 5.8s。补丁本身幂等，
+# 在 SDK 可用后、建连前打即可。
 
 # 延迟导入
 LARK_AVAILABLE = False
@@ -289,6 +292,9 @@ class FeishuAdapter(BasePlatformAdapter):
             from lark_oapi.core.const import FEISHU_DOMAIN
             from lark_oapi.event.dispatcher_handler import EventDispatcherHandler
             from lark_oapi.ws import Client as FeishuWSClient
+
+            # ssl 补丁：SDK 已可用，建连前注入（幂等，见模块级注释）
+            _patch_lark_ws_connect()
 
             # 创建事件处理器
             # 关键：直接传递 encrypt_key 和 verification_token（即使是空字符串）
