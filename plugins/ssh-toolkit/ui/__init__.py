@@ -34,4 +34,5 @@ def register_ui(registry):
 
 
 def unload_ui(registry):
-    """卸载钩子。卡片无后台线程/定时器，无残留状态需要清理。"""
+    """卸载钩子。可达性探测是短命 QRunnable（TCP 超时 3s），跑完即弃；
+    结果经主线程出生的模块级信号桥投递，卡片销毁后由 Qt 自动丢弃，无残留。"""
