@@ -2272,7 +2272,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 35,
+            "downloads": 36,
             "platforms": [
                 "windows",
                 "linux",
@@ -3622,6 +3622,7 @@
             "components": {
                 "providers": true
             },
+            "downloads": 1,
             "keywords": [
                 "服务商",
                 "Kimi",

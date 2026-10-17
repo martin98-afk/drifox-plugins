@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1792195428.9359558,
+  "fetched_at": 1792212293.5148911,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -67,7 +67,7 @@
     "game2048": 6,
     "gateway-dingtalk": 1,
     "gateway-discord": 1,
-    "gateway-feishu": 35,
+    "gateway-feishu": 36,
     "gateway-qq": 7,
     "gateway-slack": 0,
     "gateway-telegram": 0,
@@ -109,6 +109,7 @@
     "miro": 0,
     "modelscope": 0,
     "monday": 0,
+    "moonshot": 1,
     "neon": 0,
     "netlify": 0,
     "notion": 4,
