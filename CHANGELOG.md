@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+### 🔧 ssh-toolkit v0.3.0：修 paramiko 加密四件套全为 Windows 产物致 macOS 完全不可用
+- **症状**：macOS 上插件无法做任何 SSH 操作。四个加密依赖浅层 `import` 假成功（顶层包 `__init__.py` 不触发原生扩展加载），深层使用时才炸：`nacl.bindings` 报 `No module named 'nacl._sodium'`、cryptography 报 `cannot import name 'exceptions' from '_rust'`、cffi 报 `Version mismatch`、bcrypt 目录整个缺失 → paramiko 完全不可用
+- **根因（与前三个 gateway 插件同源，且更彻底）**：deps/ 公共路径混放 Windows 产物 —— `nacl/_sodium.pyd`、`cryptography/.../_rust.pyd` 均为 Windows PE；`_cffi_backend.cp314-win_amd64.pyd` 只在 `deps/win32/`（顶层 cffi 纯 Python 配不到正确 backend）；bcrypt 包目录**完全缺失**（manifest 声明了 darwin/linux 依赖但未 vendor，内容只在 `deps/win32/`）→ paramiko 的加密四件套一个都不可用
+- **修复**：新增 `deps/darwin/`（bcrypt 5.0.0 universal2 / cffi 2.1.1 arm64 含 `_cffi_backend.cpython-314-darwin.so` / cryptography 50.0.0 arm64 Rust 扩展 / PyNaCl 1.6.2 universal2 含 `_sodium.so`）；顶层移走 Windows 版 `nacl/` `cryptography/` 及对应 dist-info；保留纯 Python 的 `cffi/`（配 darwin/win32 的 backend）、`invoke/` `paramiko/` `pycparser/`
+- **附带修复**：`tests/conftest.py` 原硬编码只注入 `win32`，改为按 `sys.platform` 选当前平台目录优先（darwin/win32/linux），与宿主 `deps_loader` 同语义
+- **实机验证**（模拟宿主注入顺序 `deps/darwin` 优先）：四件套深层加载全通；paramiko 5.0.0 加载成功；RSA 2048 密钥生成（过 cryptography/openssl 全链路）；Ed25519 签名验证（过 nacl/_sodium）；bcrypt 哈希（过 _bcrypt）。插件自带测试 47 例全绿（修复前因 conftest 硬编码 + bcrypt 缺失而大面积失败/INTERNALERROR）
 ### 🔧 gateway-dingtalk / gateway-discord：deps 按平台分目录 — 修顶层 Windows 产物 + 依赖残缺
 - **症状**：非 Windows 平台装这两个网关插件后，平台注册不进 `GatewayPlatformRegistry`（表现为「配置 enabled=true 但日志只有『无启用平台』」）
 - **根因（与 gateway-feishu `f1696ea8` 同源）**：`deps/` 是公共路径（所有平台都从这里加载），而仓库里提交的是在 Windows 上打包的产物 —— 顶层混放 `.pyd`，非 Windows 平台 import 时抛 `OSError: Cannot load native module`，插件模块加载失败
