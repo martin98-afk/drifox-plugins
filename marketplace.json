@@ -1925,7 +1925,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 8,
+            "downloads": 9,
             "keywords": [
                 "theme",
                 "fire-emblem",
@@ -3195,7 +3195,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 10,
+            "downloads": 11,
             "keywords": [
                 "theme",
                 "laputa",
@@ -3432,7 +3432,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 8,
+            "downloads": 9,
             "keywords": [
                 "theme",
                 "dark",
@@ -4048,7 +4048,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 22,
+            "downloads": 23,
             "drifox": {
                 "min_version": "0.6.2"
             },
@@ -4362,7 +4362,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "theme",
                 "rdr2",
