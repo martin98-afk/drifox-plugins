@@ -2463,7 +2463,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 66,
+            "downloads": 67,
             "keywords": [
                 "git",
                 "source-control",
@@ -4244,7 +4244,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 58,
+            "downloads": 59,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -5577,7 +5577,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 24,
+            "downloads": 25,
             "keywords": [
                 "voice",
                 "dictation",
