@@ -3605,6 +3605,37 @@
             }
         },
         {
+            "name": "moonshot",
+            "description": "Moonshot (Kimi) 服务商插件 — 提供 Kimi K3 / K2.7 Code / K2.6 系列模型接入，含账户余额查询。",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "provider"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/moonshot",
+                "ref": "main"
+            },
+            "components": {
+                "providers": true
+            },
+            "keywords": [
+                "服务商",
+                "Kimi",
+                "Moonshot"
+            ],
+            "drifox": {
+                "min_version": "0.5.0"
+            },
+            "icon": {
+                "light": "providers/icons_light/moonshot.svg",
+                "dark": "providers/icons/moonshot.svg"
+            }
+        },
+        {
             "name": "neon",
             "description": "Neon — 管理 Neon Postgres 项目、分支与数据库查询。",
             "version": "1.0.0",
