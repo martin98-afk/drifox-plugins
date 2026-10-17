@@ -6,15 +6,20 @@
 余额：GET /v1/users/me/balance（Bearer token，返回 available_balance 字段）。
 
 模型清单与能力依据 Moonshot 开放平台官方文档（2026-10 核实）：
-    - kimi-k3          1M 上下文，原生视觉，始终思考，reasoning_effort 三档
-                      （low/high/max，默认 max）。temperature/top_p/n/penalty
-                      固定不可改，传入其他值报错。
-    - kimi-k2.7-code   256K 上下文，始终思考，Preserved Thinking 恒开，
-                      不支持 reasoning_effort 与 tool_choice=required。
-    - kimi-k2.6        256K 上下文，思考可开关（thinking:enabled/disabled），
-                      非思考态 temperature 固定 0.6。
+    - kimi-k3                  1M 上下文，原生视觉，始终思考，reasoning_effort 三档
+                              （low/high/max，默认 max）。temperature/top_p/n/penalty
+                              固定不可改，传入其他值报错。
+    - kimi-k2.7-code           256K 上下文，始终思考，Preserved Thinking 恒开，
+                              不支持 reasoning_effort 与 tool_choice=required。
+    - kimi-k2.7-code-highspeed 同上一者为同一模型、参数约束完全一致，仅输出速度不同。
+
     kimi-k2.5 与 moonshot-v1 全系已于 2026-08-31 下线，kimi-k2 系 2026-05-25
     下线，故 models 不录入。
+
+    kimi-k2.6 有意不录入：其 temperature 随思考模式变化（思考态固定 1.0 /
+    非思考态固定 0.6），而 default_params 是服务商级配置，切模型与切思考模式
+    都不会变，主程序亦无 per-model 参数覆盖机制。保留它等于让用户在关思考时
+    手动改温度，属把已知缺陷留给用户。K3 覆盖了它的视觉与通用场景且上下文更长。
 
 family 自建 moonshot-open：主程序 system-providers/zhipu.py 等已把默认 URL
 指向各家 Coding/Token Plan 网关，能力表描述的是订阅网关而非按量主站。
@@ -102,13 +107,6 @@ _MOONSHOT_MODEL_CAPABILITIES = {
         "supports_thinking": True,
         "thinking_param": "thinking",
     },
-    "kimi-k2.6": {
-        "context_limit": 262144,
-        "max_output_tokens": 32768,
-        "supports_vision": True,
-        "supports_thinking": True,
-        "thinking_param": "thinking",
-    },
 }
 
 
@@ -125,8 +123,13 @@ def register(registry):
             ],
             auth_type="bearer",
             default_model="kimi-k3",
+            # 服务端固定参数必须显式声明：K3 与 K2.7 Code 的 temperature/top_p/n/
+            # penalty 均由服务端固定，传入其他值直接 invalid_request_error。
+            # 主程序 DEFAULT_MODEL_PARAMS 兜底是 温度 0.7 / top_p 1.0，不显式填
+            # 会把这两个值发出去（top_p=1.0 看起来正常，极易漏查——已实测踩中）。
             default_params={
                 "温度": 1.0,
+                "top_p": 0.95,
                 "最大Token": 1000000,
                 "思考模式": True,
                 "思考等级": "max",
@@ -136,7 +139,6 @@ def register(registry):
                 "kimi-k3",
                 "kimi-k2.7-code",
                 "kimi-k2.7-code-highspeed",
-                "kimi-k2.6",
             ],
             models_dev_id="moonshot",
             family="moonshot-open",
