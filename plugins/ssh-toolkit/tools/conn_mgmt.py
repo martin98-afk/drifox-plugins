@@ -1,6 +1,7 @@
 # ssh-toolkit/tools/conn_mgmt.py
 # -*- coding: utf-8 -*-
 """连接管理工具：增 / 列 / 删（本地配置，safe）。"""
+
 import sys
 from pathlib import Path
 
@@ -24,6 +25,7 @@ def _add_impl(tool_ctx, **kwargs):
         "key_path": kwargs.get("key_path", "~/.ssh/id_rsa"),
         "password": kwargs.get("password", ""),
         "key_passphrase": kwargs.get("key_passphrase", ""),
+        "host_key_policy": kwargs.get("host_key_policy", "tofu"),
         "timeout": int(kwargs.get("timeout", 10)),
         "note": kwargs.get("note", ""),
     }
@@ -66,6 +68,10 @@ def register(registry):
                 "key_path": {"type": "string", "description": "私钥路径（publickey/agent）"},
                 "password": {"type": "string", "description": "密码（明文存储，注意安全）"},
                 "key_passphrase": {"type": "string", "description": "私钥口令"},
+                "host_key_policy": {
+                    "type": "string",
+                    "description": "主机密钥策略：tofu（默认，首次记录后校验）/ strict（只认已登记）/ off（不校验，危险）",
+                },
                 "timeout": {"type": "integer", "description": "连接超时秒"},
                 "note": {"type": "string", "description": "备注"},
             }, "required": ["name", "host", "user"]},
