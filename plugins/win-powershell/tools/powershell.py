@@ -205,11 +205,11 @@ def _powershell_impl(tool_ctx, **kwargs):
         stdout_raw, stderr_raw = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
         _kill_tree(proc.pid)
-        # 收尸：等管道关闭后再返回，避免 fd 悬挂。
-        # 必须再带 timeout——taskkill /T 杀不掉自行 detached 的孙进程，
-        # 它仍持管道写端，无界 communicate() 会把工具一起挂死，超时护栏形同虚设。
+        # 收尸：taskkill 是同步强杀，返回时杀树已完成，正常情况管道随即关闭。
+        # 只给短窗口（2s）排空余量，杀不掉的 detached 孙进程仍持管道写端，
+        # 等满它毫无意义——护栏以 timeout 为准，不能退化成 timeout+15。
         try:
-            proc.communicate(timeout=15)
+            proc.communicate(timeout=2)
         except subprocess.TimeoutExpired:
             proc.kill()
         return ToolResult(
