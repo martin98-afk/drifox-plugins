@@ -16,6 +16,16 @@ SSH 远程工具包插件（AI 工具 + 系统设置页连接管理）。基于 
 
 ## 安全边界
 
+### 加密后端仲裁（cryptography 来源）
+cx_Freeze 打包版宿主内嵌了自己版本的 cryptography，其 `FrozenImporter` 挂在
+`sys.meta_path`，优先级高于 sys.path —— 插件 deps 的 cryptography 会被截胡，
+paramiko 因此被绑到宿主副本上。实测该副本 AES-CTR 不可用，连接协商到
+`aes-*-ctr` 时报 `cipher AES in CTR mode is not supported`。
+
+插件在 import paramiko 前做来源仲裁（`tools/_auth.py`）：meta_path 钩子把
+`cryptography*` 的 import 强制指向插件 deps 目录，加载后先跑 AES-CTR 自检，
+通过才保留；任何失败（deps 缺失/自检不过）都会回滚到宿主原状，保证插件可加载。
+
 ### 主机身份（host_key_policy）
 默认 `tofu`（Trust On First Use）：首次连接把主机密钥指纹写入
 `~/.drifox/cache/ssh/known_hosts`，并在 `ssh_connect` 返回内容里回显 `SHA256:` 指纹；
