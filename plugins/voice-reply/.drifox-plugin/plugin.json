@@ -5,7 +5,7 @@
         "light": "icon.svg",
         "dark": "icon_dark.svg"
     },
-    "version": "1.4.0",
+    "version": "1.5.0",
     "type": "user",
     "platforms": [
         "windows",
@@ -50,14 +50,16 @@
                 "label": "模型",
                 "type": "text",
                 "default": "FunAudioLLM/CosyVoice2-0.5B",
-                "placeholder": "FunAudioLLM/CosyVoice2-0.5B"
+                "placeholder": "FunAudioLLM/CosyVoice2-0.5B",
+                "description": "预置：CosyVoice2-0.5B / fish-speech-1.5 / MOSS-TTSD-v0.5（设置卡内可选可填）"
             },
             {
                 "key": "api_voice",
                 "label": "音色",
                 "type": "text",
                 "default": "FunAudioLLM/CosyVoice2-0.5B:alex",
-                "placeholder": "硅基流动格式：模型名:音色名（alex/benjamin/anna/bella…）"
+                "placeholder": "硅基流动格式：模型名:音色名（alex/benjamin/anna/bella…）",
+                "description": "8 个预置音色：alex/benjamin/charles/david/anna/bella/claire/diana，随模型联动（设置卡内可选可填）"
             },
             {
                 "key": "api_key",

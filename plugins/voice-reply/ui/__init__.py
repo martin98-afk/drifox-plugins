@@ -30,6 +30,11 @@ from typing import Any, Dict
 from loguru import logger
 
 from .tts_text import build_speakable_text
+from .voice_presets import (
+    DEFAULT_API_URL,
+    DEFAULT_MODEL,
+    default_voice_value,
+)
 
 PLUGIN_NAME = "voice-reply"
 _ACTION_ID = f"{PLUGIN_NAME}:speak"
@@ -39,10 +44,10 @@ _TOOLTIP_PLAYING = "停止播放"
 # 两张卡可同时挂载按钮，播放态锚点唯一（同时只有一条在播）。
 _TOOLTIPS = (_TOOLTIP_IDLE, _TOOLTIP_PLAYING)
 
-# 在线引擎默认端点（OpenAI 兼容；极低价，也可改为任意兼容服务）
-_DEFAULT_API_URL = "https://api.siliconflow.cn/v1/audio/speech"
-_DEFAULT_API_MODEL = "FunAudioLLM/CosyVoice2-0.5B"
-_DEFAULT_API_VOICE = "FunAudioLLM/CosyVoice2-0.5B:alex"
+# 在线引擎默认值（单一数据源见 voice_presets，避免此处与预设漂移）
+_DEFAULT_API_URL = DEFAULT_API_URL
+_DEFAULT_API_MODEL = DEFAULT_MODEL
+_DEFAULT_API_VOICE = default_voice_value()
 
 # 在线 worker 单例（合成+播放期间 busy）
 _worker = None  # ApiTtsWorker
@@ -417,7 +422,7 @@ def _on_click(ctx: Dict[str, Any]) -> None:
 
 
 def register_ui(registry) -> None:
-    """注册消息卡片页脚「朗读」按钮。热重载时主程序重新调用本函数。"""
+    """注册消息卡片页脚「朗读」按钮 + 自绘设置卡。热重载时主程序重新调用本函数。"""
     # 热重载兼容：清理旧子模块缓存（避免 Python 用旧 sys.modules 引用）
     prefix = "ui_plugin_voice_reply."
     stale = [k for k in sys.modules if k.startswith(prefix)]
@@ -434,4 +439,27 @@ def register_ui(registry) -> None:
         on_click=_on_click,
         priority=0,
     )
+    _register_config_card(registry)
     logger.info("[voice-reply] 消息卡片页脚按钮已注册（朗读本条回复）")
+
+
+def _register_config_card(registry) -> None:
+    """注册自绘配置卡，覆盖主程序 E1 自动卡（priority 1 > 0）。
+
+    E1 自动卡把 api_model/api_voice 渲染成纯 LineEdit（或不可编辑 ComboBox），
+    无法「下拉选 + 手填」。自绘卡用 EditableComboBox 兼顾两者，并做音色随模型联动。
+    注册失败（旧版宿主无 register_settings_card）时静默降级回 E1 自动卡，
+    不影响朗读功能。
+    """
+    try:
+        from .config_card import _VoiceConfigCard
+
+        registry.register_settings_card(
+            PLUGIN_NAME,
+            f"{PLUGIN_NAME}-config",
+            "语音播报配置",
+            _VoiceConfigCard,
+            priority=1,
+        )
+    except Exception as e:  # noqa: BLE001 — 降级到 E1 自动卡，不阻断按钮注册
+        logger.warning(f"[voice-reply] 自绘配置卡注册失败，降级 E1 自动卡: {e}")

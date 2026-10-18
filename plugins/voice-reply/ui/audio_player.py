@@ -9,8 +9,9 @@ PCM，服务端返回的 wav 常带额外 chunk 或非 44.1k 采样率即失败�
 
 - 纯 ctypes 标准库，零第三方依赖（宿主 PyInstaller 打包，插件源码运行时加载，
   不引入 requests 等）。
-- 播放阻塞在 worker 线程内（`play <alias> wait`），主线程 stop() 用
-  `stop <alias>` 打断 —— mci alias 是进程级，跨线程命令有效。
+- 播放阻塞在 worker 线程内（轮询 `status mode`），主线程 stop() 置
+  `threading.Event` 打断，stop/close 命令由播放线程自己发出 —— mci alias
+  绑定 open 线程，跨线程发 stop 无效（实测返回 263，音频照常播完）。
 - macOS 走 afplay 子进程，stop 即终止进程。
 """
 
@@ -21,8 +22,6 @@ import struct
 import subprocess
 import sys
 import tempfile
-
-from loguru import logger
 
 # mci alias（进程级；同 alias 重复 open 会失败，故每次播放前先 close）
 _MCI_ALIAS = "drifox_voice_reply"
@@ -74,12 +73,18 @@ def describe_wav(data: bytes) -> str:
         return f"wav 头解析失败（{len(data)} 字节）：{e}"
 
 
-def play_wav(path: str, proc_slot: dict) -> None:
+def play_wav(path: str, proc_slot: dict, stop_event=None) -> None:
     """阻塞播放一个 wav（在 worker 线程内调用）。失败抛 RuntimeError（人话）。
 
     proc_slot 用于主线程 stop() 打断：
-    - Windows: {"mci_alias": str, "playing": bool}
+    - Windows: {"mci_alias": str, "stop_event": threading.Event}
     - macOS:   {"proc": Popen}
+
+    为什么 Windows 不用 `play <alias> wait`（2026-10-18 实测踩坑）：
+    mciSendStringW 的 alias 绑定到**发起 open 的那个线程**。`play ... wait`
+    阻塞在 worker 线程时，主线程发 `stop <alias>` 返回 263「指定的设备未打开」，
+    停不掉，音频整段播完。改为异步 `play` + 本线程轮询 `status <alias> mode`，
+    主线程 stop() 只置 stop_event，由本线程发 stop/close（同线程才有效）。
     """
     if sys.platform == "darwin":
         proc = subprocess.Popen(["afplay", path])
@@ -87,23 +92,55 @@ def play_wav(path: str, proc_slot: dict) -> None:
         proc.wait()
         return
 
+    if stop_event is None:
+        import threading
+
+        stop_event = threading.Event()
+
     # Windows：winmm mci（有错误码，失败可见）
     _mci_send(f"close {_MCI_ALIAS}")  # 清残留（同 alias 重复 open 会失败）
     code = _mci_send(f'open "{path}" type waveaudio alias {_MCI_ALIAS}')
     if code:
         raise RuntimeError(f"打开音频失败：{_mci_error_text(code)}")
     proc_slot["mci_alias"] = _MCI_ALIAS
+    proc_slot["stop_event"] = stop_event
     try:
-        code = _mci_send(f"play {_MCI_ALIAS} wait")  # wait = 阻塞到播完
+        code = _mci_send(f"play {_MCI_ALIAS}")  # 异步：立即返回，由下方轮询
         if code:
             raise RuntimeError(f"播放失败：{_mci_error_text(code)}")
+        _wait_playback_done(stop_event)
     finally:
         proc_slot.pop("mci_alias", None)
+        proc_slot.pop("stop_event", None)
+        _mci_send(f"stop {_MCI_ALIAS}")
         _mci_send(f"close {_MCI_ALIAS}")
 
 
+def _wait_playback_done(stop_event) -> None:
+    """轮询播放状态直到自然播完或被要求停止（在播放线程内调用）。
+
+    `status <alias> mode` 返回 "playing"/"paused"/"stopped"/"not ready"。
+    空串视为设备已关闭（异常退出）同样跳出，避免死等。
+    """
+    import ctypes
+
+    buf = ctypes.create_unicode_buffer(64)
+    while not stop_event.is_set():
+        code = ctypes.windll.winmm.mciSendStringW(
+            f"status {_MCI_ALIAS} mode", buf, 64, None
+        )
+        mode = buf.value if code == 0 else ""
+        if mode in ("stopped", "not ready", ""):
+            return
+        stop_event.wait(0.15)  # 轮询节拍：兼顾响应延迟与 CPU 占用
+
+
 def stop_playback(proc_slot: dict) -> None:
-    """主线程打断播放（mci stop / 终止 afplay 子进程）。"""
+    """主线程打断播放（mci stop / 终止 afplay 子进程）。
+
+    Windows 侧只置 stop_event：真正的 mci stop/close 必须由播放线程自己发
+    （alias 绑定 open 线程，跨线程发无效，实测返回 263）。
+    """
     if sys.platform == "darwin":
         proc = proc_slot.get("proc")
         if proc is not None:
@@ -112,11 +149,9 @@ def stop_playback(proc_slot: dict) -> None:
             except Exception:  # noqa: BLE001 — 进程已退出
                 pass
         return
-    if proc_slot.get("mci_alias"):
-        code = _mci_send(f"stop {_MCI_ALIAS}")
-        if code:
-            logger.warning(f"[voice-reply] 停止播放失败: {_mci_error_text(code)}")
-        _mci_send(f"close {_MCI_ALIAS}")
+    stop_event = proc_slot.get("stop_event")
+    if stop_event is not None:
+        stop_event.set()
 
 
 def write_temp_wav(data: bytes) -> str:
