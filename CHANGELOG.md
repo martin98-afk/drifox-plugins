@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+### 🔧 win-powershell v1.0.8：修超时只杀主进程致孙进程变孤儿，且收尸阶段白等 15s
+- **症状**：设置 `timeout` 后超时的命令（如 `npm run dev`、`python -m http.server`）被判定超时，但其拉起的孙进程继续存活占端口与 CPU；且超时最坏要 20s 才返回，远超用户设定的上限
+- **根因**：`subprocess.run(timeout=)` 超时时只杀 `pwsh` 主进程，Windows 无 POSIX 进程组语义，孙进程不在 kill 范围；收尸 `communicate(timeout=15)` 在孙进程杀不掉时等满 15s（5 + 15 = 20.1s），护栏退化成 `timeout + 15`
+- **修复**：改 `Popen` + `communicate(timeout=)` 拿到 pid，超时时 `taskkill /PID <pid> /T /F` 连带杀树；收尸窗口从 15s 收到 2s（`taskkill` 是同步强杀，返回时杀树已完成，长等无意义），仍杀不掉的 detached 孙进程不再拖累返回；`FileNotFoundError` 捕获挪到独立 try；schema 的 `timeout` 补全默认 120、范围 1-3600 与连带杀树语义
+- **实测**（宿主真实工具调用）：杀树生效 5.3s 返回且孙进程 `alive=0`；detached 孙进程杀不掉时 7.1s 返回（修复前 20.1s）、`alive=1`；正常路径 7 例回归全绿（正常输出 / 无输出 / 非零退出码 / stderr 混合 / 空命令 / timeout 夹紧 / 显式 timeout）；marker 文件确认孙进程确已启动，排除「压根没跑起来」的假阴性
+- **排障中发现并修掉的引入缺陷**：`communicate()` 返回 `(None, None)` 时，原 `proc.stdout or b""` 兜底会把 `BufferedReader` 对象当字节下传，触发 `AttributeError`（`subprocess.run` 改 `Popen` 的连带效应，原模式永远拿到 bytes）
 ### 🔧 ssh-toolkit v0.3.0：修 paramiko 加密四件套全为 Windows 产物致 macOS 完全不可用
 - **症状**：macOS 上插件无法做任何 SSH 操作。四个加密依赖浅层 `import` 假成功（顶层包 `__init__.py` 不触发原生扩展加载），深层使用时才炸：`nacl.bindings` 报 `No module named 'nacl._sodium'`、cryptography 报 `cannot import name 'exceptions' from '_rust'`、cffi 报 `Version mismatch`、bcrypt 目录整个缺失 → paramiko 完全不可用
 - **根因（与前三个 gateway 插件同源，且更彻底）**：deps/ 公共路径混放 Windows 产物 —— `nacl/_sodium.pyd`、`cryptography/.../_rust.pyd` 均为 Windows PE；`_cffi_backend.cp314-win_amd64.pyd` 只在 `deps/win32/`（顶层 cffi 纯 Python 配不到正确 backend）；bcrypt 包目录**完全缺失**（manifest 声明了 darwin/linux 依赖但未 vendor，内容只在 `deps/win32/`）→ paramiko 的加密四件套一个都不可用
