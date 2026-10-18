@@ -8,9 +8,17 @@
   DNS 劫持/ARP 欺骗即可中间人截获全部命令与凭据）。
 - strict：未知主机直接拒绝，只认已登记条目。
 - off：退回 AutoAddPolicy，仅为兼容旧行为保留，需用户显式声明。
+
+加密后端仲裁（_prefer_vendored_crypto）：cx_Freeze 打包版的 FrozenImporter
+挂在 sys.meta_path，优先于 sys.path —— 宿主内嵌的 cryptography 会截胡 import，
+paramiko 因此被绑到宿主副本上（实测该副本 AES-CTR 不可用，报
+cipher AES in CTR mode is not supported）。此处在 import paramiko 前把
+cryptography* 的 import 强制指到插件 deps 目录，自检通过才保留，失败回滚。
 """
 import base64
 import hashlib
+import importlib
+import importlib.machinery
 import os
 import sys
 import threading
@@ -54,6 +62,96 @@ def _ensure_openssl_path():
 
 
 _ensure_openssl_path()
+
+# ── 加密后端仲裁：paramiko 必须绑插件 deps 的 cryptography ──────────────────
+
+_CRYPTO_SELFTEST_OK = False
+
+
+def _vendored_crypto_dir():
+    """插件 deps 里 cryptography 包目录（平台目录优先，与 deps_loader 同口径）"""
+    here = os.path.dirname(os.path.abspath(__file__))
+    plat = "win32" if sys.platform == "win32" else sys.platform
+    for sub in (plat, ""):
+        d = os.path.normpath(os.path.join(here, "..", "deps", sub, "cryptography"))
+        if os.path.exists(os.path.join(d, "__init__.py")):
+            return d
+    return None
+
+
+class _VendoredCryptoFinder:
+    """meta_path 钩子：cryptography* 一律指向插件 deps 目录，其余放行。"""
+
+    _hook = None
+
+    def __init__(self, pkg_dir):
+        hook = importlib.machinery.FileFinder.path_hook(
+            (importlib.machinery.ExtensionFileLoader, importlib.machinery.EXTENSION_SUFFIXES),
+            (importlib.machinery.SourceFileLoader, importlib.machinery.SOURCE_SUFFIXES),
+            (importlib.machinery.SourcelessFileLoader, importlib.machinery.BYTECODE_SUFFIXES),
+        )
+        self._finder = hook(pkg_dir)
+
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname == "cryptography" or fullname.startswith("cryptography."):
+            return self._finder.find_spec(fullname, target)
+        return None
+
+
+def _crypto_modules():
+    return [k for k in sys.modules if k == "cryptography" or k.startswith("cryptography.")]
+
+
+def _selftest_aes_ctr():
+    """AES-CTR 可用性自检：正是打包版副本缺失的能力，失败即回滚依据。"""
+    from cryptography.hazmat.backends import default_backend
+    from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
+    enc = Cipher(algorithms.AES(b"0" * 16), modes.CTR(b"1" * 16), backend=default_backend()).encryptor()
+    enc.update(b"drifox-ssh-toolkit")
+
+
+def _prefer_vendored_crypto():
+    """把 cryptography 换成插件 deps 版（幂等，失败回滚宿主原状）。
+
+    回滚语义：自检不过 → 摘钩子 + 恢复原 sys.modules 条目。恢复用模块对象
+    回填而非重新 import，避免触发 FrozenImporter 又拿回坏副本。
+    """
+    global _CRYPTO_SELFTEST_OK
+    if _CRYPTO_SELFTEST_OK:
+        return
+    pkg_dir = _vendored_crypto_dir()
+    if not pkg_dir:
+        return
+    current = sys.modules.get("cryptography")
+    cur_file = os.path.normcase(os.path.abspath(str(getattr(current, "__file__", "") or "")))
+    if cur_file.startswith(os.path.normcase(pkg_dir)):
+        _CRYPTO_SELFTEST_OK = True  # 已是 vendored 版
+        return
+    saved = {k: sys.modules[k] for k in _crypto_modules()}
+    finder = _VendoredCryptoFinder(os.path.dirname(pkg_dir))
+    for k in saved:
+        del sys.modules[k]
+    sys.meta_path.insert(0, finder)
+    try:
+        importlib.import_module("cryptography")
+        mod = sys.modules.get("cryptography")
+        new_file = os.path.normcase(os.path.abspath(str(getattr(mod, "__file__", "") or "")))
+        if not new_file.startswith(os.path.normcase(pkg_dir)):
+            raise RuntimeError(f"vendored cryptography 未生效：{new_file}")
+        _selftest_aes_ctr()
+        _CRYPTO_SELFTEST_OK = True  # 钩子常驻：后续子模块 import 仍需绕开 FrozenImporter
+    except Exception:  # noqa: BLE001 - 任何失败都回滚到宿主现状（可用性优先）
+        try:
+            sys.meta_path.remove(finder)
+        except ValueError:
+            pass
+        for k in _crypto_modules():
+            sys.modules.pop(k, None)
+        sys.modules.update(saved)
+
+
+_prefer_vendored_crypto()
 # paramiko：优先主环境，缺失时由宿主注入的插件 deps/ 提供（无需自理 sys.path）
 import paramiko  # noqa: E402
 
