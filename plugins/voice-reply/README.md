@@ -23,21 +23,54 @@
 
 ## 配置
 
-设置 → 语音播报配置（声明式 config_schema，即改即生效）：
+设置 → 语音播报配置（自绘设置卡，即改即生效）：
 
 | 配置项 | 默认值 | 说明 |
 |--------|--------|------|
 | 语音引擎 | 本地系统语音 | `local` / `api` |
-| API 地址 | 硅基流动端点 | OpenAI 兼容 `/audio/speech` |
-| 模型 | `FunAudioLLM/CosyVoice2-0.5B` | 服务端模型名 |
-| 音色 | `FunAudioLLM/CosyVoice2-0.5B:alex` | 硅基流动格式 `模型名:音色名` |
+| API 地址 | 硅基流动端点 | 可编辑下拉：硅基流动 / OpenAI / 智谱 / MiniMax / 月之暗面 / 手填 |
+| 模型 | `FunAudioLLM/CosyVoice2-0.5B` | 可编辑下拉：CosyVoice2-0.5B / Fish-Speech 1.5 / MOSS-TTSD-v0.5 / 手填 |
+| 音色 | `FunAudioLLM/CosyVoice2-0.5B:alex` | 可编辑下拉，随模型换批；CosyVoice2 与 Fish-Speech 1.5 共用 8 个预置音色 |
 | API Key | 空 | 环境变量 `TTS_API_KEY` 可覆盖 |
+
+「模型」「音色」「API 地址」均为可编辑下拉（qfluentwidgets `EditableComboBox`）：
+既可从预置项里选，也能直接键入任意值（回车后该值进入下拉列表）。
+切换模型时音色下拉整体换批，且 `音色` 存储值的模型前缀同步跟随，避免用旧模型的音色名请求新模型报错。
+
+> 为什么自绘设置卡：主程序 E1 自动卡（plugin.json config_schema）只把字段渲染成
+> 不可编辑 ComboBox 或纯 LineEdit，无法「下拉选 + 手填」二合一。插件用更高 priority
+> 注册自绘卡覆盖自动卡；注册失败时自动降级回 config_schema 自动卡，朗读功能不受影响。
 
 在线合成固定请求 wav 格式：Windows 走 winmm `mciSendStringW`、macOS 走 `afplay` 播放，音频文件落在系统临时目录、播完即删。日志会打印 wav 摘要（采样率/声道/位深/时长），便于排查「提示播放中但听不到」。
 
 > 为什么不用 `winsound.PlaySound`：它播放失败时**不抛异常、静默无声**，且对 WAV 兼容面窄，
 > 表现为「提示播放中但听不到」且日志干净、无从诊断。改用 winmm mci：命令返回码非 0 即失败，
 > 可 `mciGetErrorStringW` 转人话，且支持显式 stop/close。
+
+### 停止播放：为什么用「异步 play + 轮询 mode」
+
+2026-10-18 修复「点击停止，语音继续播完」：原实现用 `play <alias> wait` 阻塞播放，
+主线程发 `stop <alias>` 打断。实测发现 mci alias **绑定到发起 open 的那个线程**，
+跨线程发 stop 一律返回 263「指定的设备未打开」，音频照常播完。
+
+改为异步 `play` + 播放线程轮询 `status <alias> mode`，主线程 stop() 只置
+`threading.Event`，真正的 stop/close 由播放线程自己发（同线程才有效）。
+打断延迟 = 轮询节拍 150ms。
+
+### 预置音色（8 个）
+
+硅基流动 CosyVoice2-0.5B 与 Fish-Speech 1.5 **音色名完全一致**，voice 值统一为
+`<模型名>:<音色名>`：
+
+| 短名 | 描述 | 短名 | 描述 |
+|------|------|------|------|
+| `alex` | 沉稳男声 | `anna` | 沉稳女声 |
+| `benjamin` | 低沉男声 | `bella` | 激情女声 |
+| `charles` | 磁性男声 | `claire` | 温柔女声 |
+| `david` | 欢快男声 | `diana` | 欢快女声 |
+
+`fnlp/MOSS-TTSD-v0.5` 是对话合成模型（input 需 `[S1]`/`[S2]` 标记、voice 走参考音频
+uri），单段播报用不上，故不提供音色包，仅允许手填。
 
 ### 无声排查
 

@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -117,10 +118,15 @@ class ApiTtsWorker(QThread):
         self._text = text
         self._stop_requested = False
         self._proc_slot: dict = {}
+        self._stop_event = threading.Event()
 
     def stop(self) -> None:
-        """主线程调用：打断合成（标志位）+ 打断播放（mci stop / 终止 afplay）。"""
+        """主线程调用：打断合成（标志位）+ 打断播放（置 stop_event）。
+
+        mci 的 stop/close 由播放线程自己发（alias 绑定 open 线程），这里只置位。
+        """
         self._stop_requested = True
+        self._stop_event.set()
         try:
             stop_playback(self._proc_slot)
         except Exception as e:  # noqa: BLE001 — 停止失败不影响主流程
@@ -149,7 +155,7 @@ class ApiTtsWorker(QThread):
         logger.info(f"[voice-reply] 音频信息: {describe_wav(data)}")
         wav_path = write_temp_wav(data)
         try:
-            play_wav(wav_path, self._proc_slot)
+            play_wav(wav_path, self._proc_slot, self._stop_event)
         except Exception as e:  # noqa: BLE001 — 设备占用/格式不支持等
             logger.error(f"[voice-reply] 播放失败: {e}")
             if not self._stop_requested:
