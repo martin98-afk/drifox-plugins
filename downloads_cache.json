@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1792385983.1048558,
+  "fetched_at": 1792406035.5830016,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -126,7 +126,7 @@
     "ponytail": 9,
     "postman": 0,
     "prisma": 0,
-    "project-dashboard": 34,
+    "project-dashboard": 35,
     "prompt-enhancer": 59,
     "python-pro": 1,
     "quick-screenshot": 29,
@@ -173,7 +173,7 @@
     "webapp-testing": 2,
     "webdav-backup": 16,
     "webflow": 0,
-    "win-powershell": 33,
+    "win-powershell": 34,
     "wix": 0,
     "workbuddy": 9,
     "workflow": 3,

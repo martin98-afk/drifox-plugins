@@ -4208,7 +4208,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 34,
+            "downloads": 35,
             "keywords": [
                 "dashboard",
                 "stats",
@@ -5883,7 +5883,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 33,
+            "downloads": 34,
             "keywords": [
                 "powershell",
                 "windows",
