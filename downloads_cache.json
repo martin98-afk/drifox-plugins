@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1792492768.983844,
+  "fetched_at": 1792510135.4951835,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -9,7 +9,7 @@
     "anthropic": 6,
     "anthropic-oauth": 1,
     "anything2explainer": 4,
-    "apify": 0,
+    "apify": 1,
     "archify": 4,
     "autoloop": 12,
     "aws-knowledge": 0,
@@ -41,11 +41,11 @@
     "context7-remote": 0,
     "cron-tasks": 43,
     "desktop-automation": 18,
-    "dingtalk-ai-table": 1,
-    "dingtalk-calendar": 0,
-    "dingtalk-contacts": 1,
-    "dingtalk-docs": 0,
-    "dingtalk-todo": 0,
+    "dingtalk-ai-table": 2,
+    "dingtalk-calendar": 1,
+    "dingtalk-contacts": 2,
+    "dingtalk-docs": 1,
+    "dingtalk-todo": 1,
     "doc-coauthoring": 1,
     "dropbox": 0,
     "dsh-presets": 1,
@@ -152,7 +152,7 @@
     "tailwind-pro": 0,
     "taskboard": 3,
     "teach": 1,
-    "tencent-docs": 2,
+    "tencent-docs": 3,
     "tencent-hunyuan": 2,
     "tencent-map": 1,
     "test-scaffold": 0,
@@ -177,8 +177,8 @@
     "wix": 0,
     "workbuddy": 9,
     "workflow": 3,
-    "zhipu-webreader": 0,
-    "zhipu-websearch": 0,
-    "zhipu-zread": 1
+    "zhipu-webreader": 1,
+    "zhipu-websearch": 1,
+    "zhipu-zread": 2
   }
 }
