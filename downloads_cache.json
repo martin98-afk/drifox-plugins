@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1792474397.435023,
+  "fetched_at": 1792492768.983844,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -67,7 +67,7 @@
     "game2048": 6,
     "gateway-dingtalk": 1,
     "gateway-discord": 1,
-    "gateway-feishu": 38,
+    "gateway-feishu": 39,
     "gateway-qq": 7,
     "gateway-slack": 0,
     "gateway-telegram": 0,
@@ -144,7 +144,7 @@
     "snake": 6,
     "solitaire": 1,
     "square": 0,
-    "ssh-toolkit": 19,
+    "ssh-toolkit": 20,
     "stripe": 0,
     "supabase": 0,
     "superclaude": 2,
