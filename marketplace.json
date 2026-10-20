@@ -2272,7 +2272,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 37,
+            "downloads": 38,
             "platforms": [
                 "windows",
                 "linux",
@@ -4815,7 +4815,7 @@
                 "tools": true,
                 "ui": true
             },
-            "downloads": 18,
+            "downloads": 19,
             "platforms": [
                 "windows",
                 "linux",
@@ -5883,7 +5883,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 34,
+            "downloads": 35,
             "keywords": [
                 "powershell",
                 "windows",
