@@ -23,9 +23,6 @@
         "platform.send",
         "platform.read"
     ],
-    "drifox": {
-        "min_version": "0.5.10"
-    },
     "keywords": [
         "cron",
         "schedule",

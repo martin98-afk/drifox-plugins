@@ -16,9 +16,6 @@
     "capabilities": [
         "window.host"
     ],
-    "drifox": {
-        "min_version": "0.6.2"
-    },
     "keywords": [
         "screenshot",
         "clipboard",

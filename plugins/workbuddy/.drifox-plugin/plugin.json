@@ -11,9 +11,7 @@
     },
     "license": "GPL-3.0-or-later",
     "type": "user",
-    "drifox": {
-        "min_version": "0.6.2"
-    },
+    "min_host_version": "0.6.2",
     "keywords": [
         "workbuddy",
         "问答模式",

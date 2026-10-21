@@ -27,9 +27,6 @@
         "ui.notify",
         "session.write"
     ],
-    "drifox": {
-        "min_version": "0.6.2"
-    },
     "keywords": [
         "autoloop",
         "loop",
