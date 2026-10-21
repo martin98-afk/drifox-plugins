@@ -135,6 +135,14 @@ class PieceLabel(QLabel):
         self._refresh_style()
         self.setVisible(piece != ".")
 
+    def set_cell(self, cell: int) -> None:
+        """自适应缩放：棋盘 resizeEvent 反算新 cell 后同步棋子尺寸/字体"""
+        if cell == self._cell:
+            return
+        self._cell = cell
+        self.setFixedSize(int(cell * 0.86), int(cell * 0.86))
+        self._refresh_style()
+
     def set_hover(self, on: bool) -> None:
         """外部驱动 hover 状态（由 ChessBoardView mouseMoveEvent 调用）"""
         if self._hover == on:
@@ -197,16 +205,19 @@ class ChessBoardView(QWidget):
         super().__init__(parent)
         # 鼠标跟踪开启（mouseMoveEvent 才会持续触发，无须按住键）
         self.setMouseTracking(True)
+        # 自适应：_base_cell 是上限（大屏不无限制放大），resizeEvent 反算实际 cell
+        self._base_cell = cell
+        self.MIN_CELL = 38
         self._cell = cell
-        pad = max(18, int(cell * 0.55))
-        self._left = pad
-        self._top = pad
-        self._right = pad
-        self._bottom = pad
-        self.setFixedSize(
-            self._left + (COLS - 1) * self._cell + self._right,
-            self._top + (ROWS - 1) * self._cell + self._bottom,
+        # 自适应：不再锁死尺寸；minimum 按最小 cell 预留，sizePolicy Expanding
+        min_cell = self.MIN_CELL
+        min_pad = max(18, int(min_cell * 0.55))
+        self.setMinimumSize(
+            min_pad * 2 + (COLS - 1) * min_cell,
+            min_pad * 2 + (ROWS - 1) * min_cell,
         )
+        from PyQt5.QtWidgets import QSizePolicy as _SP
+        self.setSizePolicy(_SP.Expanding, _SP.Expanding)
         # 棋子：{(c,r): PieceLabel}
         self._pieces: Dict[Tuple[int, int], PieceLabel] = {}
         # 高亮状态
@@ -226,7 +237,59 @@ class ChessBoardView(QWidget):
         self._anim_path: List[Tuple[int, int]] = []
         self._anim_frame: int = 0
 
+        # 构造即算一次居中偏移（后续由 resizeEvent 持续重算）
+        self._update_offsets(cell)
+
     # ── 公开接口 ──
+
+    def _reposition_pieces(self) -> None:
+        """按当前偏移重摆全部棋子（偏移变化后必须调用，否则棋子与棋盘线错开）"""
+        for pos, lbl in self._pieces.items():
+            c, r = pos
+            lbl.move(self._piece_x(c), self._piece_y(r))
+
+    def resizeEvent(self, e):
+        """窄宽自适应：容器给多大，反算可容纳的 cell 并重建棋子布局。
+
+        cell 取宽度与高度可容纳值的较小者，上限 _base_cell；
+        _left/_top 每次都按当前尺寸重算居中（cell 不变时窗口拉宽也要重新居中），
+        偏移更新后棋子必须同步重摆（回归教训：只更新偏移不摆棋子 = 棋子与
+        棋盘线完全错开）。
+        pad 随 cell 增长（0.55 倍），与 cell 耦合，迭代两次收敛。
+        """
+        w, h = e.size().width(), e.size().height()
+        c = self._base_cell
+        for _ in range(3):
+            pad = max(18, int(c * 0.55))
+            cw = (w - 2 * pad) / (COLS - 1)
+            ch = (h - 2 * pad) / (ROWS - 1)
+            c = int(max(self.MIN_CELL, min(self._base_cell, cw, ch)))
+        if c != self._cell:
+            self._apply_cell(c)
+        else:
+            self._update_offsets(c)
+            self._reposition_pieces()
+            self.update()
+        super().resizeEvent(e)
+
+    def _update_offsets(self, cell: int) -> None:
+        """按当前 widget 尺寸重算棋盘方形区居中偏移（不重建棋子）"""
+        pad = max(18, int(cell * 0.55))
+        grid_w = (COLS - 1) * cell + 2 * pad
+        grid_h = (ROWS - 1) * cell + 2 * pad
+        self._left = max(pad, (self.width() - grid_w) // 2 + pad)
+        self._top = max(pad, (self.height() - grid_h) // 2 + pad)
+        self._right = self._bottom = pad
+
+    def _apply_cell(self, cell: int) -> None:
+        """应用新 cell：更新偏移 + 同步全部棋子位置与尺寸"""
+        self._cell = cell
+        self._update_offsets(cell)
+        for pos, lbl in self._pieces.items():
+            c, r = pos
+            lbl.set_cell(cell)
+            lbl.move(self._piece_x(c), self._piece_y(r))
+        self.update()
 
     def set_pieces(self, board):
         """按棋盘字符串二维数组设置棋子（'.' 表示空）"""
@@ -427,8 +490,20 @@ class ChessBoardView(QWidget):
         p.end()
 
     def _draw_wood_bg(self, p: QPainter):
-        """木纹三层叠加：径向高光 + 重复纹理 + 主渐变。圆角矩形裁剪。"""
-        rect = self.rect()
+        """木纹三层叠加：径向高光 + 重复纹理 + 主渐变。圆角矩形裁剪。
+
+        自适应后 widget 可能非正方：只绘制以格点为界的方形棋盘区，
+        其余区域留给父级背景（棋盘视觉始终正方）。
+        """
+        pad = max(18, int(self._cell * 0.55))
+        grid_w = (COLS - 1) * self._cell + 2 * pad
+        grid_h = (ROWS - 1) * self._cell + 2 * pad
+        rect = QRect(
+            max(0, self._left - pad),
+            max(0, self._top - pad),
+            min(grid_w, self.width()),
+            min(grid_h, self.height()),
+        )
         radius = 8
         # 1) 主底色（线性渐变）
         grad = QLinearGradient(0, 0, 0, rect.height())

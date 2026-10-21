@@ -315,13 +315,25 @@ class TestAnimatingGuard(unittest.TestCase):
         self.card._select_piece.assert_not_called()
 
     def test_animating_blocks_apply_move(self):
-        """_animating=True 时 _apply_move 应跳过"""
+        """_animating=True 时手动 _apply_move 应跳过"""
         from ui.game_logic import make_move
         original_board = [row[:] for row in self.card._board]
         self.card._board_view._animating = True
         self.card._apply_move((0, 9, 0, 8))  # 红车前进一步
         # 棋盘不应改变
         self.assertEqual(self.card._board, original_board)
+
+    def test_animating_does_not_block_ai_move(self):
+        """回归：LLM 往返短于 1.5s 动画时，AI 走子不得被动效守卫静默丢弃
+        （丢弃后无重试路径，回合永久卡死在「思考中」）。"""
+        from ui.game_logic import BLACK
+        self.card._side_to_move = BLACK  # 黑方回合（AI 执子）
+        self.card._board_view._animating = True
+        # 黑炮 (1,2) 隔 (1,7) 红炮架吃 (1,9) 红马（用户实测场景）
+        self.card._apply_move((1, 2, 1, 9), source="llm")
+        self.assertEqual(self.card._board[9][1], "c")  # 黑炮落位红马位
+        self.assertEqual(self.card._board[2][1], ".")
+        self.assertEqual(self.card._side_to_move, "red")  # 回合已切换
 
     def test_normal_mode_processes_click(self):
         """_animating=False（默认）时点击正常处理"""

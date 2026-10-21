@@ -186,12 +186,12 @@ class AIThoughtPanel(QWidget):
                 cleaned = f"本步走法：({c1},{r1}) → ({c2},{r2})"
             else:
                 cleaned = "（无文本输出）"
-        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        ts = datetime.now().strftime("%H:%M:%S")
 
-        # 构造 Markdown 片段
+        # 紧凑排版：短标题单行不换行（此前「步+方+模型名+完整日期」过长被折行）
         md = (
             f"\n\n---\n\n"
-            f"**第 {self._step} 步 · {side}方 · {model}** · `{ts}`\n\n"
+            f"**第 {self._step} 步 · {side}方** · {model} · {ts}\n\n"
             f"{cleaned or '_（无文本，已自动剥离走法）_'}"
         )
 
