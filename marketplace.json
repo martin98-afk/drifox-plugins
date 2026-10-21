@@ -564,7 +564,7 @@
                 "ref": "main"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "ui": true
             },
             "downloads": 6,
@@ -590,7 +590,7 @@
                 "ref": "main"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "ui": true,
                 "mcp": true
             },
@@ -766,7 +766,7 @@
                 "ref": "main"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "skills": true
             },
             "downloads": 2,
@@ -1516,7 +1516,7 @@
                 "ref": "main"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "skills": true
             },
             "downloads": 1,
@@ -2151,7 +2151,7 @@
                 "ref": "main"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "ui": true
             },
             "downloads": 6,
@@ -2912,7 +2912,7 @@
                 "ref": "main"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "skills": true
             },
             "downloads": 1,
@@ -3343,7 +3343,7 @@
                 "ref": "main"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "skills": true
             },
             "downloads": 1,
@@ -3377,7 +3377,7 @@
                 "ref": "main"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "ui": true
             },
             "downloads": 4,
@@ -3469,7 +3469,7 @@
                 "ref": "main"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "ui": true
             },
             "downloads": 8,
@@ -3786,7 +3786,7 @@
                 "ref": "main"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "skills": true
             },
             "downloads": 1,
@@ -4734,7 +4734,7 @@
                 "ref": "main"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "ui": true
             },
             "downloads": 6,
@@ -4759,7 +4759,7 @@
                 "ref": "main"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "ui": true
             },
             "downloads": 1,
@@ -5259,7 +5259,7 @@
                 "ref": "main"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "ui": true
             },
             "downloads": 3,
@@ -5781,7 +5781,7 @@
                 "ref": "main"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "skills": true
             },
             "downloads": 2,

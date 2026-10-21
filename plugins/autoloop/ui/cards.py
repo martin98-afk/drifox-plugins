@@ -540,7 +540,7 @@ class AutoLoopRunningCard(QFrame):
         ):
             try:
                 sig.disconnect()
-            except TypeError, RuntimeError:
+            except (TypeError, RuntimeError):
                 pass
             sig.connect(slot)
 

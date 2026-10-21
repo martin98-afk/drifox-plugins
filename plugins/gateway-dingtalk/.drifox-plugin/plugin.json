@@ -12,7 +12,14 @@
     "homepage": "https://github.com/martin98-afk/drifox-plugins2",
     "license": "MIT",
     "type": "user",
-    "platforms": ["windows", "linux", "darwin"],
+    "api_version": 2,
+    "min_host_version": "0.6.10",
+    "capabilities": [],
+    "platforms": [
+        "windows",
+        "linux",
+        "darwin"
+    ],
     "dependencies": {
         "pip": {
             "linux": [

@@ -11,6 +11,13 @@
     },
     "license": "GPL-3.0-or-later",
     "type": "user",
+    "api_version": 2,
+    "min_host_version": "0.6.10",
+    "capabilities": [
+        "tool.read",
+        "ui.notify",
+        "ui.card.show"
+    ],
     "drifox": {
         "min_version": "0.6.2"
     },
@@ -20,7 +27,7 @@
         "automation"
     ],
     "components": {
-        "commands": true,
+        "commands": false,
         "ui": true,
         "mcp": true
     }

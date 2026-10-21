@@ -22,7 +22,7 @@
         "自动化测试"
     ],
     "components": {
-        "commands": true,
+        "commands": false,
         "skills": true
     },
     "homepage": "https://playwright.dev"

@@ -466,6 +466,31 @@ def _extract_start_url(command: str) -> Optional[str]:
 _bash_installed = False
 
 
+def _resolve_terminal_tools_class():
+    """从工具注册表反查 bash 实现的 TerminalTools 类。
+
+    宿主自 v0.6 起把终端工具整体迁入 system-tools 插件，``app.tools.terminal_tools``
+    已随死代码清理删除。改走注册表拿 ``bash`` 工具的 impl，再从它的模块 globals
+    取类，既避开已删模块，也不必硬编码别的插件的加载路径。
+    """
+    try:
+        from app.plugins.sdk import tool_registry_api
+    except Exception:
+        return None
+    api = tool_registry_api("read")
+    if api is None:
+        return None
+    try:
+        getter = api["get"]
+        reg = getter("bash") if callable(getter) else None
+    except Exception:
+        return None
+    impl = getattr(reg, "impl", None)
+    if impl is None:
+        return None
+    return getattr(impl, "__globals__", {}).get("TerminalTools")
+
+
 def install_bash_redirect() -> bool:
     """patch TerminalTools.execute_bash：拦截 start/explorer <url> 转交内置浏览器
 
@@ -476,10 +501,9 @@ def install_bash_redirect() -> bool:
     global _bash_installed
     if _bash_installed:
         return True
-    try:
-        from app.tools.terminal_tools import TerminalTools
-    except Exception:
-        return False  # 主程序版本无该模块（如测试环境）→ 跳过，不影响其他功能
+    TerminalTools = _resolve_terminal_tools_class()
+    if TerminalTools is None:
+        return False  # 宿主没有可用的 bash 工具实现（如测试环境）→ 跳过，不影响其他功能
 
     me = sys.modules[__name__]
     prev = TerminalTools.execute_bash

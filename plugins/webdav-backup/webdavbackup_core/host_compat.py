@@ -148,7 +148,7 @@ def restart_app() -> tuple:
     try:
         # 释放单实例锁（主程序模块存在才有；缺失跳过，最坏新进程多试一次）
         try:
-            from app.core.single_instance import release_current_lock
+            from app.core.infra.single_instance import release_current_lock
 
             release_current_lock()
         except Exception:

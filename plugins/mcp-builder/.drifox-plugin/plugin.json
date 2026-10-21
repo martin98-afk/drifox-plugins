@@ -21,7 +21,7 @@
         "development"
     ],
     "components": {
-        "commands": true,
+        "commands": false,
         "skills": true
     },
     "homepage": "https://modelcontextprotocol.io"
