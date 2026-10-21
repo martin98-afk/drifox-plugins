@@ -563,7 +563,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 64,
+            "downloads": 65,
             "keywords": [
                 "browser",
                 "web",
@@ -2362,7 +2362,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 69,
+            "downloads": 70,
             "keywords": [
                 "git",
                 "source-control",
@@ -4049,7 +4049,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 59,
+            "downloads": 60,
             "keywords": [
                 "prompt",
                 "enhance",
