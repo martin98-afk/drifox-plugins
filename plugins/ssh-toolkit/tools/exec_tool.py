@@ -12,7 +12,7 @@ if _TOOLS_DIR not in sys.path:
 
 from app.tools.result import ToolResult  # noqa: E402
 
-import _store as store, _auth as auth, _pool as pool  # noqa: E402
+import _store as store, _args as args, _auth as auth, _pool as pool  # noqa: E402
 
 # 单流输出上限：`timeout` 只约束单次 recv，不是总时长。远端 `yes` / `cat
 # /dev/urandom` 会持续灌数据，无上限的 read() 会把宿主进程直接 OOM。
@@ -98,7 +98,7 @@ def _exec_impl(tool_ctx, **kwargs):
     if client is None:
         return ToolResult(False, error=err or f"未找到活跃连接：{ref}（先 ssh_connect）")
     command = kwargs.get("command", "")
-    timeout = int(kwargs.get("timeout", 30))
+    timeout = args.to_int(kwargs.get("timeout"), 30)
     deadline = time.monotonic() + max(1, timeout)
     try:
         stdin, stdout, stderr = client.exec_command(command, timeout=timeout)

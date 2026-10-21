@@ -31,6 +31,16 @@ if _TOOLS_DIR not in sys.path:
     sys.path.insert(0, _TOOLS_DIR)
 
 
+def _to_int(value, default):
+    """配置值归一化：手写 connections.json 或旧版本写入 null 时不得炸 int(None)。"""
+    if value is None or value == "":
+        return default
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
 def _ensure_openssl_path():
     """让 deps/cryptography 的 _rust.pyd 找到 libcrypto/libssl。
 
@@ -256,9 +266,9 @@ def connect(conn):
     record = []
     client = _client(policy_name, record)
     host = conn["host"]
-    port = int(conn.get("port", 22))
+    port = _to_int(conn.get("port"), 22)
     user = conn.get("user")
-    timeout = int(conn.get("timeout", 10))
+    timeout = _to_int(conn.get("timeout"), 10)
     base = dict(hostname=host, port=port, username=user, timeout=timeout)
     if auth_type == "publickey":
         base.update(key_filename=os.path.expanduser(conn.get("key_path", "~/.ssh/id_rsa")),
