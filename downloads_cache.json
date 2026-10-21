@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1792544867.633941,
+  "fetched_at": 1792563103.163892,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -159,7 +159,7 @@
     "tetris": 3,
     "theme-factory": 0,
     "todoist": 0,
-    "token-usage": 12,
+    "token-usage": 13,
     "tool-locator": 7,
     "twin-chat": 10,
     "ui-motion-skills": 4,
