@@ -14,6 +14,7 @@ if _TOOLS_DIR not in sys.path:
 from app.tools.result import ToolResult  # noqa: E402
 
 import _pool as pool  # noqa: E402
+import _args as args  # noqa: E402
 import _guard as guard  # noqa: E402
 
 FORWARDS = {}  # forward_id -> {"thread", "stop"}
@@ -77,15 +78,18 @@ def _forward_impl(tool_ctx, **kwargs):
     ref = kwargs.get("handle") or kwargs.get("name")
     ftype = kwargs.get("type", "local")
     bind_addr = kwargs.get("bind_addr", "127.0.0.1")
-    bind_port = int(kwargs.get("bind_port", 0))
+    bind_port = args.to_int(kwargs.get("bind_port"), 0)
     remote_addr = kwargs.get("remote_addr", "127.0.0.1")
-    remote_port = int(kwargs.get("remote_port", 0))
+    remote_port = args.to_int(kwargs.get("remote_port"), 0)
     # 绑定地址边界：0.0.0.0 / :: 会把内网服务一键暴露给局域网，需显式开启
     ok, reason = guard.check_bind_addr(bind_addr, bool(kwargs.get("allow_public", False)))
     if not ok:
         return ToolResult(False, error=reason)
     if ftype not in ("local",):
         return ToolResult(False, error=f"不支持的转发类型：{ftype}（当前仅实现 local -L）")
+    if not remote_port:
+        # bind_port=0 是合法语义：交给内核分配，真实端口由 errbox 回报
+        return ToolResult(False, error="需要 remote_port（正整数）")
     client, err = pool.ensure_client(ref) if ref else (None, None)
     if client is None:
         return ToolResult(False, error=err or f"未找到活跃连接：{ref}")

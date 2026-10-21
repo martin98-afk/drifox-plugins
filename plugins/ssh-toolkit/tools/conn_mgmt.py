@@ -13,20 +13,21 @@ if _TOOLS_DIR not in sys.path:
 from app.tools.result import ToolResult  # noqa: E402
 
 import _store as store  # noqa: E402
+import _args as args  # noqa: E402
 
 
 def _add_impl(tool_ctx, **kwargs):
     conn = {
         "name": kwargs.get("name"),
         "host": kwargs.get("host"),
-        "port": int(kwargs.get("port", 22)),
+        "port": args.to_int(kwargs.get("port"), 22),
         "user": kwargs.get("user"),
         "auth_type": kwargs.get("auth_type", "publickey"),
         "key_path": kwargs.get("key_path", "~/.ssh/id_rsa"),
         "password": kwargs.get("password", ""),
         "key_passphrase": kwargs.get("key_passphrase", ""),
         "host_key_policy": kwargs.get("host_key_policy", "tofu"),
-        "timeout": int(kwargs.get("timeout", 10)),
+        "timeout": args.to_int(kwargs.get("timeout"), 10),
         "note": kwargs.get("note", ""),
     }
     try:
