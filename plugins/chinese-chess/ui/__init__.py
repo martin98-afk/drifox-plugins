@@ -25,7 +25,7 @@ def register_ui(registry):
         plugin_name="chinese-chess",
         card_id="chinese-chess",
         widget_class=ChessCard,
-        container="bottom",
+        container="full",
         title="中国象棋",
         default_visible=False,
     )

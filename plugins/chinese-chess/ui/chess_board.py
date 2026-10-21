@@ -252,8 +252,9 @@ class ChessCard(QWidget):
     def _setup_ui(self):
         self.setMinimumWidth(820)
         root = QVBoxLayout(self)
-        root.setContentsMargins(8, 8, 8, 8)
-        root.setSpacing(6)
+        # full 容器：占满对话区，边距放宽让内容呼吸
+        root.setContentsMargins(24, 16, 24, 16)
+        root.setSpacing(10)
 
         # 顶部状态栏（全局横跨，保留）
         top = QHBoxLayout()
@@ -278,7 +279,7 @@ class ChessCard(QWidget):
         # ── 左：原棋盘 + 提示 ──
         left = QWidget()
         left_layout = QVBoxLayout(left)
-        left_layout.setContentsMargins(4, 4, 4, 4)
+        left_layout.setContentsMargins(8, 8, 8, 8)
         left_layout.setSpacing(8)
 
         self._board_view = ChessBoardView(cell=52, parent=left)
@@ -315,10 +316,7 @@ class ChessCard(QWidget):
             ph.setAlignment(Qt.AlignCenter)
             splitter.addWidget(ph)
 
-        # 默认宽度：左侧 800, 右侧 320（用户可拖拽）
-        splitter.setSizes([800, 320])
-        splitter.setStretchFactor(0, 1)   # 棋盘区域可拉伸
-        splitter.setStretchFactor(1, 0)   # 面板固定大小
+
 
         root.addWidget(splitter, 1)
 
