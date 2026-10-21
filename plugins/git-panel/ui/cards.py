@@ -1038,7 +1038,7 @@ def _input_ask(title: str, hint: str = "", parent=None,
                confirm_text: str = "确认", cancel_text: str = "取消") -> str:
     """单输入弹窗：宿主环境用系统 SingleInputDialog，否则本地 _InputDialog"""
     try:
-        from app.widgets.cards.settings.memory_card import SingleInputDialog
+        from app.widgets.common_dialogs import SingleInputDialog
     except Exception:
         SingleInputDialog = None
 

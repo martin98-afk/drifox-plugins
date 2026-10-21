@@ -12,6 +12,17 @@
     "homepage": "https://github.com/martin98-afk/drifox-plugins",
     "license": "MIT",
     "type": "user",
+    "api_version": 2,
+    "min_host_version": "0.6.10",
+    "capabilities": [
+        "engine.session",
+        "agent.read",
+        "model.schema",
+        "workdir.read",
+        "workdir.write",
+        "platform.send",
+        "platform.read"
+    ],
     "drifox": {
         "min_version": "0.5.10"
     },

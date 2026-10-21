@@ -969,7 +969,7 @@ class AutoLoopWorker(QThread):
 
     def _make_autoloop_callbacks(self) -> Dict[str, Callable]:
         """构建 AutoLoop 的回调包装（日志转发 + 预算检查 + token 追踪）"""
-        from app.core.token_estimator import count_messages_tokens
+        from app.core.infra.token_estimator import count_messages_tokens
 
         # 以 Adapter 的回调为基础
         callbacks = dict(self._adapter.get_callbacks())

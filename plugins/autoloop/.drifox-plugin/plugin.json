@@ -12,6 +12,21 @@
     "homepage": "https://github.com/martin98-afk/DriFox",
     "license": "MIT",
     "type": "user",
+    "api_version": 2,
+    "min_host_version": "0.6.10",
+    "capabilities": [
+        "engine.stack",
+        "ui.exclusive",
+        "agent.read",
+        "model.config",
+        "tool.execute",
+        "model.schema",
+        "workdir.read",
+        "workdir.write",
+        "ui.card.hide",
+        "ui.notify",
+        "session.write"
+    ],
     "drifox": {
         "min_version": "0.6.2"
     },

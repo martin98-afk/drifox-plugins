@@ -199,7 +199,7 @@ def _on_screenshot_command(args: str = "") -> None:
     """
     main_widget = None
     try:
-        from app.core.window_registry import alive_window_instances
+        from app.core.infra.window_registry import alive_window_instances
 
         wins = alive_window_instances()
         if wins:

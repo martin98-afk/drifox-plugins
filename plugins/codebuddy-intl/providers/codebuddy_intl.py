@@ -67,7 +67,7 @@ def _cache_get(refresh_token: str) -> dict:
             return _CACHE[refresh_token]
     try:
         entry = json.loads(_cache_path(refresh_token).read_text(encoding="utf-8"))
-    except OSError, json.JSONDecodeError:
+    except (OSError, json.JSONDecodeError):
         entry = {}
     entry.setdefault("refresh_token", refresh_token)
     with _CACHE_LOCK:

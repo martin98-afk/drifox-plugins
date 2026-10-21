@@ -85,6 +85,23 @@
       "items": { "type": "string", "minLength": 1 },
       "uniqueItems": true
     },
+    "min_host_version": {
+      "type": "string",
+      "pattern": "^v?\\d+\\.\\d+(\\.\\d+)?$",
+      "description": "最低宿主版本（如 \"0.6.10\"）。宿主 app/plugins/version_gate.py 的 check_host_version 读取：不满足则整插件拒载（工具/UI/hooks 全不加载）。格式非法同样拒载。缺省=不限制，老宿主仍可安装。"
+    },
+    "api_version": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1,
+      "description": "插件 API 契约版本。宿主 HOST_PLUGIN_API_VERSION 当前为 2：声明 2 且未写 capabilities 视为空清单（拿不到任何能力）；声明高于宿主则拒载。缺省=1，兼容期全量放行能力。"
+    },
+    "capabilities": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "description": "声明的能力清单（仅 api_version>=2 时参与裁剪），如 [\"session.read\", \"ui.notify\"]。支持通配 \"tool.*\" 与 \"*\"。可用能力见 DriFox docs/plugins/capabilities.md。"
+    },
     "components": {
       "type": "object",
       "additionalProperties": false,

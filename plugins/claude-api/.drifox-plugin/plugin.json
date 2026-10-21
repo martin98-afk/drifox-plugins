@@ -21,7 +21,7 @@
         "api"
     ],
     "components": {
-        "commands": true,
+        "commands": false,
         "skills": true
     },
     "homepage": "https://docs.anthropic.com"
