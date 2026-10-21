@@ -215,9 +215,14 @@ def build_plugin_entry(plugin_dir: Path, manifest: dict) -> dict:
     if manifest.get("dependencies"):
         entry["dependencies"] = manifest["dependencies"]
 
-    drifox_compat = manifest.get("drifox")
-    if drifox_compat:
-        entry["drifox"] = drifox_compat
+    # 宿主版本门槛：市场端据此把版本不足的「安装 / 更新」按钮置灰并说明原因。
+    # 注意 drifox.min_version 是废字段（宿主从不读取），真正生效的是 min_host_version，
+    # 历史条目里的 drifox 块不再透传。
+    if manifest.get("min_host_version"):
+        entry["min_host_version"] = manifest["min_host_version"]
+    # api_version：宿主插件 API 契约版本，市场端可用于标注「需新版 DriFox」
+    if manifest.get("api_version"):
+        entry["api_version"] = manifest["api_version"]
 
     if manifest.get("homepage"):
         entry["homepage"] = manifest["homepage"]

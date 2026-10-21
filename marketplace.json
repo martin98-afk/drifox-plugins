@@ -27,6 +27,7 @@
                 "prompt-engineering",
                 "art"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://inference.sh",
             "icon": {
                 "light": "icon.svg",
@@ -57,6 +58,7 @@
                 "multimodal",
                 "generative"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://inference.sh",
             "icon": {
                 "light": "icon.svg",
@@ -87,6 +89,7 @@
                 "generative",
                 "creative-coding"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills/tree/main/skills/algorithmic-art",
             "icon": {
                 "light": "icon.svg",
@@ -117,6 +120,7 @@
                 "connector",
                 "amap"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.amap.com/mcp",
             "icon": {
                 "light": "icon.png",
@@ -145,6 +149,7 @@
             "keywords": [
                 "服务商"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "providers/icons_light/Anthropic.svg",
                 "dark": "providers/icons/Anthropic.svg"
@@ -176,6 +181,7 @@
                 "服务商",
                 "Claude Code"
             ],
+            "min_host_version": "0.5.12",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -208,6 +214,7 @@
                 "motion-graphics",
                 "education"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -237,6 +244,7 @@
                 "connector",
                 "apify"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.apify.com",
             "icon": {
                 "light": "icon.png",
@@ -281,6 +289,7 @@
             "keywords": [
                 "archify"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -289,7 +298,7 @@
         {
             "name": "autoloop",
             "description": "AutoLoop 自动循环模式 — 规划→执行→归档三阶段长任务自动执行（对话引擎插件化首例，经 UI 服务门面驱动自建 ConversationCore）",
-            "version": "1.1.1",
+            "version": "1.1.2",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -319,6 +328,8 @@
                 "自动循环",
                 "三阶段"
             ],
+            "min_host_version": "0.6.10",
+            "api_version": 2,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icons/无限.svg",
@@ -348,6 +359,7 @@
                 "connector",
                 "aws-knowledge"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://knowledge-mcp.global.api.aws",
             "icon": {
                 "light": "icon.png",
@@ -377,6 +389,7 @@
                 "connector",
                 "baidu-ai-search"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://appbuilder.baidu.com/v2/ai_search/mcp/sse",
             "icon": {
                 "light": "icon.png",
@@ -407,6 +420,7 @@
                 "connector",
                 "baidu-map"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.map.baidu.com/mcp",
             "icon": {
                 "light": "icon.png",
@@ -436,6 +450,7 @@
                 "connector",
                 "bailian-amap"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://dashscope.aliyuncs.com/api/v1/mcps/amap-maps/mcp",
             "icon": {
                 "light": "icon.png",
@@ -465,6 +480,7 @@
                 "connector",
                 "bailian-websearch"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://dashscope.aliyuncs.com/api/v1/mcps/WebSearch/mcp",
             "icon": {
                 "light": "icon.png",
@@ -495,6 +511,7 @@
                 "writing",
                 "design"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -528,7 +545,7 @@
         {
             "name": "browser",
             "description": "内置浏览器 — Chrome 体验多标签浏览 + 外部链接接管 + AI 智能体浏览控制（MCP）。",
-            "version": "1.4.3",
+            "version": "1.4.4",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -552,6 +569,8 @@
                 "web",
                 "automation"
             ],
+            "min_host_version": "0.6.10",
+            "api_version": 2,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -611,6 +630,7 @@
                 "art",
                 "visual"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills/tree/main/skills/canvas-design",
             "icon": {
                 "light": "icon.svg",
@@ -645,13 +665,14 @@
                 "tokens",
                 "compression"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/JuliusBrussee/caveman",
             "icon": "icon.png"
         },
         {
             "name": "chinese-chess",
             "description": "中国象棋 — 与大模型对弈的浮动卡片游戏",
-            "version": "0.2.2",
+            "version": "0.2.3",
             "author": "马丁",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -688,7 +709,9 @@
                 "evolved",
                 "xiangqi",
                 "象棋"
-            ]
+            ],
+            "min_host_version": "0.6.10",
+            "api_version": 2
         },
         {
             "name": "claude-api",
@@ -715,6 +738,7 @@
                 "prompt-engineering",
                 "api"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://docs.anthropic.com",
             "icon": {
                 "light": "icon.svg",
@@ -744,6 +768,7 @@
                 "connector",
                 "clickup"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.clickup.com/mcp",
             "icon": {
                 "light": "icon.png",
@@ -773,6 +798,7 @@
                 "connector",
                 "cloudflare-bindings"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://bindings.mcp.cloudflare.com/mcp",
             "icon": {
                 "light": "icon.png",
@@ -802,6 +828,7 @@
                 "connector",
                 "cloudflare-docs"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://docs.mcp.cloudflare.com/mcp",
             "icon": {
                 "light": "icon.png",
@@ -831,6 +858,7 @@
                 "connector",
                 "cloudflare-observability"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://observability.mcp.cloudflare.com/mcp",
             "icon": {
                 "light": "icon.png",
@@ -866,6 +894,7 @@
                 "checklist",
                 "audit"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -897,6 +926,7 @@
                 "maintainability",
                 "clean-code"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/code-simplifier",
             "icon": {
                 "light": "icon.svg",
@@ -906,7 +936,7 @@
         {
             "name": "codebuddy-intl",
             "description": "腾讯 CodeBuddy 国际版服务商（OAuth 登录制）— 浏览器授权登录，以订阅额度直连 www.codebuddy.ai 网关（craft 路由槽位 + 全表真实模型 ID 同选，槽位由网关按账号档位分配实际模型），无需 API Key",
-            "version": "0.5.0",
+            "version": "0.5.1",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -931,6 +961,8 @@
                 "Gemini",
                 "服务商"
             ],
+            "min_host_version": "0.6.10",
+            "api_version": 2,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -988,6 +1020,7 @@
                 "服务商",
                 "GPT"
             ],
+            "min_host_version": "0.5.12",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1034,6 +1067,7 @@
                 "llm-gateway",
                 "evolved"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1071,6 +1105,7 @@
                 "上下文",
                 "趋势"
             ],
+            "min_host_version": "0.4.15",
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -1129,6 +1164,7 @@
                 "documentation",
                 "文档"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://context7.com",
             "icon": {
                 "light": "icon.svg",
@@ -1158,6 +1194,7 @@
                 "connector",
                 "context7"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.context7.com/mcp",
             "icon": {
                 "light": "icon.png",
@@ -1167,7 +1204,7 @@
         {
             "name": "cron-tasks",
             "description": "定时任务中心 — 可视化配置 UI 定时任务（单次/间隔/Cron），到期自动驱动对话执行 prompt，带运行历史与可配置 hook 参与面（参考 openhanako desk cron 设计）",
-            "version": "0.5.5",
+            "version": "0.5.6",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -1195,6 +1232,8 @@
                 "计划任务",
                 "自动化"
             ],
+            "min_host_version": "0.6.10",
+            "api_version": 2,
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
                 "light": "icons/clock.svg",
@@ -1257,6 +1296,7 @@
                 "connector",
                 "dingtalk-ai-table"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp-gw.dingtalk.com",
             "icon": {
                 "light": "icon.png",
@@ -1287,6 +1327,7 @@
                 "connector",
                 "dingtalk-calendar"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp-gw.dingtalk.com",
             "icon": {
                 "light": "icon.png",
@@ -1317,6 +1358,7 @@
                 "connector",
                 "dingtalk-contacts"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp-gw.dingtalk.com",
             "icon": {
                 "light": "icon.png",
@@ -1347,6 +1389,7 @@
                 "connector",
                 "dingtalk-docs"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp-gw.dingtalk.com",
             "icon": {
                 "light": "icon.png",
@@ -1377,6 +1420,7 @@
                 "connector",
                 "dingtalk-todo"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp-gw.dingtalk.com",
             "icon": {
                 "light": "icon.png",
@@ -1408,6 +1452,7 @@
                 "documentation",
                 "collaboration"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills",
             "icon": {
                 "light": "icon.svg",
@@ -1437,6 +1482,7 @@
                 "connector",
                 "dropbox"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.dropbox.com/mcp",
             "icon": {
                 "light": "icon.png",
@@ -1471,7 +1517,8 @@
                 "agent-preset",
                 "cordis",
                 "mode-router"
-            ]
+            ],
+            "min_host_version": "0.5.0"
         },
         {
             "name": "dsh-router",
@@ -1494,7 +1541,8 @@
                 "skills": true,
                 "hooks": true
             },
-            "downloads": 1
+            "downloads": 1,
+            "min_host_version": "0.5.0"
         },
         {
             "name": "dsh-super-injector",
@@ -1514,7 +1562,8 @@
             "components": {
                 "hooks": true,
                 "tools": true
-            }
+            },
+            "min_host_version": "0.5.0"
         },
         {
             "name": "ecc",
@@ -1546,6 +1595,7 @@
                 "tdd",
                 "code-review"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://ecc.tools",
             "icon": {
                 "light": "icon.svg",
@@ -1575,6 +1625,7 @@
                 "connector",
                 "edgeone-pages"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp-on-edge.edgeone.app/mcp-server",
             "icon": {
                 "light": "icon.png",
@@ -1602,6 +1653,7 @@
                 "skills": true
             },
             "downloads": 1,
+            "min_host_version": "0.5.0",
             "homepage": "https://evomap.ai",
             "icon": {
                 "light": "icon.svg",
@@ -1631,6 +1683,7 @@
                 "connector",
                 "exa"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.exa.ai/mcp",
             "icon": {
                 "light": "icon.png",
@@ -1674,6 +1727,7 @@
                 "template",
                 "development"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1703,6 +1757,7 @@
                 "flowchart",
                 "visualization"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/github/awesome-copilot/tree/main/skills/excalidraw-diagram-generator",
             "icon": {
                 "light": "icon.svg",
@@ -1753,6 +1808,7 @@
                 "team_templates",
                 "workflow"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1785,6 +1841,7 @@
                 "dark",
                 "主题"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
                 "light": "icon.png",
@@ -1818,6 +1875,7 @@
                 "workflow",
                 "code-review"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/feature-dev",
             "icon": {
                 "light": "icon.svg",
@@ -1847,6 +1905,7 @@
                 "connector",
                 "figma"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.figma.com/mcp",
             "icon": {
                 "light": "icon.png",
@@ -1896,6 +1955,7 @@
                 "悬浮对话",
                 "快速提问"
             ],
+            "min_host_version": "0.6.2",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1926,6 +1986,7 @@
                 "tailwind",
                 "动效"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills/tree/main/skills/frontend-design",
             "icon": {
                 "light": "icon.svg",
@@ -1959,6 +2020,7 @@
                 "react",
                 "vue"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1992,7 +2054,7 @@
         {
             "name": "gateway-dingtalk",
             "description": "钉钉 (DingTalk) Stream 模式适配器（社区插件，万物即插件 Phase E）：实时消息收发，支持群/单聊/媒体；基于 dingtalk-stream SDK。",
-            "version": "1.0.1",
+            "version": "1.0.2",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [],
@@ -2033,6 +2095,8 @@
                     ]
                 }
             },
+            "min_host_version": "0.6.10",
+            "api_version": 2,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -2225,7 +2289,7 @@
         {
             "name": "gateway-wecom",
             "description": "企业微信 (WeCom) AI Bot 适配器（社区插件，万物即插件 Phase E）：通过 WebSocket 长连接与 AI Bot Gateway 通信；不依赖第三方 SDK，复用宿主 aiohttp/httpx。",
-            "version": "1.0.1",
+            "version": "1.0.2",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [],
@@ -2239,6 +2303,8 @@
                 "gateways": true
             },
             "downloads": 2,
+            "min_host_version": "0.6.10",
+            "api_version": 2,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -2280,7 +2346,7 @@
         {
             "name": "git-panel",
             "description": "Git 控制面板 — 文件变更、暂存/取消暂存、提交、Stash、分支管理、提交历史、Diff 预览、AI 生成提交描述",
-            "version": "2.1.1",
+            "version": "2.1.2",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -2304,6 +2370,8 @@
                 "branch",
                 "ai"
             ],
+            "min_host_version": "0.6.10",
+            "api_version": 2,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -2362,6 +2430,7 @@
                 "branch",
                 "pr"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2390,6 +2459,7 @@
                 "connector",
                 "gitee"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://api.gitee.com/mcp",
             "icon": {
                 "light": "icon.png",
@@ -2420,6 +2490,7 @@
                 "connector",
                 "github"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://api.githubcopilot.com/mcp/",
             "icon": {
                 "light": "icon.png",
@@ -2449,6 +2520,7 @@
                 "connector",
                 "gitlab"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://gitlab.com/api/v4/mcp",
             "icon": {
                 "light": "icon.png",
@@ -2480,6 +2552,7 @@
                 "图像生成",
                 "提示词工程"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2511,6 +2584,7 @@
                 "OAuth",
                 "服务商"
             ],
+            "min_host_version": "0.5.12",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2538,6 +2612,7 @@
             "keywords": [
                 "服务商"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "providers/icons_light/groq.svg",
                 "dark": "providers/icons/groq.svg"
@@ -2569,6 +2644,7 @@
                 "tts",
                 "voice"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2657,6 +2733,7 @@
                 "connector",
                 "huggingface"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://huggingface.co/mcp",
             "icon": {
                 "light": "icon.png",
@@ -2686,6 +2763,7 @@
                 "connector",
                 "intercom"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.intercom.com/mcp",
             "icon": {
                 "light": "icon.png",
@@ -2717,6 +2795,7 @@
                 "collaboration",
                 "documentation"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills",
             "icon": {
                 "light": "icon.svg",
@@ -2747,6 +2826,7 @@
                 "network",
                 "tool"
             ],
+            "min_host_version": "0.6.2",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2786,6 +2866,7 @@
                 "metacognition",
                 "j-space"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/Tiger3807861189/J-Space-Cognition-Suite-V3.6",
             "icon": {
                 "light": "icon.svg",
@@ -2815,6 +2896,7 @@
                 "connector",
                 "jam"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.jam.dev/mcp",
             "icon": {
                 "light": "icon.png",
@@ -2844,6 +2926,7 @@
                 "connector",
                 "jina"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.jina.ai/v1",
             "icon": {
                 "light": "icon.png",
@@ -2886,6 +2969,7 @@
                 "jsonl",
                 "evolved"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2920,6 +3004,7 @@
                 "memory",
                 "goal"
             ],
+            "min_host_version": "0.5.0",
             "icon": "icon.png"
         },
         {
@@ -2948,6 +3033,7 @@
                 "excel",
                 "知识库"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2979,6 +3065,7 @@
                 "light",
                 "主题"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
                 "light": "icon.svg",
@@ -3008,6 +3095,7 @@
                 "connector",
                 "linear"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.linear.app/mcp",
             "icon": {
                 "light": "icon.png",
@@ -3037,6 +3125,7 @@
                 "connector",
                 "mapbox"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.mapbox.com/mcp",
             "icon": {
                 "light": "icon.png",
@@ -3082,6 +3171,7 @@
                 "marketplace",
                 "evolved"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -3112,6 +3202,7 @@
                 "tool",
                 "development"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://modelcontextprotocol.io",
             "icon": {
                 "light": "icon.svg",
@@ -3166,6 +3257,7 @@
                 "connector",
                 "microsoft-learn"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://learn.microsoft.com/api/mcp",
             "icon": {
                 "light": "icon.png",
@@ -3199,6 +3291,7 @@
                 "极光",
                 "主题"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -3254,6 +3347,7 @@
                 "视频生成",
                 "多模态"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
                 "light": "icon.png",
@@ -3283,6 +3377,7 @@
                 "connector",
                 "miro"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.miro.com/",
             "icon": {
                 "light": "icon.png",
@@ -3312,6 +3407,7 @@
                 "connector",
                 "modelscope"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://www.modelscope.cn",
             "icon": {
                 "light": "icon.png",
@@ -3341,6 +3437,7 @@
                 "connector",
                 "monday"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.monday.com/mcp",
             "icon": {
                 "light": "icon.png",
@@ -3371,6 +3468,7 @@
                 "Kimi",
                 "Moonshot"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "providers/icons_light/moonshot.svg",
                 "dark": "providers/icons/moonshot.svg"
@@ -3399,6 +3497,7 @@
                 "connector",
                 "neon"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.neon.tech/mcp",
             "icon": {
                 "light": "icon.png",
@@ -3428,6 +3527,7 @@
                 "connector",
                 "netlify"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://netlify-mcp.netlify.app/mcp",
             "icon": {
                 "light": "icon.png",
@@ -3458,6 +3558,7 @@
                 "connector",
                 "notion"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.notion.com/mcp",
             "icon": {
                 "light": "icon.png",
@@ -3488,6 +3589,7 @@
                 "agents",
                 "writing"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/alchaincyf/nuwa-skill",
             "icon": {
                 "light": "icon.svg",
@@ -3521,6 +3623,7 @@
                 "excel",
                 "document"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills",
             "icon": {
                 "light": "icon.svg",
@@ -3549,6 +3652,7 @@
             "keywords": [
                 "服务商"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "providers/icons_light/Ollama.svg",
                 "dark": "providers/icons/Ollama.svg"
@@ -3585,6 +3689,7 @@
                 "OMML",
                 "document-generation"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -3612,6 +3717,7 @@
             "keywords": [
                 "服务商"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "providers/icons_light/大模型.svg",
                 "dark": "providers/icons/大模型.svg"
@@ -3662,7 +3768,8 @@
                 "xing",
                 "jimeng",
                 "beautify"
-            ]
+            ],
+            "min_host_version": "0.5.0"
         },
         {
             "name": "openrouter-provider",
@@ -3703,6 +3810,7 @@
                 "openrouter",
                 "evolved"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -3731,6 +3839,7 @@
                 "connector",
                 "paypal"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.paypal.com/mcp",
             "icon": {
                 "light": "icon.png",
@@ -3756,6 +3865,7 @@
                 "ui": true
             },
             "downloads": 23,
+            "min_host_version": "0.6.2",
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -3786,6 +3896,7 @@
                 "interactive",
                 "prototype"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/playground",
             "icon": {
                 "light": "icon.svg",
@@ -3820,6 +3931,7 @@
                 "skills",
                 "commands"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/DietrichGebert/ponytail"
         },
         {
@@ -3846,6 +3958,7 @@
                 "connector",
                 "postman"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.postman.com/mcp",
             "icon": {
                 "light": "icon.png",
@@ -3875,6 +3988,7 @@
                 "connector",
                 "prisma"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.prisma.io/mcp",
             "icon": {
                 "light": "icon.png",
@@ -3910,6 +4024,7 @@
                 "welcome",
                 "trend"
             ],
+            "min_host_version": "0.4.15",
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -3943,6 +4058,7 @@
                 "提示词",
                 "优化"
             ],
+            "min_host_version": "0.5.10",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -3973,6 +4089,7 @@
                 "typing",
                 "lint"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -3981,7 +4098,7 @@
         {
             "name": "quick-screenshot",
             "description": "输入框工具栏一键选区截图：左键点按钮拖框选取屏幕区域，松手自动复制到系统剪贴板，Ctrl+V 进输入框即可作为附件发送；右键按钮先隐藏 DriFox 主窗再截图，可截身后的画面",
-            "version": "0.2.1",
+            "version": "0.2.2",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -4020,6 +4137,8 @@
                 "selection",
                 "选区截图"
             ],
+            "min_host_version": "0.6.10",
+            "api_version": 2,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -4051,6 +4170,7 @@
                 "dark",
                 "主题"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
                 "light": "icon.png",
@@ -4082,6 +4202,7 @@
                 "performance",
                 "frontend"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://nextjs.org",
             "icon": {
                 "light": "icon.svg",
@@ -4114,6 +4235,7 @@
                 "code-review",
                 "hook"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/security-guidance",
             "icon": {
                 "light": "icon.svg",
@@ -4123,7 +4245,7 @@
         {
             "name": "self-evolver",
             "description": "DriFox 自进化工具集 — AI 可调用的 5 个工具：生成插件骨架、校验插件结构、扫描分析插件、管理 MCP 服务器配置、记录进化审计日志，配合技能引导实现自我开发/优化/修复插件。",
-            "version": "0.9.0",
+            "version": "0.9.1",
             "author": "black",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -4148,6 +4270,8 @@
                 "mcp",
                 "development"
             ],
+            "min_host_version": "0.6.10",
+            "api_version": 2,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -4176,6 +4300,7 @@
                 "connector",
                 "semgrep"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.semgrep.ai/mcp",
             "icon": {
                 "light": "icon.png",
@@ -4205,6 +4330,7 @@
                 "connector",
                 "sentry"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.sentry.dev/mcp",
             "icon": {
                 "light": "icon.png",
@@ -4237,6 +4363,7 @@
                 "copywriting",
                 "marketing"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/coreyhaines31/marketingskills",
             "icon": {
                 "light": "icon.svg",
@@ -4298,6 +4425,7 @@
                 "agents",
                 "template"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/skill-creator",
             "icon": {
                 "light": "icon.svg",
@@ -4329,6 +4457,7 @@
                 "skill",
                 "install"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -4358,6 +4487,7 @@
                 "communication",
                 "image-generation"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills/tree/main/skills/slack-gif-creator",
             "icon": {
                 "light": "icon.svg",
@@ -4437,6 +4567,7 @@
                 "connector",
                 "square"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.squareup.com/mcp",
             "icon": {
                 "light": "icon.png",
@@ -4513,6 +4644,7 @@
                 "connector",
                 "stripe"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.stripe.com",
             "icon": {
                 "light": "icon.png",
@@ -4542,6 +4674,7 @@
                 "connector",
                 "supabase"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.supabase.com/mcp",
             "icon": {
                 "light": "icon.png",
@@ -4579,6 +4712,7 @@
                 "research",
                 "architecture"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/SuperClaude-Org/SuperClaude_Framework"
         },
         {
@@ -4608,6 +4742,7 @@
                 "brainstorming",
                 "planning"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/obra/superpowers",
             "icon": {
                 "light": "icon.svg",
@@ -4640,6 +4775,7 @@
                 "design-system",
                 "lsp"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://tailwindcss.com",
             "icon": {
                 "light": "icon.svg",
@@ -4676,6 +4812,7 @@
                 "并行任务",
                 "对话引擎"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
                 "light": "icons/board.svg",
@@ -4708,6 +4845,7 @@
                 "tutorial",
                 "交互式教学"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -4737,6 +4875,7 @@
                 "connector",
                 "tencent-docs"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://docs.qq.com/openapi/mcp",
             "icon": {
                 "light": "icon.png",
@@ -4787,6 +4926,7 @@
                 "混元",
                 "llm"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -4816,6 +4956,7 @@
                 "connector",
                 "tencent-map"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.map.qq.com/mcp?format=0",
             "icon": {
                 "light": "icon.png",
@@ -4848,6 +4989,7 @@
                 "tdd",
                 "unit-test"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -4901,6 +5043,7 @@
                 "styling",
                 "主题"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills/tree/main/skills/theme-factory",
             "icon": {
                 "light": "icon.svg",
@@ -4930,6 +5073,7 @@
                 "connector",
                 "todoist"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://ai.todoist.net/mcp",
             "icon": {
                 "light": "icon.png",
@@ -4970,6 +5114,7 @@
                 "活动",
                 "统计"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -5001,6 +5146,7 @@
                 "hot-reload",
                 "development"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -5035,6 +5181,7 @@
                 "双开",
                 "对话"
             ],
+            "min_host_version": "0.4.15",
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -5067,6 +5214,7 @@
                 "design",
                 "easing"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -5095,6 +5243,7 @@
                 "connector",
                 "vercel"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.vercel.com",
             "icon": {
                 "light": "icon.png",
@@ -5128,6 +5277,7 @@
                 "speech",
                 "语音克隆"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
                 "light": "icon.svg",
@@ -5181,6 +5331,7 @@
                 "windows",
                 "darwin"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -5234,6 +5385,7 @@
                 "windows",
                 "darwin"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -5269,6 +5421,7 @@
                 "wttr",
                 "query"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -5299,6 +5452,7 @@
                 "frontend",
                 "前端"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills/tree/main/skills/web-artifacts-builder",
             "icon": {
                 "light": "icon.svg",
@@ -5331,6 +5485,7 @@
                 "react",
                 "前端"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -5362,6 +5517,7 @@
                 "testing",
                 "自动化测试"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://playwright.dev",
             "icon": {
                 "light": "icon.svg",
@@ -5371,7 +5527,7 @@
         {
             "name": "webdav-backup",
             "description": "WebDAV 备份 — 将 DriFox 数据（会话/配置/插件数据）全量备份到坚果云、Nextcloud 等 WebDAV 网盘，支持定时自动备份、可选 AES-256 加密、历史版本管理与一键恢复",
-            "version": "0.8.2",
+            "version": "0.8.3",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -5397,6 +5553,8 @@
                 "恢复",
                 "同步"
             ],
+            "min_host_version": "0.6.10",
+            "api_version": 2,
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
                 "light": "icons/webdav.svg",
@@ -5426,6 +5584,7 @@
                 "connector",
                 "webflow"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.webflow.com/mcp",
             "icon": {
                 "light": "icon.png",
@@ -5457,6 +5616,7 @@
                 "shell",
                 "terminal"
             ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -5485,6 +5645,7 @@
                 "connector",
                 "wix"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://mcp.wix.com/mcp",
             "icon": {
                 "light": "icon.png",
@@ -5523,6 +5684,7 @@
                 "记忆",
                 "产物面板"
             ],
+            "min_host_version": "0.6.2",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -5576,6 +5738,7 @@
                 "connector",
                 "zhipu-webreader"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://open.bigmodel.cn/api/mcp/web_reader/mcp",
             "icon": {
                 "light": "icon.png",
@@ -5606,6 +5769,7 @@
                 "connector",
                 "zhipu-websearch"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://open.bigmodel.cn/api/mcp/web_search_prime/mcp",
             "icon": {
                 "light": "icon.png",
@@ -5636,6 +5800,7 @@
                 "connector",
                 "zhipu-zread"
             ],
+            "min_host_version": "0.5.0",
             "homepage": "https://open.bigmodel.cn/api/mcp/zread/mcp",
             "icon": {
                 "light": "icon.png",
