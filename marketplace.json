@@ -4146,6 +4146,7 @@
             "components": {
                 "mcp": true
             },
+            "downloads": 1,
             "keywords": [
                 "mcp",
                 "connector",

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1792535468.182093,
+  "fetched_at": 1792544867.633941,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -124,7 +124,7 @@
     "pixel-team-studio": 23,
     "playground": 3,
     "ponytail": 9,
-    "postman": 0,
+    "postman": 1,
     "prisma": 0,
     "project-dashboard": 35,
     "prompt-enhancer": 59,
