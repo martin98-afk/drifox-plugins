@@ -26,6 +26,7 @@
 ## 依赖
 
 - `git` 命令行工具（系统已安装即可）
+- 宿主需支持 `engine.session` / `model.config` 能力（plugin.json `capabilities` 已声明；缺失会导致「主程序未提供 create_engine_session 服务」报错）
 - 无需 Python 第三方包（运行时依赖 PyQt5 / qfluentwidgets，由 DriFox 提供）
 
 ## 安装

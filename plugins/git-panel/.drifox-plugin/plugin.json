@@ -15,6 +15,7 @@
     "api_version": 2,
     "min_host_version": "0.6.10",
     "capabilities": [
+        "engine.session",
         "model.config"
     ],
     "keywords": [
