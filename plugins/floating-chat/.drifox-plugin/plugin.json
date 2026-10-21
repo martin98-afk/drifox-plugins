@@ -11,9 +11,7 @@
     },
     "license": "MIT",
     "type": "user",
-    "drifox": {
-        "min_version": "0.6.2"
-    },
+    "min_host_version": "0.6.2",
     "keywords": [
         "chat",
         "floating",

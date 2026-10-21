@@ -14,9 +14,6 @@
     "api_version": 2,
     "min_host_version": "0.6.10",
     "capabilities": [],
-    "drifox": {
-        "min_version": "0.5.12"
-    },
     "keywords": [
         "CodeBuddy",
         "国际版",

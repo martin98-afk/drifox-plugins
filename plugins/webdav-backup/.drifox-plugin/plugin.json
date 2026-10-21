@@ -17,9 +17,6 @@
     "capabilities": [
         "ui.notify"
     ],
-    "drifox": {
-        "min_version": "0.5.12"
-    },
     "keywords": [
         "webdav",
         "backup",

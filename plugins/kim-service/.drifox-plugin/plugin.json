@@ -12,9 +12,7 @@
         "name": "KimYx0207"
     },
     "license": "MIT",
-    "drifox": {
-        "min_version": "0.5.0"
-    },
+    "min_host_version": "0.5.0",
     "keywords": [
         "prompt",
         "optimizer",
