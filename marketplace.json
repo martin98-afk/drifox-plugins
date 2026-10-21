@@ -563,7 +563,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 62,
+            "downloads": 64,
             "keywords": [
                 "browser",
                 "web",
@@ -703,7 +703,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 3,
+            "downloads": 5,
             "keywords": [
                 "chinese",
                 "evolved",
@@ -951,7 +951,7 @@
             "components": {
                 "providers": true
             },
-            "downloads": 9,
+            "downloads": 11,
             "keywords": [
                 "CodeBuddy",
                 "国际版",
@@ -1222,7 +1222,7 @@
                 "tools": true,
                 "hook_policies": true
             },
-            "downloads": 43,
+            "downloads": 45,
             "keywords": [
                 "cron",
                 "schedule",
@@ -2362,7 +2362,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 67,
+            "downloads": 69,
             "keywords": [
                 "git",
                 "source-control",
@@ -4129,7 +4129,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 29,
+            "downloads": 31,
             "keywords": [
                 "screenshot",
                 "clipboard",
@@ -4261,7 +4261,7 @@
                 "tools": true,
                 "skills": true
             },
-            "downloads": 17,
+            "downloads": 19,
             "keywords": [
                 "self-evolve",
                 "plugin",
@@ -5099,7 +5099,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 13,
+            "downloads": 15,
             "keywords": [
                 "welcome",
                 "token",
@@ -5542,7 +5542,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 16,
+            "downloads": 17,
             "keywords": [
                 "webdav",
                 "backup",
