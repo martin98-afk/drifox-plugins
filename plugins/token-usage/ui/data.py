@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
 """数据层 — 从 sessions.messages 解压出真实 API usage，按日聚合
 
-口径（净占用，用户 2026-10-14 确认）：
-- 输入 Token / 输出 Token / 总 Token = **每个会话最后一条带 token_usage 的
-  消息**的 input / output（代表该会话最终占用的上下文与产出量）
+口径（全量求和，用户 2026-10-21 确认）：
+- 输入 Token = 每轮 usage.input **原样累加**（与 API 计费口径一致）
+- 输出 Token = 每轮 usage.output 之和
+- 总 Token = 输入 + 输出
 - 请求次数 = 窗口内全部 token_usage 记录条数（每次 API 调用算一次）
 - 热力图色阶按当日「总 Token」取
+
+为什么不扣增量（2026-10-21 推翻 10-14 的净占用口径）：DriFox 每轮请求都把
+整个上下文重发一遍，全量求和看着像「把同一份上下文重复计几十次」，但服务商
+就是按这个数字计费的（实测 prompt 中位数 93K / p90 227K，单会话中位 43 轮）。
+增量口径报出的量比账单小两个数量级，用户视角等于「统计器坏了」。
 
 为什么不用 sessions.context_usage：那是本地估算的消息总 token，口径与真实
 usage 混在一起算不出输入/输出拆分；token_usage 是 API 返回的精确值。
@@ -159,16 +165,12 @@ def _int_of(value) -> int:
 
 
 def collect() -> dict:
-    """扫描全库会话，按增量口径聚合每日 usage 序列。
+    """扫描全库会话，按全量口径聚合每日 usage 序列。
 
-    口径（增量，2026-10-14 确认）：
-    - 输入 Token = 每轮 prompt_tokens **减去同会话上一轮** prompt_tokens
-      （首轮无基线，全额计入）。DriFox 每轮请求都把整个上下文重发一遍，
-      直接求和等于把同一份上下文重复计几十次（实测占比 99%+），
-      扣掉增量后才是「真正新产生的输入量」，与输出同量级。
-    - 输出 Token = 每轮 output 之和（每轮输出都是新增的，无重复）
+    口径（全量求和，2026-10-21 确认）：
+    - 输入 Token = 每轮 usage.input 原样累加（与 API 计费口径一致）
+    - 输出 Token = 每轮 usage.output 之和
     - 请求次数 = 带 usage 的消息条数
-    - 输入出现回退（压缩后 prompt 变小）时按 0 计，不产生负数
 
     Returns:
         dict:
@@ -208,8 +210,6 @@ def collect() -> dict:
         messages = decode_messages(raw)
         if not messages:
             continue
-        # 会话内上一轮的 prompt 值（增量基线）；跨会话各自独立
-        prev_prompt = None
         session_requests = 0
         for msg in messages:
             if not isinstance(msg, dict):
@@ -220,13 +220,11 @@ def collect() -> dict:
             day = str(msg.get("timestamp") or "")[:10]
             if len(day) != 10:
                 continue
-            prompt = _int_of(usage.get("input"))
             slot = daily.setdefault(day, [0, 0, 0])
-            # 增量输入：本轮 prompt 减去上轮 prompt；回退（压缩后变小）按 0 计
-            slot[0] += max(0, prompt - prev_prompt) if prev_prompt is not None else prompt
+            # 全量口径：每轮 input / output 原样累加，不做会话内去重
+            slot[0] += _int_of(usage.get("input"))
             slot[1] += _int_of(usage.get("output"))
             slot[2] += 1  # 请求次数
-            prev_prompt = prompt
             session_requests += 1
         if session_requests:
             counted_sessions += 1
