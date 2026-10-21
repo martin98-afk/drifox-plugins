@@ -250,7 +250,7 @@ class ChessCard(QWidget):
     # ── UI 搭建 ──
 
     def _setup_ui(self):
-        self.setMinimumWidth(820)
+        self.setMinimumWidth(560)
         root = QVBoxLayout(self)
         # full 容器：占满对话区，边距放宽让内容呼吸
         root.setContentsMargins(24, 16, 24, 16)
@@ -264,6 +264,11 @@ class ChessCard(QWidget):
         self._status_label.setFont(f)
         top.addWidget(self._status_label)
         top.addStretch(1)
+        self._thought_toggle_btn = QPushButton("🤖 思考记录")
+        self._thought_toggle_btn.setCheckable(True)
+        self._thought_toggle_btn.setFixedHeight(28)
+        self._thought_toggle_btn.toggled.connect(self._toggle_thought_panel)
+        top.addWidget(self._thought_toggle_btn)
         self._new_game_btn = QPushButton("新对局")
         self._new_game_btn.clicked.connect(self._new_game)
         self._new_game_btn.setFixedHeight(28)
@@ -283,14 +288,8 @@ class ChessCard(QWidget):
         left_layout.setSpacing(8)
 
         self._board_view = ChessBoardView(cell=52, parent=left)
-        wrap = QHBoxLayout()
-        wrap.addStretch(1)
-        wrap.addWidget(self._board_view)
-        wrap.addStretch(1)
-        # 转成 widget 容器
-        wrap_w = QWidget()
-        wrap_w.setLayout(wrap)
-        left_layout.addWidget(wrap_w, 1)
+        # view 自适应：吃满 left 区域，内部自居中方盘（窄宽不再裁切）
+        left_layout.addWidget(self._board_view, 1)
 
         self._hint_label = QLabel("点击己方棋子选中 → 点击目标格落子")
         self._hint_label.setAlignment(Qt.AlignCenter)
@@ -316,9 +315,22 @@ class ChessCard(QWidget):
             ph.setAlignment(Qt.AlignCenter)
             splitter.addWidget(ph)
 
+        # 默认宽度：左侧棋盘区优先，右侧面板固定限宽（用户可拖拽）
+        splitter.setSizes([860, 380])
+        splitter.setStretchFactor(0, 1)   # 棋盘区域可拉伸
+        splitter.setStretchFactor(1, 0)   # 面板固定大小
 
+        # 思考面板默认收起（顶栏 toggle 未选中）
+        if self._thought_panel is not None:
+            self._thought_panel.hide()
 
         root.addWidget(splitter, 1)
+
+    def _toggle_thought_panel(self, checked: bool):
+        """顶栏开关：显示/隐藏右侧 AI 思考记录面板（默认收起）。"""
+        if getattr(self, "_thought_panel", None) is None:
+            return
+        self._thought_panel.setVisible(checked)
 
     # ── 状态显示 ──
 
@@ -419,9 +431,12 @@ class ChessCard(QWidget):
     def _apply_move(self, move, source: Optional[str] = None):
         from .game_logic import is_checkmate, is_stalemate
 
-        # 状态机保护：动效期间拒绝新走子（#6）
-        if getattr(self._board_view, "_animating", False):
-            logger.debug("[chinese-chess] 动效进行中，跳过 _apply_move")
+        # 状态机保护：动效期间拒绝**手动**新走子（#6）。
+        # AI 来源（llm/fallback）不拦：LLM 往返可能短于 1.5s 动画（flash 模型
+        # 实测竞态），静默丢弃后无重试路径会永久卡死在「思考中」；
+        # 且 animate_last_move 自带旧 timer 清理，重叠动效安全。
+        if source is None and getattr(self._board_view, "_animating", False):
+            logger.debug("[chinese-chess] 动效进行中，跳过手动 _apply_move")
             return
 
         # Blocker #1 兜底守卫：AI 来源的走法需校验当前局面合法性，

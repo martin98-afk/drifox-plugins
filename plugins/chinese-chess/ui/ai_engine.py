@@ -42,6 +42,11 @@ COORD_GUIDE = (
 
 SYSTEM_PROMPT = (
     "你是中国象棋高手。请根据局面从【合法走法清单】中选择最佳一步。\n"
+    "决策优先级：\n"
+    "1. 能将死对方的走法 > 吃子（车>炮>马>兵）且吃后不被反吃 > 解除将军 > 出子/护帅\n"
+    "2. 严禁将/帅裸奔：走后不能让对方炮/车直接照面将军\n"
+    "3. 禁止同一点对来回移动（重复走法浪费步数且长打判负）\n"
+    "4. 优先保持车马炮灵活性，不要过早挪动九宫内士象\n"
     "严格要求：\n"
     '1. 仅输出 1 行 JSON，格式 {"from":[c1,r1],"to":[c2,r2]}，c 与 r 为整数\n'
     "2. from/to 必须逐字取自清单中某一条的起点与终点，禁止自创坐标\n"
@@ -67,18 +72,27 @@ def _legal_moves_section(board, side: str) -> str:
 
 
 def build_user_prompt(board, side: str, history: List[str]) -> str:
-    """构造用户提示：坐标说明 + 历史 + ASCII 局面 + 合法走法清单。
+    """构造用户提示：坐标说明 + 近期历史（防重复）+ ASCII 局面 + 合法走法清单。
 
     附清单是走法质量的关键：弱模型自由生成坐标的非法率高（实测 glm-flash
-    系三连非法触发兜底），从清单中选则几乎不可能非法。
+    系三连非法触发兜底）；附近期历史防同子往返（实测将 (4,0)↔(4,1) 来回走）。
     """
     side_cn = "红方" if side == RED else "黑方"
-    last = history[-1] if history else "（首步，无历史）"
+    recent = history[-8:]
+    last = recent[-1] if recent else "（首步，无历史）"
+    hist_block = ""
+    if recent:
+        hist_block = (
+            "【本局走法序列】（你方走法不得与序列中任一走法完全相同，避免往返）：\n"
+            + "\n".join(f"{i + 1}. {m}" for i, m in enumerate(recent))
+            + "\n\n"
+        )
     return (
         f"{COORD_GUIDE}\n\n"
         f"你是 {side_cn}，现在轮到你走。\n"
         f"上一步：{last}\n\n"
-        f"当前局面（红方在底部，· 表示空格）：\n"
+        + hist_block
+        + f"当前局面（红方在底部，· 表示空格）：\n"
         f"{board_to_ascii(board)}\n\n"
         f"【合法走法清单】（只能从中选一条）：\n"
         f"{_legal_moves_section(board, side)}\n\n"
