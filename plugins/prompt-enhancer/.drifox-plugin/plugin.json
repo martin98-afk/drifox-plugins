@@ -8,6 +8,10 @@
     "license": "MIT",
     "type": "user",
     "min_host_version": "0.5.10",
+    "capabilities": [
+        "engine.session",
+        "model.config"
+    ],
     "icon": {
         "light": "icon.svg",
         "dark": "icon_dark.svg"
