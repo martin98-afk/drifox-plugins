@@ -131,10 +131,19 @@ class TestAIThoughtPanel(unittest.TestCase):
             self.assertIn(f"第 {i} 步", text)
 
     def test_add_thought_strips_json(self):
+        # 新契约：纯 JSON 响应剥离后回显走法坐标（不再留空洞占位）
         self.panel.add_thought("红", "gpt-4", '{"from":[4,9],"to":[4,8]}')
         out = self.panel.get_text()
-        self.assertIn(PLACEHOLDER, out)
+        self.assertIn("本步走法：(4,9) → (4,8)", out)
         self.assertNotIn("from", out)
+
+    def test_add_thought_mixed_text_still_strips_json(self):
+        # 混合文本（走法+解释）仍剥走法留解释
+        self.panel.add_thought("红", "gpt-4", '车二平三，因为可以抓马 {"from":[8,9],"to":[2,9]}')
+        out = self.panel.get_text()
+        self.assertIn(PLACEHOLDER, out)
+        self.assertIn("车二平三", out)
+        self.assertNotIn('"from"', out)
 
     def test_add_thought_accumulates_chars(self):
         self.panel.add_thought("红", "gpt-4", "abcdef")
@@ -215,7 +224,7 @@ class TestThoughtSignalIntegration(unittest.TestCase):
         )
         sig.thought_received.emit("黑", "claude-3", '{"from":[1,9],"to":[1,7]}')
         self.assertEqual(panel.get_step(), 1)
-        self.assertIn(PLACEHOLDER, panel.get_text())
+        self.assertIn("本步走法：(1,9) → (1,7)", panel.get_text())
         self.assertNotIn("from", panel.get_text())
 
     def test_card_builds_panel(self):
