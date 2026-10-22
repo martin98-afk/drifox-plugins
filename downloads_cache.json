@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1792675141.8894246,
+  "fetched_at": 1792692290.2112074,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -98,6 +98,7 @@
     "knowledge-base-skills": 2,
     "laputa-fog": 11,
     "linear": 0,
+    "magpie": 1,
     "mapbox": 0,
     "marketplace-recommend": 2,
     "mcp-builder": 1,
