@@ -1,0 +1,25 @@
+{
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "name": "magpie",
+    "description": "magpie 本地网关服务商 — 把 magpie 聚合的全部订阅账号、API Key、本地模型与配额自动切换，作为 DriFox 的单一模型入口",
+    "version": "0.1.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "min_host_version": "0.5.12",
+    "keywords": [
+        "magpie",
+        "网关",
+        "服务商",
+        "多账号",
+        "配额"
+    ],
+    "components": {
+        "providers": true
+    }
+}
