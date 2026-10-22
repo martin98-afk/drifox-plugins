@@ -3103,6 +3103,37 @@
             }
         },
         {
+            "name": "magpie",
+            "description": "magpie 本地网关服务商 — 把 magpie 聚合的全部订阅账号、API Key、本地模型与配额自动切换，作为 DriFox 的单一模型入口",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "provider"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/magpie",
+                "ref": "main"
+            },
+            "components": {
+                "providers": true
+            },
+            "keywords": [
+                "magpie",
+                "网关",
+                "服务商",
+                "多账号",
+                "配额"
+            ],
+            "min_host_version": "0.5.12",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "mapbox",
             "description": "Mapbox — 地点搜索、路线规划、等时圈与静态地图。",
             "version": "1.0.0",
