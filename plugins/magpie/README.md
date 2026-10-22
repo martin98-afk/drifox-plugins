@@ -30,6 +30,46 @@ Copilot / Gemini / Grok）、API Key、本地模型收进一个地方，对外�
 模型 id 形如 `deepseek/deepseek-v4-pro`、`anthropic/claude-sonnet-5`、
 `group/opus-anywhere`。路由组也照原样选，配额耗尽后的回退由 magpie 内部完成。
 
+## 内嵌 magpie 网页界面
+
+插件带一个独立弹窗（左侧插件栏「magpie」，或命令 `/magpie:web`），里面直接
+内嵌 magpie 自己的网页界面：切模型、加服务商、看配额与用量、改路由组，跟开
+浏览器里那个页面是同一套。
+
+**它连的是 `127.0.0.1:3430`，不是网关的 3425。** 这两个是不同的东西：
+
+| 端口 | 用途 | 由谁开启 |
+|------|------|----------|
+| 3425 | LLM 网关（DriFox 聊天走这里） | App / `magpie serve` / 桌面版任一形态 |
+| 3430 | 网页界面（本弹窗走这里） | **只有** `magpie web` / `magpie serve --web` / `magpie daemon install --web` |
+
+所以只装了桌面 App 时，弹窗会提示「网页界面没有在监听」。要内嵌使用，得从终端
+启动网页服务：
+
+```sh
+magpie web --no-open          # 默认 3430
+```
+
+或者装成后台服务，开机自动带网页：
+
+```sh
+magpie daemon install --web
+```
+
+### Web Key
+
+`magpie web` 每次启动会生成一个新的随机 key，URL 必须带 `?k=<key>` 才能进。
+固定它的办法是先设环境变量再启动：
+
+```sh
+MAGPIE_WEB_KEY=mykey magpie web --no-open
+```
+
+然后把 `mykey` 填进插件的设置卡（设置 → 插件 → magpie 网页界面 → Web Key）。
+设置里还有「网页端口」，改了 3430 就同步改这里。
+
+key 留空时弹窗仍会尝试加载，被拒绝时页面顶部会提示 key 不匹配。
+
 ## 已知限制
 
 这些是「聚合网关」形态的固有代价，不是插件缺陷：
@@ -40,9 +80,9 @@ Copilot / Gemini / Grok）、API Key、本地模型收进一个地方，对外�
   超限由厂商返回 400。
 - **采样参数原样透传。** 选到不接受采样参数的模型（o1/o3 类）时，需在模型配置卡
   手动关掉温度等参数。
-- **未接配额面板。** `GET /v1/magpie/quotas` 的响应结构未经实测，本插件不做猜测式
-  解析。配额请直接在 magpie 的 Usage 页看，或在 Claude Code 状态栏用
-  `magpie statusline`。
+- **未接原生配额面板。** `GET /v1/magpie/quotas` 的响应结构未经实测，插件不做
+  猜测式解析。看配额请用内嵌的 magpie 网页界面（Quotas / Usage 页），或在
+  Claude Code 状态栏用 `magpie statusline`。
 - **不管理 magpie 配置。** magpie 的文档明确「读 settings.json，不要写」。改模型、
   加服务商请用 magpie 自己的界面或 CLI。
 - **只走 OpenAI 兼容协议。** magpie 也提供 Anthropic Messages 与 Gemini 端点，
@@ -69,6 +109,8 @@ Copilot / Gemini / Grok）、API Key、本地模型收进一个地方，对外�
 | `... 不是 magpie 网关：/api/hello 返回 ...` | 该端口被别的服务占用 | 换端口，或停掉占用方 |
 | 读取 magpie 模型列表失败 | 网关在跑但 `/v1/models` 异常 | 在浏览器打开 `/v1/models` 看返回 |
 | magpie 返回的模型列表为空 | magpie 里还没加服务商，或模型对 agents 不可见 | 在 magpie 里添加服务商 |
+| 弹窗显示「网页界面没有在监听」 | 只跑了桌面 App，没开网页服务 | `magpie web --no-open` 或 `magpie daemon install --web` |
+| 弹窗显示「页面加载失败（多为 web key 不匹配）」 | key 是上次启动的，或没填 | 设 `MAGPIE_WEB_KEY` 重启 magpie web，把同值填进插件设置 |
 
 ## 许可
 
