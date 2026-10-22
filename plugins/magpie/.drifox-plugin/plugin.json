@@ -5,12 +5,17 @@
     },
     "name": "magpie",
     "description": "magpie 本地网关 — 接入聚合后的全部订阅账号与路由组，并内嵌 magpie 网页界面直接管理模型与配额",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "author": {
         "name": "DriFox Contributors"
     },
     "license": "GPL-3.0-or-later",
     "type": "user",
+    "api_version": 2,
+    "capabilities": [
+        "input.write",
+        "ui.notify"
+    ],
     "min_host_version": "0.5.12",
     "keywords": [
         "magpie",
