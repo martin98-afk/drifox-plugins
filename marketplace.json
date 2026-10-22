@@ -563,7 +563,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 66,
+            "downloads": 67,
             "keywords": [
                 "browser",
                 "web",
@@ -951,7 +951,7 @@
             "components": {
                 "providers": true
             },
-            "downloads": 12,
+            "downloads": 13,
             "keywords": [
                 "CodeBuddy",
                 "国际版",
@@ -1222,7 +1222,7 @@
                 "tools": true,
                 "hook_policies": true
             },
-            "downloads": 46,
+            "downloads": 47,
             "keywords": [
                 "cron",
                 "schedule",
@@ -5371,7 +5371,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 9,
+            "downloads": 10,
             "keywords": [
                 "voice",
                 "tts",
