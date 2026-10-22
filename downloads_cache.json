@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1792655455.6698706,
+  "fetched_at": 1792675141.8894246,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -39,7 +39,7 @@
     "context-usage-stats": 5,
     "context7": 4,
     "context7-remote": 0,
-    "cron-tasks": 50,
+    "cron-tasks": 51,
     "desktop-automation": 18,
     "dingtalk-ai-table": 2,
     "dingtalk-calendar": 1,

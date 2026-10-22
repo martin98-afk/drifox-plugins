@@ -1222,7 +1222,7 @@
                 "tools": true,
                 "hook_policies": true
             },
-            "downloads": 50,
+            "downloads": 51,
             "keywords": [
                 "cron",
                 "schedule",
