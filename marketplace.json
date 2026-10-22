@@ -703,7 +703,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "chinese",
                 "evolved",
@@ -1222,7 +1222,7 @@
                 "tools": true,
                 "hook_policies": true
             },
-            "downloads": 47,
+            "downloads": 50,
             "keywords": [
                 "cron",
                 "schedule",
@@ -4129,7 +4129,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 32,
+            "downloads": 33,
             "keywords": [
                 "screenshot",
                 "clipboard",
@@ -4261,7 +4261,7 @@
                 "tools": true,
                 "skills": true
             },
-            "downloads": 20,
+            "downloads": 21,
             "keywords": [
                 "self-evolve",
                 "plugin",
@@ -5542,7 +5542,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 18,
+            "downloads": 19,
             "keywords": [
                 "webdav",
                 "backup",
