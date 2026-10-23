@@ -5289,10 +5289,11 @@
         {
             "name": "vision-proxy",
             "description": "图片代理 — 当前模型不支持视觉时，把图片转发给配置的多模态模型，取回文字描述交给当前模型继续推理",
-            "version": "0.1.0",
+            "version": "0.2.0",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
+                "ui",
                 "tool"
             ],
             "source": {
@@ -5302,7 +5303,8 @@
                 "ref": "main"
             },
             "components": {
-                "tools": true
+                "tools": true,
+                "ui": true
             },
             "keywords": [
                 "vision",
