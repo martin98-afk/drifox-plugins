@@ -563,7 +563,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 67,
+            "downloads": 68,
             "keywords": [
                 "browser",
                 "web",
@@ -594,7 +594,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 26,
+            "downloads": 27,
             "keywords": [
                 "calendar",
                 "date",
@@ -1092,7 +1092,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 26,
+            "downloads": 27,
             "keywords": [
                 "welcome",
                 "stats",
@@ -2362,7 +2362,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 71,
+            "downloads": 72,
             "keywords": [
                 "git",
                 "source-control",
@@ -4085,7 +4085,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 60,
+            "downloads": 61,
             "keywords": [
                 "prompt",
                 "enhance",
