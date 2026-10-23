@@ -1222,7 +1222,7 @@
                 "tools": true,
                 "hook_policies": true
             },
-            "downloads": 51,
+            "downloads": 52,
             "keywords": [
                 "cron",
                 "schedule",
@@ -5306,6 +5306,7 @@
                 "tools": true,
                 "ui": true
             },
+            "downloads": 1,
             "keywords": [
                 "vision",
                 "multimodal",
