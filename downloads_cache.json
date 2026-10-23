@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1792750664.7168295,
+  "fetched_at": 1792768553.8667274,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -39,7 +39,7 @@
     "context-usage-stats": 5,
     "context7": 4,
     "context7-remote": 0,
-    "cron-tasks": 51,
+    "cron-tasks": 52,
     "desktop-automation": 18,
     "dingtalk-ai-table": 2,
     "dingtalk-calendar": 1,
@@ -165,6 +165,7 @@
     "twin-chat": 10,
     "ui-motion-skills": 4,
     "vercel": 0,
+    "vision-proxy": 1,
     "voice-clone": 1,
     "voice-input": 25,
     "voice-reply": 10,
