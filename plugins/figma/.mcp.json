@@ -3,16 +3,17 @@
     "figma": {
       "type": "http",
       "url": "https://mcp.figma.com/mcp",
-      "enabled": false,
+      "enabled": true,
       "command": "",
       "args": [],
       "env": {},
       "headers": {},
       "auth": {
         "type": "oauth",
-        "client_name": "DriFox",
+        "client_name": "Claude Code",
         "scope": ""
-      }
+      },
+      "credential": {}
     }
   }
 }

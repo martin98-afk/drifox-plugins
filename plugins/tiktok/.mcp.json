@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "tiktok": {
+      "type": "http",
+      "url": "https://business-api.tiktok.com/open_mcp/tt-ads-mcp-flat",
+      "enabled": false
+    }
+  }
+}

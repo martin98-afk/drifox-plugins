@@ -16,6 +16,21 @@ PKCE，token 保存在插件自身配置中，之后自动刷新。
 
 授权入口：设置 → MCP 连接器 → 本插件 → 点击授权按钮。
 
+### 注册名说明（重要）
+
+Figma 的远程 MCP 只接受其官方目录内客户端的动态注册，其余一律 `403 Forbidden`。
+实测（2026-10-24）可通过的名字仅：`Claude Code`、`Codex`、`opencode`、`Claude Desktop`；
+`DriFox`、`VS Code`、`Cursor`、`Gemini CLI` 等均被拒。
+
+本插件 `.mcp.json` 的 `client_name` 设为 `Claude Code` 才能完成注册。代价与风险：
+
+- Figma 侧会把连接识别为 Claude Code（授权页 `utm_source=Figma+MCP+in+Claude+Code`），
+  属于冒用第三方客户端身份，不符合 Figma 服务条款，账号风险由使用者自担。
+- 该白名单是 Figma 单方维护的硬编码列表，随时可能收紧导致再次失败。
+- 若 Figma 官方接洽或明确禁止，应改回 `DriFox` 并等待被纳入官方目录。
+
+替代方案：用 Figma 桌面版 MCP（本地端点，需桌面 app 与 Dev/Full 席位），不依赖此白名单。
+
 ## 上游
 
 - 服务方端点: `https://mcp.figma.com/mcp`

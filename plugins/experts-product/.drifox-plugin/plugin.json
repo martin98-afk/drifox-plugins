@@ -1,0 +1,25 @@
+{
+  "name": "experts-product",
+  "description": "产品设计专家智能体包 — 17 个 @智能体（源自 WorkBuddy 专家市场）",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "WorkBuddy Expert Market",
+    "url": "https://www.workbuddy.cn"
+  },
+  "license": "MIT",
+  "type": "user",
+  "min_host_version": "0.5.0",
+  "keywords": [
+    "agents",
+    "experts",
+    "product"
+  ],
+  "components": {
+    "agents": true
+  },
+  "homepage": "https://www.workbuddy.cn"
+}

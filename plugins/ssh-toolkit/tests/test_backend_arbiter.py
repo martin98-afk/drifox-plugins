@@ -11,9 +11,16 @@ import sys
 import ssh_toolkit_auth as A
 
 
-def test_arbiter_marked_done_after_import():
-    """conftest import _auth 时仲裁已执行：标记应为 True。"""
-    assert A._CRYPTO_SELFTEST_OK is True
+def test_arbiter_marked_done_after_lazy_init():
+    """懒加载（#23）语义：首次 _ensure_paramiko() 后仲裁标记就位。
+
+    旧断言「import 后 _CRYPTO_SELFTEST_OK 为 True」与懒化目标直接冲突
+    （模块级仲裁+cryptography 全量导入正是被移除的 1.4s 启动开销）。
+    注意合跑时其他用例可能已先触发懒初始化，故不断言「此前为 False」；
+    import 不触发仲裁的验证在探针（独立进程）覆盖。
+    """
+    A._ensure_paramiko()
+    assert A._CRYPTO_SELFTEST_OK is True, "_ensure_paramiko 后仲裁应已完成"
 
 
 def test_cryptography_bound_to_vendored_copy():

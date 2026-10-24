@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "slack-mcp": {
+      "type": "http",
+      "url": "https://mcp.slack.com/mcp",
+      "enabled": false,
+      "auth": {
+        "type": "oauth",
+        "client_name": "DriFox",
+        "scope": ""
+      }
+    }
+  }
+}

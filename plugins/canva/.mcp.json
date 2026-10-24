@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "canva": {
+      "type": "http",
+      "url": "https://mcp.canva.com/mcp",
+      "enabled": false,
+      "auth": {
+        "type": "oauth",
+        "client_name": "DriFox",
+        "scope": ""
+      }
+    }
+  }
+}

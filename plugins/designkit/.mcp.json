@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "designkit": {
+      "type": "http",
+      "url": "https://designkitmcp.designkit.com/mcp/workbuddy",
+      "enabled": false
+    }
+  }
+}
