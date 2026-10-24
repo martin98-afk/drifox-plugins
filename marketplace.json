@@ -1922,7 +1922,8 @@
                 "ref": "main"
             },
             "components": {
-                "agents": true
+                "agents": true,
+                "skills": true
             },
             "keywords": [
                 "agents",

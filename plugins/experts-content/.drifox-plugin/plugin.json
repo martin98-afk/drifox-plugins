@@ -19,7 +19,8 @@
     "content"
   ],
   "components": {
-    "agents": true
+    "agents": true,
+    "skills": true
   },
   "homepage": "https://www.workbuddy.cn"
 }
