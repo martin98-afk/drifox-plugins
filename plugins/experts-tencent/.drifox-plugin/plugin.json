@@ -2,8 +2,8 @@
   "name": "experts-tencent",
   "description": "腾讯专区专家智能体包 — 17 个 @智能体（源自 WorkBuddy 专家市场）",
   "icon": {
-    "light": "icon.svg",
-    "dark": "icon.svg"
+    "light": "icon.png",
+    "dark": "icon.png"
   },
   "version": "1.0.0",
   "author": {
