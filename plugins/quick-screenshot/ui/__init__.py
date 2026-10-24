@@ -199,7 +199,7 @@ def _on_screenshot_command(args: str = "") -> None:
     """
     main_widget = None
     try:
-        from app.core.window_registry import alive_window_instances
+        from app.core.infra.window_registry import alive_window_instances
 
         wins = alive_window_instances()
         if wins:
@@ -244,7 +244,7 @@ def register_ui(registry) -> None:
     # 挂全局处理器后，快捷键触发走 _execute_command → FunctionCommandHandlers 直达截图。
     # dict 覆盖式注册，热重载重复调用幂等。
     try:
-        from app.core.builtin_commands import FunctionCommandHandlers
+        from app.core.commands.builtin_commands import FunctionCommandHandlers
 
         FunctionCommandHandlers.register(PLUGIN_NAME, _on_screenshot_command)
     except Exception as e:  # noqa: BLE001 — 宿主无该 API 时退化为仅按钮入口

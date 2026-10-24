@@ -189,7 +189,10 @@ class TestGitRepoEndToEnd(TempRepoMixin, unittest.TestCase):
         self.g.commit("ours change")
 
         # 拉取并合并 → 冲突
-        out, err, code = _git(self.repo, "pull", "origin", "main")
+        # --no-rebase：显式指定 merge 策略。裸 `git pull` 在 git 2.27+ 且
+        # 未配置 pull.rebase / pull.ff 的机器上直接报 "Need to specify how to
+        # reconcile divergent branches" 而不进入合并，导致测试依赖本机配置
+        out, err, code = _git(self.repo, "pull", "--no-rebase", "origin", "main")
         self.assertNotEqual(code, 0, f"pull 应冲突失败: {err}")
         items = self.g.status_items()
         conflict = [i for i in items if i["status"] in cards._CONFLICT_STATUS]

@@ -33,7 +33,7 @@ _DEFAULT_SUBSYSTEMS = ("all", "mem_diag")
 def _subsystems() -> tuple[str, ...]:
     """从 LOG_ROUTES 派生合法子系统清单（懒加载，避开循环 import）。"""
     try:
-        from app.core.logging_setup import LOG_ROUTES
+        from app.core.infra.logging_setup import LOG_ROUTES
 
         subs = list(_DEFAULT_SUBSYSTEMS)
         for file_name, _inc, _exc in LOG_ROUTES:
@@ -379,7 +379,7 @@ def _impl(tool_ctx, **kwargs):  # noqa: ARG001
                 head = max(0, int(kwargs.get("head", 3)))
                 tail_n = max(0, int(kwargs.get("tail", 10)))
                 max_hits = max(1, min(int(kwargs.get("max_hits", 500)), 5000))
-            except TypeError, ValueError:
+            except (TypeError, ValueError):
                 head, tail_n, max_hits = 3, 10, 500
             return ToolResult(
                 True,
@@ -398,7 +398,7 @@ def _impl(tool_ctx, **kwargs):  # noqa: ARG001
             try:
                 line_no = int(kwargs.get("line_no", 0))
                 n = max(1, min(int(kwargs.get("n", 50)), 500))
-            except TypeError, ValueError:
+            except (TypeError, ValueError):
                 line_no, n = 0, 50
             return ToolResult(
                 True,
@@ -407,7 +407,7 @@ def _impl(tool_ctx, **kwargs):  # noqa: ARG001
         if op == "triage":
             try:
                 lines = int(kwargs.get("lines") or 500)
-            except TypeError, ValueError:
+            except (TypeError, ValueError):
                 lines = 500
             lines = max(50, min(lines, 5000))
             plugin_filter = (kwargs.get("plugin_name") or "").strip() or None

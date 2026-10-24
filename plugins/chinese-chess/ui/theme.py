@@ -78,7 +78,12 @@ PATH_ARROW_COLOR = "rgba(212, 175, 55, 0.6)"              # 路径箭头：金�
 
 # ── 通用 Token（借用主程序 design_tokens，缺失时不报错）────────
 def _import_general_tokens():
-    """懒导入主程序设计 Token；失败返回带默认值的占位类。"""
+    """取通用 Token：宿主提供 BorderRadius / Animations 时用宿主值。
+
+    Spacing / FontSizes 两个类已从 ``app.utils.design_tokens`` 移除（现仅剩
+    ``Sizes`` / ``BorderRadius`` / ``Animations`` 等），固定用本地常量，
+    不再发一次必然失败的 import。
+    """
     class _FallbackTokens:
         BorderRadius = type("BR", (), {"SM": "4px", "MD": "8px", "LG": "18px"})()
         Spacing = type("S", (), {"XS": 4, "SM": 8, "MD": 12, "LG": 16, "XL": 20, "XXL": 24})()
@@ -86,16 +91,12 @@ def _import_general_tokens():
         Animations = type("A", (), {"FAST_MS": 150, "NORMAL_MS": 200, "SLOW_MS": 300})()
 
     try:
-        from app.utils.design_tokens import BorderRadius, Spacing, FontSizes, Animations  # type: ignore
-
-        return BorderRadius, Spacing, FontSizes, Animations
+        from app.utils.design_tokens import Animations, BorderRadius  # type: ignore
     except Exception:
-        return (
-            _FallbackTokens.BorderRadius,
-            _FallbackTokens.Spacing,
-            _FallbackTokens.FontSizes,
-            _FallbackTokens.Animations,
-        )
+        BorderRadius = _FallbackTokens.BorderRadius
+        Animations = _FallbackTokens.Animations
+
+    return BorderRadius, _FallbackTokens.Spacing, _FallbackTokens.FontSizes, Animations
 
 
 BorderRadius, Spacing, FontSizes, Animations = _import_general_tokens()

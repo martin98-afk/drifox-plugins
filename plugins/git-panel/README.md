@@ -8,8 +8,8 @@
 |------|------|
 | 📝 **文件变更列表** | `git status --porcelain` 实时展示已暂存 / 未暂存变更，**VSCode 风格状态字母**（M/A/D/R/U/! + 颜色）区分类型，长路径自动换行不撑宽侧栏 |
 | ➕ **暂存 / 取消暂存 / 放弃** | 单文件与「全部」批量操作；**放弃未暂存修改**按钮常驻（有未暂存修改即显示），一键恢复所有已跟踪修改 + 删除未跟踪文件/目录，已暂存内容不受影响，有确认弹窗保护 |
-| 💬 **提交 / Amend** | **多行提交描述框** + AI 生成按钮：根据暂存区 diff 由 LLM 生成提交描述（提示词与模型在系统设置「Git 提交描述生成」配置，留空模型沿用当前窗口），支持 `--amend` 修改上次提交；「搁置」按钮在提交栏右侧按钮列 |
-| 📦 **Stash 管理** | 创建 / 列表 / 应用（保留搁置）/ 删除，双击条目查看内容，一键保存工作进度 |
+| 💬 **提交 / Amend** | **多行提交描述框**（右上角内嵌 **AI 生成图标按钮**：根据暂存区 diff 由 LLM 生成提交描述，失败自动重试最多 3 次，自动剥离围栏/引导句/尾注；提示词与模型在系统设置「Git 提交描述生成」配置，留空模型沿用当前窗口）+ **提交模式按钮占满一行**（VSCode 风格右侧下拉切换：提交 / 暂存全部并提交 ｜ 提交并推送，分组分隔线，选中即记忆）；支持 `--amend` 修改上次提交 |
+| 📦 **Stash 管理** | 列表 / 应用（保留搁置）/ 删除，双击条目查看内容 |
 | 🌿 **分支管理** | 查看当前分支、创建并切换（**新建分支**入口在分支区标题右侧）、切换分支、删除分支（长分支名自动换行）；新建分支弹窗继承系统字体与字号 |
 | ⬆⬇🔄 **远程同步** | Push（无 upstream 自动 `--set-upstream`）、Pull（`--rebase --autostash` 失败回退普通 pull）、Fetch（`--all --prune`），头部显示 ahead/behind 数量 |
 | 📜 **提交历史（Graph 视图）** | 最近 30 条 commit：**并行分支点线图**（分叉斜出/汇合斜入/HEAD 空心高亮，多色区分分支列）+ 分支/标签徽章（当前分支绿、远程蓝、tag 黄）+ 相对时间 + 单行省略描述；**悬停显示详情卡**（作者/完整时间/文件增删统计），**单击展开该提交的文件列表**（+N −M 着色，点击文件看单文件 diff），**双击查看完整 diff**；折叠状态跨刷新记忆 |
@@ -26,6 +26,7 @@
 ## 依赖
 
 - `git` 命令行工具（系统已安装即可）
+- 宿主需支持 `engine.session` / `model.config` 能力（plugin.json `capabilities` 已声明；缺失会导致「主程序未提供 create_engine_session 服务」报错）
 - 无需 Python 第三方包（运行时依赖 PySide6 / qfluentwidgets，由 DriFox 提供）
 
 ## 安装
@@ -121,3 +122,33 @@ _run_git (git_core.py)  ←── 唯一 subprocess 执行点（QThread 外执�
 - DriFox UI 插件注册表：`DriFox/app/core/ui_plugin_registry.py`
 - context_provider 机制：`DriFox/app/main_widget.py`
 - 同类插件：[git-dashboard](../git-dashboard/)（可视化仪表盘，与本面板互补）
+
+## LLM 调用通道（重要）
+本插件的 AI 生成提交描述走宿主 `services["create_engine_session"]`（EP3 契约），
+经 ModelAdapter / Serializer / Transport 三层分派发出请求。
+
+**不要**自建 openai client 直发 `chat.completions.create`：那会绕过三层分派，
+导致服务商伪装头缺失（CodeBuddy `X-Product` + 动态 `Authorization`、OpenCode
+`x-opencode-session`）→ 401 / 400 MissingSessionID，且 GPT-5 系应走
+`/v1/responses`、思考参数映射与智能重试全部失效。
+
+取配置仍走 `get_provider_config`；两者分工：前者管「发给谁」，后者管「怎么发」。
+
+生成失败（网络抖动/服务商 429、5xx/思考型模型空输出）自动重试最多 3 次（指数退避），
+用户主动取消不重试；回填前自动剥离 ``` 围栏、「好的/以下是」引导句、
+Co-Authored-By 尾注与 `<think>` 块。
+
+## 密钥获取（重要）
+插件需要「切到指定服务商跑一次 LLM 调用」时，**必须**经宿主公开服务取配置：
+```python
+cfg = ctx["services"]["get_provider_config"]("MiniMax", "MiniMax-M2.7")
+# → {"API_KEY": "sk-…已解密明文", "API_URL": "…", "模型名称": …}
+```
+**不要**自行 `json.load(~/.drifox/app.config)` 取 `LLM.SavedProviders[*].API_KEY`：
+主程序 `SecretMode` 非 `none` 时，该字段是密文（`password` 模式 `enc:v2:…`）
+或空串（`keyring` 模式密钥已入系统凭证库），拿去发请求会得到
+`401 log in fail: Please carry the API secret key`。只有主程序内存态持有明文。
+
+磁盘文件仍可读**非密钥字段**（`provider_name` / `模型列表` 等），用于渲染
+「服务商:模型名」下拉选项；密钥字段一律走服务。旧版主程序无该服务时，
+回退遍历 `main_widget._valid_configs`（同为内存态，同样不碰磁盘）。

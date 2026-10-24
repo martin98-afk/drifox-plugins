@@ -28,7 +28,7 @@ from crontasks_core.models import CronJob  # noqa: E402
 @pytest.fixture(scope="session")
 def qapp():
     """全局唯一 QCoreApplication（session 级保活，防 QObject 被连带回收）"""
-    from PyQt5.QtCore import QCoreApplication
+    from PySide6.QtCore import QCoreApplication
 
     app = QCoreApplication.instance() or QCoreApplication([])
     yield app

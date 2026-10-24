@@ -104,14 +104,17 @@ class WeComAdapter(BasePlatformAdapter):
             return False
 
         try:
-            # HTTP 客户端
-            from app.gateway.platforms._http_client_limits import platform_httpx_limits
-
-            limits = platform_httpx_limits()
+            # HTTP 客户端（连接池参数本地定义：宿主 app.gateway.platforms._http_client_limits
+            # 已在主程序死代码清理中删除，插件不再跨层引用宿主私有模块）
+            limits = httpx.Limits(
+                max_keepalive_connections=20,
+                max_connections=100,
+                keepalive_expiry=30.0,
+            )
             self._http_client = httpx.AsyncClient(
                 timeout=30.0,
                 follow_redirects=True,
-                limits=limits if limits else httpx.Limits(),
+                limits=limits,
             )
 
             # WebSocket 连接

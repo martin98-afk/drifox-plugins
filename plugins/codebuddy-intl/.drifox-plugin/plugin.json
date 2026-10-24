@@ -1,0 +1,29 @@
+{
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "name": "codebuddy-intl",
+    "description": "腾讯 CodeBuddy 国际版服务商（OAuth 登录制）— 浏览器授权登录，以订阅额度直连 www.codebuddy.ai 网关（craft 路由槽位 + 全表真实模型 ID 同选，槽位由网关按账号档位分配实际模型），无需 API Key",
+    "version": "0.5.1",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "api_version": 2,
+    "min_host_version": "0.6.10",
+    "capabilities": [],
+    "keywords": [
+        "CodeBuddy",
+        "国际版",
+        "OAuth",
+        "Claude",
+        "GPT",
+        "Gemini",
+        "服务商"
+    ],
+    "components": {
+        "providers": true
+    }
+}

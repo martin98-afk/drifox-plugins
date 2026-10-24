@@ -4,8 +4,9 @@
 功能：
 - 文件变更列表（已暂存 / 未暂存）
 - 暂存 / 取消暂存 / 放弃修改
-- 提交
-- 搁置创建 / 列表 / 应用 / 弹出 / 删除
+- 提交（含提交并推送 / 暂存全部并提交模式）
+- AI 生成提交描述（自动重试）
+- 搁置列表 / 应用 / 弹出 / 删除
 - 分支切换 / 创建 / 删除
 - 提交历史（Graph 图）
 - Diff 预览对话框
@@ -19,10 +20,12 @@ import os
 import re
 import subprocess
 import sys
+import threading
+import time
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
-from typing import Callable, List, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 from .llm_config import (
     DEFAULT_COMMIT_PROMPT,
@@ -40,6 +43,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QPlainTextEdit,
+    QGridLayout,
     QListWidget,
     QListWidgetItem,
     QPushButton,
@@ -56,7 +60,6 @@ from qfluentwidgets import (
     InfoBar,
     InfoBarPosition,
     MaskDialogBase,
-    PrimaryPushButton,
     RoundMenu,
     ScrollArea,
     StrongBodyLabel,
@@ -71,6 +74,28 @@ from .elided_label import _ElidedLabel
 from .git_core import GitRepo, GitResult
 
 PLUGIN_NAME = "git-panel"
+
+# AI 生成提交描述的采样/上限（与原一次性调用逐点一致：temperature=0.3 / max_tokens=500）。
+# 思考模式显式关闭：EngineSession 的 model_config_override 是顶层浅合并，
+# override 里没有的键会从「当前窗口模型配置」漏进来（思考模式/思考等级等），
+# 增强模型不支持思考时会在 extra_body 里塞无效参数 → 特殊服务商 400。
+# 交给主程序注入：o1/o3 等拒收 temperature 的模型由 transport 的 skip_params 自动剔除。
+_COMMIT_AI_PARAMS = {"温度": 0.3, "最大Token": 500, "思考模式": False}
+# turn() 内部超时（秒）与硬看门狗缓冲：daemon 线程下内部超时收尾可能整链未发生
+# （cron-tasks 实测），超时后放弃等待直接报错，避免按钮永久卡在「生成中…」
+_AI_TURN_TIMEOUT = 120.0
+_AI_WATCHDOG_GRACE = 30.0
+# AI 生成自动重试：服务商偶发 429/5xx、网络抖动、思考型模型空输出都值得再试一次
+_AI_MAX_ATTEMPTS = 3
+_AI_RETRY_BACKOFF = (2.0, 4.0)  # 第 2/3 次尝试前的等待秒数
+
+# 提交模式下拉（VSCode 风格）：选中即记忆，主按钮按当前模式执行。
+# 顺序即菜单顺序，前两项为提交方式组、末项为提交后动作组（菜单构建时插分隔线）
+_COMMIT_MODE_LABELS = {
+    "commit": "提交",
+    "stage_commit": "暂存全部并提交",
+    "commit_push": "提交并推送",
+}
 
 
 # ========================================================================
@@ -1013,7 +1038,7 @@ def _input_ask(title: str, hint: str = "", parent=None,
                confirm_text: str = "确认", cancel_text: str = "取消") -> str:
     """单输入弹窗：宿主环境用系统 SingleInputDialog，否则本地 _InputDialog"""
     try:
-        from app.widgets.cards.settings.memory_card import SingleInputDialog
+        from app.widgets.common_dialogs import SingleInputDialog
     except Exception:
         SingleInputDialog = None
 
@@ -2094,44 +2119,147 @@ class _StashDetailDialog(MaskDialogBase):
 # ========================================================================
 
 
+def _clean_commit_message(text: str) -> str:
+    """清洗模型输出，提高回填可用率。
+
+    实测失败样本三类：``` 代码围栏整体包裹、「好的/以下是…」引导句、
+    Co-Authored-By / Generated with 尾注。逐类剥离，保留干净描述本体。
+    """
+    t = (text or "").strip()
+    t = strip_thinking(t)  # 去 <think>…</think>（部分模型思考内容会混进正文）
+    if t.startswith("```"):
+        t = re.sub(r"^```[a-zA-Z0-9_-]*[ \t]*\n?", "", t)
+        t = re.sub(r"\n?```\s*$", "", t).strip()
+    lines = t.splitlines()
+    # 尾注：Co-Authored-By / Generated with ... / 空行后的签名
+    while lines and re.match(
+        r"^\s*(co-authored-by\s*:|generated\s+(with|by)|[\U0001F916])", lines[-1], re.I
+    ):
+        lines.pop()
+    t = "\n".join(lines).strip()
+    # 引导句：首行以「好的/当然/以下是/这是/提交描述/提交信息」等开头且冒号收尾 → 整行去掉
+    # （仅多行时执行：单行全是引导句时剥完为空，保留原样让上层判空重试）
+    if "\n" in t:
+        first, rest = t.split("\n", 1)
+        if re.match(
+            r"^\s*(好的|当然|以下是|这是|下面是|提交描述|提交信息|commit\s*message)"
+            r".*[:：]\s*$",
+            first,
+            re.I,
+        ):
+            t = rest.strip()
+    return t
+
+
 class _AISignals(QObject):
     done = Signal(str)
     error = Signal(str)
+    status = Signal(str)  # 重试进度（如「第 2/3 次尝试」）
 
 
 class _AIGenerateTask(QRunnable):
-    """后台调 LLM 根据暂存 diff 生成提交描述（一次性对话，同 prompt-enhancer 范式）"""
+    """后台调 LLM 根据暂存 diff 生成提交描述。
 
-    def __init__(self, system: str, user: str, llm_config: dict, signals):
+    经宿主 EngineSession（EP3 契约）驱动，而非自建 openai client 直发
+    chat.completions.create —— 后者绕过 ModelAdapter / Serializer / Transport
+    三层分派，导致服务商伪装头缺失（CodeBuddy X-Product + 动态 Authorization、
+    OpenCode x-opencode-session）→ 401 / 400 MissingSessionID，且 GPT-5 系
+    应走 /v1/responses、思考参数映射与智能重试全部失效。
+
+    改走 create_engine_session 后以上链路自动生效，插件零协议知识。
+
+    自动重试：服务商偶发 429/5xx、网络抖动、思考型模型空输出在单次调用下
+    表现为「成功率低需手动反复重试」，这里在后台线程内最多尝试 _AI_MAX_ATTEMPTS
+    次（指数退避），空文本/超时/报错均重试，取消不重试。
+    """
+
+    def __init__(self, system: str, user: str, llm_config: dict, signals, services=None):
         super().__init__()
         self._system = system
         self._user = user
         self._llm = llm_config
         self._signals = signals
+        self._services = services
         self.setAutoDelete(True)
 
     def run(self):
-        try:
-            from app.utils.http_client import build_openai_client
+        last_err = ""
+        text = ""
+        for attempt in range(1, _AI_MAX_ATTEMPTS + 1):
+            if attempt > 1:
+                self._signals.status.emit(
+                    f"前次失败（{last_err[:40]}），自动重试 {attempt}/{_AI_MAX_ATTEMPTS}…"
+                )
+                time.sleep(_AI_RETRY_BACKOFF[min(attempt - 2, len(_AI_RETRY_BACKOFF) - 1)])
 
-            client = build_openai_client(
-                api_key=self._llm.get("API_KEY", ""),
-                base_url=self._llm.get("API_URL"),
-            )
-            resp = client.chat.completions.create(
-                model=self._llm.get("模型名称", "gpt-4o"),
-                messages=[
-                    {"role": "system", "content": self._system},
-                    {"role": "user", "content": self._user},
-                ],
-                temperature=0.3,
-                max_tokens=500,
-            )
-            result = strip_thinking((resp.choices[0].message.content or "").strip())
-            self._signals.done.emit(result)
-        except Exception as e:
-            logger.error(f"[git-panel] AI 生成提交描述失败: {e}")
-            self._signals.error.emit(str(e))
+            holder: dict = {}
+            done = threading.Event()
+            self._spawn_turn(holder, done)
+
+            # 硬看门狗：不信任 turn() 内部超时（cron-tasks 实测 daemon 线程下超时收尾
+            # 可能整链不发生），到期放弃等待直接报错，避免按钮永久卡在「生成中…」
+            retryable = True
+            if not done.wait(_AI_TURN_TIMEOUT + _AI_WATCHDOG_GRACE):
+                last_err = f"生成超时（>{int(_AI_TURN_TIMEOUT)}s）"
+            else:
+                text = holder.get("text", "")
+                err = holder.get("error")
+                cleaned = _clean_commit_message(text)
+                if err:
+                    last_err = str(err)
+                    if "已取消" in last_err:
+                        retryable = False  # 用户主动取消，不再重试
+                elif not cleaned:
+                    last_err = "模型返回为空"
+                    text = ""
+                else:
+                    self._signals.done.emit(cleaned)
+                    return
+
+            if attempt >= _AI_MAX_ATTEMPTS or not retryable:
+                break
+
+        self._signals.error.emit(last_err or "生成失败")
+
+    def _spawn_turn(self, holder: dict, done: threading.Event):
+        """单次尝试：开 daemon 线程调 EngineSession，结果写入 holder 后 set(done)"""
+
+        def _turn():
+            try:
+                create = (self._services or {}).get("create_engine_session")
+                if not callable(create):
+                    holder["error"] = "主程序未提供 create_engine_session 服务，请升级 DriFox 至 0.5.10+"
+                    return
+                session: Any = create(
+                    "git-panel",
+                    model_config_override=self._llm,
+                    # 全局 hook 全跳过：BuildSystemPrompt 等注入会混进提交描述指令污染输出
+                    hook_policy_id="none",
+                )
+                try:
+                    result = session.turn(
+                        system=self._system,
+                        user=self._user,
+                        tools=[],
+                        timeout=_AI_TURN_TIMEOUT,
+                    )
+                finally:
+                    session.cleanup()
+                if getattr(result, "timed_out", False):
+                    holder["error"] = f"生成超时（>{int(_AI_TURN_TIMEOUT)}s）"
+                elif getattr(result, "cancelled", False):
+                    holder["error"] = "已取消"
+                elif getattr(result, "error", None):
+                    holder["error"] = str(result.error)
+                else:
+                    holder["text"] = getattr(result, "text", "") or ""
+            except Exception as e:  # 顶层屏障：后台线程静默死亡比报错更糟
+                logger.error(f"[git-panel] AI 生成提交描述失败: {e}")
+                holder["error"] = f"{type(e).__name__}: {e}"
+            finally:
+                done.set()
+
+        threading.Thread(target=_turn, daemon=True, name="git-panel-turn").start()
 
 
 class GitPanelCard(QWidget):
@@ -2251,21 +2379,19 @@ class GitPanelCard(QWidget):
             f"background: transparent; color: {tcs}; font-family: '{ff}'; font-size: {fs - 2}px;"
         )
 
-        # 提交描述框（QPlainTextEdit，选择器须匹配；跟随主题字体字号）
+        # 提交描述框（QPlainTextEdit，选择器须匹配；跟随主题字体字号；右侧留 AI 按钮位）
         self._commit_input.setStyleSheet(
             "QPlainTextEdit { background: rgba(128,128,128,0.06); border: 1px solid rgba(128,128,128,0.1); "
-            "border-radius: 6px; padding: 6px 8px; "
+            "border-radius: 6px; padding: 6px 40px 6px 8px; "
             f"color: {tc}; font-family: '{ff}'; font-size: {fs - 2}px; }}"
             "QPlainTextEdit:focus { border-color: rgba(98,160,234,0.6); }"
         )
 
-        # 提交按钮
-        self._commit_btn.setStyleSheet(
-            f"QPushButton {{ background: rgba(98,160,234,0.18); border: none; border-radius: 5px; "
-            f"color: {tc}; font-family: '{ff}'; font-size: {fs - 2}px; padding: 5px 14px; }}"
-            "QPushButton:hover { background: rgba(98,160,234,0.3); }"
-            "QPushButton:pressed { background: rgba(98,160,234,0.4); }"
-        )
+        # 提交条（实心蓝自拼，颜色/字体随主题重应用）
+        try:
+            self._apply_commit_bar_style()
+        except RuntimeError:
+            pass
 
         # 提交描述框（正文与 placeholder 均跟随 widget 字体）
         try:
@@ -2274,18 +2400,16 @@ class GitPanelCard(QWidget):
         except RuntimeError:
             pass
 
-        # 搁置按钮
+        # 次要按钮（推送/拉取/获取/新建分支）
         btn_base = (
             f"QPushButton {{ background: rgba(128,128,128,0.1); border: none; border-radius: 5px; "
             f"color: {tc}; font-family: '{ff}'; font-size: {fs - 2}px; padding: 4px 10px; }}"
             "QPushButton:hover { background: rgba(128,128,128,0.2); }"
             "QPushButton:pressed { background: rgba(128,128,128,0.3); }"
         )
-        if hasattr(self, '_stash_btn'):
-            self._stash_btn.setStyleSheet(btn_base)
         if hasattr(self, '_new_branch_btn'):
             self._new_branch_btn.setStyleSheet(btn_base)
-        for name in ("_push_btn", "_pull_btn", "_fetch_btn", "_ai_btn"):
+        for name in ("_push_btn", "_pull_btn", "_fetch_btn"):
             if hasattr(self, name):
                 getattr(self, name).setStyleSheet(btn_base)
 
@@ -2447,7 +2571,7 @@ class GitPanelCard(QWidget):
         """操作面板：分支信息行 + 提交行合并为一个浅底圆角容器，视觉统一
 
         行 1：分支徽章（超长省略）+ 推送/拉取/获取
-        行 2：提交输入框 + 提交/搁置/新建分支
+        行 2：提交输入框（内嵌 AI 按钮） + 提交模式按钮（占满一行）
         """
         panel = QFrame(self)
         panel.setObjectName("panelAction")
@@ -2519,45 +2643,80 @@ class GitPanelCard(QWidget):
         r2.setSpacing(6)
 
         # 提交描述（初始单行高度，输入/换行时自动增高，上限封顶）
-        self._commit_input = QPlainTextEdit(row2)
+        # VSCode 风格：AI 生成图标按钮内嵌输入框右上角（QGridLayout 同格叠放）
+        input_wrap = QWidget(row2)
+        input_wrap.setStyleSheet("background: transparent;")
+        igl = QGridLayout(input_wrap)
+        igl.setContentsMargins(0, 0, 0, 0)
+        self._commit_input = QPlainTextEdit(input_wrap)
         self._commit_input.setPlaceholderText("提交描述...")
         self._commit_input.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self._commit_input.textChanged.connect(self._adjust_input_height)
         self._commit_input.updateRequest.connect(self._on_input_update_request)
         self._commit_input.setStyleSheet(
             "QPlainTextEdit { background: rgba(128,128,128,0.06); border: 1px solid rgba(128,128,128,0.1); "
-            "border-radius: 6px; padding: 6px 8px; }"
+            "border-radius: 6px; padding: 6px 40px 6px 8px; }"
             "QPlainTextEdit:focus { border-color: rgba(98,160,234,0.6); }"
         )
-        r2.addWidget(self._commit_input)
+        igl.addWidget(self._commit_input, 0, 0)
 
-        # 底部按钮行：全部右对齐（AI 生成 / 搁置 / 提交）
-        btn_row = QHBoxLayout()
-        btn_row.setContentsMargins(0, 0, 0, 0)
-        btn_row.setSpacing(6)
-        btn_row.addStretch(1)
-
-        self._ai_btn = QPushButton("AI 生成", row2)
-        self._ai_btn.setFixedHeight(26)
-        self._ai_btn.setMinimumWidth(72)  # 「生成中…」变宽时不跳动
+        self._ai_btn = TransparentToolButton(FluentIcon.ROBOT, input_wrap)
+        self._ai_btn.setFixedSize(32, 26)
+        self._ai_btn.setIconSize(QSize(16, 16))
+        self._ai_btn.setToolTip("根据暂存区变更由 AI 生成提交描述（失败自动重试）")
         self._ai_btn.setCursor(Qt.PointingHandCursor)
-        self._ai_btn.setToolTip("根据暂存区变更由 AI 生成提交描述（模型可在系统设置配置）")
         self._ai_btn.clicked.connect(self._on_ai_generate)
-        btn_row.addWidget(self._ai_btn)
+        # 透明容器包一层：给按钮顶部/右侧留呼吸边距（直接用 alignment 会贴死框顶）
+        ai_holder = QWidget(input_wrap)
+        ai_holder.setStyleSheet("background: transparent;")
+        ahl = QHBoxLayout(ai_holder)
+        ahl.setContentsMargins(0, 5, 3, 0)
+        ahl.addWidget(self._ai_btn)
+        igl.addWidget(ai_holder, 0, 0, Qt.AlignTop | Qt.AlignRight)
+        r2.addWidget(input_wrap)
 
-        self._stash_btn = QPushButton("搁置", row2)
-        self._stash_btn.setFixedHeight(26)
-        self._stash_btn.setCursor(Qt.PointingHandCursor)
-        self._stash_btn.setToolTip("保存当前工作进度")
-        self._stash_btn.clicked.connect(self._on_stash)
-        btn_row.addWidget(self._stash_btn)
-
-        self._commit_btn = PrimaryPushButton("提交", row2)
-        self._commit_btn.setFixedHeight(26)
+        # 提交行：占满一行 + 右侧下拉切换提交模式（VSCode Commit 按钮同构）。
+        # 不用 PrimarySplitPushButton：其 sizePolicy 固定不拉伸，且主题色（teal）
+        # 与面板蓝色语言冲突；自拼实心蓝条，颜色复用面板 accent
+        self._commit_mode = "commit"
+        self._commit_bar = QFrame(row2)
+        self._commit_bar.setObjectName("commitBar")
+        ch = QHBoxLayout(self._commit_bar)
+        ch.setContentsMargins(0, 0, 0, 0)
+        ch.setSpacing(0)
+        self._commit_btn = QPushButton("提交", self._commit_bar)
+        self._commit_btn.setObjectName("commitMain")
+        self._commit_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self._commit_btn.setFixedHeight(30)
+        self._commit_btn.setCursor(Qt.PointingHandCursor)
+        self._commit_btn.setToolTip("提交暂存区变更；右侧箭头可切换提交模式")
         self._commit_btn.clicked.connect(self._on_commit)
-        btn_row.addWidget(self._commit_btn)
+        ch.addWidget(self._commit_btn, 1)
 
-        r2.addLayout(btn_row)
+        sep = QFrame(self._commit_bar)
+        sep.setFixedSize(1, 14)
+        sep.setStyleSheet("background: rgba(255,255,255,0.30); border: none;")
+        ch.addWidget(sep)
+
+        self._commit_drop = QPushButton("▾", self._commit_bar)
+        self._commit_drop.setObjectName("commitDrop")
+        self._commit_drop.setFixedSize(32, 30)
+        self._commit_drop.setCursor(Qt.PointingHandCursor)
+        self._commit_drop.setToolTip("切换提交模式")
+        self._commit_drop.clicked.connect(self._show_commit_menu)
+        ch.addWidget(self._commit_drop)
+
+        self._mode_menu = RoundMenu(parent=self._commit_bar)
+        for mode, label in _COMMIT_MODE_LABELS.items():
+            if mode == "commit_push":
+                # VSCode 式分组：提交方式 | 提交后动作
+                self._mode_menu.addSeparator()
+            act = Action(label, self._mode_menu, triggered=lambda _=False, m=mode: self._set_commit_mode(m))
+            act.setCheckable(True)
+            act.setChecked(mode == self._commit_mode)
+            self._mode_menu.addAction(act)
+        self._apply_commit_bar_style()
+        r2.addWidget(self._commit_bar)
 
         # 初始单行高度（_retheme 提供 QSS 字体后由 _adjust_input_height 精调）
         QTimer.singleShot(0, self._adjust_input_height)
@@ -3057,28 +3216,31 @@ class GitPanelCard(QWidget):
             main_widget,
             override_provider=override[0] if override else None,
             override_model=override[1] if override else None,
+            services=ctx.get("services"),
         )
         if not llm:
             self._show_info_bar("info", "AI 生成", "未找到模型配置，请先在系统设置配置模型")
             return
         system = load_plugin_text_config("commit_prompt", DEFAULT_COMMIT_PROMPT)
-        user = f"暂存变更 diff（超长时已截断）：\n{diff_text[:6000]}"
+        user = f"暂存变更 diff（超长时已截断）：\n{diff_text[:9000]}"
+        llm = {**llm, **_COMMIT_AI_PARAMS}
         self._ai_task_running = True
         self._ai_btn.setEnabled(False)
-        self._ai_btn.setText("生成中…")
+        self._ai_btn.setToolTip("正在生成提交描述…")
         self._show_info_bar("info", "AI 生成", "正在根据暂存变更生成提交描述…")
 
         signals = _AISignals()
         signals.done.connect(self._on_ai_done)
         signals.error.connect(self._on_ai_error)
-        task = _AIGenerateTask(system, user, llm, signals)
+        signals.status.connect(self._on_ai_status)
+        task = _AIGenerateTask(system, user, llm, signals, services=ctx.get("services"))
         pool = getattr(main_widget, "_gen_thread_pool", None) or QThreadPool.globalInstance()
         pool.start(task)
 
     def _on_ai_done(self, message: str):
         self._ai_task_running = False
         self._ai_btn.setEnabled(True)
-        self._ai_btn.setText("AI 生成")
+        self._ai_btn.setToolTip("根据暂存区变更由 AI 生成提交描述（失败自动重试）")
         if message:
             self._commit_input.setPlainText(message)
             self._show_info_bar("success", "AI 生成", "已生成提交描述，可编辑后提交")
@@ -3088,24 +3250,77 @@ class GitPanelCard(QWidget):
     def _on_ai_error(self, err: str):
         self._ai_task_running = False
         self._ai_btn.setEnabled(True)
-        self._ai_btn.setText("AI 生成")
-        self._show_info_bar("error", "AI 生成失败", (err or "")[:80])
+        self._ai_btn.setToolTip("根据暂存区变更由 AI 生成提交描述（失败自动重试）")
+        self._show_info_bar("error", f"AI 生成失败（已重试 {_AI_MAX_ATTEMPTS} 次）", (err or "")[:80])
+
+    def _on_ai_status(self, msg: str):
+        """自动重试进度提示"""
+        self._show_info_bar("info", "AI 生成", msg)
 
     # ── Git 操作 ──
 
+    def _apply_commit_bar_style(self):
+        """提交条样式：整条实心蓝圆角（随深浅色取面板 accent），白字居中，跟主题字体"""
+        ff, fs = self._cached_ff, self._cached_fs
+        dark = isDarkTheme()
+        bg = "#62a0ea" if dark else "#2878dc"
+        self._commit_bar.setStyleSheet(
+            f"#commitBar {{ background: {bg}; border: none; border-radius: 6px; }}"
+            f"#commitMain {{ background: transparent; border: none; color: white; "
+            f"padding: 0px 12px; font-family: '{ff}'; font-size: {max(fs - 2, 11)}px; }}"
+            "#commitMain:hover { background: rgba(255,255,255,0.12); "
+            "border-radius: 6px 0px 0px 6px; }"
+            "#commitMain:pressed { background: rgba(255,255,255,0.22); }"
+            "#commitDrop { background: transparent; border: none; border-radius: 0px; "
+            "color: white; font-size: 14px; padding: 0px; }"
+            "#commitDrop:hover { background: rgba(255,255,255,0.12); "
+            "border-radius: 0px 6px 6px 0px; }"
+            "#commitDrop:pressed { background: rgba(255,255,255,0.22); }"
+        )
+        self._commit_btn.setFont(QFont(ff, max(10, fs - 2)))
+        self._commit_drop.setFont(QFont(ff, 12))
+
+    def _show_commit_menu(self):
+        """下拉箭头：菜单位于 ▾ 正下方，右缘对齐箭头右缘，宽度自适应内容"""
+        menu = self._mode_menu
+        menu.view.setMinimumWidth(0)  # 收缩到内容宽，勿撑满条宽
+        menu.adjustSize()  # 先算准尺寸，否则 width()==0 对齐坐标偏
+        g = self._commit_drop.mapToGlobal(QPoint(0, 0))
+        x = g.x() + self._commit_drop.width() - menu.width()
+        y = g.y() + self._commit_drop.height()
+        menu.exec(QPoint(x, y))
+
+    def _set_commit_mode(self, mode: str):
+        """切换提交模式（下拉选择，主按钮文字与执行行为跟随）"""
+        if mode not in _COMMIT_MODE_LABELS:
+            return
+        self._commit_mode = mode
+        self._commit_btn.setText(_COMMIT_MODE_LABELS[mode])
+        for act in self._mode_menu.actions():
+            act.setChecked(act.text() == _COMMIT_MODE_LABELS[mode])
+
     def _on_commit(self):
-        """执行提交"""
+        """按当前提交模式执行：普通提交 / 提交并推送 / 暂存全部并提交"""
         msg = self._commit_input.toPlainText().strip()
         if not msg:
             self._show_info_bar("info", "提交信息不能为空", "")
             return
+        mode = self._commit_mode
+        if mode == "stage_commit":
+            # 先 add -A：小操作同步执行，失败直接终止不进提交
+            self._set_status_text("暂存全部中…")
+            r = GitRepo(self._repo_path).add(["-A"])
+            if not r.ok:
+                self._set_status_text(f"暂存失败: {r.stderr[:50]}")
+                QTimer.singleShot(3000, lambda: self._reset_status() if not self._is_loading else None)
+                return
         self._set_status_text("提交中…")
         self._run_git_async(
             lambda: GitRepo(self._repo_path).commit(msg),
-            lambda r: self._on_commit_done(r),
+            lambda r: self._on_commit_done(r, mode),
         )
 
-    def _on_commit_done(self, result: Optional[GitResult] = None):
+    def _on_commit_done(self, result: Optional[GitResult] = None, mode: str = "commit"):
         if result is not None:
             if result.ok:
                 self._set_status_text("提交成功")
@@ -3117,18 +3332,10 @@ class GitPanelCard(QWidget):
         else:
             self._set_status_text("提交成功")
         self._commit_input.setPlainText("")
-        QTimer.singleShot(1000, self._async_refresh)
-
-    def _on_stash(self):
-        """创建搁置"""
-        msg = self._commit_input.toPlainText().strip() or "WIP"
-        if not _confirm_ask("确认搁置", f"确定要搁置当前修改吗？\n消息: {msg}", self):
+        if mode == "commit_push" and result is not None and result.ok:
+            QTimer.singleShot(200, self._do_push)
             return
-        self._set_status_text("搁置中…")
-        self._run_git_async(
-            lambda: GitRepo(self._repo_path).stash_push(msg),
-            lambda r: self._on_op_done("搁置成功", r),
-        )
+        QTimer.singleShot(1000, self._async_refresh)
 
     def _on_stash_action(self, action: str, ref: str):
         """处理 stash 操作"""

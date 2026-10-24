@@ -12,16 +12,14 @@
     },
     "license": "MIT",
     "type": "user",
-    "drifox": {
-        "min_version": "0.5.0"
-    },
+    "min_host_version": "0.5.0",
     "keywords": [
         "communication",
         "collaboration",
         "documentation"
     ],
     "components": {
-        "commands": true,
+        "commands": false,
         "skills": true
     },
     "homepage": "https://github.com/anthropics/skills"

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Claude 星芒（深色主题提亮） -->
+  <g fill="#E08D6D" transform="translate(32 32)">
+    <rect x="-3.4" y="-25" width="6.8" height="50" rx="3.4"/>
+    <rect x="-3.4" y="-25" width="6.8" height="50" rx="3.4" transform="rotate(45)"/>
+    <rect x="-3.4" y="-25" width="6.8" height="50" rx="3.4" transform="rotate(90)"/>
+    <rect x="-3.4" y="-25" width="6.8" height="50" rx="3.4" transform="rotate(135)"/>
+  </g>
+</svg>

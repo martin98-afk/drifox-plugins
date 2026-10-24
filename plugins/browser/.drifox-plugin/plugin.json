@@ -5,22 +5,26 @@
         "light": "icon.svg",
         "dark": "icon_dark.svg"
     },
-    "version": "1.4.1",
+    "version": "1.4.4",
     "author": {
         "name": "DriFox Contributors"
     },
     "license": "GPL-3.0-or-later",
     "type": "user",
-    "drifox": {
-        "min_version": "0.5.0"
-    },
+    "api_version": 2,
+    "min_host_version": "0.6.10",
+    "capabilities": [
+        "tool.read",
+        "ui.notify",
+        "ui.card.show"
+    ],
     "keywords": [
         "browser",
         "web",
         "automation"
     ],
     "components": {
-        "commands": true,
+        "commands": false,
         "ui": true,
         "mcp": true
     }

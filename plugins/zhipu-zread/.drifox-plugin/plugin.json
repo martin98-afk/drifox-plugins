@@ -1,0 +1,25 @@
+{
+  "name": "zhipu-zread",
+  "description": "智谱 开源仓库阅读 — 阅读 GitHub 开源仓库的文档、结构与代码。安装后填入智谱 API Key。",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "liliMozi",
+    "url": "https://github.com/liliMozi/hana-connectors"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "user",
+  "min_host_version": "0.5.0",
+  "keywords": [
+    "mcp",
+    "connector",
+    "zhipu-zread"
+  ],
+  "components": {
+    "mcp": true
+  },
+  "homepage": "https://open.bigmodel.cn/api/mcp/zread/mcp"
+}

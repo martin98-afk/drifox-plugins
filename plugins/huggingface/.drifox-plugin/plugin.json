@@ -1,0 +1,25 @@
+{
+  "name": "huggingface",
+  "description": "Hugging Face — 搜索 Hugging Face 上的模型、数据集、Space 与论文。",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "liliMozi",
+    "url": "https://github.com/liliMozi/hana-connectors"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "user",
+  "min_host_version": "0.5.0",
+  "keywords": [
+    "mcp",
+    "connector",
+    "huggingface"
+  ],
+  "components": {
+    "mcp": true
+  },
+  "homepage": "https://huggingface.co/mcp"
+}

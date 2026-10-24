@@ -1,0 +1,25 @@
+{
+  "name": "aws-knowledge",
+  "description": "AWS Knowledge — 检索 AWS 官方文档、最佳实践与区域可用性信息。",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "liliMozi",
+    "url": "https://github.com/liliMozi/hana-connectors"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "user",
+  "min_host_version": "0.5.0",
+  "keywords": [
+    "mcp",
+    "connector",
+    "aws-knowledge"
+  ],
+  "components": {
+    "mcp": true
+  },
+  "homepage": "https://knowledge-mcp.global.api.aws"
+}

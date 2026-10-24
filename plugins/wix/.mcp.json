@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "wix": {
+      "type": "http",
+      "url": "https://mcp.wix.com/mcp",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {},
+      "auth": {
+        "type": "oauth",
+        "client_name": "DriFox",
+        "scope": ""
+      }
+    }
+  }
+}

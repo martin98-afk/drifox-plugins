@@ -13,6 +13,7 @@ if _TOOLS_DIR not in sys.path:
 from app.tools.result import ToolResult  # noqa: E402
 
 import _pool as pool  # noqa: E402
+import _guard as guard  # noqa: E402
 
 
 def _client(ref):
@@ -44,6 +45,10 @@ def _upload_impl(tool_ctx, **kwargs):
     executable = bool(kwargs.get("executable", False))
     if not local or not remote:
         return ToolResult(False, error="需要 local_path 与 remote_path")
+    # 本地上传源边界：宿主沙箱不认识 local_path 字段，此处是唯一关卡
+    ok, reason = guard.check_local_read(local, tool_ctx, kwargs.get("allow_paths"))
+    if not ok:
+        return ToolResult(False, error=reason)
     try:
         client = _client(ref)
         remote = _norm_remote(remote, _home(client))
@@ -72,6 +77,10 @@ def _download_impl(tool_ctx, **kwargs):
     local = kwargs.get("local_path")
     if not local or not remote:
         return ToolResult(False, error="需要 remote_path 与 local_path")
+    # 本地落点边界：写入自启动目录/凭据文件 = 把远端信任升级成端点沦陷
+    ok, reason = guard.check_local_write(local, tool_ctx, kwargs.get("allow_paths"))
+    if not ok:
+        return ToolResult(False, error=reason)
     try:
         client = _client(ref)
         remote = _norm_remote(remote, _home(client))
@@ -115,6 +124,11 @@ def register(registry):
                 "remote_path": {"type": "string", "description": "远程目标路径"},
                 "text_mode": {"type": "boolean", "description": "文本模式：上传前自动将 CRLF 转为 LF（默认 false，向后兼容）"},
                 "executable": {"type": "boolean", "description": "是否上传后自动 chmod 0o755（默认 false）"},
+                "allow_paths": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "额外允许的本地根目录（默认仅工作目录；凭据类目录永不放行）",
+                },
             }, "required": ["local_path", "remote_path"]},
         }},
         impl=_upload_impl, danger="dangerous", icon="ssh_upload", cn_name="SSH 上传文件", group="SSH 远程",
@@ -130,6 +144,11 @@ def register(registry):
                 "name": {"type": "string", "description": "连接名"},
                 "remote_path": {"type": "string", "description": "远程文件路径"},
                 "local_path": {"type": "string", "description": "本地目标路径"},
+                "allow_paths": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": "额外允许的本地根目录（默认仅工作目录；自启动/凭据位置永不放行）",
+                },
             }, "required": ["remote_path", "local_path"]},
         }},
         impl=_download_impl, danger="dangerous", icon="ssh_download", cn_name="SSH 下载文件", group="SSH 远程",

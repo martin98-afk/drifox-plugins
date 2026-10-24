@@ -438,6 +438,26 @@ def _find_python() -> str:
     return ""
 
 
+def _resolve_python(plugin_root) -> str:
+    """决定写入 bridge.json 的 python 路径（启动期不 spawn 子进程为原则）
+
+    上次探测结果已落盘在 bridge.json 且解释器仍在 → 直接复用，省掉
+    `_find_python()` 的 2s 子进程探测（会阻塞 UI 插件装载，实测 2.077s）。
+    复用值的安全性由消费方保证：`mcp/server.py::_bootstrap` 用前会再跑一次
+    `_can_import_mcp(py)` 验证并逐个回退候选，旧值失效不会导致 MCP 起不来。
+    只在 bridge.json 缺失/记录为空/文件已被删除时才做一次真实探测。
+    """
+    try:
+        bridge = plugin_root / "mcp" / "bridge.json"
+        if bridge.exists():
+            prev = json.loads(bridge.read_text(encoding="utf-8")).get("python_executable", "")
+            if prev and Path(prev).exists():
+                return prev
+    except Exception:
+        pass
+    return _find_python()
+
+
 def _write_bridge(plugin_root, port: int, token: str):
     """写桥接信息：端口/token/可用的 python，供 MCP 服务器读取"""
     global _BRIDGE_FILE
@@ -448,7 +468,7 @@ def _write_bridge(plugin_root, port: int, token: str):
     data = {
         "port": port,
         "token": token,
-        "python_executable": _find_python(),
+        "python_executable": _resolve_python(plugin_root),
         "plugin_root": str(plugin_root),
     }
     try:

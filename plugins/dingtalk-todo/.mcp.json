@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "dingtalk-todo": {
+      "type": "http",
+      "url": "${cred.url}",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {},
+      "credential": {
+        "label": "钉钉待办链接",
+        "placeholder": "粘贴专属 MCP 链接",
+        "getUrl": "https://mcp.dingtalk.com",
+        "inject": {
+          "type": "url"
+        }
+      }
+    }
+  }
+}

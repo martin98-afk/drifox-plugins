@@ -145,12 +145,33 @@ def _decode_output(raw: bytes) -> str:
     return raw.decode("utf-8", errors="replace")
 
 
+def _kill_tree(pid: int) -> None:
+    """按进程树强杀指定 PID（taskkill /T /F），任何失败静默。
+
+    必要性：subprocess/Popen 超时只杀 pwsh 本身，它拉起的孙进程
+    （npm run dev、python -m http.server 等）会变孤儿继续占端口与 CPU。
+    Windows 没有 POSIX 进程组语义，taskkill /T 是系统自带、唯一可靠的
+    连带杀树手段；失败（taskkill 缺失 / 进程已退出 / 权限不足）不影响主流程。
+    """
+    try:
+        subprocess.run(
+            ["taskkill", "/PID", str(pid), "/T", "/F"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=15,
+            check=False,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def _powershell_impl(tool_ctx, **kwargs):
     """运行 PowerShell 脚本。
 
     参数:
         command: 要执行的 PowerShell 命令/脚本/脚本块（必填）
-        timeout: 超时秒数（可选，默认 120，范围 1-3600）
+        timeout: 超时秒数（可选，默认 120，范围 1-3600）。超时后连同子进程树一并强杀
     """
     script = kwargs.get("command")
     if not script or not str(script).strip():
@@ -206,6 +227,21 @@ def _powershell_impl(tool_ctx, **kwargs):
         )
     except FileNotFoundError:
         return ToolResult(False, error=f"未找到 PowerShell 可执行文件：{exe}")
+
+    try:
+        stdout_raw, stderr_raw = proc.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        _kill_tree(proc.pid)
+        # 收尸：taskkill 是同步强杀，返回时杀树已完成，正常情况管道随即关闭。
+        # 只给短窗口（2s）排空余量，杀不掉的 detached 孙进程仍持管道写端，
+        # 等满它毫无意义——护栏以 timeout 为准，不能退化成 timeout+15。
+        try:
+            proc.communicate(timeout=2)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+        return ToolResult(
+            False, error=f"PowerShell 执行超时（>{timeout}s 已终止，含子进程树）"
+        )
     except Exception as e:  # noqa: BLE001
         return ToolResult(False, error=f"执行失败：{e}")
 
@@ -224,7 +260,11 @@ def _powershell_impl(tool_ctx, **kwargs):
     # 关键修复:合并 stdout/stderr 字节流后统一解码。
     # 原实现分别解码再拼接,会在 PS 5.1 下产生"半 GBK 半 UTF-8"编码错位,
     # 触发条件是 stderr(GBK)与 stdout(可能 UTF-8)同时存在时——典型"部分乱码"场景。
-    merged_raw = stdout_raw or b""
+    # communicate() 已读走输出，返回值可能是 None（子进程无输出时），
+    # 不能再回退 proc.stdout——那是 BufferedReader 对象而非字节。
+    stdout_raw = stdout_raw or b""
+    stderr_raw = stderr_raw or b""
+    merged_raw = stdout_raw
     if stderr_raw:
         if merged_raw and not merged_raw.endswith(b"\n"):
             merged_raw += b"\n"
@@ -254,7 +294,13 @@ _SCHEMA = {
             "type": "object",
             "properties": {
                 "command": {"type": "string", "description": "命令"},
-                "timeout": {"type": "integer", "description": "超时秒数"},
+                "timeout": {
+                    "type": "integer",
+                    "description": (
+                        "超时秒数，默认 120，范围 1-3600。"
+                        "超时后 PowerShell 及其子进程树会被一并强杀。"
+                    ),
+                },
                 "description": {
                     "type": "string",
                     "description": (

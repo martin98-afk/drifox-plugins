@@ -71,6 +71,37 @@
 
 > **DriFox 运行时内置插件**（`plugin-manager`、`plugin-marketplace`、`context-usage-stats`、`file-tree` 等）随 DriFox 分发，不收录在本仓库市场，避免重复安装造成困惑。
 
+### HanaAgent 连接器迁移
+
+54 个远程 MCP 连接器，从 [HanaAgent 官方市场](https://github.com/liliMozi/hana-connectors)（official-global，批次 v2026.10.10）整体迁移而来。每个连接器指向服务方自营的远程 MCP 端点，不含服务端代码，也不托管凭据。插件名与 server 名沿用上游 id，工具名前缀 `mcp__<id>__`。
+
+| 插件 | 描述 | 组件 | 版本 |
+|------|------|------|------|
+| [`github`](github/) | GitHub — 仓库、Issue、PR 与 Actions 管理（Bearer Token） | mcp | 1.0.0 |
+| [`gitlab`](gitlab/) | GitLab — 仓库、Issue、MR 管理（OAuth） | mcp | 1.0.0 |
+| [`gitee`](gitee/) | Gitee — 仓库、文件、Issue 与 PR（Bearer Token） | mcp | 1.0.0 |
+| [`notion`](notion/) | Notion — 页面与数据库搜索、读写（OAuth） | mcp | 1.0.0 |
+| [`linear`](linear/) | Linear — 任务与项目管理（OAuth） | mcp | 1.0.0 |
+| [`sentry`](sentry/) | Sentry — 错误与性能监控（OAuth） | mcp | 1.0.0 |
+| [`stripe`](stripe/) | Stripe — 支付与订阅管理（OAuth） | mcp | 1.0.0 |
+| [`figma`](figma/) | Figma — 设计文件读取与评论（OAuth） | mcp | 1.0.0 |
+| [`supabase`](supabase/) | Supabase — 数据库与后端服务（OAuth） | mcp | 1.0.0 |
+| [`cloudflare-bindings`](cloudflare-bindings/) | Cloudflare Workers 与 KV/R2/D1 管理（OAuth） | mcp | 1.0.0 |
+| [`vercel`](vercel/) | Vercel — 项目与部署管理（OAuth） | mcp | 1.0.0 |
+| [`amap`](amap/) | 高德地图 — 地点、路线、天气与周边（Query Key） | mcp | 1.0.0 |
+| [`baidu-map`](baidu-map/) | 百度地图 — 地点、路线、路况与天气（Query AK） | mcp | 1.0.0 |
+| [`tencent-map`](tencent-map/) | 腾讯位置服务 — 地点、周边与天气（Query Key） | mcp | 1.0.0 |
+| [`dingtalk-contacts`](dingtalk-contacts/) | 钉钉通讯录 — 组织成员与部门查询（专属链接） | mcp | 1.0.0 |
+| [`zhipu-websearch`](zhipu-websearch/) | 智谱联网搜索（Bearer Key） | mcp | 1.0.0 |
+
+> 上表列常用 16 个。全部 54 个安装后在设置 → MCP 连接器中逐个启用，未在上表出现的直接到 `plugins/` 下按 id 找目录。
+>
+> 认证方式分三类：**OAuth**（29 个，装后在设置里点授权，走动态注册 + PKCE，token 自动刷新）；**填 Key**（17 个，在设置 → MCP 连接器里点「获取 Key」跳申请页，粘贴保存即自动连接，不必配环境变量）；**免认证**（8 个，装上即用）。
+>
+> 需填 Key 的 17 个默认关闭（`enabled: false`），填好 Key 再打开开关。填之前尝试启用会直接提示去填，不会挂到超时。
+>
+> `context7-remote` 与既有 [`context7`](context7/) 功能重复：前者连官方远程端点，后者走本地 npx。server 名已区分，可共存，按需启用其一。上游 context7 因目录名被占用而改用此名。
+
 ## 组件覆盖矩阵
 
 | | commands | agents | skills | themes | hooks | mcp | lsp | ui | tools |

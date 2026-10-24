@@ -5,13 +5,19 @@
         "light": "icon.svg",
         "dark": "icon_dark.svg"
     },
-    "version": "2.0.1",
+    "version": "2.1.2",
     "author": {
         "name": "DriFox Contributors"
     },
     "homepage": "https://github.com/martin98-afk/DriFox",
     "license": "MIT",
     "type": "user",
+    "api_version": 2,
+    "min_host_version": "0.6.10",
+    "capabilities": [
+        "engine.session",
+        "model.config"
+    ],
     "keywords": [
         "git",
         "source-control",

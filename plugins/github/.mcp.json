@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "github": {
+      "type": "http",
+      "url": "https://api.githubcopilot.com/mcp/",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {},
+      "credential": {
+        "label": "Token",
+        "placeholder": "GitHub Personal Access Token",
+        "getUrl": "https://github.com/settings/personal-access-tokens",
+        "inject": {
+          "type": "header",
+          "name": "Authorization",
+          "scheme": "Bearer"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+    "name": "floating-chat",
+    "version": "0.1.0",
+    "description": "随时呼出的对话悬浮窗：全局热键一键弹出，不打开主窗也能快速问大模型。独立会话不污染主对话，输入即问、流式作答、一键打开完整会话",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "license": "MIT",
+    "type": "user",
+    "min_host_version": "0.6.2",
+    "keywords": [
+        "chat",
+        "floating",
+        "quick",
+        "hotkey",
+        "window",
+        "悬浮对话",
+        "快速提问"
+    ],
+    "components": {
+        "tools": false,
+        "commands": true,
+        "agents": false,
+        "skills": false,
+        "hooks": false,
+        "mcp": false,
+        "lsp": false,
+        "themes": false,
+        "ui": true,
+        "providers": false,
+        "team_templates": false,
+        "model_adapters": false,
+        "loop_policies": false,
+        "storages": false,
+        "serializers": false,
+        "gateways": false,
+        "engines": false
+    }
+}

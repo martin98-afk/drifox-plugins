@@ -5,9 +5,7 @@
 start() 开始录音 → stop_and_save(path) 收尾保存 → close() 释放设备。
 异常路径必须 close()，否则 waveaudio 设备被占用，后续录音全挂。
 
-打包约束：宿主为 PyInstaller 打包，标准库 wave / array 未被主程序静态引用、
-PyInstaller 不收集，import 必 ModuleNotFoundError。故 WAV 头解析与电平统计
-一律手解字节（见 _parse_wav_header / _wav_level），不引入任何新 import。
+WAV 头解析与电平统计见 wav_utils（与 macOS 录音器共用）。
 """
 
 from __future__ import annotations
@@ -17,6 +15,8 @@ import os
 from ctypes import wintypes
 
 from loguru import logger
+
+from .wav_utils import log_saved
 
 _MCI_OK = 0
 
@@ -176,16 +176,7 @@ class VoiceRecorder:
             _mci(f"stop {self._alias}")
             self._recording = False
         _mci(f'save {self._alias} "{wav_path}"')
-        dur = _wav_duration(wav_path)
-        size = os.path.getsize(wav_path) if os.path.exists(wav_path) else -1
-        rms, peak = _wav_level(wav_path)
-        if dur >= 0:
-            logger.info(
-                f"[voice-input] 录音已保存: {wav_path}（{dur:.1f} 秒, {size} 字节, "
-                f"电平 rms={rms:.4f}/peak={peak:.4f}）"
-            )
-        else:
-            logger.info(f"[voice-input] 录音已保存: {wav_path}（时长读取失败）")
+        log_saved(wav_path, "winmm")
         self.close()
 
     def close(self) -> None:

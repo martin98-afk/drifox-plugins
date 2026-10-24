@@ -5,16 +5,28 @@
     },
     "name": "autoloop",
     "description": "AutoLoop 自动循环模式 — 规划→执行→归档三阶段长任务自动执行（对话引擎插件化首例，经 UI 服务门面驱动自建 ConversationCore）",
-    "version": "1.1.0",
+    "version": "1.1.2",
     "author": {
         "name": "DriFox Contributors"
     },
     "homepage": "https://github.com/martin98-afk/DriFox",
     "license": "MIT",
     "type": "user",
-    "drifox": {
-        "min_version": "0.5.0"
-    },
+    "api_version": 2,
+    "min_host_version": "0.6.10",
+    "capabilities": [
+        "engine.stack",
+        "ui.exclusive",
+        "agent.read",
+        "model.config",
+        "tool.execute",
+        "model.schema",
+        "workdir.read",
+        "workdir.write",
+        "ui.card.hide",
+        "ui.notify",
+        "session.write"
+    ],
     "keywords": [
         "autoloop",
         "loop",

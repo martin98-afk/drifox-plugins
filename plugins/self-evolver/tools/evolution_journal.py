@@ -44,7 +44,7 @@ def _plugin_version(plugin_name: str) -> str | None:
         if mf.exists():
             try:
                 return json.loads(mf.read_text(encoding="utf-8")).get("version")
-            except json.JSONDecodeError, OSError:
+            except (json.JSONDecodeError, OSError):
                 return None
     return None
 
@@ -144,7 +144,7 @@ def _impl(tool_ctx, **kwargs):
             else:
                 try:
                     limit = int(raw_limit)
-                except TypeError, ValueError:
+                except (TypeError, ValueError):
                     limit = 50
                 if limit < 0:
                     limit = 0

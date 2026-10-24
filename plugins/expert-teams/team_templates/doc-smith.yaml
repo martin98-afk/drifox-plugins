@@ -1,0 +1,20 @@
+# 文档工坊 —— /team --load=doc-smith
+# 场景：批量产出/更新项目文档。采料师从源码提取带出处的事实，誊写匠按章成文，逐字有据。
+schema_version: 1
+template_name: doc-smith
+description: 文档工坊：素材采集 → 批量誊写 → 主编终审，批量文档不跑偏
+# ── v2 预埋字段（schema v1 静默忽略，主程序升级后自动生效）──
+display_name: 文档工坊
+category: 文档产出
+leader: leader
+default_init_prompt: 开工。先让采料师按章节清单从源码采集事实、接口与示例（每条带出处），你定文档结构与章节分工，再由誊写匠按素材卡逐章成文（缺口写 TODO 不脑补），最后你终审一致性与准确性。你（leader）负责结构与分工，禁止代写成员产出。本次任务：<在此填写文档范围>
+agents:
+  - agent_name: leader
+    description: 文档主编：定结构、分章节、终审成稿的一致性与准确性
+    profession: 文档主编
+  - agent_name: fact-miner
+    description: 采料师·甲本：只读从源码提取事实、接口签名与示例，每条带可核对出处
+    profession: 采料师
+  - agent_name: doc-scribe
+    description: 誊写匠·丁稿：按素材卡与章节分工批量产出/更新文档，逐字有据、缺口标 TODO
+    profession: 誊写匠

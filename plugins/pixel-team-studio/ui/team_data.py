@@ -5,7 +5,7 @@
 所有函数均带 try/except 兜底，保证 UI 在任何异常下不崩溃。
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 from loguru import logger
 
@@ -16,7 +16,7 @@ from loguru import logger
 def _main_window():
     """获取第一个存活的主窗口实例（团队操作以它为准）"""
     try:
-        from app.core.window_registry import alive_window_instances
+        from app.core.infra.window_registry import alive_window_instances
 
         wins = alive_window_instances()
         for win in wins:
@@ -30,7 +30,7 @@ def _main_window():
 def _find_window(window_id: str):
     """按 window_id 查找存活窗口实例"""
     try:
-        from app.core.window_registry import alive_window_instances
+        from app.core.infra.window_registry import alive_window_instances
 
         for win in alive_window_instances():
             if win is not None and getattr(win, "_window_id", "") == window_id:
@@ -41,7 +41,7 @@ def _find_window(window_id: str):
 
 
 def _team_manager():
-    from app.core.team_manager import TeamManager
+    from app.core.team.team_manager import TeamManager
 
     return TeamManager.get_instance()
 
@@ -200,7 +200,7 @@ def get_member_task_count(member: Dict[str, Any]) -> int:
 def list_agents() -> List[Dict[str, str]]:
     """所有可组建团队的 @智能体角色：[{name, description, mode}]"""
     try:
-        from app.core.agent import AgentManager
+        from app.core.conversation.agent import AgentManager
 
         am = AgentManager.get_instance()
         agents = []
@@ -307,6 +307,55 @@ def create_team_from_template(template_name: str) -> int:
         return -1
 
 
+def create_team_with_label(agent_name: str, label: str) -> str:
+    """空白区拖拽建团：新 run_id + 团队名 + 添加首个成员
+
+    返回 run_id；失败返回空串。
+    """
+    label = (label or "").strip() or "新团队"
+    win = _main_window()
+    if win is None:
+        return ""
+    try:
+        tm = _team_manager()
+        run_id = tm.start_team_run(force=True)
+        if add_member(agent_name, run_id, label):
+            return run_id
+        return ""
+    except Exception as e:  # noqa: BLE001
+        logger.exception(f"[pixel-team-studio] 拖拽建团失败({agent_name}): {e}")
+        return ""
+
+
+def broadcast_to_team(run_id: str, text: str) -> int:
+    """向指定团队所有成员广播消息；返回成功送达数"""
+    text = (text or "").strip()
+    if not text:
+        return 0
+    ok = 0
+    for team in get_teams():
+        if team.get("run_id", "") != run_id:
+            continue
+        for m in team.get("members", []):
+            wid = m.get("window_id", "")
+            if wid and send_member_message(wid, text):
+                ok += 1
+    return ok
+
+
+def dissolve_team(run_id: str) -> int:
+    """解散指定团队：逐成员移除（窗口保留）。返回成功移除数"""
+    ok = 0
+    for team in get_teams():
+        if team.get("run_id", "") != run_id:
+            continue
+        for m in team.get("members", []):
+            wid = m.get("window_id", "")
+            if wid and remove_member(wid):
+                ok += 1
+    return ok
+
+
 def add_member(agent_name: str, run_id: str, team_label: str) -> bool:
     """拖拽添加成员：为角色新建成员窗口并加入指定团队"""
     win = _main_window()
@@ -327,15 +376,23 @@ def add_member(agent_name: str, run_id: str, team_label: str) -> bool:
 
 
 def remove_member(window_id: str) -> bool:
-    """拖拽移除成员：离开团队（窗口保留，恢复独立模式）"""
+    """移除成员：离开团队，并直接关闭其窗口标签页（v0.4.1 起，不再保留窗口）"""
     win = _find_window(window_id)
     if win is not None:
         try:
             win._handle_team_leave()
-            return True
         except Exception as e:  # noqa: BLE001
-            logger.exception(f"[pixel-team-studio] 移除成员失败({window_id}): {e}")
-            return False
+            logger.exception(f"[pixel-team-studio] 成员离开团队失败({window_id}): {e}")
+        try:
+            from app.widgets.tab_manager_window import TabManagerWindow
+
+            tmw = TabManagerWindow.get_instance()
+            if tmw is not None:
+                tmw.remove_window(win)  # 关闭标签页 + 销毁窗口
+                return True
+        except Exception as e:  # noqa: BLE001
+            logger.exception(f"[pixel-team-studio] 关闭成员窗口失败({window_id}): {e}")
+            return True  # 窗口已离开团队，视为成功
     try:
         _team_manager().leave_team(window_id)
         return True

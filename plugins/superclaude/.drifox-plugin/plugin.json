@@ -23,7 +23,5 @@
         "skills": true,
         "mcp": true
     },
-    "drifox": {
-        "min_version": "0.5.0"
-    }
+    "min_host_version": "0.5.0"
 }

@@ -10,7 +10,6 @@ render_func 返回 markdown 片段（概要行 + ```echarts 代码块），
 """
 
 import sys
-from pathlib import Path
 
 from loguru import logger
 
@@ -70,7 +69,7 @@ def _get_project_root() -> str:
             continue
         seen.add(cand)
         try:
-            from dashboard import find_git_root
+            from .dashboard import find_git_root
 
             git_root = find_git_root(cand)
             if git_root:
@@ -95,7 +94,7 @@ def _render_welcome_tab(ctx: dict = None) -> str:
         # 候选链全部无效（registry 未就绪 / 无任何窗口提供项目）→ 不采集，下次渲染重试
         return "> ⚠️ 未检测到 git 项目，请在对话窗口打开项目后重试\n"
 
-    from collector import build_cache_key, get_collector
+    from .collector import build_cache_key, get_collector
 
     collector = get_collector()
     cache_key = build_cache_key(root)
@@ -112,7 +111,7 @@ def _render_welcome_tab(ctx: dict = None) -> str:
     # 概要行
     import json
 
-    from dashboard import build_options
+    from .dashboard import build_options
 
     repo = data.get("repo_name", "")
     branch = data.get("branch", "")
@@ -139,10 +138,16 @@ def register_ui(registry):
     for k in stale:
         del sys.modules[k]
 
-    # 确保 ui 目录在 sys.path（相对导入 dashboard / async）
-    ui_dir = str(Path(__file__).resolve().parent)
-    if ui_dir not in sys.path:
-        sys.path.insert(0, ui_dir)
+    # 【不往 sys.path 塞 ui 目录】宿主 UIPluginRegistry 会把每个插件的 ui 目录
+    # 逐个 sys.path.insert(0, ...)（后加载的排前面），本插件的 ui 目录会挤在其
+    # 他插件之后 —— 此时任何顶层裸名导入（`import dashboard` /
+    # `from collector import ...`）都可能解析到**别的插件**的同名文件。
+    # 实测与 token-usage 撞车：两者都有 ui/collector.py，本插件拿到的是对方的
+    # collector（build_cache_key 签名 () 而非 (project_root)），render_func 抛
+    # TypeError 被宿主 _render_welcome_body 的 except 吞掉 → 回退渲染会话列表，
+    # 表现为「切到项目看板 tab 却显示会话内容」。
+    # 全部子模块改用相对导入（宿主按文件路径 spec 加载 ui/__init__.py，
+    # submodule_search_locations = ui 目录，相对导入可用）。
 
     registry.register_welcome_tab(
         plugin_name="project-dashboard",

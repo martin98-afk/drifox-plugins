@@ -258,7 +258,7 @@ class AutoLoopWorker(QThread):
         # 确保 ConversationCore 的 SessionManager 有当前会话
         sm = self._conversation_core.session_manager
         if not sm.get_current_session():
-            from app.core.chat_session import ChatSession
+            from app.core.conversation.chat_session import ChatSession
 
             auto_loop_session = ChatSession(name="AutoLoop")
             sm.sessions.append(auto_loop_session)
@@ -969,7 +969,7 @@ class AutoLoopWorker(QThread):
 
     def _make_autoloop_callbacks(self) -> Dict[str, Callable]:
         """构建 AutoLoop 的回调包装（日志转发 + 预算检查 + token 追踪）"""
-        from app.core.token_estimator import count_messages_tokens
+        from app.core.infra.token_estimator import count_messages_tokens
 
         # 以 Adapter 的回调为基础
         callbacks = dict(self._adapter.get_callbacks())

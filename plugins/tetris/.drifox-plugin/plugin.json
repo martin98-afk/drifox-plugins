@@ -9,9 +9,9 @@
     "author": {
         "name": "DriFox Contributor"
     },
-    "type": "game",
+    "type": "user",
     "components": {
-        "commands": true,
+        "commands": false,
         "ui": true
     }
 }

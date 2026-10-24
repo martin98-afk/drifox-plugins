@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "amap": {
+      "type": "http",
+      "url": "https://mcp.amap.com/mcp",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {},
+      "credential": {
+        "label": "Key",
+        "placeholder": "高德地图 Web 服务 Key",
+        "getUrl": "https://console.amap.com/dev/key/app",
+        "inject": {
+          "type": "query",
+          "name": "key"
+        }
+      }
+    }
+  }
+}

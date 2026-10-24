@@ -1,0 +1,56 @@
+{
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "name": "magpie",
+    "description": "magpie 本地网关 — 接入聚合后的全部订阅账号与路由组，并内嵌 magpie 网页界面直接管理模型与配额",
+    "version": "0.3.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "api_version": 2,
+    "capabilities": [
+        "input.write",
+        "ui.notify"
+    ],
+    "min_host_version": "0.5.12",
+    "keywords": [
+        "magpie",
+        "网关",
+        "服务商",
+        "多账号",
+        "配额",
+        "web"
+    ],
+    "components": {
+        "providers": true,
+        "ui": true
+    },
+    "config_schema": {
+        "title": "magpie 网页界面",
+        "fields": [
+            {
+                "key": "web_port",
+                "label": "网页端口",
+                "type": "number",
+                "default": 3430,
+                "min": 1,
+                "max": 65535,
+                "placeholder": "3430",
+                "description": "magpie web / serve --web 的监听端口。默认 3430，与网关端口 3425 不是同一个。"
+            },
+            {
+                "key": "web_key",
+                "label": "Web Key",
+                "type": "password",
+                "default": "",
+                "env": "MAGPIE_WEB_KEY",
+                "placeholder": "留空则不加 ?k= 参数",
+                "description": "magpie web 每次启动会换随机 key；设环境变量 MAGPIE_WEB_KEY 可固定，把同一个值填这里。"
+            }
+        ]
+    }
+}

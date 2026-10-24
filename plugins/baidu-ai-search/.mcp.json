@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "baidu-ai-search": {
+      "type": "sse",
+      "url": "https://appbuilder.baidu.com/v2/ai_search/mcp/sse",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {},
+      "credential": {
+        "label": "API Key",
+        "placeholder": "百度智能云 API Key",
+        "getUrl": "https://console.bce.baidu.com/qianfan/ais/cloud/api-key",
+        "inject": {
+          "type": "query",
+          "name": "api_key"
+        }
+      }
+    }
+  }
+}

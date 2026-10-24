@@ -27,9 +27,7 @@
                 "prompt-engineering",
                 "art"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://inference.sh",
             "icon": {
                 "light": "icon.svg",
@@ -60,9 +58,7 @@
                 "multimodal",
                 "generative"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://inference.sh",
             "icon": {
                 "light": "icon.svg",
@@ -93,13 +89,42 @@
                 "generative",
                 "creative-coding"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills/tree/main/skills/algorithmic-art",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "amap",
+            "description": "高德地图 — 地点搜索、路线规划、天气与周边查询。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/amap",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "downloads": 1,
+            "keywords": [
+                "mcp",
+                "connector",
+                "amap"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.amap.com/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
             }
         },
         {
@@ -120,16 +145,46 @@
             "components": {
                 "providers": true
             },
-            "downloads": 4,
+            "downloads": 6,
             "keywords": [
                 "服务商"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "providers/icons_light/Anthropic.svg",
                 "dark": "providers/icons/Anthropic.svg"
+            }
+        },
+        {
+            "name": "anthropic-oauth",
+            "description": "Anthropic Claude 服务商（OAuth 登录制）— 用 claude.ai 账号浏览器授权登录，以 Pro/Max 订阅额度直连 Claude 系列模型，无需 API Key",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "provider"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/anthropic-oauth",
+                "ref": "pyside6"
+            },
+            "components": {
+                "providers": true
+            },
+            "downloads": 1,
+            "keywords": [
+                "Anthropic",
+                "Claude",
+                "OAuth",
+                "服务商",
+                "Claude Code"
+            ],
+            "min_host_version": "0.5.12",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -150,7 +205,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 2,
+            "downloads": 4,
             "keywords": [
                 "video",
                 "explainer",
@@ -159,12 +214,41 @@
                 "motion-graphics",
                 "education"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "apify",
+            "description": "Apify — 运行 Apify 上的爬虫与自动化 Actor，获取网页数据。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/apify",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "downloads": 1,
+            "keywords": [
+                "mcp",
+                "connector",
+                "apify"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.apify.com",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
             }
         },
         {
@@ -205,9 +289,7 @@
             "keywords": [
                 "archify"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -216,7 +298,7 @@
         {
             "name": "autoloop",
             "description": "AutoLoop 自动循环模式 — 规划→执行→归档三阶段长任务自动执行（对话引擎插件化首例，经 UI 服务门面驱动自建 ConversationCore）",
-            "version": "1.1.0",
+            "version": "1.1.2",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -246,13 +328,163 @@
                 "自动循环",
                 "三阶段"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.6.10",
+            "api_version": 2,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icons/无限.svg",
                 "dark": "icons/无限_light.svg"
+            }
+        },
+        {
+            "name": "aws-knowledge",
+            "description": "AWS Knowledge — 检索 AWS 官方文档、最佳实践与区域可用性信息。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/aws-knowledge",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "aws-knowledge"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://knowledge-mcp.global.api.aws",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "baidu-ai-search",
+            "description": "百度 AI 搜索 — 用百度搜索全网实时信息。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/baidu-ai-search",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "baidu-ai-search"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://appbuilder.baidu.com/v2/ai_search/mcp/sse",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "baidu-map",
+            "description": "百度地图 — 地点检索、路线规划、实时路况与天气查询。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/baidu-map",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "downloads": 1,
+            "keywords": [
+                "mcp",
+                "connector",
+                "baidu-map"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.map.baidu.com/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "bailian-amap",
+            "description": "高德地图（百炼） — 地点搜索、路线规划、天气与周边查询，经阿里云百炼接入。安装后填入百炼 API Key。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/bailian-amap",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "bailian-amap"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://dashscope.aliyuncs.com/api/v1/mcps/amap-maps/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "bailian-websearch",
+            "description": "阿里云百炼 联网搜索 — 通过阿里云百炼进行实时联网搜索。安装后填入百炼 API Key。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/bailian-websearch",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "bailian-websearch"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://dashscope.aliyuncs.com/api/v1/mcps/WebSearch/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
             }
         },
         {
@@ -279,9 +511,7 @@
                 "writing",
                 "design"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -303,7 +533,7 @@
                 "ref": "pyside6"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "ui": true
             },
             "downloads": 6,
@@ -315,7 +545,7 @@
         {
             "name": "browser",
             "description": "内置浏览器 — Chrome 体验多标签浏览 + 外部链接接管 + AI 智能体浏览控制（MCP）。",
-            "version": "1.4.1",
+            "version": "1.4.4",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -329,19 +559,18 @@
                 "ref": "pyside6"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 42,
+            "downloads": 67,
             "keywords": [
                 "browser",
                 "web",
                 "automation"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.6.10",
+            "api_version": 2,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -365,7 +594,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 22,
+            "downloads": 26,
             "keywords": [
                 "calendar",
                 "date",
@@ -401,9 +630,7 @@
                 "art",
                 "visual"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills/tree/main/skills/canvas-design",
             "icon": {
                 "light": "icon.svg",
@@ -438,16 +665,14 @@
                 "tokens",
                 "compression"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/JuliusBrussee/caveman",
             "icon": "icon.png"
         },
         {
             "name": "chinese-chess",
             "description": "中国象棋 — 与大模型对弈的浮动卡片游戏",
-            "version": "0.2.2",
+            "version": "0.3.0",
             "author": "马丁",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -478,16 +703,15 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 3,
+            "downloads": 6,
             "keywords": [
                 "chinese",
                 "evolved",
                 "xiangqi",
                 "象棋"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            }
+            "min_host_version": "0.6.10",
+            "api_version": 2
         },
         {
             "name": "claude-api",
@@ -505,7 +729,7 @@
                 "ref": "pyside6"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "skills": true
             },
             "downloads": 2,
@@ -514,13 +738,131 @@
                 "prompt-engineering",
                 "api"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://docs.anthropic.com",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "clickup",
+            "description": "ClickUp — 查看和管理 ClickUp 的任务、文档与空间。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/clickup",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "clickup"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.clickup.com/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "cloudflare-bindings",
+            "description": "Cloudflare Workers — 管理 Cloudflare Workers 与 KV、R2、D1 等存储资源。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/cloudflare-bindings",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "cloudflare-bindings"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://bindings.mcp.cloudflare.com/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "cloudflare-docs",
+            "description": "Cloudflare Docs — 检索 Cloudflare 开发者文档。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/cloudflare-docs",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "cloudflare-docs"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://docs.mcp.cloudflare.com/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "cloudflare-observability",
+            "description": "Cloudflare Observability — 查询 Cloudflare Workers 的日志与分析数据。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/cloudflare-observability",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "cloudflare-observability"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://observability.mcp.cloudflare.com/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
             }
         },
         {
@@ -552,9 +894,7 @@
                 "checklist",
                 "audit"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -586,10 +926,43 @@
                 "maintainability",
                 "clean-code"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/code-simplifier",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "codebuddy-intl",
+            "description": "腾讯 CodeBuddy 国际版服务商（OAuth 登录制）— 浏览器授权登录，以订阅额度直连 www.codebuddy.ai 网关（craft 路由槽位 + 全表真实模型 ID 同选，槽位由网关按账号档位分配实际模型），无需 API Key",
+            "version": "0.5.1",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "provider"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/codebuddy-intl",
+                "ref": "pyside6"
+            },
+            "components": {
+                "providers": true
+            },
+            "downloads": 13,
+            "keywords": [
+                "CodeBuddy",
+                "国际版",
+                "OAuth",
+                "Claude",
+                "GPT",
+                "Gemini",
+                "服务商"
+            ],
+            "min_host_version": "0.6.10",
+            "api_version": 2,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -615,6 +988,39 @@
             },
             "downloads": 9,
             "homepage": "https://github.com/martin98-afk/DriFox",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "codex-oauth",
+            "description": "OpenAI Codex 服务商（OAuth 登录制）— 用 ChatGPT 账号浏览器授权登录，以订阅额度直连 Codex Responses API（gpt-6.1-sol / gpt-6-luna 等），无需 API Key",
+            "version": "0.2.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "provider"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/codex-oauth",
+                "ref": "pyside6"
+            },
+            "components": {
+                "providers": true
+            },
+            "downloads": 2,
+            "keywords": [
+                "OpenAI",
+                "Codex",
+                "ChatGPT",
+                "OAuth",
+                "服务商",
+                "GPT"
+            ],
+            "min_host_version": "0.5.12",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -654,16 +1060,14 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 6,
+            "downloads": 9,
             "keywords": [
                 "command-code",
                 "commandcode",
                 "llm-gateway",
                 "evolved"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -688,7 +1092,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 21,
+            "downloads": 26,
             "keywords": [
                 "welcome",
                 "stats",
@@ -701,9 +1105,7 @@
                 "上下文",
                 "趋势"
             ],
-            "drifox": {
-                "min_version": "0.4.15"
-            },
+            "min_host_version": "0.4.15",
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -728,7 +1130,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -762,9 +1164,7 @@
                 "documentation",
                 "文档"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://context7.com",
             "icon": {
                 "light": "icon.svg",
@@ -772,9 +1172,39 @@
             }
         },
         {
+            "name": "context7-remote",
+            "description": "Context7 — 查询各类开源库与框架的最新文档和代码示例。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/context7-remote",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "context7"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.context7.com/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
             "name": "cron-tasks",
             "description": "定时任务中心 — 可视化配置 UI 定时任务（单次/间隔/Cron），到期自动驱动对话执行 prompt，带运行历史与可配置 hook 参与面（参考 openhanako desk cron 设计）",
-            "version": "0.5.5",
+            "version": "0.5.8",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -792,7 +1222,7 @@
                 "tools": true,
                 "hook_policies": true
             },
-            "downloads": 32,
+            "downloads": 51,
             "keywords": [
                 "cron",
                 "schedule",
@@ -802,9 +1232,8 @@
                 "计划任务",
                 "自动化"
             ],
-            "drifox": {
-                "min_version": "0.5.10"
-            },
+            "min_host_version": "0.6.10",
+            "api_version": 2,
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
                 "light": "icons/clock.svg",
@@ -829,7 +1258,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 16,
+            "downloads": 18,
             "keywords": [
                 "desktop",
                 "automation",
@@ -841,6 +1270,161 @@
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "dingtalk-ai-table",
+            "description": "钉钉 AI 表格 — 读写钉钉 AI 表格中的数据。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/dingtalk-ai-table",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "downloads": 2,
+            "keywords": [
+                "mcp",
+                "connector",
+                "dingtalk-ai-table"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp-gw.dingtalk.com",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "dingtalk-calendar",
+            "description": "钉钉日历 — 查看和创建钉钉日程。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/dingtalk-calendar",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "downloads": 1,
+            "keywords": [
+                "mcp",
+                "connector",
+                "dingtalk-calendar"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp-gw.dingtalk.com",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "dingtalk-contacts",
+            "description": "钉钉通讯录 — 查询组织成员与部门。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/dingtalk-contacts",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "downloads": 2,
+            "keywords": [
+                "mcp",
+                "connector",
+                "dingtalk-contacts"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp-gw.dingtalk.com",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "dingtalk-docs",
+            "description": "钉钉文档 — 搜索、阅读和编辑钉钉文档。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/dingtalk-docs",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "downloads": 1,
+            "keywords": [
+                "mcp",
+                "connector",
+                "dingtalk-docs"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp-gw.dingtalk.com",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "dingtalk-todo",
+            "description": "钉钉待办 — 查看、创建和完成钉钉待办。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/dingtalk-todo",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "downloads": 1,
+            "keywords": [
+                "mcp",
+                "connector",
+                "dingtalk-todo"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp-gw.dingtalk.com",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
             }
         },
         {
@@ -859,7 +1443,7 @@
                 "ref": "pyside6"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "skills": true
             },
             "downloads": 1,
@@ -868,13 +1452,41 @@
                 "documentation",
                 "collaboration"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "dropbox",
+            "description": "Dropbox — 搜索和读取你 Dropbox 里的文件。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/dropbox",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "dropbox"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.dropbox.com/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
             }
         },
         {
@@ -906,9 +1518,7 @@
                 "cordis",
                 "mode-router"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            }
+            "min_host_version": "0.5.0"
         },
         {
             "name": "dsh-router",
@@ -932,9 +1542,7 @@
                 "hooks": true
             },
             "downloads": 1,
-            "drifox": {
-                "min_version": "0.5.0"
-            }
+            "min_host_version": "0.5.0"
         },
         {
             "name": "dsh-super-injector",
@@ -955,9 +1563,7 @@
                 "hooks": true,
                 "tools": true
             },
-            "drifox": {
-                "min_version": "0.5.0"
-            }
+            "min_host_version": "0.5.0"
         },
         {
             "name": "ecc",
@@ -989,13 +1595,41 @@
                 "tdd",
                 "code-review"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://ecc.tools",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "edgeone-pages",
+            "description": "腾讯云 EdgeOne Pages — 把网页一键部署到 EdgeOne Pages，生成可公开访问的链接。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/edgeone-pages",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "edgeone-pages"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp-on-edge.edgeone.app/mcp-server",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
             }
         },
         {
@@ -1019,13 +1653,41 @@
                 "skills": true
             },
             "downloads": 1,
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://evomap.ai",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "exa",
+            "description": "Exa — 面向 AI 的网页搜索与网页内容抓取。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/exa",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "exa"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.exa.ai/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
             }
         },
         {
@@ -1065,9 +1727,7 @@
                 "template",
                 "development"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1097,10 +1757,58 @@
                 "flowchart",
                 "visualization"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/github/awesome-copilot/tree/main/skills/excalidraw-diagram-generator",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "expert-teams",
+            "description": "场景化专家团模板包：缺陷狩猎、深度调研、重构小队、发布指挥、文档工坊五个预设团队，12 个专属职业智能体（追因师、修复匠、谋篇师、测绘师等），提示词设计借鉴 WorkBuddy 专家团规范（人格化职业、误派预检、快速失败、邮箱回传），/team --load 一键拉起。",
+            "version": "0.2.0",
+            "author": "马丁",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "agent",
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/expert-teams",
+                "ref": "pyside6"
+            },
+            "components": {
+                "tools": false,
+                "commands": false,
+                "agents": true,
+                "skills": false,
+                "hooks": false,
+                "mcp": false,
+                "lsp": false,
+                "themes": false,
+                "ui": false,
+                "providers": false,
+                "team_templates": true,
+                "model_adapters": false,
+                "loop_policies": false,
+                "storages": false,
+                "serializers": false,
+                "gateways": false,
+                "engines": false
+            },
+            "downloads": 1,
+            "keywords": [
+                "team",
+                "团队",
+                "专家团",
+                "multi-agent",
+                "team_templates",
+                "workflow"
+            ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1124,7 +1832,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 6,
+            "downloads": 9,
             "keywords": [
                 "theme",
                 "fire-emblem",
@@ -1133,9 +1841,7 @@
                 "dark",
                 "主题"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
                 "light": "icon.png",
@@ -1169,10 +1875,87 @@
                 "workflow",
                 "code-review"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/feature-dev",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "figma",
+            "description": "Figma — 读取 Figma 设计稿的结构、样式与变量。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/figma",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "figma"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.figma.com/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "floating-chat",
+            "description": "随时呼出的对话悬浮窗：全局热键一键弹出，不打开主窗也能快速问大模型。独立会话不污染主对话，输入即问、流式作答、一键打开完整会话",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/floating-chat",
+                "ref": "pyside6"
+            },
+            "components": {
+                "tools": false,
+                "commands": true,
+                "agents": false,
+                "skills": false,
+                "hooks": false,
+                "mcp": false,
+                "lsp": false,
+                "themes": false,
+                "ui": true,
+                "providers": false,
+                "team_templates": false,
+                "model_adapters": false,
+                "loop_policies": false,
+                "storages": false,
+                "serializers": false,
+                "gateways": false,
+                "engines": false
+            },
+            "keywords": [
+                "chat",
+                "floating",
+                "quick",
+                "hotkey",
+                "window",
+                "悬浮对话",
+                "快速提问"
+            ],
+            "min_host_version": "0.6.2",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1203,9 +1986,7 @@
                 "tailwind",
                 "动效"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills/tree/main/skills/frontend-design",
             "icon": {
                 "light": "icon.svg",
@@ -1231,7 +2012,7 @@
                 "commands": true,
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "frontend",
                 "a11y",
@@ -1239,9 +2020,7 @@
                 "react",
                 "vue"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1263,10 +2042,10 @@
                 "ref": "pyside6"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "ui": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1275,7 +2054,7 @@
         {
             "name": "gateway-dingtalk",
             "description": "钉钉 (DingTalk) Stream 模式适配器（社区插件，万物即插件 Phase E）：实时消息收发，支持群/单聊/媒体；基于 dingtalk-stream SDK。",
-            "version": "1.0.1",
+            "version": "1.0.2",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [],
@@ -1316,6 +2095,8 @@
                     ]
                 }
             },
+            "min_host_version": "0.6.10",
+            "api_version": 2,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -1375,7 +2156,7 @@
         {
             "name": "gateway-feishu",
             "description": "飞书 (Feishu/Lark) WebSocket 模式适配器（社区插件，万物即插件 Phase E）：实时消息收发，基于 lark-oapi SDK。",
-            "version": "1.2.2",
+            "version": "1.2.3",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [],
@@ -1388,7 +2169,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 28,
+            "downloads": 39,
             "platforms": [
                 "windows",
                 "linux",
@@ -1428,7 +2209,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -1498,7 +2279,7 @@
                 "gateways": true,
                 "tools": true
             },
-            "downloads": 7,
+            "downloads": 9,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -1508,7 +2289,7 @@
         {
             "name": "gateway-wecom",
             "description": "企业微信 (WeCom) AI Bot 适配器（社区插件，万物即插件 Phase E）：通过 WebSocket 长连接与 AI Bot Gateway 通信；不依赖第三方 SDK，复用宿主 aiohttp/httpx。",
-            "version": "1.0.1",
+            "version": "1.0.2",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [],
@@ -1522,6 +2303,8 @@
                 "gateways": true
             },
             "downloads": 2,
+            "min_host_version": "0.6.10",
+            "api_version": 2,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -1531,7 +2314,7 @@
         {
             "name": "git-dashboard",
             "description": "Git 仪表盘 — 提交日历热力图、最近提交、分支图可视化",
-            "version": "0.1.2",
+            "version": "0.1.3",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -1548,7 +2331,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 13,
+            "downloads": 20,
             "keywords": [
                 "git",
                 "dashboard",
@@ -1563,7 +2346,7 @@
         {
             "name": "git-panel",
             "description": "Git 控制面板 — 文件变更、暂存/取消暂存、提交、Stash、分支管理、提交历史、Diff 预览、AI 生成提交描述",
-            "version": "2.0.1",
+            "version": "2.1.2",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -1579,7 +2362,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 40,
+            "downloads": 71,
             "keywords": [
                 "git",
                 "source-control",
@@ -1587,6 +2370,8 @@
                 "branch",
                 "ai"
             ],
+            "min_host_version": "0.6.10",
+            "api_version": 2,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -1645,12 +2430,101 @@
                 "branch",
                 "pr"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "gitee",
+            "description": "Gitee — 管理 Gitee 仓库、文件、Issue 与 PR。安装后填入私人令牌。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/gitee",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "gitee"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://api.gitee.com/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "github",
+            "description": "GitHub — 管理 GitHub 仓库、Issue、PR 与 Actions。安装后填入个人访问令牌。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/github",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "downloads": 2,
+            "keywords": [
+                "mcp",
+                "connector",
+                "github"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://api.githubcopilot.com/mcp/",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "gitlab",
+            "description": "GitLab — 查看 GitLab.com 的项目、Issue、合并请求与流水线。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/gitlab",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "gitlab"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://gitlab.com/api/v4/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
             }
         },
         {
@@ -1678,9 +2552,39 @@
                 "图像生成",
                 "提示词工程"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
+            "min_host_version": "0.5.0",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "grok-oauth",
+            "description": "xAI Grok 服务商（OAuth 登录制）— 用 SuperGrok / X Premium+ 订阅账号浏览器授权登录，直连 Grok 系列模型，无需 API Key",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "provider"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/grok-oauth",
+                "ref": "pyside6"
             },
+            "components": {
+                "providers": true
+            },
+            "downloads": 3,
+            "keywords": [
+                "xAI",
+                "Grok",
+                "SuperGrok",
+                "OAuth",
+                "服务商"
+            ],
+            "min_host_version": "0.5.12",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1704,13 +2608,11 @@
             "components": {
                 "providers": true
             },
-            "downloads": 3,
+            "downloads": 5,
             "keywords": [
                 "服务商"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "providers/icons_light/groq.svg",
                 "dark": "providers/icons/groq.svg"
@@ -1742,9 +2644,7 @@
                 "tts",
                 "voice"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1810,6 +2710,67 @@
             }
         },
         {
+            "name": "huggingface",
+            "description": "Hugging Face — 搜索 Hugging Face 上的模型、数据集、Space 与论文。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/huggingface",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "downloads": 3,
+            "keywords": [
+                "mcp",
+                "connector",
+                "huggingface"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://huggingface.co/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "intercom",
+            "description": "Intercom — 查询 Intercom 的会话、联系人与客服数据。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/intercom",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "intercom"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.intercom.com/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
             "name": "internal-comms",
             "description": "内部沟通模板 — 3P 沟通（进度/计划/问题）、状态报告、事件复盘、决策通知、产品更新、客户邮件。",
             "version": "1.0.0",
@@ -1825,7 +2786,7 @@
                 "ref": "pyside6"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "skills": true
             },
             "downloads": 1,
@@ -1834,9 +2795,7 @@
                 "collaboration",
                 "documentation"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills",
             "icon": {
                 "light": "icon.svg",
@@ -1846,7 +2805,7 @@
         {
             "name": "ip-switcher",
             "description": "IP 切换监控 — 免费模型限流自动换 IP（429 检测 + 代理池轮换 + 仪表盘）。",
-            "version": "0.1.1",
+            "version": "0.1.2",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -1867,9 +2826,7 @@
                 "network",
                 "tool"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.6.2",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1909,13 +2866,71 @@
                 "metacognition",
                 "j-space"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/Tiger3807861189/J-Space-Cognition-Suite-V3.6",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "jam",
+            "description": "Jam — 读取 Jam 缺陷报告里的录屏、日志与网络请求。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/jam",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "jam"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.jam.dev/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "jina",
+            "description": "Jina AI — 读取网页正文、网页搜索与学术检索。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/jina",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "jina"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.jina.ai/v1",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
             }
         },
         {
@@ -1954,9 +2969,7 @@
                 "jsonl",
                 "evolved"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -1991,9 +3004,7 @@
                 "memory",
                 "goal"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": "icon.png"
         },
         {
@@ -2022,9 +3033,7 @@
                 "excel",
                 "知识库"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2048,7 +3057,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 7,
+            "downloads": 11,
             "keywords": [
                 "theme",
                 "laputa",
@@ -2056,13 +3065,107 @@
                 "light",
                 "主题"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "linear",
+            "description": "Linear — 查看和管理 Linear 里的 Issue、项目与周期。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/linear",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "linear"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.linear.app/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "magpie",
+            "description": "magpie 本地网关 — 接入聚合后的全部订阅账号与路由组，并内嵌 magpie 网页界面直接管理模型与配额",
+            "version": "0.3.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "ui",
+                "provider"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/magpie",
+                "ref": "pyside6"
+            },
+            "components": {
+                "providers": true,
+                "ui": true
+            },
+            "downloads": 1,
+            "keywords": [
+                "magpie",
+                "网关",
+                "服务商",
+                "多账号",
+                "配额",
+                "web"
+            ],
+            "min_host_version": "0.5.12",
+            "api_version": 2,
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "mapbox",
+            "description": "Mapbox — 地点搜索、路线规划、等时圈与静态地图。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/mapbox",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "mapbox"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.mapbox.com/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
             }
         },
         {
@@ -2104,9 +3207,7 @@
                 "marketplace",
                 "evolved"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2128,7 +3229,7 @@
                 "ref": "pyside6"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "skills": true
             },
             "downloads": 1,
@@ -2137,9 +3238,7 @@
                 "tool",
                 "development"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://modelcontextprotocol.io",
             "icon": {
                 "light": "icon.svg",
@@ -2162,13 +3261,43 @@
                 "ref": "pyside6"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "ui": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "microsoft-learn",
+            "description": "Microsoft Learn — 检索微软官方技术文档与代码示例。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/microsoft-learn",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "microsoft-learn"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://learn.microsoft.com/api/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
             }
         },
         {
@@ -2189,7 +3318,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 5,
+            "downloads": 9,
             "keywords": [
                 "theme",
                 "dark",
@@ -2198,9 +3327,7 @@
                 "极光",
                 "主题"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2222,10 +3349,10 @@
                 "ref": "pyside6"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "ui": true
             },
-            "downloads": 6,
+            "downloads": 8,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2256,13 +3383,222 @@
                 "视频生成",
                 "多模态"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            }
+        },
+        {
+            "name": "miro",
+            "description": "Miro — 读取和创建 Miro 白板上的内容。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/miro",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "miro"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.miro.com/",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "modelscope",
+            "description": "魔搭 MCP — 接入魔搭 MCP 广场上的托管服务。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/modelscope",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "modelscope"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://www.modelscope.cn",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "monday",
+            "description": "monday.com — 查看和更新 monday.com 的看板、条目与更新。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/monday",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "monday"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.monday.com/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "moonshot",
+            "description": "Moonshot (Kimi) 服务商插件 — 提供 Kimi K3 / K2.7 Code / K2.6 系列模型接入，含账户余额查询。",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "provider"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/moonshot",
+                "ref": "pyside6"
+            },
+            "components": {
+                "providers": true
+            },
+            "downloads": 1,
+            "keywords": [
+                "服务商",
+                "Kimi",
+                "Moonshot"
+            ],
+            "min_host_version": "0.5.0",
+            "icon": {
+                "light": "providers/icons_light/moonshot.svg",
+                "dark": "providers/icons/moonshot.svg"
+            }
+        },
+        {
+            "name": "neon",
+            "description": "Neon — 管理 Neon Postgres 项目、分支与数据库查询。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/neon",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "neon"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.neon.tech/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "netlify",
+            "description": "Netlify — 创建、部署和管理 Netlify 站点。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/netlify",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "netlify"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://netlify-mcp.netlify.app/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "notion",
+            "description": "Notion — 搜索、阅读和编辑你的 Notion 页面与数据库。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/notion",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "downloads": 4,
+            "keywords": [
+                "mcp",
+                "connector",
+                "notion"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.notion.com/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
             }
         },
         {
@@ -2283,15 +3619,13 @@
             "components": {
                 "skills": true
             },
-            "downloads": 10,
+            "downloads": 12,
             "keywords": [
                 "skill",
                 "agents",
                 "writing"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/alchaincyf/nuwa-skill",
             "icon": {
                 "light": "icon.svg",
@@ -2314,7 +3648,7 @@
                 "ref": "pyside6"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "skills": true
             },
             "downloads": 1,
@@ -2325,9 +3659,7 @@
                 "excel",
                 "document"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills",
             "icon": {
                 "light": "icon.svg",
@@ -2352,13 +3684,11 @@
             "components": {
                 "providers": true
             },
-            "downloads": 2,
+            "downloads": 4,
             "keywords": [
                 "服务商"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "providers/icons_light/Ollama.svg",
                 "dark": "providers/icons/Ollama.svg"
@@ -2382,7 +3712,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 9,
+            "downloads": 12,
             "keywords": [
                 "omml",
                 "docx",
@@ -2395,9 +3725,7 @@
                 "OMML",
                 "document-generation"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2425,9 +3753,7 @@
             "keywords": [
                 "服务商"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "providers/icons_light/大模型.svg",
                 "dark": "providers/icons/大模型.svg"
@@ -2468,7 +3794,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 12,
+            "downloads": 14,
             "keywords": [
                 "openhanako",
                 "hana",
@@ -2479,9 +3805,7 @@
                 "jimeng",
                 "beautify"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            }
+            "min_host_version": "0.5.0"
         },
         {
             "name": "openrouter-provider",
@@ -2517,23 +3841,51 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "openrouter",
                 "evolved"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
             }
         },
         {
+            "name": "paypal",
+            "description": "PayPal — 管理 PayPal 的发票、订单、交易与订阅。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/paypal",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "paypal"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.paypal.com/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
             "name": "pixel-team-studio",
             "description": "像素智能体团队工作室 — 实时可视化智能体团队与成员状态，拖拽像素小人组建团队，双击切窗口/右键直接给成员发消息",
-            "version": "0.3.2",
+            "version": "0.4.2",
             "author": "马丁",
             "license": "MIT",
             "categories": [
@@ -2548,7 +3900,8 @@
             "components": {
                 "ui": true
             },
-            "downloads": 9,
+            "downloads": 23,
+            "min_host_version": "0.6.2",
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -2579,9 +3932,7 @@
                 "interactive",
                 "prototype"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/playground",
             "icon": {
                 "light": "icon.svg",
@@ -2616,15 +3967,74 @@
                 "skills",
                 "commands"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/DietrichGebert/ponytail"
+        },
+        {
+            "name": "postman",
+            "description": "Postman — 管理 Postman 的工作区、集合、环境与 API。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/postman",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "downloads": 1,
+            "keywords": [
+                "mcp",
+                "connector",
+                "postman"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.postman.com/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "prisma",
+            "description": "Prisma — 管理 Prisma Postgres 数据库、备份与连接。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/prisma",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "prisma"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.prisma.io/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
         },
         {
             "name": "project-dashboard",
             "description": "项目信息看板 — 生成 commit 趋势/语言分布/贡献者/文件统计图表，欢迎卡片展示",
-            "version": "0.2.3",
+            "version": "0.2.4",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -2641,7 +4051,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 24,
+            "downloads": 35,
             "keywords": [
                 "dashboard",
                 "stats",
@@ -2650,34 +4060,7 @@
                 "welcome",
                 "trend"
             ],
-            "drifox": {
-                "min_version": "0.4.15"
-            },
-            "homepage": "https://github.com/martin98-afk/DriFox",
-            "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
-            }
-        },
-        {
-            "name": "project-side-rail",
-            "description": "项目竖向 icon 列表 — 停靠在侧边栏右侧，用于快速切换项目",
-            "version": "0.1.1",
-            "author": "DriFox Contributors",
-            "license": "MIT",
-            "categories": [
-                "ui"
-            ],
-            "source": {
-                "type": "git-subdir",
-                "url": "https://github.com/martin98-afk/drifox-plugins",
-                "path": "plugins/project-side-rail",
-                "ref": "pyside6"
-            },
-            "components": {
-                "ui": true
-            },
-            "downloads": 14,
+            "min_host_version": "0.4.15",
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -2687,7 +4070,7 @@
         {
             "name": "prompt-enhancer",
             "description": "输入框按钮：一键用 LLM 优化当前输入框的提示词，增强指令可在系统配置中多行编辑。优化中按钮圆环转圈动画，复用主程序模型配置，「提示词增强模型」选择可持久化（关闭再打开保留），闭包实现（不修改主程序）。",
-            "version": "0.2.5",
+            "version": "0.4.0",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -2702,7 +4085,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 35,
+            "downloads": 60,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -2711,6 +4094,7 @@
                 "提示词",
                 "优化"
             ],
+            "min_host_version": "0.5.10",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2741,9 +4125,7 @@
                 "typing",
                 "lint"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2752,7 +4134,7 @@
         {
             "name": "quick-screenshot",
             "description": "输入框工具栏一键选区截图：左键点按钮拖框选取屏幕区域，松手自动复制到系统剪贴板，Ctrl+V 进输入框即可作为附件发送；右键按钮先隐藏 DriFox 主窗再截图，可截身后的画面",
-            "version": "0.2.0",
+            "version": "0.2.2",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -2783,7 +4165,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 13,
+            "downloads": 33,
             "keywords": [
                 "screenshot",
                 "clipboard",
@@ -2791,9 +4173,8 @@
                 "selection",
                 "选区截图"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.6.10",
+            "api_version": 2,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2817,7 +4198,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 4,
+            "downloads": 7,
             "keywords": [
                 "theme",
                 "rdr2",
@@ -2825,9 +4206,7 @@
                 "dark",
                 "主题"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
                 "light": "icon.png",
@@ -2853,15 +4232,13 @@
                 "commands": true,
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "react",
                 "performance",
                 "frontend"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://nextjs.org",
             "icon": {
                 "light": "icon.svg",
@@ -2894,9 +4271,7 @@
                 "code-review",
                 "hook"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/security-guidance",
             "icon": {
                 "light": "icon.svg",
@@ -2906,7 +4281,7 @@
         {
             "name": "self-evolver",
             "description": "DriFox 自进化工具集 — AI 可调用的 5 个工具：生成插件骨架、校验插件结构、扫描分析插件、管理 MCP 服务器配置、记录进化审计日志，配合技能引导实现自我开发/优化/修复插件。",
-            "version": "0.9.0",
+            "version": "0.9.1",
             "author": "black",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -2922,7 +4297,7 @@
                 "tools": true,
                 "skills": true
             },
-            "downloads": 15,
+            "downloads": 21,
             "keywords": [
                 "self-evolve",
                 "plugin",
@@ -2931,12 +4306,71 @@
                 "mcp",
                 "development"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.6.10",
+            "api_version": 2,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "semgrep",
+            "description": "Semgrep — 扫描代码中的安全漏洞与问题。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/semgrep",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "semgrep"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.semgrep.ai/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "sentry",
+            "description": "Sentry — 查看 Sentry 里的错误、性能问题与发布信息。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/sentry",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "sentry"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.sentry.dev/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
             }
         },
         {
@@ -2965,9 +4399,7 @@
                 "copywriting",
                 "marketing"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/coreyhaines31/marketingskills",
             "icon": {
                 "light": "icon.svg",
@@ -3029,9 +4461,7 @@
                 "agents",
                 "template"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/skill-creator",
             "icon": {
                 "light": "icon.svg",
@@ -3063,9 +4493,7 @@
                 "skill",
                 "install"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -3095,9 +4523,7 @@
                 "communication",
                 "image-generation"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills/tree/main/skills/slack-gif-creator",
             "icon": {
                 "light": "icon.svg",
@@ -3120,7 +4546,7 @@
                 "ref": "pyside6"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "ui": true
             },
             "downloads": 6,
@@ -3130,12 +4556,68 @@
             }
         },
         {
+            "name": "solitaire",
+            "description": "经典接龙纸牌游戏（Klondike）——拖拽移动、双击自动收牌，在 DriFox 中直接玩",
+            "version": "0.1.1",
+            "author": "DriFox Contributor",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/solitaire",
+                "ref": "pyside6"
+            },
+            "components": {
+                "commands": false,
+                "ui": true
+            },
+            "downloads": 1,
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "square",
+            "description": "Square — 管理 Square 的商品、订单、付款与客户。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/square",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "square"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.squareup.com/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
             "name": "ssh-toolkit",
-            "description": "SSH 远程工具包：连接管理、命令执行、文件传输(SFTP)、端口转发、目录浏览，基于 paramiko 实现，AI 自动调用。",
-            "version": "0.1.3",
+            "description": "SSH 远程工具包：连接管理（AI 工具 + 系统设置页）、命令执行、文件传输(SFTP)、端口转发、目录浏览，基于 paramiko 实现，AI 自动调用。",
+            "version": "0.3.0",
             "author": "马丁",
             "license": "GPL-3.0-or-later",
             "categories": [
+                "ui",
                 "tool"
             ],
             "source": {
@@ -3145,9 +4627,10 @@
                 "ref": "pyside6"
             },
             "components": {
-                "tools": true
+                "tools": true,
+                "ui": true
             },
-            "downloads": 14,
+            "downloads": 20,
             "platforms": [
                 "windows",
                 "linux",
@@ -3172,6 +4655,66 @@
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "stripe",
+            "description": "Stripe — 查询和管理 Stripe 的客户、付款、订阅与发票。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/stripe",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "stripe"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.stripe.com",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "supabase",
+            "description": "Supabase — 管理 Supabase 项目、数据库、边缘函数与日志。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/supabase",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "supabase"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.supabase.com/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
             }
         },
         {
@@ -3205,9 +4748,7 @@
                 "research",
                 "architecture"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/SuperClaude-Org/SuperClaude_Framework"
         },
         {
@@ -3237,9 +4778,7 @@
                 "brainstorming",
                 "planning"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/obra/superpowers",
             "icon": {
                 "light": "icon.svg",
@@ -3272,9 +4811,7 @@
                 "design-system",
                 "lsp"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://tailwindcss.com",
             "icon": {
                 "light": "icon.svg",
@@ -3311,9 +4848,7 @@
                 "并行任务",
                 "对话引擎"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
                 "light": "icons/board.svg",
@@ -3346,12 +4881,41 @@
                 "tutorial",
                 "交互式教学"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "tencent-docs",
+            "description": "腾讯文档 — 创建、搜索、阅读和编辑腾讯文档，支持文档、表格、幻灯片与思维导图。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/tencent-docs",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "downloads": 3,
+            "keywords": [
+                "mcp",
+                "connector",
+                "tencent-docs"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://docs.qq.com/openapi/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
             }
         },
         {
@@ -3388,6 +4952,7 @@
                 "gateways": false,
                 "engines": false
             },
+            "downloads": 2,
             "keywords": [
                 "tencent",
                 "hunyuan",
@@ -3397,12 +4962,41 @@
                 "混元",
                 "llm"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "tencent-map",
+            "description": "腾讯位置服务 — 地点搜索、路线规划、周边与天气查询。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/tencent-map",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "downloads": 1,
+            "keywords": [
+                "mcp",
+                "connector",
+                "tencent-map"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.map.qq.com/mcp?format=0",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
             }
         },
         {
@@ -3431,9 +5025,7 @@
                 "tdd",
                 "unit-test"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -3455,7 +5047,7 @@
                 "ref": "pyside6"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "ui": true
             },
             "downloads": 3,
@@ -3487,10 +5079,79 @@
                 "styling",
                 "主题"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills/tree/main/skills/theme-factory",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "todoist",
+            "description": "Todoist — 查看、添加和整理 Todoist 里的任务与项目。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/todoist",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "todoist"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://ai.todoist.net/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "token-usage",
+            "description": "欢迎卡片 Token 用量 — 30 天四指标 + GitHub 风格年度活动热力图，数据取自会话里的真实 API usage",
+            "version": "0.1.5",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui",
+                "stats"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/token-usage",
+                "ref": "pyside6"
+            },
+            "components": {
+                "ui": true
+            },
+            "downloads": 16,
+            "keywords": [
+                "welcome",
+                "token",
+                "usage",
+                "heatmap",
+                "activity",
+                "stats",
+                "api",
+                "Token",
+                "用量",
+                "热力图",
+                "活动",
+                "统计"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -3521,9 +5182,7 @@
                 "hot-reload",
                 "development"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -3547,7 +5206,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 9,
+            "downloads": 10,
             "keywords": [
                 "twin",
                 "dual",
@@ -3558,9 +5217,7 @@
                 "双开",
                 "对话"
             ],
-            "drifox": {
-                "min_version": "0.4.15"
-            },
+            "min_host_version": "0.4.15",
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.svg",
@@ -3593,9 +5250,72 @@
                 "design",
                 "easing"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
+            "min_host_version": "0.5.0",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "vercel",
+            "description": "Vercel — 查看 Vercel 项目、部署与日志，并检索 Vercel 文档。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/vercel",
+                "ref": "pyside6"
             },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "vercel"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.vercel.com",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "vision-proxy",
+            "description": "图片代理 — 当前模型不支持视觉时，把图片转发给配置的多模态模型，取回文字描述交给当前模型继续推理",
+            "version": "0.2.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "ui",
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/vision-proxy",
+                "ref": "pyside6"
+            },
+            "components": {
+                "tools": true,
+                "ui": true
+            },
+            "keywords": [
+                "vision",
+                "multimodal",
+                "image",
+                "视觉",
+                "多模态",
+                "图片代理"
+            ],
+            "min_host_version": "0.6.10",
+            "api_version": 2,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -3628,9 +5348,7 @@
                 "speech",
                 "语音克隆"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
                 "light": "icon.svg",
@@ -3640,7 +5358,7 @@
         {
             "name": "voice-input",
             "description": "输入框工具栏语音听写按钮：点击开始录音，再次点击结束并把识别文字插入输入框光标处。纯云端识别：硅基流动（免费模型，默认）与 MiniMax 双引擎可配，云端失败自动互为备用",
-            "version": "0.4.2",
+            "version": "0.5.0",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -3671,7 +5389,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 4,
+            "downloads": 25,
             "keywords": [
                 "voice",
                 "dictation",
@@ -3680,9 +5398,11 @@
                 "语音输入",
                 "听写"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "platforms": [
+                "windows",
+                "darwin"
+            ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -3690,12 +5410,12 @@
         },
         {
             "name": "voice-reply",
-            "description": "将 AI 回复转为语音播放（Windows SAPI5 离线 TTS，零依赖）",
-            "version": "1.1.0",
+            "description": "消息卡片页脚「朗读」按钮：点击播报本条 AI 回复。双引擎：本地系统语音（Windows SAPI5 / macOS say，免费零配置，默认）+ OpenAI 兼容在线 TTS API（默认预填硅基流动 CosyVoice2，可指向任意兼容服务）",
+            "version": "1.5.0",
             "author": "DriFox",
             "license": "GPL-3.0-or-later",
             "categories": [
-                "workflow"
+                "ui"
             ],
             "source": {
                 "type": "git-subdir",
@@ -3704,9 +5424,39 @@
                 "ref": "pyside6"
             },
             "components": {
-                "hooks": true
+                "tools": false,
+                "commands": false,
+                "agents": false,
+                "skills": false,
+                "hooks": false,
+                "mcp": false,
+                "lsp": false,
+                "themes": false,
+                "ui": true,
+                "providers": false,
+                "team_templates": false,
+                "model_adapters": false,
+                "loop_policies": false,
+                "storages": false,
+                "serializers": false,
+                "gateways": false,
+                "engines": false
             },
-            "downloads": 6,
+            "downloads": 10,
+            "keywords": [
+                "voice",
+                "tts",
+                "speech",
+                "read-aloud",
+                "footer-action",
+                "语音播报",
+                "朗读"
+            ],
+            "platforms": [
+                "windows",
+                "darwin"
+            ],
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -3742,9 +5492,7 @@
                 "wttr",
                 "query"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -3768,16 +5516,14 @@
             "components": {
                 "skills": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "react",
                 "tailwind",
                 "frontend",
                 "前端"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills/tree/main/skills/web-artifacts-builder",
             "icon": {
                 "light": "icon.svg",
@@ -3802,7 +5548,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "frontend",
                 "html",
@@ -3810,9 +5556,7 @@
                 "react",
                 "前端"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -3834,7 +5578,7 @@
                 "ref": "pyside6"
             },
             "components": {
-                "commands": true,
+                "commands": false,
                 "skills": true
             },
             "downloads": 2,
@@ -3844,9 +5588,7 @@
                 "testing",
                 "自动化测试"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "homepage": "https://playwright.dev",
             "icon": {
                 "light": "icon.svg",
@@ -3854,9 +5596,76 @@
             }
         },
         {
+            "name": "webdav-backup",
+            "description": "WebDAV 备份 — 将 DriFox 数据（会话/配置/插件数据）全量备份到坚果云、Nextcloud 等 WebDAV 网盘，支持定时自动备份、可选 AES-256 加密、历史版本管理与一键恢复",
+            "version": "0.8.3",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/webdav-backup",
+                "ref": "pyside6"
+            },
+            "components": {
+                "ui": true
+            },
+            "downloads": 19,
+            "keywords": [
+                "webdav",
+                "backup",
+                "坚果云",
+                "jianguoyun",
+                "nextcloud",
+                "备份",
+                "恢复",
+                "同步"
+            ],
+            "min_host_version": "0.6.10",
+            "api_version": 2,
+            "homepage": "https://github.com/martin98-afk/drifox-plugins",
+            "icon": {
+                "light": "icons/webdav.svg",
+                "dark": "icons/webdav_light.svg"
+            }
+        },
+        {
+            "name": "webflow",
+            "description": "Webflow — 管理 Webflow 站点、页面与 CMS 内容。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/webflow",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "webflow"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.webflow.com/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
             "name": "win-powershell",
             "description": "专用 Windows PowerShell 执行工具——强制走 PowerShell 原生入口运行 PS 脚本/命令（cmdlet、管道对象、ConvertTo-Json），自动处理 UTF-8 编码与超时，区别于通用 bash 工具。",
-            "version": "1.0.7",
+            "version": "1.0.8",
             "author": "马丁",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -3871,25 +5680,53 @@
             "components": {
                 "tools": true
             },
-            "downloads": 24,
+            "downloads": 35,
             "keywords": [
                 "powershell",
                 "windows",
                 "shell",
                 "terminal"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.5.0",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
             }
         },
         {
+            "name": "wix",
+            "description": "Wix — 管理 Wix 站点、商品、预约与内容。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/wix",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "wix"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://mcp.wix.com/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
             "name": "workbuddy",
             "description": "把 WorkBuddy「专家全能模式」的问答体验完整搬进 DriFox：BuildSystemPrompt 钩子注入专家提示词；present_files 产物呈现 + Tab 式产物面板；Stop 钩子记忆更新提醒 + wb_memory 记忆读写工具，还原 WorkBuddy 的记忆与产物体验。",
-            "version": "1.4.1",
+            "version": "1.4.2",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -3908,7 +5745,7 @@
                 "ui": true,
                 "skills": true
             },
-            "downloads": 7,
+            "downloads": 9,
             "keywords": [
                 "workbuddy",
                 "问答模式",
@@ -3918,9 +5755,7 @@
                 "记忆",
                 "产物面板"
             ],
-            "drifox": {
-                "min_version": "0.5.0"
-            },
+            "min_host_version": "0.6.2",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -3948,6 +5783,99 @@
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "zhipu-webreader",
+            "description": "智谱 网页读取 — 抓取网页正文与结构化内容。安装后填入智谱 API Key。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/zhipu-webreader",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "downloads": 1,
+            "keywords": [
+                "mcp",
+                "connector",
+                "zhipu-webreader"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://open.bigmodel.cn/api/mcp/web_reader/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "zhipu-websearch",
+            "description": "智谱 联网搜索 — 通过智谱开放平台进行实时联网搜索。安装后填入智谱 API Key。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/zhipu-websearch",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "downloads": 1,
+            "keywords": [
+                "mcp",
+                "connector",
+                "zhipu-websearch"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://open.bigmodel.cn/api/mcp/web_search_prime/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "zhipu-zread",
+            "description": "智谱 开源仓库阅读 — 阅读 GitHub 开源仓库的文档、结构与代码。安装后填入智谱 API Key。",
+            "version": "1.0.0",
+            "author": "liliMozi",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/zhipu-zread",
+                "ref": "pyside6"
+            },
+            "components": {
+                "mcp": true
+            },
+            "downloads": 2,
+            "keywords": [
+                "mcp",
+                "connector",
+                "zhipu-zread"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://open.bigmodel.cn/api/mcp/zread/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
             }
         }
     ]
