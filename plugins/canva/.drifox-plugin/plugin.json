@@ -1,0 +1,25 @@
+{
+  "name": "canva",
+  "description": "无缝调用Canva可画的设计能力。一句话生成海报、演示文稿、小红书封面等设计，通过文字描述调整尺寸、填充品牌模板及检索已有内容",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "Canva可画",
+    "url": "https://www.canva.com"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "user",
+  "min_host_version": "0.5.0",
+  "keywords": [
+    "mcp",
+    "connector",
+    "canva"
+  ],
+  "components": {
+    "mcp": true
+  },
+  "homepage": "https://www.canva.com"
+}

@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "tripo-3d": {
+      "type": "http",
+      "url": "https://openapi-mcp.tripo3d.ai/mcp",
+      "enabled": false,
+      "auth": {
+        "type": "oauth",
+        "client_name": "DriFox",
+        "scope": ""
+      }
+    }
+  }
+}

@@ -606,6 +606,36 @@
             }
         },
         {
+            "name": "canva",
+            "description": "无缝调用Canva可画的设计能力。一句话生成海报、演示文稿、小红书封面等设计，通过文字描述调整尺寸、填充品牌模板及检索已有内容",
+            "version": "1.0.0",
+            "author": "Canva可画",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/canva",
+                "ref": "main"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "canva"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://www.canva.com",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
             "name": "canvas-design",
             "description": "设计感海报生成 — 用设计哲学将需求变成 PNG/PDF 视觉作品（构图/字体/色彩体系）。",
             "version": "1.0.0",
@@ -1238,6 +1268,36 @@
             "icon": {
                 "light": "icons/clock.svg",
                 "dark": "icons/clock_light.svg"
+            }
+        },
+        {
+            "name": "designkit",
+            "description": "Create and revise visual designs and presentations with Designkit, then download the finished files.",
+            "version": "1.0.0",
+            "author": "Designkit",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/designkit",
+                "ref": "main"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "designkit"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://www.designkit.com",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
             }
         },
         {
@@ -1963,6 +2023,36 @@
             }
         },
         {
+            "name": "fosunwealth",
+            "description": "从你关心的问题出发，获得更清晰的金融洞察。",
+            "version": "1.0.0",
+            "author": "星财富AI",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/fosunwealth",
+                "ref": "main"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "fosunwealth"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://aiapi.fosunhanig.com",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon.svg"
+            }
+        },
+        {
             "name": "frontend-design",
             "description": "Anthropic 官方前端设计 — 创作有辨识度的网页 UI：大胆配色、刻意字体、意图动效、风格统一。helloianneo 必装 Top 10 第 1 名。",
             "version": "1.0.0",
@@ -2025,6 +2115,36 @@
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "futu-mcp",
+            "description": "富途牛牛是股票交易与行情数据连接器。支持港股、美股、A股、新加坡、日本、加拿大等多市场行情查询与交易下单，提供K线、资金流向、期权链、财报、研报、机构持仓、经济日历等全方位金融数据服务。",
+            "version": "1.0.0",
+            "author": "富途牛牛",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/futu-mcp",
+                "ref": "main"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "futu"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://www.futunn.com",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
             }
         },
         {
@@ -3012,6 +3132,36 @@
             }
         },
         {
+            "name": "kdocs",
+            "description": "金山文档官方 Skill。对话即操作——知识一键存入、碎片内容整理、接龙转表格、文档转 Markdown、表格美化、收发表生成，全在一句话内完成。",
+            "version": "1.0.0",
+            "author": "金山文档|WPS云文档",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/kdocs",
+                "ref": "main"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "kdocs"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://www.kdocs.cn",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon.svg"
+            }
+        },
+        {
             "name": "kim-service",
             "description": "Kim Service — AI Hook 与 Agent Skills 合集：HookPrompt 提示词自动优化 + 8 个 Skill（Agent Teams / Memory 3-Layer / Find Skill / GoalPro / Kim Decision / Meta Skill Creator / Semgrep / Xiaohongshu）。",
             "version": "0.1.0",
@@ -3042,6 +3192,36 @@
             ],
             "min_host_version": "0.5.0",
             "icon": "icon.png"
+        },
+        {
+            "name": "kling-ai-plugin",
+            "description": "一句话，让灵感从想法变成大片。可灵（Kling / Kling AI / 可灵AI）是面向创作者、设计师、视频制作人、电商卖家、广告营销和品牌团队的 AI 生图与 AI 生视频连接器，可在 WorkBuddy 中直接用自然语言完成图片生成和视频生成，包括文生图、图生图、文生视频、图生视频、参考图创作、单镜头与多分镜视频。适合制作海报、插画、人像、商品图、电商",
+            "version": "1.0.0",
+            "author": "可灵 AI",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/kling-ai-plugin",
+                "ref": "main"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "kling-ai"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://www.klingai.com",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
         },
         {
             "name": "knowledge-base-skills",
@@ -3511,6 +3691,36 @@
             ],
             "min_host_version": "0.5.0",
             "homepage": "https://mcp.monday.com/mcp",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
+            }
+        },
+        {
+            "name": "moomoo-mcp",
+            "description": "Moomoo is a stock trading and market data connector. It supports multi-market (HK, US, CN, SG, JP, CA, etc.) quote queries and order execution, providing K-lines, capital flow, opt",
+            "version": "1.0.0",
+            "author": "Moomoo",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/moomoo-mcp",
+                "ref": "main"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "moomoo"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://www.moomoo.com",
             "icon": {
                 "light": "icon.png",
                 "dark": "icon.png"
@@ -4567,6 +4777,36 @@
             }
         },
         {
+            "name": "slack-mcp",
+            "description": "跨频道和私信读写搜索 Slack 消息。用自然语言创建管理 Canvas 文档、定时发送消息、添加表情回应、查找用户信息。",
+            "version": "1.0.0",
+            "author": "Slack",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/slack-mcp",
+                "ref": "main"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "slack"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://slack.com",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon.svg"
+            }
+        },
+        {
             "name": "snake",
             "description": "经典贪吃蛇游戏——在 DriFox 中直接玩的浮動卡片",
             "version": "0.3.0",
@@ -5123,6 +5363,36 @@
             }
         },
         {
+            "name": "tiktok",
+            "description": "TikTok for Business MCP Server 是基于模型上下文协议（MCP）搭建的标准化桥梁，助力开发者与广告主将 AI 智能代理直接对接 TikTok 广告平台。它将广告核心能力⸺广告活动管理、效果报表、受众配置以及创意运营，封装为一套稳定、可投入生产环境使用的工具。AI智能代理仅通过简洁结构化指令，即可完成 TikTok 广告的管理、优化",
+            "version": "1.0.0",
+            "author": "TikTok for Business",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/tiktok",
+                "ref": "main"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "tiktok"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://ads.tiktok.com",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon.svg"
+            }
+        },
+        {
             "name": "todoist",
             "description": "Todoist — 查看、添加和整理 Todoist 里的任务与项目。",
             "version": "1.0.0",
@@ -5222,6 +5492,36 @@
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "tripo-3d",
+            "description": "Generate textured, rig-ready 3D models from text or images; export GLB/FBX/OBJ/STL/USDZ/3MF.",
+            "version": "1.0.0",
+            "author": "Tripo 3D",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "mcp"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/tripo-3d",
+                "ref": "main"
+            },
+            "components": {
+                "mcp": true
+            },
+            "keywords": [
+                "mcp",
+                "connector",
+                "tripo-3d"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://www.tripo3d.ai",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon.png"
             }
         },
         {
