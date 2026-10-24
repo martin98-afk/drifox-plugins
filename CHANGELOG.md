@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+### ✨ 新增 10 个远程 MCP 连接器插件（源自 WorkBuddy 连接器市场）
+- **插件**：canva / designkit / fosunwealth / futu-mcp / kdocs / kling-ai-plugin / moomoo-mcp / slack-mcp / tiktok / tripo-3d
+- **来源**：WorkBuddy 连接器市场整包（download.codebuddy.ai/connector-agent-plugins/connector-plugins.zip），逐个提取 mcp.json 端点、plugin.json 描述/示例与 ai.workbuddy/assets 图标
+- **形态**：统一远程 streamable HTTP MCP（`type: http`），`enabled: false`，用户在设置 → MCP 连接器手动启用
+- **认证**：canva / kdocs / slack-mcp / tripo-3d 走 `auth.oauth`；designkit / fosunwealth / futu-mcp / kling-ai-plugin / moomoo-mcp / tiktok 直连（首次使用按工具返回指引授权）
+- **验证**：validate_plugins 191 插件全过；marketplace.json 重新生成（顺带修正 jimeng 版本漂移 1.0.0 → 1.0.1）
+- **调研备注**：WorkBuddy 内置 sheetagent MCP 实测为假本地（依赖宿主 editorsdk 127.0.0.1:39099），未移植；市场内 dingtalk/feishu/wecom/tmeet 为 CLI 形态、github/notion/linear/edgeone-pages 库内已有对应，均不重复接入
 ### 🔧 token-usage v0.1.5：统计口径由「会话内增量」改为「全量求和」——原口径比真实账单小 93.5 倍
 - **症状**：用量页签显示的数字远低于实际花费（用户反馈「少得太多，是不是没叠加」）
 - **根因**：v0.1.4 采用「净占用/增量」口径，每轮 input 减去同会话上一轮 input。设计动机是 DriFox 每轮请求都会重发整个上下文，直接求和会把同一份上下文重复计几十次。但**服务商就是按全量计费的**，扣掉重发量后得到的「净新增输入」与账单不是同一个量级。实测开发库（590 会话 / 43145 次请求）：prompt 中位数 93K、p90 227K、单会话中位 43 轮，增量口径只保留全量的 1.07%

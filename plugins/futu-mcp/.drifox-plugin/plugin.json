@@ -1,0 +1,25 @@
+{
+  "name": "futu-mcp",
+  "description": "富途牛牛是股票交易与行情数据连接器。支持港股、美股、A股、新加坡、日本、加拿大等多市场行情查询与交易下单，提供K线、资金流向、期权链、财报、研报、机构持仓、经济日历等全方位金融数据服务。",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "富途牛牛",
+    "url": "https://www.futunn.com"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "user",
+  "min_host_version": "0.5.0",
+  "keywords": [
+    "mcp",
+    "connector",
+    "futu"
+  ],
+  "components": {
+    "mcp": true
+  },
+  "homepage": "https://www.futunn.com"
+}

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "moomoo-mcp": {
+      "type": "http",
+      "url": "https://mcp.moomoo.com/mcp",
+      "enabled": false
+    }
+  }
+}

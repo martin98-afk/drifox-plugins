@@ -1,0 +1,25 @@
+{
+  "name": "moomoo-mcp",
+  "description": "Moomoo is a stock trading and market data connector. It supports multi-market (HK, US, CN, SG, JP, CA, etc.) quote queries and order execution, providing K-lines, capital flow, opt",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "Moomoo",
+    "url": "https://www.moomoo.com"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "user",
+  "min_host_version": "0.5.0",
+  "keywords": [
+    "mcp",
+    "connector",
+    "moomoo"
+  ],
+  "components": {
+    "mcp": true
+  },
+  "homepage": "https://www.moomoo.com"
+}
