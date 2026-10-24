@@ -296,3 +296,142 @@ def test_schema_covers_all_actions(jm):
 
 def test_gen_specs_cover_all_gen_actions(jm):
     assert set(jm._GEN_SPECS) == set(jm.GEN_ACTIONS)
+
+
+# ── query 成品收集（2026-10-24 实测翻车点回归） ────────────────────
+
+
+class _FakeRegister:
+    def register_tool(self, *a, **kw):
+        pass
+
+
+def _load(monkeypatch, jm, tmp_path, cli_output, exit_code=0):
+    """把 _require_cli/_run 换成假 CLI，返回 ctx。"""
+    monkeypatch.setattr(jm, "_require_cli", lambda: ("fake-dreamina", None))
+
+    def fake_run(cmd, cwd, timeout=180):
+        return (exit_code, cli_output), None
+
+    monkeypatch.setattr(jm, "_run", fake_run)
+    return {"workdir": str(tmp_path), "env": {"app_data_dir": str(tmp_path)}}
+
+
+def _success_json(path):
+    """用 json.dumps 构造，避免 Windows 路径反斜杠在手写 JSON 里成非法转义。"""
+    import json as _json
+
+    return _json.dumps(
+        {
+            "gen_status": "success",
+            "credit_count": 3,
+            "result_json": {
+                "images": [{"item_id": "1", "path": path}],
+                "videos": [],
+            },
+        }
+    )
+
+
+def test_query_parses_result_json_paths(jm, tmp_path, monkeypatch):
+    """CLI 实际结构 result_json.images[].path 必须被解析（v1.4.21 实测）。"""
+    out_dir = tmp_path / "plugins" / "jimeng" / "generated"
+    out_dir.mkdir(parents=True)
+    img = out_dir / "a.png"
+
+    def fake_run(cmd, cwd, timeout=180):
+        img.write_bytes(b"x")  # 模拟 CLI 下载动作，晚于 before 扫描
+        return (0, _success_json(str(img))), None
+
+    monkeypatch.setattr(jm, "_require_cli", lambda: ("fake-dreamina", None))
+    monkeypatch.setattr(jm, "_run", fake_run)
+    ctx = {"workdir": str(tmp_path), "env": {"app_data_dir": str(tmp_path)}}
+    res = jm._dispatch(ctx, action="query", submit_id="s1")
+    assert res.success, res.error
+    assert "a.png" in res.content
+
+
+def test_query_relative_path_name_fallback(jm, tmp_path, monkeypatch):
+    """CLI 回显自身默认相对路径时按文件名兜底命中。"""
+    out_dir = tmp_path / "plugins" / "jimeng" / "generated"
+    out_dir.mkdir(parents=True)
+    echo = ".drifox\\plugins\\jimeng\\generated\\b.png"
+
+    def fake_run(cmd, cwd, timeout=180):
+        (out_dir / "b.png").write_bytes(b"x")
+        return (0, _success_json(echo)), None
+
+    monkeypatch.setattr(jm, "_require_cli", lambda: ("fake-dreamina", None))
+    monkeypatch.setattr(jm, "_run", fake_run)
+    ctx = {"workdir": str(tmp_path), "env": {"app_data_dir": str(tmp_path)}}
+    res = jm._dispatch(ctx, action="query", submit_id="s1")
+    assert res.success, res.error
+    assert "b.png" in res.content
+
+
+def test_query_deep_scan_catches_nested(jm, tmp_path, monkeypatch):
+    """JSON 无路径键、文件落在嵌套子目录时递归差异法兜底。"""
+    out_dir = tmp_path / "plugins" / "jimeng" / "generated"
+    nested = out_dir / ".drifox" / "plugins" / "jimeng" / "generated"
+
+    def fake_run(cmd, cwd, timeout=180):
+        nested.mkdir(parents=True, exist_ok=True)
+        (nested / "c.png").write_bytes(b"x")
+        return (0, '{"gen_status": "success"}'), None
+
+    monkeypatch.setattr(jm, "_require_cli", lambda: ("fake-dreamina", None))
+    monkeypatch.setattr(jm, "_run", fake_run)
+    ctx = {"workdir": str(tmp_path), "env": {"app_data_dir": str(tmp_path)}}
+    res = jm._dispatch(ctx, action="query", submit_id="s1")
+    assert res.success, res.error
+    assert "c.png" in res.content
+
+
+def test_plugin_dir_resolves_relative_app_data(jm, tmp_path, monkeypatch):
+    """相对 app_data_dir 必须 resolve 成绝对路径，防下载目录漂移。"""
+    monkeypatch.chdir(tmp_path)
+    ctx = {"workdir": str(tmp_path), "env": {"app_data_dir": ".drifox"}}
+    d = jm._plugin_dir(ctx)
+    assert d.is_absolute()
+    assert d == (tmp_path / ".drifox" / "plugins" / "jimeng").resolve()
+
+
+# ── checklogin 退出码语义（2026-10-24 实测翻车点回归） ─────────────
+
+
+def _prep_pending(jm, ctx):
+    jm._pending_path(ctx).write_text('{"device_code": "dc"}', encoding="utf-8")
+
+
+def test_checklogin_nonzero_but_logged_in_no_permission(jm, tmp_path, monkeypatch):
+    """OAuth 成功但无 CLI 权限（非会员）时 CLI 退 1，应报成功+受限而非失败。"""
+    ctx = _load(
+        monkeypatch, jm, tmp_path,
+        "OAuth 登录成功。\nuser_id: 123\ntotal_credit: 100\n"
+        "登录成功，但当前账号没有 dreamina_cli 使用权限: 仅限会员用户使用\n",
+        exit_code=1,
+    )
+    _prep_pending(jm, ctx)
+    res = jm._dispatch(ctx, action="checklogin")
+    assert res.success, res.error
+    assert res.data.get("permission") == "limited"
+    assert not jm._pending_path(ctx).exists()
+
+
+def test_checklogin_nonzero_unknown_still_error(jm, tmp_path, monkeypatch):
+    """退出码 1 且无登录证据时保持失败语义。"""
+    ctx = _load(monkeypatch, jm, tmp_path, "some weird failure\n", exit_code=1)
+    _prep_pending(jm, ctx)
+    res = jm._dispatch(ctx, action="checklogin")
+    assert not res.success
+
+
+def test_checklogin_timeout_pending(jm, tmp_path, monkeypatch):
+    """轮询超时是 pending，不是失败。"""
+    ctx = _load(
+        monkeypatch, jm, tmp_path, "等待登录超时，请重试\n", exit_code=1,
+    )
+    _prep_pending(jm, ctx)
+    res = jm._dispatch(ctx, action="checklogin")
+    assert res.success
+    assert res.data.get("status") == "pending"

@@ -231,7 +231,9 @@ def _cli_failure(text: str) -> "str | None":
 
 def _plugin_dir(tool_ctx) -> Path:
     app_data = (tool_ctx or {}).get("env", {}).get("app_data_dir")
-    base = Path(app_data) if app_data else Path.home() / ".drifox"
+    # app_data_dir 可能是相对路径（MCP 宿主进程 cwd 不定），必须 resolve，
+    # 否则默认下载目录漂移到宿主 cwd 下，用户找不到成品。
+    base = Path(app_data).resolve() if app_data else Path.home() / ".drifox"
     out = base / "plugins" / "jimeng"
     out.mkdir(parents=True, exist_ok=True)
     return out
@@ -293,11 +295,15 @@ def _result_with_artifacts(**kwargs) -> ToolResult:
     return ToolResult(**kwargs)
 
 
-def _scan_results(directory: Path) -> "set[str]":
+def _scan_results(directory: Path) -> "list[Path]":
+    """递归收集目录下成果文件（CLI 可能忽略 download_dir 写进 cwd 下嵌套默认目录）。"""
     try:
-        return {p.name for p in directory.iterdir() if p.suffix.lower() in _RESULT_EXTS}
+        return [
+            p for p in directory.rglob("*")
+            if p.is_file() and p.suffix.lower() in _RESULT_EXTS
+        ]
     except OSError:
-        return set()
+        return []
 
 
 # ── 参数校验 ──────────────────────────────────────────────────────
@@ -684,7 +690,7 @@ def _query_impl(tool_ctx, kw) -> ToolResult:
         return ToolResult(False, error=f"下载目录不可用：{out_dir}（{e}）")
 
     # 目录差异法：并发任务会互相串（已知限制），JSON 路径优先于差异
-    before = _scan_results(out_dir)
+    before = {p.name for p in _scan_results(out_dir)}
     result, run_err = _run(
         [cmd_path, "query_result", "--submit_id", submit_id, "--download_dir", str(out_dir)],
         str(out_dir),
@@ -742,22 +748,38 @@ def _query_impl(tool_ctx, kw) -> ToolResult:
             data={"submit_id": submit_id, "status": status_raw},
         )
 
-    # 成功：优先 JSON 里的路径，其次目录差异
+    # 成功：优先 JSON 里的路径，其次目录差异（含嵌套子目录）
     files = []
     for key in ("files", "results", "paths", "download_paths"):
         val = obj.get(key) if isinstance(obj, dict) else None
         if isinstance(val, list):
             files += [str(v) for v in val if isinstance(v, str) and v.strip()]
-    if not files:
-        after = _scan_results(out_dir)
-        files = sorted(after - before)
+    # CLI 实际回传 result_json.images[]/videos[].path（v1.4.21 实测）
+    rj = obj.get("result_json") if isinstance(obj, dict) else None
+    if isinstance(rj, dict):
+        for group in ("images", "videos", "audios"):
+            val = rj.get(group)
+            if isinstance(val, list):
+                files += [
+                    str(v.get("path")).strip()
+                    for v in val
+                    if isinstance(v, dict) and str(v.get("path") or "").strip()
+                ]
     paths = []
     for f in files:
         p = Path(f)
         if not p.is_absolute():
-            p = out_dir / p
+            # CLI 可能回显自身默认相对路径（如 .drifox\plugins\...），
+            # 按原样拼不存在时按文件名兜底
+            cand = out_dir / p
+            p = cand if cand.exists() else out_dir / p.name
         if p.exists():
             paths.append(p)
+    if not paths:
+        paths = sorted(
+            (p for p in _scan_results(out_dir) if p.name not in before),
+            key=lambda p: p.name,
+        )
 
     if not paths:
         return ToolResult(
@@ -986,14 +1008,31 @@ def _checklogin_impl(tool_ctx, kw) -> ToolResult:
             data={"status": "pending"},
         )
 
-    # checklogin 只有授权成功才会正常退出（超时是 1），故 0 退出即成功。
-    # 不靠关键字判断：成功输出格式未经实测（无法在本机伪造授权），
-    # 依赖关键字会在格式变化时把成功误判为失败。
-    if code == 0:
+    # CLI 实测：OAuth 成功但账号无 dreamina_cli 权限（非会员）时同样以非 0 退出，
+    # 输出含 user_id/total_credit 即登录已成功，不能笼统报错。
+    logged_in = (
+        ("user_id" in lower)
+        or ("total_credit" in lower)
+        or ("登录成功" in body)
+    ) and _LOGIN_HINT not in body
+    if code == 0 or logged_in:
         try:
             _pending_path(tool_ctx).unlink()
         except OSError:
             pass
+        no_perm = ("dreamina_cli" in lower) and (
+            ("权限" in body) or ("permission" in lower) or ("会员" in body)
+        )
+        if no_perm:
+            return ToolResult(
+                True,
+                content=(
+                    "OAuth 登录成功，但当前账号没有 dreamina_cli 使用权限（仅限会员），"
+                    "开通会员或换会员账号后即可生成。\n"
+                    f"CLI 输出：{body[:300]}"
+                ),
+                data={"status": "success", "permission": "limited"},
+            )
         return ToolResult(
             True,
             content="即梦登录成功，可以开始生成。\n" + (f"CLI 输出：{body[:200]}" if body else ""),
