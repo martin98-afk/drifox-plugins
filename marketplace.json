@@ -2905,6 +2905,40 @@
             }
         },
         {
+            "name": "jimeng",
+            "description": "即梦（Dreamina）生图/生视频 — 封装官方 dreamina CLI，8 个生成命令 + 会话/额度/登录管理，成品落盘并回传成果栏",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/jimeng",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true,
+                "tools": true
+            },
+            "keywords": [
+                "image-generation",
+                "video-generation",
+                "即梦",
+                "dreamina",
+                "jimeng",
+                "seedance"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://github.com/martin98-afk/drifox-plugins",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "jina",
             "description": "Jina AI — 读取网页正文、网页搜索与学术检索。",
             "version": "1.0.0",

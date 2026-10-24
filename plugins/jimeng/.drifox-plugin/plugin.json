@@ -1,0 +1,28 @@
+{
+    "name": "jimeng",
+    "description": "即梦（Dreamina）生图/生视频 — 封装官方 dreamina CLI，8 个生成命令 + 会话/额度/登录管理，成品落盘并回传成果栏",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "1.0.0",
+    "type": "user",
+    "license": "MIT",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "homepage": "https://github.com/martin98-afk/drifox-plugins",
+    "keywords": [
+        "image-generation",
+        "video-generation",
+        "即梦",
+        "dreamina",
+        "jimeng",
+        "seedance"
+    ],
+    "components": {
+        "skills": true,
+        "tools": true
+    },
+    "min_host_version": "0.5.0"
+}
