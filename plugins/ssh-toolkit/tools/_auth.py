@@ -161,16 +161,51 @@ def _prefer_vendored_crypto():
         sys.modules.update(saved)
 
 
-_prefer_vendored_crypto()
-# paramiko：优先主环境，缺失时由宿主注入的插件 deps/ 提供（无需自理 sys.path）
-import paramiko  # noqa: E402
-
 SUPPORTED = {"publickey", "password", "keyboard-interactive", "agent"}
 
 HOST_KEY_POLICIES = ("tofu", "strict", "off")
 DEFAULT_HOST_KEY_POLICY = "tofu"
 _HOST_KEY_ATTR = "_drifox_new_host_keys"
 _REMEMBER_LOCK = threading.Lock()
+
+# paramiko 懒加载（#23）：模块级 import 实测 1399ms / +25.6MB，而工具注册只
+# 需要 _auth 的常量与函数签名——首次真正调用 SSH 功能时才付这笔成本。
+# 仲裁（_prefer_vendored_crypto）必须在 import paramiko 之前执行，两者一起内化。
+_paramiko = None
+_paramiko_ready = False
+# 模块级占位：懒加载完成（或测试 monkeypatch）后指向真模块。
+# 保持 `_auth.paramiko` 访问面存在——既有测试 fixture 对它 setattr。
+paramiko = None
+
+
+def _ensure_paramiko():
+    """惰性导入 paramiko（幂等）：先做加密后端仲裁，再 import。
+
+    导入成功后把模块对象挂回本模块的 ``paramiko`` 名字——既保持
+    ``_auth.paramiko`` 的传统访问面（含测试 monkeypatch 面），也让
+    ``_remember_host`` / ``_client`` 等直接用返回值。
+
+    Returns:
+        paramiko 模块对象。
+    """
+    global _paramiko, _paramiko_ready
+    # 测试路径：monkeypatch 直接替换模块级 paramiko 名字时直接采用。
+    # ⚠️ 不置 _paramiko_ready——fake 从未走过仲裁，置位会让后续真导入
+    # 被早退跳过（合跑时 arbiter 断言踩过此坑）。
+    existing = globals().get("paramiko")
+    if existing is not None:
+        _paramiko = existing
+        return existing
+    if _paramiko_ready:
+        return _paramiko
+    _prefer_vendored_crypto()
+    # paramiko：优先主环境，缺失时由宿主注入的插件 deps/ 提供（无需自理 sys.path）
+    import paramiko as _pm  # noqa: E402
+
+    _paramiko = _pm
+    _paramiko_ready = True
+    globals()["paramiko"] = _pm
+    return _pm
 
 
 def known_hosts_path():
@@ -194,12 +229,13 @@ def _remember_host(hostname, key, path):
         parent = os.path.dirname(path)
         if parent:
             os.makedirs(parent, exist_ok=True)
-        hosts = paramiko.HostKeys()
+        pm = _ensure_paramiko()
+        hosts = pm.HostKeys()
         if os.path.exists(path):
             try:
                 hosts.load(path)
             except Exception:  # noqa: BLE001 - 文件损坏时重建，不阻断连接
-                hosts = paramiko.HostKeys()
+                hosts = pm.HostKeys()
         hosts.add(hostname, key.get_name(), key)
         hosts.save(path)
         try:
@@ -208,35 +244,61 @@ def _remember_host(hostname, key, path):
             pass
 
 
-class _TofuPolicy(paramiko.MissingHostKeyPolicy):
-    """未知主机：记录指纹 + 落盘后放行；已知主机不匹配由 paramiko 直接抛异常"""
-
-    def __init__(self, path, record):
-        self._path = path
-        self._record = record
-
-    def missing_host_key(self, client, hostname, key):
-        fp = fingerprint(key)
-        # 落盘失败不阻断连接（用户仍可从返回内容读到指纹并自行核对）
-        try:
-            _remember_host(hostname, key, self._path)
-        except Exception:  # noqa: BLE001
-            pass
-        self._record.append({"host": hostname, "fingerprint": fp})
+# Policy 类工厂（懒化）：基类 paramiko.MissingHostKeyPolicy 在类定义时求值，
+# 模块级 class 语句会拖回 eager import。首次 _client 调用时创建并缓存。
+# 缓存与 paramiko 对象 identity 绑定：测试逐用例 monkeypatch 不同的 fake，
+# identity 变化即重建（否则 strict 断言拿到旧 fake 的 SSHException）。
+_TOFU_POLICY_CLS = None
+_STRICT_POLICY_CLS = None
+_policies_built_for = None
 
 
-class _StrictPolicy(paramiko.MissingHostKeyPolicy):
-    """strict：未知主机一律拒绝，错误里带上指纹供用户离线核对"""
+def _policies():
+    """构建（一次）TOFU / strict 两个主机密钥策略类，返回 (tofu_cls, strict_cls)"""
+    global _TOFU_POLICY_CLS, _STRICT_POLICY_CLS, _policies_built_for
+    pm = _ensure_paramiko()
+    if _TOFU_POLICY_CLS is None or _policies_built_for is not pm:
+        # 基类鸭子回退：paramiko.MissingHostKeyPolicy 本是空接口（SSHClient 按
+        # missing_host_key 方法鸭子调用），测试 fake 无该属性时用 object 顶替
+        base = getattr(pm, "MissingHostKeyPolicy", object)
 
-    def missing_host_key(self, client, hostname, key):
-        raise paramiko.SSHException(
-            f"未知主机 {hostname}（指纹 {fingerprint(key)}）。strict 模式下拒绝连接；"
-            f"确认可信后可将该指纹登记到 {known_hosts_path()}，或改用 host_key_policy=tofu"
-        )
+        class _TofuPolicy(base):
+            """未知主机：记录指纹 + 落盘后放行；已知主机不匹配由 paramiko 直接抛异常"""
+
+            def __init__(self, path, record):
+                self._path = path
+                self._record = record
+
+            def missing_host_key(self, client, hostname, key):
+                fp = fingerprint(key)
+                # 落盘失败不阻断连接（用户仍可从返回内容读到指纹并自行核对）
+                try:
+                    _remember_host(hostname, key, self._path)
+                except Exception:  # noqa: BLE001
+                    pass
+                self._record.append({"host": hostname, "fingerprint": fp})
+
+        class _StrictPolicy(base):
+            """strict：未知主机一律拒绝，错误里带上指纹供用户离线核对"""
+
+            def missing_host_key(self, client, hostname, key):
+                raise pm.SSHException(
+                    f"未知主机 {hostname}（指纹 {fingerprint(key)}）。strict 模式下拒绝连接；"
+                    f"确认可信后可将该指纹登记到 {known_hosts_path()}，或改用 host_key_policy=tofu"
+                )
+
+        _TOFU_POLICY_CLS, _STRICT_POLICY_CLS = _TofuPolicy, _StrictPolicy
+        # 挂回模块级名字：既有测试断言 A._TofuPolicy / monkeypatch 面依赖
+        globals()["_TofuPolicy"] = _TofuPolicy
+        globals()["_StrictPolicy"] = _StrictPolicy
+        _policies_built_for = pm
+    return _TOFU_POLICY_CLS, _STRICT_POLICY_CLS
 
 
 def _client(policy_name, record):
-    c = paramiko.SSHClient()
+    pm = _ensure_paramiko()
+    tofu_cls, strict_cls = _policies()
+    c = pm.SSHClient()
     path = known_hosts_path()
     try:
         c.load_system_host_keys()  # 用户已在系统 known_hosts 登记过的主机直接可信
@@ -248,11 +310,11 @@ def _client(policy_name, record):
         except Exception:  # noqa: BLE001
             pass
     if policy_name == "off":
-        c.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        c.set_missing_host_key_policy(pm.AutoAddPolicy())
     elif policy_name == "strict":
-        c.set_missing_host_key_policy(_StrictPolicy())
+        c.set_missing_host_key_policy(strict_cls())
     else:
-        c.set_missing_host_key_policy(_TofuPolicy(path, record))
+        c.set_missing_host_key_policy(tofu_cls(path, record))
     return c
 
 
