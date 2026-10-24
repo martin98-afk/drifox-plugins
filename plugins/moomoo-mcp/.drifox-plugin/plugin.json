@@ -19,7 +19,8 @@
     "moomoo"
   ],
   "components": {
-    "mcp": true
+    "mcp": true,
+    "skills": true
   },
   "homepage": "https://www.moomoo.com"
 }

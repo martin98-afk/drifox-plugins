@@ -21,3 +21,11 @@ Create and revise visual designs and presentations with Designkit, then download
 - 制作一份介绍智能台灯的三页英文演示文稿。
 - 为虚构书店的周末活动设计一张方形海报。
 - 修改刚才的演示文稿并导出可编辑 PPTX。
+
+## 技能
+
+随插件内置 AI 技能（AI 按任务自动匹配，无需手动调用）：
+
+- `designkit`
+
+注：技能正文沿用服务方原文（含其官方脚本），个别操作指引以 WorkBuddy/CodeBuddy 环境为例，DriFox 下以实际可用工具为准。

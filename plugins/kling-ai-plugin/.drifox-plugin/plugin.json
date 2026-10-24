@@ -19,7 +19,8 @@
     "kling-ai"
   ],
   "components": {
-    "mcp": true
+    "mcp": true,
+    "skills": true
   },
   "homepage": "https://www.klingai.com"
 }

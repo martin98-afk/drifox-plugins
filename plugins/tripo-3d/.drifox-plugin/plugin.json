@@ -19,7 +19,8 @@
     "tripo-3d"
   ],
   "components": {
-    "mcp": true
+    "mcp": true,
+    "skills": true
   },
   "homepage": "https://www.tripo3d.ai"
 }

@@ -19,7 +19,8 @@
     "designkit"
   ],
   "components": {
-    "mcp": true
+    "mcp": true,
+    "skills": true
   },
   "homepage": "https://www.designkit.com"
 }

@@ -22,3 +22,12 @@ OAuth 授权。Tripo 3D 生成走 OAuth 授权，生成类工具按用量计费�
 - Turn this concept image into a textured 3D model and export it as GLB
 - Generate a 3D-printable knight figurine and export it as STL
 - Generate a T-pose robot character, rig it and add a walk animation
+
+## 技能
+
+随插件内置 AI 技能（AI 按任务自动匹配，无需手动调用）：
+
+- `tripo-3d`
+- `tripo-game-asset`
+
+注：技能正文沿用服务方原文（含其官方脚本），个别操作指引以 WorkBuddy/CodeBuddy 环境为例，DriFox 下以实际可用工具为准。

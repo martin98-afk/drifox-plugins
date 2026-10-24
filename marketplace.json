@@ -621,7 +621,8 @@
                 "ref": "main"
             },
             "components": {
-                "mcp": true
+                "mcp": true,
+                "skills": true
             },
             "keywords": [
                 "mcp",
@@ -1286,7 +1287,8 @@
                 "ref": "main"
             },
             "components": {
-                "mcp": true
+                "mcp": true,
+                "skills": true
             },
             "keywords": [
                 "mcp",
@@ -2038,7 +2040,8 @@
                 "ref": "main"
             },
             "components": {
-                "mcp": true
+                "mcp": true,
+                "skills": true
             },
             "keywords": [
                 "mcp",
@@ -2133,7 +2136,8 @@
                 "ref": "main"
             },
             "components": {
-                "mcp": true
+                "mcp": true,
+                "skills": true
             },
             "keywords": [
                 "mcp",
@@ -3147,7 +3151,8 @@
                 "ref": "main"
             },
             "components": {
-                "mcp": true
+                "mcp": true,
+                "skills": true
             },
             "keywords": [
                 "mcp",
@@ -3209,7 +3214,8 @@
                 "ref": "main"
             },
             "components": {
-                "mcp": true
+                "mcp": true,
+                "skills": true
             },
             "keywords": [
                 "mcp",
@@ -3712,7 +3718,8 @@
                 "ref": "main"
             },
             "components": {
-                "mcp": true
+                "mcp": true,
+                "skills": true
             },
             "keywords": [
                 "mcp",
@@ -5510,7 +5517,8 @@
                 "ref": "main"
             },
             "components": {
-                "mcp": true
+                "mcp": true,
+                "skills": true
             },
             "keywords": [
                 "mcp",
