@@ -205,7 +205,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "video",
                 "explainer",
@@ -563,7 +563,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 70,
+            "downloads": 71,
             "keywords": [
                 "browser",
                 "web",
@@ -951,7 +951,7 @@
             "components": {
                 "providers": true
             },
-            "downloads": 13,
+            "downloads": 14,
             "keywords": [
                 "CodeBuddy",
                 "国际版",
@@ -1222,7 +1222,7 @@
                 "tools": true,
                 "hook_policies": true
             },
-            "downloads": 53,
+            "downloads": 54,
             "keywords": [
                 "cron",
                 "schedule",
@@ -1900,6 +1900,7 @@
             "components": {
                 "mcp": true
             },
+            "downloads": 1,
             "keywords": [
                 "mcp",
                 "connector",
@@ -2045,7 +2046,7 @@
                 "commands": false,
                 "ui": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2169,7 +2170,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 39,
+            "downloads": 40,
             "platforms": [
                 "windows",
                 "linux",
@@ -2362,7 +2363,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 74,
+            "downloads": 75,
             "keywords": [
                 "git",
                 "source-control",
@@ -4165,7 +4166,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 35,
+            "downloads": 36,
             "keywords": [
                 "screenshot",
                 "clipboard",
@@ -5135,7 +5136,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 17,
+            "downloads": 18,
             "keywords": [
                 "welcome",
                 "token",
@@ -5681,7 +5682,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 37,
+            "downloads": 38,
             "keywords": [
                 "powershell",
                 "windows",
