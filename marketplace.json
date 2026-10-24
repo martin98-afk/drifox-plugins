@@ -3131,7 +3131,7 @@
                 "配额",
                 "web"
             ],
-            "min_host_version": "0.5.12",
+            "min_host_version": "0.6.11",
             "api_version": 2,
             "icon": {
                 "light": "icon.svg",
