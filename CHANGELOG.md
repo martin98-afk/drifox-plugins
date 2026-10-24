@@ -5,7 +5,7 @@
 - **专家插件**：experts-tencent / product / engineering / data / finance / marketing / content / sales / ops / quality / legal / consulting / game（按 WorkBuddy 15 分类拆包，campus 与 global 两分类上游 prompt 全缺故未建）
 - **数据源**：expert_center.json（429 个专家清单）公开可下；prompt 文件 243 个成功（`baseUrl+/plugins/<plugin>/agents/<name>.md`），185 个上游 COS 404（清单先行、内容未上线，含腾讯专区 9 个），各插件 README 已附缺失名单，待上游补全后重跑 `.test/build_experts.py` 同步
 - **形态**：每个专家 = `agents/<name>.md`（frontmatter name/description 原样保留，@ 名按文件名全局去重）；精选场景 27/30 个专家已随分类入库
-- **wecom-unified**：企业微信全能套件（源自 static.workbuddy.cn/wecom-skills v1.1.7）——13 业务域技能 + 130 命令 references + 5 平台 wecom-cli 二进制（43.5MB）；原包按 WorkBuddy 宿主 `WECOM_CLI_*` 登录注入设计，已改写为 DriFox 下 `auth init` 扫码授权；版权腾讯，仅供个人使用
+- **wecom-unified**：企业微信全能套件（源自 static.workbuddy.cn/wecom-skills v1.1.7）——13 业务域技能 + 130 命令 references；CLI 换用 WorkBuddy 内置 vendor 版（workbuddy-local 构建，直连 qyapi.weixin.qq.com，仅 Windows 9.2MB；原插件内置 a2a 构建依赖宿主网关 auth-proxy.local，离宿主 DNS 即死，已弃用）；该构建无 auth 子命令，需环境变量 `WECOM_CLI_ACCESS_TOKEN`（原由 WorkBuddy 桌面端扫码注入，DriFox 下需自备，README/SKILL 已如实声明）；版权腾讯，仅供个人使用
 - **验证**：validate_plugins 全量 205 插件通过
 ### ✨ 新增 10 个远程 MCP 连接器插件（源自 WorkBuddy 连接器市场）
 - **插件**：canva / designkit / fosunwealth / futu-mcp / kdocs / kling-ai-plugin / moomoo-mcp / slack-mcp / tiktok / tripo-3d

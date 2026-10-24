@@ -19,9 +19,11 @@ allowed-tools: Bash, Read
 
 ### DriFox 本地运行时
 
-`wecom-cli` 随本插件提供，位于插件根目录 `bin/<平台>/` 下：Windows 为 `bin/win32-x64/wecom-cli.exe`，macOS 为 `bin/darwin-arm64/wecom-cli` 或 `bin/darwin-x64/wecom-cli`，Linux 为 `bin/linux-arm64/wecom-cli` 或 `bin/linux-x64/wecom-cli`。调用前先按当前操作系统拼出可执行文件绝对路径，不要假设 `wecom-cli` 已在 PATH 中。可执行 `<cli> --version` 检查；缺失、执行失败或版本低于 1.2.1 时停止并提示重新安装插件。禁止安装公共版 CLI 覆盖本插件内置的 custom-auth 版本。
+`wecom-cli` 随本插件提供（workbuddy-local 构建，仅 Windows）：插件根目录 `bin/win32-x64/wecom-cli.exe`。调用前拼出绝对路径，不要假设其在 PATH 中；`<cli> --version` 可验证。
 
-首次使用需完成企业微信授权：执行 `<cli> auth init` 并按提示扫码登录，登录态由 CLI 本地管理，无外部环境变量注入。授权不可用时停止并报告当前登录不可用。
+本构建**没有 auth 子命令**，不会自行登录：每个请求需要环境变量 `WECOM_CLI_ACCESS_TOKEN` 提供企业微信访问凭证，调用前必须先在该环境变量中设置有效 token，否则请求将以 401 失败。
+
+token 获取现状（截至 2026-10）：该 token 原本由 WorkBuddy 桌面端的企微连接器扫码后注入，DriFox 无此注入链路，当前没有公开的自动化获取途径。未配置 token 时，停止并向用户说明「需自备 WECOM_CLI_ACCESS_TOKEN」，不要尝试 auth/扫码类命令。
 
 ---
 
