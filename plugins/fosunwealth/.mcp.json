@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "fosunwealth": {
+      "type": "http",
+      "url": "https://aiapi.fosunhanig.com/ai-fin-agent/mcp",
+      "enabled": false
+    }
+  }
+}

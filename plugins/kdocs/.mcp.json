@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "kdocs": {
+      "type": "http",
+      "url": "https://mcp-center.wps.cn/skill_hub/mcp",
+      "enabled": false,
+      "auth": {
+        "type": "oauth",
+        "client_name": "DriFox",
+        "scope": ""
+      }
+    }
+  }
+}

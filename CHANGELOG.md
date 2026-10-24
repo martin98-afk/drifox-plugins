@@ -19,6 +19,20 @@
 - **顺手修复 2 处 main 分支遗留语法错误**（Python 2 风格 except 元组缺括号，从未通过编译）：autoloop `cards.py:543`、gateway-dingtalk `dingtalk.py:243`
 - **验证**：独立 venv（PySide6 6.11.2 + PySide6-Fluent-Widgets 1.11.3，qfluentwidgets PySide6 分支版）py_compile 87/87 通过；64 个 UI/worker 模块真实 import 成功（含 stub 主程序 `app.*` 上下文的 7 个），0 失败；WebEngine 真开窗口渲染 + JS 回读 + 下载/Profile/Script API 断言 15/15 通过（offscreen，Chromium 正常起帧）
 - **文档同步**：autoloop / cron-tasks / git-panel / project-dashboard / taskboard 5 个 README 依赖表 PyQt5 → PySide6
+### ✨ 新增 13 个专家智能体插件（243 个 @智能体，源自 WorkBuddy 专家市场）
+- **专家插件**：experts-tencent / product / engineering / data / finance / marketing / content / sales / ops / quality / legal / consulting / game（按 WorkBuddy 15 分类拆包，campus 与 global 两分类上游 prompt 全缺故未建）
+- **数据源**：expert_center.json（429 个专家清单）公开可下；prompt 文件 243 个成功（`baseUrl+/plugins/<plugin>/agents/<name>.md`），185 个上游 COS 404（清单先行、内容未上线，含腾讯专区 9 个），各插件 README 已附缺失名单，待上游补全后重跑 `.test/build_experts.py` 同步
+- **形态**：每个专家 = `agents/<name>.md`（frontmatter name/description 原样保留，@ 名按文件名全局去重）；精选场景 27/30 个专家已随分类入库
+- **验证**：validate_plugins 全量 205 插件通过
+### ✨ 新增 10 个远程 MCP 连接器插件（源自 WorkBuddy 连接器市场）
+- **插件**：canva / designkit / fosunwealth / futu-mcp / kdocs / kling-ai-plugin / moomoo-mcp / slack-mcp / tiktok / tripo-3d
+- **来源**：WorkBuddy 连接器市场整包（download.codebuddy.ai/connector-agent-plugins/connector-plugins.zip），逐个提取 mcp.json 端点、plugin.json 描述/示例与 ai.workbuddy/assets 图标
+- **形态**：统一远程 streamable HTTP MCP（`type: http`），`enabled: false`，用户在设置 → MCP 连接器手动启用
+- **认证**：canva / kdocs / slack-mcp / tripo-3d 走 `auth.oauth`；designkit / fosunwealth / futu-mcp / kling-ai-plugin / moomoo-mcp / tiktok 直连（首次使用按工具返回指引授权）
+- **技能**：8 个插件随包内置 11 个服务方 AI 技能（canva / designkit / fosunwealth / futu-mcp / kdocs×1 / kling-ai×3 / moomoo-mcp / tripo-3d×2，含 kdocs 569 文件 references 全量 API 指引），manifest 补 `components.skills: true`；frontmatter 扫描确认无 WorkBuddy 专有工具引用
+- **验证**：validate_plugins 191 插件全过；marketplace.json 重新生成（顺带修正 jimeng 版本漂移 1.0.0 → 1.0.1）
+- **wecom-unified 不收录**：CLI 为 WorkBuddy 定制（a2a 构建依赖宿主网关，vendor 构建直连官方 API 但无 auth 子命令，token 由 WorkBuddy 云端凭其账号态签发，DriFox 下无授权链路）；待企业微信侧有可用凭证来源再评估
+- **调研备注**：WorkBuddy 内置 sheetagent MCP 实测为假本地（依赖宿主 editorsdk 127.0.0.1:39099），未移植；市场内 dingtalk/feishu/wecom/tmeet 为 CLI 形态、github/notion/linear/edgeone-pages 库内已有对应，均不重复接入
 ### 🔧 token-usage v0.1.5：统计口径由「会话内增量」改为「全量求和」——原口径比真实账单小 93.5 倍
 - **症状**：用量页签显示的数字远低于实际花费（用户反馈「少得太多，是不是没叠加」）
 - **根因**：v0.1.4 采用「净占用/增量」口径，每轮 input 减去同会话上一轮 input。设计动机是 DriFox 每轮请求都会重发整个上下文，直接求和会把同一份上下文重复计几十次。但**服务商就是按全量计费的**，扣掉重发量后得到的「净新增输入」与账单不是同一个量级。实测开发库（590 会话 / 43145 次请求）：prompt 中位数 93K、p90 227K、单会话中位 43 轮，增量口径只保留全量的 1.07%
