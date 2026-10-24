@@ -1877,6 +1877,396 @@
             }
         },
         {
+            "name": "experts-consulting",
+            "description": "行业顾问专家智能体包 — 6 个 @智能体（源自 WorkBuddy 专家市场）",
+            "version": "1.0.0",
+            "author": "WorkBuddy Expert Market",
+            "license": "MIT",
+            "categories": [
+                "agent"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/experts-consulting",
+                "ref": "main"
+            },
+            "components": {
+                "agents": true
+            },
+            "keywords": [
+                "agents",
+                "experts",
+                "consulting"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://www.workbuddy.cn",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon.svg"
+            }
+        },
+        {
+            "name": "experts-content",
+            "description": "内容创作专家智能体包 — 27 个 @智能体（源自 WorkBuddy 专家市场）",
+            "version": "1.0.0",
+            "author": "WorkBuddy Expert Market",
+            "license": "MIT",
+            "categories": [
+                "agent"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/experts-content",
+                "ref": "main"
+            },
+            "components": {
+                "agents": true
+            },
+            "keywords": [
+                "agents",
+                "experts",
+                "content"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://www.workbuddy.cn",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon.svg"
+            }
+        },
+        {
+            "name": "experts-data",
+            "description": "数据智能专家智能体包 — 20 个 @智能体（源自 WorkBuddy 专家市场）",
+            "version": "1.0.0",
+            "author": "WorkBuddy Expert Market",
+            "license": "MIT",
+            "categories": [
+                "agent"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/experts-data",
+                "ref": "main"
+            },
+            "components": {
+                "agents": true
+            },
+            "keywords": [
+                "agents",
+                "experts",
+                "data"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://www.workbuddy.cn",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon.svg"
+            }
+        },
+        {
+            "name": "experts-engineering",
+            "description": "技术工程专家智能体包 — 28 个 @智能体（源自 WorkBuddy 专家市场）",
+            "version": "1.0.0",
+            "author": "WorkBuddy Expert Market",
+            "license": "MIT",
+            "categories": [
+                "agent"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/experts-engineering",
+                "ref": "main"
+            },
+            "components": {
+                "agents": true
+            },
+            "keywords": [
+                "agents",
+                "experts",
+                "engineering"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://www.workbuddy.cn",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon.svg"
+            }
+        },
+        {
+            "name": "experts-finance",
+            "description": "金融投资专家智能体包 — 23 个 @智能体（源自 WorkBuddy 专家市场）",
+            "version": "1.0.0",
+            "author": "WorkBuddy Expert Market",
+            "license": "MIT",
+            "categories": [
+                "agent"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/experts-finance",
+                "ref": "main"
+            },
+            "components": {
+                "agents": true
+            },
+            "keywords": [
+                "agents",
+                "experts",
+                "finance"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://www.workbuddy.cn",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon.svg"
+            }
+        },
+        {
+            "name": "experts-game",
+            "description": "游戏空间专家智能体包 — 24 个 @智能体（源自 WorkBuddy 专家市场）",
+            "version": "1.0.0",
+            "author": "WorkBuddy Expert Market",
+            "license": "MIT",
+            "categories": [
+                "agent"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/experts-game",
+                "ref": "main"
+            },
+            "components": {
+                "agents": true
+            },
+            "keywords": [
+                "agents",
+                "experts",
+                "game"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://www.workbuddy.cn",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon.svg"
+            }
+        },
+        {
+            "name": "experts-legal",
+            "description": "法务安全专家智能体包 — 14 个 @智能体（源自 WorkBuddy 专家市场）",
+            "version": "1.0.0",
+            "author": "WorkBuddy Expert Market",
+            "license": "MIT",
+            "categories": [
+                "agent"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/experts-legal",
+                "ref": "main"
+            },
+            "components": {
+                "agents": true
+            },
+            "keywords": [
+                "agents",
+                "experts",
+                "legal"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://www.workbuddy.cn",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon.svg"
+            }
+        },
+        {
+            "name": "experts-marketing",
+            "description": "营销增长专家智能体包 — 29 个 @智能体（源自 WorkBuddy 专家市场）",
+            "version": "1.0.0",
+            "author": "WorkBuddy Expert Market",
+            "license": "MIT",
+            "categories": [
+                "agent"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/experts-marketing",
+                "ref": "main"
+            },
+            "components": {
+                "agents": true
+            },
+            "keywords": [
+                "agents",
+                "experts",
+                "marketing"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://www.workbuddy.cn",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon.svg"
+            }
+        },
+        {
+            "name": "experts-ops",
+            "description": "运营人力专家智能体包 — 6 个 @智能体（源自 WorkBuddy 专家市场）",
+            "version": "1.0.0",
+            "author": "WorkBuddy Expert Market",
+            "license": "MIT",
+            "categories": [
+                "agent"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/experts-ops",
+                "ref": "main"
+            },
+            "components": {
+                "agents": true
+            },
+            "keywords": [
+                "agents",
+                "experts",
+                "ops"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://www.workbuddy.cn",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon.svg"
+            }
+        },
+        {
+            "name": "experts-product",
+            "description": "产品设计专家智能体包 — 17 个 @智能体（源自 WorkBuddy 专家市场）",
+            "version": "1.0.0",
+            "author": "WorkBuddy Expert Market",
+            "license": "MIT",
+            "categories": [
+                "agent"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/experts-product",
+                "ref": "main"
+            },
+            "components": {
+                "agents": true
+            },
+            "keywords": [
+                "agents",
+                "experts",
+                "product"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://www.workbuddy.cn",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon.svg"
+            }
+        },
+        {
+            "name": "experts-quality",
+            "description": "项目质量专家智能体包 — 22 个 @智能体（源自 WorkBuddy 专家市场）",
+            "version": "1.0.0",
+            "author": "WorkBuddy Expert Market",
+            "license": "MIT",
+            "categories": [
+                "agent"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/experts-quality",
+                "ref": "main"
+            },
+            "components": {
+                "agents": true
+            },
+            "keywords": [
+                "agents",
+                "experts",
+                "quality"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://www.workbuddy.cn",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon.svg"
+            }
+        },
+        {
+            "name": "experts-sales",
+            "description": "销售商务专家智能体包 — 10 个 @智能体（源自 WorkBuddy 专家市场）",
+            "version": "1.0.0",
+            "author": "WorkBuddy Expert Market",
+            "license": "MIT",
+            "categories": [
+                "agent"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/experts-sales",
+                "ref": "main"
+            },
+            "components": {
+                "agents": true
+            },
+            "keywords": [
+                "agents",
+                "experts",
+                "sales"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://www.workbuddy.cn",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon.svg"
+            }
+        },
+        {
+            "name": "experts-tencent",
+            "description": "腾讯专区专家智能体包 — 17 个 @智能体（源自 WorkBuddy 专家市场）",
+            "version": "1.0.0",
+            "author": "WorkBuddy Expert Market",
+            "license": "MIT",
+            "categories": [
+                "agent"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/experts-tencent",
+                "ref": "main"
+            },
+            "components": {
+                "agents": true
+            },
+            "keywords": [
+                "agents",
+                "experts",
+                "tencent"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://www.workbuddy.cn",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon.svg"
+            }
+        },
+        {
             "name": "fe-fw",
             "description": "银翼圣焰主题 — 火焰纹章 万缕千丝 灵感深色主题，火焰橙红 + 命运女神紫双色组合，银白救世主文字色。",
             "version": "1.0.0",
@@ -6005,6 +6395,38 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon.png"
+            }
+        },
+        {
+            "name": "wecom-unified",
+            "description": "企业微信全能套件 — 通讯录/智能文档/智能表格/在线PPT/日程/会议/待办/微盘/邮件，自带跨平台 wecom-cli，扫码授权后 AI 直接驱动",
+            "version": "1.1.7",
+            "author": "Tencent WorkBuddy",
+            "license": "Proprietary",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/wecom-unified",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "wecom",
+                "企业微信",
+                "docs",
+                "calendar",
+                "meeting"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://work.weixin.qq.com",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon.svg"
             }
         },
         {
