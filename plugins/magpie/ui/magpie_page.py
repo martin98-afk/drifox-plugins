@@ -7,17 +7,22 @@
 
 页面三态：
 - 探测中：显示「正在连接…」
-- 不可达：显示命令指引（该跑哪条命令才能开这个端口）
+- 不可达：一键启动（经宿主 process.start 能力拉起 magpie web，自动固定 key）
+  或命令指引
 - 已连上：QWebEngineView 加载，顶部状态条保留「重新加载 / 在浏览器打开」
 
-key：magpie web 每次启动会换一个随机 key，URL 必须带 ``?k=<key>``。要固定就在
-启动前设 ``MAGPIE_WEB_KEY``，再把同一个值填进插件设置。key 留空时仍尝试加载，
-失败由 magpie 自己的页面提示。
+key：magpie web 每次启动会换一个随机 key，URL 必须带 ``?k=<key>``。插件自动
+管理：配置里没 key 时生成一个稳定随机值存进插件配置，启动进程时以环境变量
+``MAGPIE_WEB_KEY`` 注入——之后每次（含插件拉起的每次重启）都是同一个 key，
+用户无感。用户在设置卡手填过的 key 优先（``PluginConfigStore.get`` 的语义：
+系统环境变量 > 存储值，插件只在两者都空时才生成）。
 """
 
 import os
+import secrets
 import shutil
 import threading
+import time
 
 from loguru import logger
 
@@ -44,6 +49,50 @@ def _caps(cap_id: str):
 def _magpie_installed() -> bool:
     """magpie 可执行文件是否在 PATH 上（决定引导文案走「启动」还是「安装」）。"""
     return shutil.which("magpie") is not None
+
+
+def _new_web_key() -> str:
+    """生成一个 magpie 接受的稳定随机 key（16+ 位字母数字，hex 24 位）。"""
+    return secrets.token_hex(12)
+
+
+def _ensure_web_key(cfg: dict) -> str:
+    """取当前生效 key；没有则生成并写回插件配置（下次启动复用同一个）。
+
+    cfg 是启动前的配置快照（含 env 覆盖语义后的 key），避免这里再读一次。
+    写回失败不阻断启动：本次仍用该 key（进程已定死），仅记日志。
+    """
+    key = str((cfg or {}).get("key") or "").strip()
+    if key:
+        return key
+    key = _new_web_key()
+    try:
+        from app.plugins.managers.plugin_config_store import PluginConfigStore
+
+        PluginConfigStore().set_values(_PLUGIN, {"web_key": key})
+    except Exception as e:  # noqa: BLE001 — 写失败仅影响下次复用，不阻断本次启动
+        logger.warning(f"[magpie] 自动生成的 web key 写回配置失败: {e}")
+    return key
+
+
+def _web_argv(port: int) -> list:
+    """组装 magpie web 启动命令（argv 数组；可执行名交给 CreateProcess 补 .exe）。"""
+    exe = shutil.which("magpie") or "magpie"
+    argv = [exe, "web"]
+    if port != _DEFAULT_WEB_PORT:
+        argv += ["--addr", f"127.0.0.1:{port}"]
+    argv.append("--no-open")
+    return argv
+
+
+def _wait_port(port: int, timeout: float = 12.0) -> bool:
+    """轮询等端口就绪（magpie 冷启动含初始化，秒级）。"""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if _probe(port, timeout=1.0):
+            return True
+        time.sleep(0.5)
+    return _probe(port, timeout=1.0)
 
 
 def _read_config() -> dict:
@@ -107,6 +156,7 @@ class MagpieWebPage(QWidget):
     """magpie 网页界面（独立弹窗内容页）。"""
 
     _probe_done = pyqtSignal(bool)
+    _start_done = pyqtSignal(bool, str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -121,6 +171,7 @@ class MagpieWebPage(QWidget):
 
         self._build_ui()
         self._probe_done.connect(self._on_probe_done)
+        self._start_done.connect(self._on_start_done)
 
     # ── 三约定接口 ────────────────────────────────────────
 
@@ -182,6 +233,10 @@ class MagpieWebPage(QWidget):
         btn_lay.setContentsMargins(0, 0, 0, 0)
         btn_lay.setSpacing(10)
         btn_lay.addStretch(1)
+
+        self._launch_btn = PushButton("启动 magpie web", self._guide_btns)
+        self._launch_btn.clicked.connect(self._launch_magpie)
+        btn_lay.addWidget(self._launch_btn)
 
         self._copy_btn = PushButton("复制启动命令", self._guide_btns)
         self._copy_btn.clicked.connect(self._copy_command)
@@ -262,6 +317,52 @@ class MagpieWebPage(QWidget):
         self._status.setText("页面加载失败（多为 web key 不匹配）")
         self._show_guide(_read_config(), load_failed=True)
 
+    # ── 一键启动（经宿主 process.start 能力） ─────────────
+
+    def _launch_magpie(self):
+        """拉起 magpie web：自动定 key → 启动进程 → 轮询端口 → 自动加载。
+
+        全程后台线程，按钮期间禁用防重复点；结果经 _start_done 回主线程。
+        """
+        cfg = _read_config()
+        self._status.setText("正在启动 magpie web …")
+        self._reload_btn.setEnabled(False)
+        self._launch_btn.setEnabled(False)
+
+        def work():
+            ok, err = False, ""
+            try:
+                start = _caps("process.start")
+                if start is None:
+                    err = "宿主未提供 process.start 能力（需 DriFox ≥ 0.6.11）"
+                else:
+                    key = _ensure_web_key(cfg)
+                    start(_web_argv(cfg["port"]), env={"MAGPIE_WEB_KEY": key}, name="magpie-web")
+                    ok = _wait_port(cfg["port"])
+                    if not ok:
+                        err = "已启动但端口未就绪（超时 12s），可稍后点「重新加载」重试"
+            except FileNotFoundError:
+                err = "找不到 magpie 可执行文件（PATH 上没有）"
+            except Exception as e:  # noqa: BLE001 — 启动失败原因回显给用户
+                err = str(e)
+            try:
+                self._start_done.emit(ok, err)
+            except RuntimeError:
+                pass  # 页面已销毁（窗口关闭）
+
+        threading.Thread(target=work, daemon=True, name="magpie-web-launch").start()
+
+    def _on_start_done(self, ok: bool, err: str):
+        self._reload_btn.setEnabled(True)
+        self._launch_btn.setEnabled(True)
+        if ok:
+            self._notify("magpie web 已启动", "用插件固定的 key，无需再手动设环境变量")
+            self._on_probe_done(True)
+            return
+        self._status.setText("启动失败")
+        self._notify("magpie web 启动失败", err)
+        self._show_guide(_read_config())
+
     def _show_guide(self, cfg: dict, load_failed: bool = False):
         if self._view is not None:
             self._view.setVisible(False)
@@ -272,8 +373,9 @@ class MagpieWebPage(QWidget):
         self._guide_text.setText(
             self._guide_html(_start_command(cfg["port"]), cfg["key"], load_failed, installed)
         )
-        # 未装 magpie 时「复制启动命令」没有意义，只留「让 AI 帮我装」
+        # 按钮按分支显隐：未装→只留安装引导；key 不匹配→只留重启对齐
         self._copy_btn.setVisible(installed and not load_failed)
+        self._launch_btn.setVisible(installed)
         self._apply_theme()
 
     def _open_in_browser(self):
@@ -368,15 +470,20 @@ class MagpieWebPage(QWidget):
         if load_failed:
             head = "magpie 拒绝了这次访问"
             body_lines.append(
-                "magpie web 每次启动会换一个随机 key。固定它的办法：先设好环境变量"
-                " <code>MAGPIE_WEB_KEY</code> 再启动，然后把同一个值填进插件设置里的"
-                "「Web Key」。"
+                "运行中的 magpie web 用的是另一次启动时随机生成的 key。"
+                "先退出现有的 magpie 进程，再点下面的「启动 magpie web」："
+                "插件会用自己固定的 key 重新拉起，之后不再变。"
+            )
+            body_lines.append(
+                "也可以在插件设置里把 Web Key 改成当前实例的值（当前实例若是"
+                "手动启动且没设 <code>MAGPIE_WEB_KEY</code>，那个 key 每次都会变）。"
             )
         elif installed:
             head = "magpie 网页服务没有在监听"
             body_lines.append(
-                "magpie 已安装。桌面 App 不对外开网页端口，需要在终端启动网页服务，"
-                "然后点「重新加载」："
+                "magpie 已安装。点下面的「启动 magpie web」直接拉起：插件会"
+                "自动固定 key 并在就绪后自动加载，无需终端。也可以复制命令"
+                "自己启动："
             )
             body_lines.append(
                 "<code style=\"padding:2px 6px;border-radius:4px;"

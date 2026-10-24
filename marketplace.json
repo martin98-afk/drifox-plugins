@@ -3104,8 +3104,8 @@
         },
         {
             "name": "magpie",
-            "description": "magpie 本地网关 — 接入聚合后的全部订阅账号与路由组，并内嵌 magpie 网页界面直接管理模型与配额",
-            "version": "0.3.0",
+            "description": "magpie 本地网关 — 接入聚合后的全部订阅账号与路由组，一键启动 magpie web（自动固定 key），并内嵌网页界面直接管理模型与配额",
+            "version": "0.4.0",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
