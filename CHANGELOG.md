@@ -6,6 +6,7 @@
 - **来源**：WorkBuddy 连接器市场整包（download.codebuddy.ai/connector-agent-plugins/connector-plugins.zip），逐个提取 mcp.json 端点、plugin.json 描述/示例与 ai.workbuddy/assets 图标
 - **形态**：统一远程 streamable HTTP MCP（`type: http`），`enabled: false`，用户在设置 → MCP 连接器手动启用
 - **认证**：canva / kdocs / slack-mcp / tripo-3d 走 `auth.oauth`；designkit / fosunwealth / futu-mcp / kling-ai-plugin / moomoo-mcp / tiktok 直连（首次使用按工具返回指引授权）
+- **技能**：8 个插件随包内置 11 个服务方 AI 技能（canva / designkit / fosunwealth / futu-mcp / kdocs×1 / kling-ai×3 / moomoo-mcp / tripo-3d×2，含 kdocs 569 文件 references 全量 API 指引），manifest 补 `components.skills: true`；frontmatter 扫描确认无 WorkBuddy 专有工具引用
 - **验证**：validate_plugins 191 插件全过；marketplace.json 重新生成（顺带修正 jimeng 版本漂移 1.0.0 → 1.0.1）
 - **调研备注**：WorkBuddy 内置 sheetagent MCP 实测为假本地（依赖宿主 editorsdk 127.0.0.1:39099），未移植；市场内 dingtalk/feishu/wecom/tmeet 为 CLI 形态、github/notion/linear/edgeone-pages 库内已有对应，均不重复接入
 ### 🔧 token-usage v0.1.5：统计口径由「会话内增量」改为「全量求和」——原口径比真实账单小 93.5 倍

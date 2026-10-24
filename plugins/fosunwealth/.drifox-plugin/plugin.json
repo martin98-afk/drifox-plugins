@@ -19,7 +19,8 @@
     "fosunwealth"
   ],
   "components": {
-    "mcp": true
+    "mcp": true,
+    "skills": true
   },
   "homepage": "https://aiapi.fosunhanig.com"
 }

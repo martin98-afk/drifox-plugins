@@ -19,7 +19,8 @@
     "futu"
   ],
   "components": {
-    "mcp": true
+    "mcp": true,
+    "skills": true
   },
   "homepage": "https://www.futunn.com"
 }

@@ -19,7 +19,8 @@
     "canva"
   ],
   "components": {
-    "mcp": true
+    "mcp": true,
+    "skills": true
   },
   "homepage": "https://www.canva.com"
 }
