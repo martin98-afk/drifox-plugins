@@ -563,7 +563,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 67,
+            "downloads": 68,
             "keywords": [
                 "browser",
                 "web",
@@ -594,7 +594,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 26,
+            "downloads": 27,
             "keywords": [
                 "calendar",
                 "date",
@@ -1092,7 +1092,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 26,
+            "downloads": 27,
             "keywords": [
                 "welcome",
                 "stats",
@@ -1222,7 +1222,7 @@
                 "tools": true,
                 "hook_policies": true
             },
-            "downloads": 51,
+            "downloads": 52,
             "keywords": [
                 "cron",
                 "schedule",
@@ -2362,7 +2362,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 71,
+            "downloads": 72,
             "keywords": [
                 "git",
                 "source-control",
@@ -3104,8 +3104,8 @@
         },
         {
             "name": "magpie",
-            "description": "magpie 本地网关 — 接入聚合后的全部订阅账号与路由组，并内嵌 magpie 网页界面直接管理模型与配额",
-            "version": "0.3.0",
+            "description": "magpie 本地网关 — 接入聚合后的全部订阅账号与路由组，一键启动 magpie web（自动固定 key），并内嵌网页界面直接管理模型与配额",
+            "version": "0.4.0",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -4085,7 +4085,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 60,
+            "downloads": 61,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -5306,6 +5306,7 @@
                 "tools": true,
                 "ui": true
             },
+            "downloads": 1,
             "keywords": [
                 "vision",
                 "multimodal",
