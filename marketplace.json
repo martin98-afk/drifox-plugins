@@ -563,7 +563,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 68,
+            "downloads": 70,
             "keywords": [
                 "browser",
                 "web",
@@ -1222,7 +1222,7 @@
                 "tools": true,
                 "hook_policies": true
             },
-            "downloads": 52,
+            "downloads": 53,
             "keywords": [
                 "cron",
                 "schedule",
@@ -2362,7 +2362,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 72,
+            "downloads": 74,
             "keywords": [
                 "git",
                 "source-control",
@@ -3122,7 +3122,7 @@
                 "providers": true,
                 "ui": true
             },
-            "downloads": 1,
+            "downloads": 3,
             "keywords": [
                 "magpie",
                 "网关",
@@ -3900,7 +3900,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 23,
+            "downloads": 25,
             "min_host_version": "0.6.2",
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
@@ -4085,7 +4085,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 61,
+            "downloads": 63,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -4165,7 +4165,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 33,
+            "downloads": 35,
             "keywords": [
                 "screenshot",
                 "clipboard",
@@ -5135,7 +5135,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 16,
+            "downloads": 17,
             "keywords": [
                 "welcome",
                 "token",
@@ -5390,7 +5390,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 25,
+            "downloads": 27,
             "keywords": [
                 "voice",
                 "dictation",
@@ -5681,7 +5681,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 35,
+            "downloads": 37,
             "keywords": [
                 "powershell",
                 "windows",
