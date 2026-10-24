@@ -6399,38 +6399,6 @@
             }
         },
         {
-            "name": "wecom-unified",
-            "description": "企业微信全能套件 — 通讯录/智能文档/智能表格/在线PPT/日程/会议/待办/微盘/邮件，自带跨平台 wecom-cli，扫码授权后 AI 直接驱动",
-            "version": "1.1.7",
-            "author": "Tencent WorkBuddy",
-            "license": "Proprietary",
-            "categories": [
-                "workflow"
-            ],
-            "source": {
-                "type": "git-subdir",
-                "url": "https://github.com/martin98-afk/drifox-plugins",
-                "path": "plugins/wecom-unified",
-                "ref": "main"
-            },
-            "components": {
-                "skills": true
-            },
-            "keywords": [
-                "wecom",
-                "企业微信",
-                "docs",
-                "calendar",
-                "meeting"
-            ],
-            "min_host_version": "0.5.0",
-            "homepage": "https://work.weixin.qq.com",
-            "icon": {
-                "light": "icon.svg",
-                "dark": "icon.svg"
-            }
-        },
-        {
             "name": "win-powershell",
             "description": "专用 Windows PowerShell 执行工具——强制走 PowerShell 原生入口运行 PS 脚本/命令（cmdlet、管道对象、ConvertTo-Json），自动处理 UTF-8 编码与超时，区别于通用 bash 工具。",
             "version": "1.0.8",

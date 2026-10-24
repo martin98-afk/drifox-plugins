@@ -1,11 +1,10 @@
 # Changelog
 
 ## Unreleased
-### ✨ 新增 13 个专家智能体插件（243 个 @智能体，源自 WorkBuddy 专家市场）+ wecom-unified 全家桶
+### ✨ 新增 13 个专家智能体插件（243 个 @智能体，源自 WorkBuddy 专家市场）
 - **专家插件**：experts-tencent / product / engineering / data / finance / marketing / content / sales / ops / quality / legal / consulting / game（按 WorkBuddy 15 分类拆包，campus 与 global 两分类上游 prompt 全缺故未建）
 - **数据源**：expert_center.json（429 个专家清单）公开可下；prompt 文件 243 个成功（`baseUrl+/plugins/<plugin>/agents/<name>.md`），185 个上游 COS 404（清单先行、内容未上线，含腾讯专区 9 个），各插件 README 已附缺失名单，待上游补全后重跑 `.test/build_experts.py` 同步
 - **形态**：每个专家 = `agents/<name>.md`（frontmatter name/description 原样保留，@ 名按文件名全局去重）；精选场景 27/30 个专家已随分类入库
-- **wecom-unified**：企业微信全能套件（源自 static.workbuddy.cn/wecom-skills v1.1.7）——13 业务域技能 + 130 命令 references；CLI 换用 WorkBuddy 内置 vendor 版（workbuddy-local 构建，直连 qyapi.weixin.qq.com，仅 Windows 9.2MB；原插件内置 a2a 构建依赖宿主网关 auth-proxy.local，离宿主 DNS 即死，已弃用）；该构建无 auth 子命令，需环境变量 `WECOM_CLI_ACCESS_TOKEN`（原由 WorkBuddy 桌面端扫码注入，DriFox 下需自备，README/SKILL 已如实声明）；版权腾讯，仅供个人使用
 - **验证**：validate_plugins 全量 205 插件通过
 ### ✨ 新增 10 个远程 MCP 连接器插件（源自 WorkBuddy 连接器市场）
 - **插件**：canva / designkit / fosunwealth / futu-mcp / kdocs / kling-ai-plugin / moomoo-mcp / slack-mcp / tiktok / tripo-3d
@@ -14,6 +13,7 @@
 - **认证**：canva / kdocs / slack-mcp / tripo-3d 走 `auth.oauth`；designkit / fosunwealth / futu-mcp / kling-ai-plugin / moomoo-mcp / tiktok 直连（首次使用按工具返回指引授权）
 - **技能**：8 个插件随包内置 11 个服务方 AI 技能（canva / designkit / fosunwealth / futu-mcp / kdocs×1 / kling-ai×3 / moomoo-mcp / tripo-3d×2，含 kdocs 569 文件 references 全量 API 指引），manifest 补 `components.skills: true`；frontmatter 扫描确认无 WorkBuddy 专有工具引用
 - **验证**：validate_plugins 191 插件全过；marketplace.json 重新生成（顺带修正 jimeng 版本漂移 1.0.0 → 1.0.1）
+- **wecom-unified 不收录**：CLI 为 WorkBuddy 定制（a2a 构建依赖宿主网关，vendor 构建直连官方 API 但无 auth 子命令，token 由 WorkBuddy 云端凭其账号态签发，DriFox 下无授权链路）；待企业微信侧有可用凭证来源再评估
 - **调研备注**：WorkBuddy 内置 sheetagent MCP 实测为假本地（依赖宿主 editorsdk 127.0.0.1:39099），未移植；市场内 dingtalk/feishu/wecom/tmeet 为 CLI 形态、github/notion/linear/edgeone-pages 库内已有对应，均不重复接入
 ### 🔧 token-usage v0.1.5：统计口径由「会话内增量」改为「全量求和」——原口径比真实账单小 93.5 倍
 - **症状**：用量页签显示的数字远低于实际花费（用户反馈「少得太多，是不是没叠加」）
