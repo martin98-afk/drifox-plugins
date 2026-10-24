@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1792861541.9966738,
+  "fetched_at": 1792870579.6458201,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -189,7 +189,7 @@
     "twin-chat": 10,
     "ui-motion-skills": 4,
     "vercel": 0,
-    "vision-proxy": 1,
+    "vision-proxy": 2,
     "voice-clone": 1,
     "voice-input": 28,
     "voice-reply": 11,
