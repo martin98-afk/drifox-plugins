@@ -158,12 +158,16 @@ class DingTalkAdapter(BasePlatformAdapter):
             # 应用 monkey-patch 修复（仅在 SDK 已确认可用后执行一次）
             _patch_dingtalk_stream_logging()
 
-            from app.gateway.platforms._http_client_limits import platform_httpx_limits
-
-            limits = platform_httpx_limits()
+            # 连接池参数本地定义：宿主 app.gateway.platforms._http_client_limits
+            # 已在主程序死代码清理中删除，插件不再跨层引用宿主私有模块
+            limits = httpx.Limits(
+                max_keepalive_connections=20,
+                max_connections=100,
+                keepalive_expiry=30.0,
+            )
             self._http_client = httpx.AsyncClient(
                 timeout=30.0,
-                limits=limits if limits else httpx.Limits(),
+                limits=limits,
             )
 
             # 创建 Stream 客户端

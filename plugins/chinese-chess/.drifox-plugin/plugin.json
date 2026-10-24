@@ -1,15 +1,19 @@
 {
   "name": "chinese-chess",
   "description": "中国象棋 — 与大模型对弈的浮动卡片游戏",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "author": {
     "name": "马丁"
   },
   "license": "GPL-3.0-or-later",
-  "type": "game",
-  "drifox": {
-    "min_version": "0.5.0"
-  },
+  "type": "user",
+  "api_version": 2,
+  "min_host_version": "0.6.10",
+  "capabilities": [
+    "ui.notify",
+    "model.config",
+    "engine.session"
+  ],
   "keywords": [
     "chinese",
     "evolved",
@@ -58,28 +62,16 @@
       {
         "key": "red_model",
         "label": "我方模型",
-        "type": "select",
-        "options": [
-          {
-            "value": "__default__",
-            "label": "默认（主程序当前模型）"
-          }
-        ],
+        "type": "text",
         "default": "",
-        "description": "我方 AI 使用的模型（启动时由 config_card.py 从主程序 LLM.SavedProviders 动态注入）"
+        "description": "我方 AI 模型，格式 Provider:Model；留空用主程序当前模型（正常情况用自绘设置卡下拉选择，此字段仅供旧宿主降级手填）"
       },
       {
         "key": "black_model",
         "label": "对方模型",
-        "type": "select",
-        "options": [
-          {
-            "value": "__default__",
-            "label": "默认（主程序当前模型）"
-          }
-        ],
+        "type": "text",
         "default": "",
-        "description": "对方 AI 使用的模型（启动时由 config_card.py 从主程序 LLM.SavedProviders 动态注入）"
+        "description": "对方 AI 模型，格式 Provider:Model；留空用主程序当前模型（正常情况用自绘设置卡下拉选择，此字段仅供旧宿主降级手填）"
       }
     ]
   }

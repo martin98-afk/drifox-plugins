@@ -1,14 +1,99 @@
 {
     "name": "voice-reply",
-    "description": "将 AI 回复转为语音播放（Windows SAPI5 离线 TTS，零依赖）",
+    "description": "消息卡片页脚「朗读」按钮：点击播报本条 AI 回复。双引擎：本地系统语音（Windows SAPI5 / macOS say，免费零配置，默认）+ OpenAI 兼容在线 TTS API（默认预填硅基流动 CosyVoice2，可指向任意兼容服务）",
     "icon": {
         "light": "icon.svg",
         "dark": "icon_dark.svg"
     },
-    "version": "1.1.0",
+    "version": "1.5.0",
     "type": "user",
+    "platforms": [
+        "windows",
+        "darwin"
+    ],
+    "min_host_version": "0.5.0",
+    "keywords": [
+        "voice",
+        "tts",
+        "speech",
+        "read-aloud",
+        "footer-action",
+        "语音播报",
+        "朗读"
+    ],
+    "config_schema": {
+        "title": "语音播报配置",
+        "fields": [
+            {
+                "key": "engine",
+                "label": "语音引擎",
+                "type": "select",
+                "default": "local",
+                "options": [
+                    {"value": "local", "label": "本地系统语音（免费，Windows SAPI5 / macOS say）"},
+                    {"value": "api", "label": "在线 API（OpenAI 兼容 /audio/speech）"}
+                ],
+                "description": "本地引擎零配置零成本；在线引擎音质更好，需填 API Key"
+            },
+            {
+                "key": "api_url",
+                "label": "API 地址",
+                "type": "text",
+                "default": "https://api.siliconflow.cn/v1/audio/speech",
+                "placeholder": "OpenAI 兼容 /audio/speech 端点",
+                "description": "任何 OpenAI 兼容 TTS 服务均可，包括自部署免费方案（如 openai-edge-tts）"
+            },
+            {
+                "key": "api_model",
+                "label": "模型",
+                "type": "text",
+                "default": "FunAudioLLM/CosyVoice2-0.5B",
+                "placeholder": "FunAudioLLM/CosyVoice2-0.5B",
+                "description": "预置：CosyVoice2-0.5B / fish-speech-1.5 / MOSS-TTSD-v0.5（设置卡内可选可填）"
+            },
+            {
+                "key": "api_voice",
+                "label": "音色",
+                "type": "text",
+                "default": "FunAudioLLM/CosyVoice2-0.5B:alex",
+                "placeholder": "硅基流动格式：模型名:音色名（alex/benjamin/anna/bella…）",
+                "description": "8 个预置音色：alex/benjamin/charles/david/anna/bella/claire/diana，随模型联动（设置卡内可选可填）"
+            },
+            {
+                "key": "api_key",
+                "label": "API Key",
+                "type": "password",
+                "default": "",
+                "env": "TTS_API_KEY",
+                "placeholder": "仅在线引擎需要"
+            },
+            {
+                "key": "api_console",
+                "label": "获取硅基流动 Key",
+                "type": "link",
+                "url": "https://cloud.siliconflow.cn/account/ak",
+                "placeholder": "前往硅基流动创建 API Key"
+            }
+        ]
+    },
     "components": {
-        "hooks": true
+        "tools": false,
+        "commands": false,
+        "agents": false,
+        "skills": false,
+        "hooks": false,
+        "mcp": false,
+        "lsp": false,
+        "themes": false,
+        "ui": true,
+        "providers": false,
+        "team_templates": false,
+        "model_adapters": false,
+        "loop_policies": false,
+        "storages": false,
+        "serializers": false,
+        "gateways": false,
+        "engines": false
     },
     "author": {
         "name": "DriFox",

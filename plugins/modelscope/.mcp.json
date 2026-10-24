@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "modelscope": {
+      "type": "http",
+      "url": "${cred.url}",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {},
+      "credential": {
+        "label": "魔搭 MCP链接",
+        "placeholder": "粘贴专属 MCP 链接",
+        "getUrl": "https://www.modelscope.cn/mcp",
+        "inject": {
+          "type": "url"
+        }
+      }
+    }
+  }
+}

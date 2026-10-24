@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "gitee": {
+      "type": "http",
+      "url": "https://api.gitee.com/mcp",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {},
+      "credential": {
+        "label": "Token",
+        "placeholder": "Gitee 私人令牌",
+        "getUrl": "https://gitee.com/profile/personal_access_tokens",
+        "inject": {
+          "type": "header",
+          "name": "Authorization",
+          "scheme": "Bearer"
+        }
+      }
+    }
+  }
+}

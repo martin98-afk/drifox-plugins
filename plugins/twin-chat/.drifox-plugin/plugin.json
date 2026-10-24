@@ -12,9 +12,7 @@
     "homepage": "https://github.com/martin98-afk/DriFox",
     "license": "MIT",
     "type": "user",
-    "drifox": {
-        "min_version": "0.4.15"
-    },
+    "min_host_version": "0.4.15",
     "keywords": [
         "twin",
         "dual",

@@ -1,0 +1,25 @@
+{
+  "name": "apify",
+  "description": "Apify — 运行 Apify 上的爬虫与自动化 Actor，获取网页数据。",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "liliMozi",
+    "url": "https://github.com/liliMozi/hana-connectors"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "user",
+  "min_host_version": "0.5.0",
+  "keywords": [
+    "mcp",
+    "connector",
+    "apify"
+  ],
+  "components": {
+    "mcp": true
+  },
+  "homepage": "https://mcp.apify.com"
+}

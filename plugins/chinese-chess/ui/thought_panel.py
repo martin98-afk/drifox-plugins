@@ -177,12 +177,21 @@ class AIThoughtPanel(QWidget):
         """
         self._step += 1
         cleaned = strip_json_and_moves(text or "")
-        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if not cleaned or cleaned == PLACEHOLDER:
+            # 模型只回了走法 JSON（合规行为）：剥离后为空，回显走法坐标
+            # 而非留空洞占位（此前条目只有标题+「（走法已省略）」，信息量为零）
+            m = _MOVE_RE.search(text or "")
+            if m:
+                c1, r1, c2, r2 = (int(x) for x in m.groups())
+                cleaned = f"本步走法：({c1},{r1}) → ({c2},{r2})"
+            else:
+                cleaned = "（无文本输出）"
+        ts = datetime.now().strftime("%H:%M:%S")
 
-        # 构造 Markdown 片段
+        # 紧凑排版：短标题单行不换行（此前「步+方+模型名+完整日期」过长被折行）
         md = (
             f"\n\n---\n\n"
-            f"**第 {self._step} 步 · {side}方 · {model}** · `{ts}`\n\n"
+            f"**第 {self._step} 步 · {side}方** · {model} · {ts}\n\n"
             f"{cleaned or '_（无文本，已自动剥离走法）_'}"
         )
 

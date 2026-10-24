@@ -1,0 +1,23 @@
+# 缺陷狩猎团 —— /team --load=bug-hunter
+# 场景：疑难 Bug 定位与修复。追因师只读锁定根因，修复匠按图施工，回归卫兵拦住新问题。
+schema_version: 1
+template_name: bug-hunter
+description: 缺陷狩猎团：复现定位 → 修复 → 回归把关，专治疑难 Bug
+# ── v2 预埋字段（schema v1 静默忽略，主程序升级后自动生效）──
+display_name: 缺陷狩猎团
+category: 质量保障
+leader: leader
+default_init_prompt: 开始狩猎。先让追因师复现问题并锁定根因，拿到根因报告后由修复匠实施最小修复并补回归测试，最后回归卫兵审查 diff 防引入新问题。你（leader）负责能力预检与信息中转，禁止代写成员产出。本次目标：<在此粘贴 Bug 现象与复现步骤>
+agents:
+  - agent_name: leader
+    description: 狩猎队长：受理现象，派发前做能力预检，信息一律经你中转，收口最终结论
+    profession: 狩猎队长
+  - agent_name: root-cause-analyst
+    description: 追因师·辛析：只读复现缺陷路径，二分定位根因，产出可核对的证据链
+    profession: 追因师
+  - agent_name: fix-smith
+    description: 修复匠·庚钉：按根因实施最小修复，回归测试先行，不顺手重构
+    profession: 修复匠
+  - agent_name: regression-guard
+    description: 回归卫兵·戊盾：只读审查修复 diff 与影响面，一票拦截引入的新问题
+    profession: 回归卫兵

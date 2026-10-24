@@ -28,7 +28,172 @@ from app.gateway.base import (
     SendResult,
 )
 
-logger = logging.getLogger(__name__)
+# 走 loguru：宿主的日志系统只给 loguru 配 sink，标准 logging 的输出会被丢弃，
+# 导致本插件的 [Feishu] 运行日志完全不落盘（连接/消息/handler 丢失均不可见）。
+from loguru import logger  # noqa: E402
+
+
+def _bridge_lark_logging() -> None:
+    """把 lark SDK 的标准 logging 记录转发进 loguru（幂等）。
+
+    lark_oapi 用 logging.getLogger("Lark") 记录连接诊断（尤其是
+    "connect failed, err: ..."）。宿主只给 loguru 配 sink，标准 logging
+    输出被丢弃 → 连接失败时日志完全空白，排查只能盲猜。此桥接让 SDK
+    的诊断落进 gateway.log / all.log。
+    """
+    import logging as _logging
+
+    _root = _logging.getLogger()
+    if getattr(_root, "_drifox_lark_bridge_installed", False):
+        return
+
+    class _LoguruForwarder(_logging.Handler):
+        def emit(self, record: _logging.LogRecord) -> None:
+            try:
+                # lark 的 logger 名形如 Lark / Lark.xxx，只转发这一族，
+                # 避免把第三方库的噪音全量灌进日志
+                if not record.name.startswith("Lark"):
+                    return
+                msg = record.getMessage()
+                level = record.levelname
+                if level in ("ERROR", "CRITICAL"):
+                    logger.error("[Lark] {}", msg)
+                elif level == "WARNING":
+                    logger.warning("[Lark] {}", msg)
+                elif level == "DEBUG":
+                    # DEBUG 保留（连接诊断关键：connected to / ping success）；
+                    # sink 级别为 DEBUG，降到 TRACE 会被过滤
+                    logger.debug("[Lark] {}", msg)
+                else:
+                    logger.info("[Lark] {}", msg)
+            except Exception:
+                pass
+
+    _root.addHandler(_LoguruForwarder())
+    _root._drifox_lark_bridge_installed = True  # type: ignore[attr-defined]
+
+
+_bridge_lark_logging()
+
+
+def _ensure_ca_bundle() -> None:
+    """确保 OpenSSL 能找到可用的 CA bundle（宿主打包环境自愈）。
+
+    症状：宿主里所有 HTTPS/wss 握手失败，报
+    ``[SSL: CERTIFICATE_VERIFY_FAILED] self-signed certificate in certificate
+    chain``。飞书 WS 在 TLS 阶段即挂，长连接从未建立，消息静默丢失。
+
+    成因：DriFox 是 PyInstaller 打包，OpenSSL 的默认 CA 路径
+    （``ssl.get_default_verify_paths()``）在打包环境下可能指向不存在/为空的
+    文件 → 内置 CA 列表为空，任何证书都验证不过。企业网络里代理插入的自签
+    CA 也需要走系统信任库才认。
+
+    分层兜底（幂等、不越权）：
+    1. ``SSL_CERT_FILE`` 已设 → 尊重既有配置，不动
+    2. 默认 bundle 可加载出证书 → 无需介入
+    3. 有 truststore → 记为待用（websockets 侧经 _ssl_context() 消费）
+    4. 否则回退 certifi 的 cacert.pem，写 ``SSL_CERT_FILE``
+
+    注：truststore 无法经环境变量注入，只能显式建 SSLContext 传给库；
+    websockets 走 ``_ssl_context()``，urllib 等走 ``SSL_CERT_FILE``。
+    """
+    import os
+    import ssl
+
+    global _TRUSTSTORE_AVAILABLE
+    # 探测 truststore（系统信任库：macOS 钥匙串/Windows 证书存储/Linux CA 目录）
+    try:
+        import truststore  # noqa: F401
+
+        _TRUSTSTORE_AVAILABLE = True
+    except Exception:
+        _TRUSTSTORE_AVAILABLE = False
+
+    if os.environ.get("SSL_CERT_FILE"):
+        return  # 已有显式配置，尊重之
+    try:
+        ctx = ssl.create_default_context()
+        if ctx.get_ca_certs():
+            return  # 默认 bundle 可用，无需兜底
+    except Exception:
+        pass  # 加载失败 → 继续走兜底
+    if _TRUSTSTORE_AVAILABLE:
+        # truststore 可用：SSLContext 由 _ssl_context() 显式提供，
+        # 无需（也不应）写 SSL_CERT_FILE —— 写了反而覆盖系统信任库行为
+        logger.info("[Feishu] 宿主默认 CA 不可用，改用 truststore 系统信任库")
+        return
+    try:
+        import certifi
+
+        ca = certifi.where()
+        if ca and os.path.exists(ca):
+            os.environ["SSL_CERT_FILE"] = ca
+            logger.info("[Feishu] 宿主默认 CA 不可用，已回退 certifi: {}", ca)
+        else:
+            logger.warning("[Feishu] certifi cacert.pem 不存在，HTTPS 可能不可用")
+    except Exception as e:
+        logger.warning("[Feishu] CA bundle 兜底失败（HTTPS 可能不可用）: {}", e)
+
+
+def _ssl_context():
+    """建立 WS 连接用的 SSLContext；无法改进默认行为时返回 None。
+
+    websockets 的 ``ssl`` 参数接受 SSLContext。返回 None 表示让库走默认
+    验证（此时 ``SSL_CERT_FILE`` 已由 _ensure_ca_bundle 兜底）。
+    """
+    if not _TRUSTSTORE_AVAILABLE:
+        return None
+    try:
+        import ssl
+
+        import truststore
+
+        return truststore.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    except Exception:
+        return None
+
+
+def _patch_lark_ws_connect() -> None:
+    """给 lark SDK 的 WS 连接注入自建 SSLContext（幂等）。
+
+    SDK 的 ``_ws_connect_kwargs()`` 硬编码只返回 ``{"proxy": None}``，不暴露
+    ssl 入口，调用方无法传入自定义 SSLContext。而宿主打包环境下默认 CA
+    列表可能为空，且企业代理的自签 CA 只认系统信任库 —— 唯一解法是换成
+    truststore 的 SSLContext。
+
+    做法：包装模块级 ``_ws_connect_kwargs``，在原有返回值上补 ``ssl`` 键。
+    websockets 15 从 ``**kwargs`` 取 ``kwargs["ssl"]``（asyncio/client.py
+    的 ``kwargs.setdefault("ssl", True)`` 分支），显式传入即生效。
+
+    未探测到 truststore 时不介入，保持 SDK 原行为。
+    """
+    ctx = _ssl_context()
+    if ctx is None:
+        return
+    try:
+        import lark_oapi.ws.client as _wsc
+
+        if getattr(_wsc, "_drifox_ssl_patched", False):
+            return
+        _orig = _wsc._ws_connect_kwargs
+
+        def _with_ssl():
+            kwargs = dict(_orig())
+            kwargs["ssl"] = ctx
+            return kwargs
+
+        _wsc._ws_connect_kwargs = _with_ssl
+        _wsc._drifox_ssl_patched = True  # type: ignore[attr-defined]
+    except Exception as e:
+        logger.debug("[Feishu] lark SDK ssl 注入跳过: {}", e)
+
+
+_TRUSTSTORE_AVAILABLE = False
+_ensure_ca_bundle()
+# [PERF] _patch_lark_ws_connect() 延迟到 connect() 内调用：其内部 import
+# lark_oapi.ws.client 实测 ~5.7s（SDK 模块树巨大，文件缓存热也慢），模块级执行
+# 会让宿主启动预热的 warmup.gateways 扫描整段卡死 5.8s。补丁本身幂等，
+# 在 SDK 可用后、建连前打即可。
 
 # 延迟导入
 LARK_AVAILABLE = False
@@ -128,6 +293,9 @@ class FeishuAdapter(BasePlatformAdapter):
             from lark_oapi.event.dispatcher_handler import EventDispatcherHandler
             from lark_oapi.ws import Client as FeishuWSClient
 
+            # ssl 补丁：SDK 已可用，建连前注入（幂等，见模块级注释）
+            _patch_lark_ws_connect()
+
             # 创建事件处理器
             # 关键：直接传递 encrypt_key 和 verification_token（即使是空字符串）
             # 不要传 dummy 值！SDK 的 _do_without_validation 方法（WebSocket 使用）
@@ -155,13 +323,10 @@ class FeishuAdapter(BasePlatformAdapter):
             # 启动独立 handler loop
             self._start_handler_loop()
 
-            # 在独立线程中运行客户端
-            self._feishu_thread = threading.Thread(
-                target=self._run_feishu_client,
-                name="FeishuWSClient",
-                daemon=True,
-            )
-            self._feishu_thread.start()
+            # 重置重连计数：connect() 是全新一次连接（用户开关 / 启动期补启），
+            # 不是被动断线后的续接，不应继承上一轮的 attempts
+            self._reconnect_attempts = 0
+            self._spawn_ws_thread()
 
             self._running = True
             self._connected = True
@@ -192,6 +357,19 @@ class FeishuAdapter(BasePlatformAdapter):
         """运行消息处理事件循环"""
         asyncio.set_event_loop(self._handler_loop)
         self._handler_loop.run_forever()
+
+    def _spawn_ws_thread(self) -> None:
+        """拉起 ws 客户端线程（首次 connect 与被动断线重连共用）。
+
+        抽成独立方法的原因：重连路径需在旧线程内换新线程，若在
+        _run_feishu_client 里直接递归调用自身会线程套线程、无法退出。
+        """
+        self._feishu_thread = threading.Thread(
+            target=self._run_feishu_client,
+            name="FeishuWSClient",
+            daemon=True,
+        )
+        self._feishu_thread.start()
 
     def _run_feishu_client(self) -> None:
         """在独立线程中运行飞书客户端
@@ -229,8 +407,50 @@ class FeishuAdapter(BasePlatformAdapter):
                 self._ws_loop = None
                 loop.close()
 
+            # 被动断线自愈：非主动停止 + 仍标记运行中 → 退避重连
+            if not self._stop_event.is_set() and self._running:
+                self._schedule_ws_reconnect()
+
         except Exception as e:
             logger.error("[Feishu] Thread error: {}", e)
+
+    def _schedule_ws_reconnect(self) -> None:
+        """ws 线程被动退出后的补偿重连（退避 + 次数上限）。
+
+        背景：lark SDK 的 auto_reconnect 只覆盖自身驱动协程内的重连窗口，
+        驱动协程一旦退出 start() 即返回、本线程结束、loop 关闭，而
+        _connected 仍为 True 无人复位 → 宿主停在「假连接」，消息静默丢失
+        直到重启。此处做补偿。
+
+        在旧 ws 线程内 sleep 后经 _spawn_ws_thread 换新线程，不递归自身。
+        """
+        if self._reconnect_attempts >= self._max_reconnect_attempts:
+            logger.error(
+                "[Feishu] 被动断线重连达上限 {} 次，停止重连（需重启或重开关插件）",
+                self._max_reconnect_attempts,
+            )
+            self._connected = False
+            self._running = False
+            return
+        self._reconnect_attempts += 1
+        # 线性退避 2s/4s/6s/8s/10s，给对端与网络恢复留时间
+        delay = min(2 * self._reconnect_attempts, 10)
+        logger.warning(
+            "[Feishu] 连接意外断开，{}s 后第 {}/{} 次重连",
+            delay,
+            self._reconnect_attempts,
+            self._max_reconnect_attempts,
+        )
+        # 可被 stop_event 打断：用户主动停时不必等满 delay
+        if self._stop_event.wait(delay):
+            logger.debug("[Feishu] 重连等待期内收到停止信号，取消重连")
+            return
+        try:
+            self._spawn_ws_thread()
+        except Exception as e:
+            logger.error("[Feishu] 重连失败: {}", e)
+            self._connected = False
+            self._running = False
 
     def _on_feishu_message(self, data: Any) -> None:
         """处理接收到的飞书消息
@@ -259,6 +479,13 @@ class FeishuAdapter(BasePlatformAdapter):
             if message is None:
                 logger.debug("[Feishu] No message in callback data")
                 return
+            logger.info(
+                "[Feishu] 收到原始消息: message_id={} chat_id={} chat_type={} msg_type={}",
+                getattr(message, "message_id", ""),
+                getattr(message, "chat_id", ""),
+                getattr(message, "chat_type", ""),
+                getattr(message, "message_type", ""),
+            )
 
             # 提取字段
             message_id = str(getattr(message, "message_id", "") or "")
@@ -346,6 +573,12 @@ class FeishuAdapter(BasePlatformAdapter):
                 media_types=[],
             )
 
+            logger.info(
+                "[Feishu] 消息待分发: text={!r} handler_set={} loop_running={}",
+                text[:50],
+                self._message_handler is not None,
+                (self._handler_loop is not None and self._handler_loop.is_running()),
+            )
             if self._message_handler:
                 try:
                     # 重要：WS client 回调运行在 WS 线程的事件循环中，
@@ -356,6 +589,10 @@ class FeishuAdapter(BasePlatformAdapter):
                         asyncio.run_coroutine_threadsafe(
                             self._message_handler(event),
                             loop,
+                        )
+                        logger.info(
+                            "[Feishu] 已投递至宿主 handler: message_id={}",
+                            message_id,
                         )
                     else:
                         logger.error("[Feishu] Handler loop not running, dropping message")

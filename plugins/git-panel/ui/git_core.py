@@ -23,6 +23,10 @@ _log = logging.getLogger("git-panel")
 GIT_TIMEOUT = 15      # 本地操作超时（秒）
 NETWORK_TIMEOUT = 60  # 网络操作（push/pull/fetch）超时（秒）
 
+# Windows 下隐藏 git 子进程控制台窗口，避免闪黑窗；
+# POSIX 上该常量不存在，getattr 兜底 0（macOS/Linux 传 0 等价于不设置）
+_HIDE_WINDOW_FLAG = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+
 
 # ========================================================================
 # git 命令执行（唯一 subprocess 入口）
@@ -43,7 +47,7 @@ def _run_git(cwd: str, *args: str, strip: bool = True, timeout: int = GIT_TIMEOU
             encoding="utf-8",
             errors="replace",
             timeout=timeout,
-            creationflags=subprocess.CREATE_NO_WINDOW,
+            creationflags=_HIDE_WINDOW_FLAG,
         )
         out, err = r.stdout, r.stderr
         if strip:

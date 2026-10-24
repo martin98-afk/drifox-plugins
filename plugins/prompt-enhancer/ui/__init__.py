@@ -14,18 +14,20 @@
 实现要点：
 - 通过 UI 扩展点 context["main_widget"] 读取输入框（input_area）与当前模型配置；
 - 通过 PluginConfigStore 读写插件配置（enhance_prompt / enhance_model）；
-- 一次性对话范式复用 app.utils.http_client.build_openai_client（参考 topic_summary.py）；
+- 请求发出走宿主 services["create_engine_session"]（EP3 契约）：经 ModelAdapter /
+  Serializer / Transport 三层分派，服务商伪装头、responses 协议、思考参数映射、
+  智能重试全部自动生效，插件零协议知识；
 - 后台 QRunnable + 信号桥接，结果在主线程注回输入框，避免 UI 卡死。
 
-模型配置来自 main_widget._valid_configs（私有状态，非公开 API），用户已确认接受复用。
+模型配置来自宿主 services["get_provider_config"]（主程序读内存态已解锁明文，
 「提示词增强模型」配置项为空时沿用调用方当前 provider/model，否则按
-「ProviderName:ModelName」格式从主程序 LLM.SavedProviders 解析（与主程序
-标题生成/子智能体模型选择器同格式）。
+「ProviderName:ModelName」格式解析（与主程序标题生成/子智能体模型选择器同格式）。
 """
 
 import json
 import os
 import re
+import threading
 from typing import Any, Dict, List, Optional, Tuple
 
 from loguru import logger
@@ -44,6 +46,17 @@ except Exception:  # noqa: BLE001
     TextEdit = None  # type: ignore
 
 PLUGIN_NAME = "prompt-enhancer"
+
+# 增强任务的采样/上限（与原一次性调用逐点一致：temperature=0.3 / max_tokens=2000）。
+# 思考模式显式关闭：EngineSession 的 model_config_override 是顶层浅合并，
+# override 里没有的键会从「当前窗口模型配置」漏进来（思考模式/思考等级等），
+# 增强模型不支持思考时会在 extra_body 里塞无效参数 → 特殊服务商 400。
+# 交给主程序注入：o1/o3 等拒收 temperature 的模型由 transport 的 skip_params 自动剔除。
+_ENHANCE_PARAMS = {"温度": 0.3, "最大Token": 2000, "思考模式": False}
+# turn() 内部超时（秒）与硬看门狗缓冲：daemon 线程下内部超时收尾可能整链未发生
+# （cron-tasks 实测），超时后放弃等待直接报错，避免按钮永久卡在「优化中」
+_TURN_TIMEOUT = 120.0
+_WATCHDOG_GRACE = 30.0
 
 DEFAULT_ENHANCE_PROMPT = (
     "你是一个提示词优化专家。请把用户输入的粗略想法改写成清晰、结构化、高信息密度的提示词："
@@ -98,7 +111,13 @@ _SYSTEM_CONFIG_CACHE: Dict[str, Any] = {"path": None, "mtime": 0.0, "data": None
 
 
 def _load_system_config() -> Optional[Dict[str, Any]]:
-    """读取并缓存主程序 app.config（按文件 mtime 失效，避免热重载期间读到陈旧快照）。"""
+    """读取并缓存主程序 app.config（按文件 mtime 失效，避免热重载期间读到陈旧快照）。
+
+    ⚠️ 仅供读取**非密钥字段**（provider_name / 模型列表 等用于渲染下拉选项）。
+    严禁用它取 API_KEY：密钥模式下磁盘该字段是密文（password 模式 enc:v2:…）
+    或空串（keyring 模式），拿它发请求必然 401。要 key 走宿主
+    services["get_provider_config"]（见 _get_llm_config）。
+    """
     cfg_path = _resolve_system_config_path()
     if not cfg_path:
         return None
@@ -182,23 +201,6 @@ def _parse_enhance_model(value: str) -> Optional[Tuple[str, str]]:
     for display, _v in _parse_provider_options():
         if display == f"{provider}:{model}":
             return provider, model
-    return None
-
-
-def _get_provider_config_by_name(provider_name: str) -> Optional[Dict[str, Any]]:
-    """按服务商名取 SavedProviders 中的完整配置（API_KEY / API_URL / 模型名称…）。
-
-    若同名前缀冲突（理论上极少），取第一条匹配。
-    """
-    data = _load_system_config()
-    if data is None:
-        return None
-    saved = ((data.get("LLM") or {}).get("SavedProviders") or {})
-    for _cid, p in saved.items():
-        if not isinstance(p, dict):
-            continue
-        if (p.get("provider_name") or p.get("name") or "") == provider_name:
-            return p
     return None
 
 
@@ -474,33 +476,79 @@ class _EnhanceConfigCard(_ConfigCardBase):
         self._echo()
 
 
+def _get_provider_config_from_memory(
+    main_widget, provider: str = "", model: str = ""
+) -> Optional[Dict[str, Any]]:
+    """从宿主**内存态**取服务商配置（含已解密明文 API_KEY）。
+
+    兜底路径：宿主未提供 services["get_provider_config"]（旧版主程序）时使用。
+    严禁读 app.config 文件——密钥模式下磁盘 API_KEY 是密文（enc:v2:…）或空串，
+    拿它发请求必然 401。
+    """
+    valid = getattr(main_widget, "_valid_configs", None)
+    if not isinstance(valid, dict) or not valid:
+        return None
+    if provider:
+        # 按 config_id / display_name / provider_name 匹配（与主程序五级解析同序）
+        if provider in valid:
+            return dict(valid[provider])
+        for _cid, info in valid.items():
+            if not isinstance(info, dict):
+                continue
+            if provider in (info.get("display_name"), info.get("provider_name"), info.get("name")):
+                return dict(info)
+        return None
+    name = getattr(main_widget, "_current_provider_name", None) or ""
+    cfg = valid.get(name)
+    return dict(cfg) if isinstance(cfg, dict) else None
+
+
 def _get_llm_config(
     main_widget,
     override_provider: Optional[str] = None,
     override_model: Optional[str] = None,
+    services: Optional[Dict[str, Any]] = None,
 ) -> Optional[Dict[str, Any]]:
     """取执行本次提示词增强的模型配置（API_KEY / API_URL / 模型名称）。
 
-    override_provider/override_model 均提供时，优先使用主程序 SavedProviders 中
-    对应服务商的配置（API_KEY/API_URL 来自服务商，「模型名称」使用 override_model）；
-    否则沿用主程序当前会话模型配置（私有状态 _valid_configs，非公开 API；用户已确认接受）。
+    取配置的**唯一正确通道**是宿主：
+    1. services["get_provider_config"]（主程序公开服务，读内存态已解锁明文，
+       并叠加模型默认参数，与主程序发起请求的配置同构）；
+    2. 兜底遍历 main_widget._valid_configs（同为内存态，旧版主程序无服务时用）。
 
-    返回 None 表示无可用配置（需提示用户先配置模型）。
+    绝不 json.load(app.config)：密钥模式下磁盘 API_KEY 是密文或空串。
+
+    override_provider/override_model 均提供时优先用该服务商；否则沿用调用方
+    当前 provider/model。返回 None 表示无可用配置（需提示用户先配置模型）。
     """
-    if override_provider and override_model:
-        provider_cfg = _get_provider_config_by_name(override_provider)
-        if provider_cfg:
-            merged = dict(provider_cfg)  # 拷贝避免改主配置
-            merged["模型名称"] = override_model
-            # 若 override_model 在该 provider 的「模型列表」里不存在，保持 override_model（自定义模型名兜底）
-            return merged
-        # 服务商已被用户从主配置删除 → 兜底用调用方当前模型，不报错（_echo 时已清空）
+    provider = override_provider or ""
+    model = override_model or ""
 
-    valid = getattr(main_widget, "_valid_configs", None)
-    if not isinstance(valid, dict):
+    # 1) 宿主公开服务（首选）
+    if isinstance(services, dict):
+        get_cfg = services.get("get_provider_config")
+        if callable(get_cfg):
+            try:
+                cfg = get_cfg(provider, model)
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"[PromptEnhancer] get_provider_config 调用失败: {e}")
+                cfg = None
+            # 判据是「配置非空」而非「key 非空」：免鉴权服务商（如 OpenCode 免费
+            # 模型）API_KEY 本就为空，build_openai_client 会剥掉 Authorization 头
+            if isinstance(cfg, dict) and cfg:
+                return cfg
+            # 服务返回空（provider 不存在 / 宿主未就绪）→ 继续兜底，
+            # 显式指名的 provider 失效时不静默串到别的服务商
+            if provider:
+                return None
+
+    # 2) 内存态兜底（旧版主程序 / 未注入 services 的调用路径）
+    cfg = _get_provider_config_from_memory(main_widget, provider, model)
+    if not isinstance(cfg, dict):
         return None
-    name = getattr(main_widget, "_current_provider_name", None) or "系统默认配置"
-    return valid.get(name)
+    if model:
+        cfg["模型名称"] = model
+    return cfg
 
 
 def _resolve_enhance_model(main_widget) -> Optional[Tuple[str, str]]:
@@ -560,10 +608,12 @@ def _on_enhance_clicked(context: Dict[str, Any]) -> None:
         main_widget,
         override_provider=override[0] if override else None,
         override_model=override[1] if override else None,
+        services=context.get("services"),
     )
     if not llm_config:
         _notify(main_widget, "提示词增强", "未找到模型配置，请先在设置中配置模型", "warning")
         return
+    llm_config = {**llm_config, **_ENHANCE_PARAMS}
 
     _busy_windows[window_id] = True
     _show_progress(main_widget, window_id, "正在优化提示词…")
@@ -580,6 +630,7 @@ def _on_enhance_clicked(context: Dict[str, Any]) -> None:
         enhance_prompt=enhance_prompt,
         llm_config=llm_config,
         signals=signals,
+        services=context.get("services"),
     )
     pool = getattr(main_widget, "_gen_thread_pool", None) or QThreadPool.globalInstance()
     pool.start(task)
@@ -591,37 +642,78 @@ class _EnhanceSignals(QObject):
 
 
 class _EnhanceTask(QRunnable):
-    def __init__(self, text, enhance_prompt, llm_config, signals):
+    """一次性增强任务 — 经宿主 EngineSession（EP3 契约）驱动。
+
+    原实现自建 openai client 直发 chat.completions.create，绕过
+    ModelAdapter / Serializer / Transport 三层分派，导致：
+    - 服务商伪装头缺失（CodeBuddy X-Product + 动态 Authorization、
+      OpenCode x-opencode-session）→ 401 / 400 MissingSessionID
+    - GPT-5 系应走 /v1/responses、Code Assist 应走原生协议 → 400
+    - 思考参数映射 / max_tokens 钳制 / 15 次智能重试全部失效
+
+    改走 create_engine_session 后以上链路自动生效，插件零协议知识。
+    """
+
+    def __init__(self, text, enhance_prompt, llm_config, signals, services=None):
         super().__init__()
         self.text = text
         self.enhance_prompt = enhance_prompt
         self.llm_config = llm_config
         self.signals = signals
+        self.services = services
         self.setAutoDelete(True)
 
     def run(self):
-        try:
-            from app.utils.http_client import build_openai_client
+        holder: Dict[str, Any] = {}
+        done = threading.Event()
 
-            client = build_openai_client(
-                api_key=self.llm_config.get("API_KEY", ""),
-                base_url=self.llm_config.get("API_URL"),
-            )
-            resp = client.chat.completions.create(
-                model=self.llm_config.get("模型名称", "gpt-4o"),
-                messages=[
-                    {"role": "system", "content": self.enhance_prompt},
-                    {"role": "user", "content": self.text},
-                ],
-                temperature=0.3,
-                max_tokens=2000,
-            )
-            result = resp.choices[0].message.content.strip()
-            result = _strip_thinking(result)
-            self.signals.done.emit(result)
-        except Exception as e:
-            logger.exception(f"[PromptEnhancer] 增强失败: {e}")
-            self.signals.error.emit(str(e))
+        def _turn():
+            try:
+                create = (self.services or {}).get("create_engine_session")
+                if not callable(create):
+                    holder["error"] = "主程序未提供 create_engine_session 服务，请升级 DriFox 至 0.5.10+"
+                    return
+                session: Any = create(
+                    "prompt-enhancer",
+                    model_config_override=self.llm_config,
+                    # 全局 hook 全跳过：BuildSystemPrompt 等注入会混进增强指令污染输出
+                    hook_policy_id="none",
+                )
+                try:
+                    result = session.turn(
+                        system=self.enhance_prompt,
+                        user=self.text,
+                        tools=[],
+                        timeout=_TURN_TIMEOUT,
+                    )
+                finally:
+                    session.cleanup()
+                if getattr(result, "timed_out", False):
+                    holder["error"] = f"优化超时（>{int(_TURN_TIMEOUT)}s）"
+                elif getattr(result, "cancelled", False):
+                    holder["error"] = "已取消"
+                elif getattr(result, "error", None):
+                    holder["error"] = str(result.error)
+                else:
+                    holder["text"] = getattr(result, "text", "") or ""
+            except Exception as e:  # 顶层屏障：后台线程静默死亡比报错更糟
+                logger.exception(f"[PromptEnhancer] 增强失败: {e}")
+                holder["error"] = f"{type(e).__name__}: {e}"
+            finally:
+                done.set()
+
+        threading.Thread(target=_turn, daemon=True, name="pe-turn").start()
+
+        # 硬看门狗：不信任 turn() 内部超时（cron-tasks 实测 daemon 线程下超时收尾
+        # 可能整链不发生），到期放弃等待直接报错，避免按钮永久卡在「优化中」
+        if not done.wait(_TURN_TIMEOUT + _WATCHDOG_GRACE):
+            self.signals.error.emit(f"优化超时（>{int(_TURN_TIMEOUT)}s），已放弃等待")
+            return
+        err = holder.get("error")
+        if err:
+            self.signals.error.emit(str(err))
+        else:
+            self.signals.done.emit(_strip_thinking(holder.get("text", "")))
 
 
 def _strip_thinking(text: str) -> str:

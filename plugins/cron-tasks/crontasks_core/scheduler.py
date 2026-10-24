@@ -443,7 +443,7 @@ class CronScheduler(QObject):
         if job.agent:
             return job.agent
         try:
-            from app.config.settings import Settings
+            from app.utils.config import Settings
 
             return Settings.get_instance().llm_primary_agent.value or "build"
         except Exception:

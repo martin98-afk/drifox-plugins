@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "prisma": {
+      "type": "http",
+      "url": "https://mcp.prisma.io/mcp",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {},
+      "auth": {
+        "type": "oauth",
+        "client_name": "DriFox",
+        "scope": ""
+      }
+    }
+  }
+}

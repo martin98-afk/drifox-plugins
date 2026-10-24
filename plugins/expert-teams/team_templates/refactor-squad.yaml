@@ -1,0 +1,23 @@
+# 重构小队 —— /team --load=refactor-squad
+# 场景：结构性重构。测绘师先画影响面定小步路径，外科按图施工，审计逐步验证行为等价。
+schema_version: 1
+template_name: refactor-squad
+description: 重构小队：依赖测绘 → 小步等价重构 → 等价性审计，保持测试常绿
+# ── v2 预埋字段（schema v1 静默忽略，主程序升级后自动生效）──
+display_name: 重构小队
+category: 代码演进
+leader: leader
+default_init_prompt: 开始重构。先让测绘师梳理调用关系与影响面、给出小步等价重构路径（含每步验证方式与测试缺口），再由外科严格按路径图逐步施工（每步验证、红即回退），审计逐步核对行为等价。你（leader）控制节奏并裁决路径变更，禁止代写成员产出。重构目标：<在此粘贴重构范围与动机>
+agents:
+  - agent_name: leader
+    description: 重构指挥：控节奏防蔓延，裁决路径变更与回退决策，收口每步结果
+    profession: 重构指挥
+  - agent_name: dependency-mapper
+    description: 测绘师·衡图：只读梳理调用图与影响面，规划小步等价重构路径
+    profession: 测绘师
+  - agent_name: refactor-surgeon
+    description: 重构外科·乙刀：严格按路径图小步施工，每步验证、红即回退上报
+    profession: 重构外科
+  - agent_name: equivalence-auditor
+    description: 等价审计·丙衡：只读逐步验证行为等价，审查死代码残留与规范偏离
+    profession: 等价审计

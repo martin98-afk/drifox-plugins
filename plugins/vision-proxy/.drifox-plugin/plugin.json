@@ -1,0 +1,73 @@
+{
+    "name": "vision-proxy",
+    "description": "图片代理 — 当前模型不支持视觉时，把图片转发给配置的多模态模型，取回文字描述交给当前模型继续推理",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "0.2.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "api_version": 2,
+    "min_host_version": "0.6.10",
+    "capabilities": [
+        "engine.session",
+        "model.config",
+        "provider.list",
+        "model.enumerate"
+    ],
+    "keywords": [
+        "vision",
+        "multimodal",
+        "image",
+        "视觉",
+        "多模态",
+        "图片代理"
+    ],
+    "components": {
+        "tools": true,
+        "ui": true
+    },
+    "config_schema": {
+        "title": "图片代理（视觉模型）",
+        "fields": [
+            {
+                "key": "vision_provider",
+                "label": "视觉服务商",
+                "type": "text",
+                "default": "",
+                "placeholder": "留空则跟随当前窗口服务商",
+                "description": "承接图片理解的服务商名（config_id / 显示名 / provider_name 均可）。留空表示不换服务商，直接用当前模型。"
+            },
+            {
+                "key": "vision_model",
+                "label": "视觉模型",
+                "type": "text",
+                "default": "",
+                "placeholder": "留空则跟随当前模型",
+                "description": "承接图片理解的模型名，必须支持图像输入（如 gpt-4o / claude-sonnet-4 / gemini-2.0-flash / qwen-vl-max）。留空则用当前窗口选中的模型。"
+            },
+            {
+                "key": "timeout_sec",
+                "label": "超时（秒）",
+                "type": "number",
+                "default": 120,
+                "min": 10,
+                "max": 600,
+                "description": "等待视觉模型返回的秒数。图片理解通常 10-40 秒，思考模型建议 ≥180。"
+            },
+            {
+                "key": "max_images",
+                "label": "单次最多图片数",
+                "type": "number",
+                "default": 4,
+                "min": 1,
+                "max": 8,
+                "description": "一次调用允许携带的图片数量上限，防止单次请求 token 爆掉。"
+            }
+        ]
+    }
+}

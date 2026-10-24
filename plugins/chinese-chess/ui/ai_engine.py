@@ -1,20 +1,20 @@
 # -*- coding: utf-8 -*-
 """中国象棋 AI 引擎 — 单轮 LLM 请求 + JSON 走法解析
 
-EP3→EP4 重构：仿 prompt_enhancer 的 _EnhanceTask 范式，把原
-EngineSession/executor/QThread/done_ev 流式链路替换为
-单次 chat.completions.create() 调用：
+EP3 迁移：LLM 调用经宿主 create_engine_session（EngineSession 契约）驱动，
+不再自建 openai client 直发（非流式直发会被只支持流式的服务商 400 拒绝，
+且绕过 Transport 层丢失伪装头/协议适配/max_tokens 钳制/智能重试）：
 
-1. ChessCard 经 ctx 拿到 main_widget，调 _get_llm_config()
-2. _AIMoveTask.run() 调 _one_shot_ask() 拿响应
-3. parse_move() 拆 JSON 走法；_is_legal() 校验
-4. 非法或异常 → 兜底 random_legal_move()
-5. 信号 done(move, source) 回到主线程落子
+1. ChessCard 经 ctx 拿 main_widget + services
+2. _resolve_side_config() 按红/黑方选择解析模型配置（关思考 + 低温度）
+3. _AIMoveTask.run() 调 _one_shot_ask() → session.turn() 拿响应
+4. parse_move() 拆 JSON 走法；_is_legal() 校验
+5. 非法或异常 → 兜底 fallback_legal_move()
+6. 信号 done(move, source) 回到主线程落子
 
-走子语义不变（解析失败/非法/无候选 → 随机兜底），但运行栈从 7 层压到 2 层。
+走子语义不变（解析失败/非法/无候选 → 兜底），协议适配全部交宿主。
 """
 
-import random
 import re
 import threading
 from typing import Any, Dict, List, Optional, Tuple
@@ -41,25 +41,62 @@ COORD_GUIDE = (
 )
 
 SYSTEM_PROMPT = (
-    "你是中国象棋高手。请根据局面选择最佳走法。\n"
+    "你是中国象棋高手。请根据局面从【合法走法清单】中选择最佳一步。\n"
+    "决策优先级：\n"
+    "1. 能将死对方的走法 > 吃子（车>炮>马>兵）且吃后不被反吃 > 解除将军 > 出子/护帅\n"
+    "2. 严禁将/帅裸奔：走后不能让对方炮/车直接照面将军\n"
+    "3. 禁止同一点对来回移动（重复走法浪费步数且长打判负）\n"
+    "4. 优先保持车马炮灵活性，不要过早挪动九宫内士象\n"
     "严格要求：\n"
     '1. 仅输出 1 行 JSON，格式 {"from":[c1,r1],"to":[c2,r2]}，c 与 r 为整数\n'
-    "2. 不要 markdown 代码块、不要多余文字、不要解释\n"
-    "3. 不要输出 <think> 等思考过程内容，仅输出最终走法 JSON"  # 对齐 prompt-enhancer：显式禁止 thinking 块
+    "2. from/to 必须逐字取自清单中某一条的起点与终点，禁止自创坐标\n"
+    "3. 不要 markdown 代码块、不要多余文字、不要解释\n"
+    "4. 不要输出 <think> 等思考过程内容，仅输出最终走法 JSON"  # 对齐 prompt-enhancer：显式禁止 thinking 块
 )
+
+# 棋子中文名（红大写/黑小写，board 存红大写）
+_PIECE_CN_RED = {"K": "帅", "A": "仕", "B": "相", "N": "马", "R": "车", "C": "炮", "P": "兵"}
+_PIECE_CN_BLACK = {"k": "将", "a": "士", "b": "象", "n": "马", "r": "车", "c": "炮", "p": "卒"}
+
+
+def _legal_moves_section(board, side: str) -> str:
+    """把 gen_legal_moves 结果渲染成提示词清单（棋子名 + 坐标）。"""
+    cn = _PIECE_CN_RED if side == RED else _PIECE_CN_BLACK
+    moves = gen_legal_moves(board, side)
+    lines = []
+    for c1, r1, c2, r2 in moves:
+        name = cn.get(board[r1][c1], "?")
+        cap = "吃" if board[r2][c2] != "." else ""
+        lines.append(f"({c1},{r1})->({c2},{r2}) {name}{cap}")
+    return "\n".join(lines)
 
 
 def build_user_prompt(board, side: str, history: List[str]) -> str:
-    """构造用户提示：含坐标说明 + 历史 + ASCII 局面"""
+    """构造用户提示：坐标说明 + 近期历史（防重复）+ ASCII 局面 + 合法走法清单。
+
+    附清单是走法质量的关键：弱模型自由生成坐标的非法率高（实测 glm-flash
+    系三连非法触发兜底）；附近期历史防同子往返（实测将 (4,0)↔(4,1) 来回走）。
+    """
     side_cn = "红方" if side == RED else "黑方"
-    last = history[-1] if history else "（首步，无历史）"
+    recent = history[-8:]
+    last = recent[-1] if recent else "（首步，无历史）"
+    hist_block = ""
+    if recent:
+        hist_block = (
+            "【本局走法序列】（你方走法不得与序列中任一走法完全相同，避免往返）：\n"
+            + "\n".join(f"{i + 1}. {m}" for i, m in enumerate(recent))
+            + "\n\n"
+        )
     return (
         f"{COORD_GUIDE}\n\n"
         f"你是 {side_cn}，现在轮到你走。\n"
         f"上一步：{last}\n\n"
-        f"当前局面（红方在底部，· 表示空格）：\n"
+        + hist_block
+        + f"当前局面（红方在底部，· 表示空格）：\n"
         f"{board_to_ascii(board)}\n\n"
-        "请输出你的走法（仅 1 行 JSON）。"
+        f"【合法走法清单】（只能从中选一条）：\n"
+        f"{_legal_moves_section(board, side)}\n\n"
+        "请从清单中选择你的最佳走法（仅 1 行 JSON）。"
     )
 
 
@@ -159,6 +196,10 @@ def random_legal_move(board, side: str) -> Optional[Tuple[int, int, int, int]]:
     return moves[0]  # 取第一个而非随机，保持可复现
 
 
+# ── 单轮请求超时（关思考后普通模型 60s 足够）──
+_TURN_TIMEOUT = 60.0
+
+
 def _strip_thinking(text: str) -> str:
     """剥离 <think>…</think> 段落（防御 reasoning 模型漏出思考）"""
     if not text:
@@ -169,16 +210,84 @@ def _strip_thinking(text: str) -> str:
 # ── 模型配置 ──
 
 
-def _get_llm_config(main_widget) -> Optional[Dict[str, Any]]:
-    """复用主程序当前会话模型配置（沿用 prompt_enhancer 思路）。
+def _get_llm_config(
+    main_widget,
+    provider: str = "",
+    model: str = "",
+    services: Optional[Dict[str, Any]] = None,
+) -> Optional[Dict[str, Any]]:
+    """取模型配置（API_KEY / API_URL / 模型名称）。
 
-    main_widget._valid_configs 是私有状态；用户已接受 prompt_enhancer 同方式读取。
+    唯一正确通道 services["get_provider_config"]（宿主内存态明文 + 模型
+    默认参数）；旧宿主兜底遍历 main_widget._valid_configs。
+    绝不读 app.config 磁盘文件——密钥模式下 API_KEY 是密文。
+
+    provider/model 为空时沿用主程序当前会话模型；提供时用指定服务商，
+    且显式指名的 provider 失效时不静默串到别的服务商（返 None）。
     """
+    if isinstance(services, dict):
+        get_cfg = services.get("get_provider_config")
+        if callable(get_cfg):
+            try:
+                cfg = get_cfg(provider, model)
+            except Exception as e:  # noqa: BLE001
+                logger.warning(f"[chinese-chess] get_provider_config 调用失败: {e}")
+                cfg = None
+            # 判据是「配置非空」非「key 非空」：免鉴权服务商 API_KEY 本就为空
+            if isinstance(cfg, dict) and cfg:
+                return dict(cfg)
+            if provider:
+                return None
+
     valid = getattr(main_widget, "_valid_configs", None)
     if not isinstance(valid, dict) or not valid:
         return None
-    name = getattr(main_widget, "_current_provider_name", None) or "系统默认配置"
-    return valid.get(name)
+    if provider:
+        # 按 config_id / display_name / provider_name 匹配（与主程序五级解析同序）
+        cfg = None
+        if provider in valid:
+            cfg = dict(valid[provider])
+        else:
+            for _cid, info in valid.items():
+                if isinstance(info, dict) and provider in (
+                    info.get("display_name"),
+                    info.get("provider_name"),
+                    info.get("name"),
+                ):
+                    cfg = dict(info)
+                    break
+        if cfg is None:
+            return None
+    else:
+        name = getattr(main_widget, "_current_provider_name", None) or ""
+        raw = valid.get(name)
+        cfg = dict(raw) if isinstance(raw, dict) else None
+        if cfg is None:
+            return None
+    if model:
+        cfg["模型名称"] = model
+    return cfg
+
+
+def _resolve_side_config(
+    main_widget,
+    services: Optional[Dict[str, Any]],
+    side: str,
+    card,
+) -> Optional[Dict[str, Any]]:
+    """红/黑方各自生效的模型配置。
+
+    设置卡红/黑模型格式 "Provider:Model"，空 = 沿用主程序当前会话模型；
+    叠加象棋专用参数：关思考（走法无需 reasoning，提速）+ 低温度。
+    """
+    sel = str(getattr(card, "_red_model" if side == RED else "_black_model", "") or "")
+    provider, model = "", ""
+    if ":" in sel:
+        provider, model = sel.split(":", 1)
+    cfg = _get_llm_config(main_widget, provider, model, services)
+    if not cfg:
+        return None
+    return {**cfg, "温度": 0.3, "思考模式": False}
 
 
 def _resolve_main_widget(card) -> Optional[Any]:
@@ -254,6 +363,7 @@ class _AIMoveTask(QRunnable):
         prompt_suffix: Optional[str] = None,
         side_cn: Optional[str] = None,
         model_name: Optional[str] = None,
+        services: Optional[Dict[str, Any]] = None,
     ):
         super().__init__()
         # 深拷贝棋盘，避免主线程修改影响后台任务
@@ -265,6 +375,7 @@ class _AIMoveTask(QRunnable):
         self.history = list(history or [])
         self.llm_config = llm_config
         self.signals = signals
+        self.services = services or {}
         self.max_retries = max_retries if max_retries is not None else self.MAX_RETRY_ATTEMPTS - 1
         self.prompt_suffix = prompt_suffix  # 可选：追加到 system prompt 末尾的额外约束
         self._lock = threading.Lock()
@@ -358,18 +469,25 @@ class _AIMoveTask(QRunnable):
     def _one_shot_ask(
         self, user_prompt: str, retry_hint: Optional[str] = None
     ) -> Tuple[str, Optional[str]]:
-        """单轮 chat.completions.create() 调用。
+        """经宿主 EngineSession（EP3）执行单轮 LLM 调用。
 
-        重试逻辑在 run() 主循环控制；本函数只做一次 LLM 调用。
+        原实现自建 openai client 直发**非流式** chat.completions.create，
+        只支持流式的服务商直接 400（11101 Non-stream not supported）；
+        且绕过 ModelAdapter/Serializer/Transport 后，伪装头、GPT-5 系
+        /v1/responses 协议、max_tokens 钳制、智能重试全部失效。
 
         Returns:
-            (text, finish_reason) — text 已剥离 <think> 段落；全失败抛异常。
-        """
-        from app.utils.http_client import build_openai_client
+            (text, finish_reason) — text 已剥离 <think>；宿主 ChatResult
+            不暴露 finish_reason，恒为 None（截断场景由解析失败重试兜住）。
 
-        api_key = self.llm_config.get("API_KEY", "")
-        base_url = self.llm_config.get("API_URL")
-        model = self.llm_config.get("模型名称", "gpt-4o")
+        Raises:
+            RuntimeError / TimeoutError — 供 run() 计入重试。
+        """
+        create = (self.services or {}).get("create_engine_session")
+        if not callable(create):
+            raise RuntimeError(
+                "主程序未提供 create_engine_session 服务，请升级 DriFox ≥ 0.5.10"
+            )
 
         # 解析失败重试：prompt 强化追加（明确"仅输出标准 JSON"）
         extra_suffix = self.prompt_suffix or ""
@@ -380,40 +498,46 @@ class _AIMoveTask(QRunnable):
                 f"只输出 1 行：{{\"from\":[c1,r1],\"to\":[c2,r2]}}"
             )
 
-        client = build_openai_client(api_key=api_key, base_url=base_url)
-        # max_tokens 需给 reasoning 模型预留思考预算（实测 MiniMax-M3 用 ~499 token 思考），
-        # 500 太小会导致思考占满、答案截断为 length=length / 空响应。提到 2000 留充足余量。
-        resp = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT + extra_suffix},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.3,
-            max_tokens=2000,
+        session = create(
+            "chinese-chess",
+            model_config_override=self.llm_config,
+            # 全局 hook 全跳过：象棋单步决策不吃 BuildSystemPrompt 等注入
+            hook_policy_id="none",
         )
-        fr = getattr(resp.choices[0], "finish_reason", None)
-        msg = resp.choices[0].message
-        text = (msg.content or "").strip()
-        logger.debug(
-            f"[chinese-chess] LLM 响应: model={model}, finish_reason={fr}, "
-            f"content_len={len(msg.content or '')}, usage={getattr(resp, 'usage', None)}"
-        )
+        try:
+            result = session.turn(
+                system=SYSTEM_PROMPT + extra_suffix,
+                user=user_prompt,
+                tools=[],
+                timeout=_TURN_TIMEOUT,
+            )
+        finally:
+            session.cleanup()
+
+        if getattr(result, "timed_out", False):
+            raise TimeoutError(f"LLM 响应超时（>{int(_TURN_TIMEOUT)}s）")
+        if getattr(result, "cancelled", False):
+            raise RuntimeError("已取消")
+        err = getattr(result, "error", None)
+        if err:
+            raise RuntimeError(str(err))
+
+        text = _strip_thinking(getattr(result, "text", "") or "")
+        model = self.llm_config.get("模型名称", "unknown")
+        logger.debug(f"[chinese-chess] LLM 响应: model={model}, content_len={len(text)}")
 
         # ── #7 扩展：emit 原始响应给右侧面板（已剥离 <think> 段但保留 JSON） ──
-        # 仅首次成功响应时 emit；空响应 / 异常时不 emit（避免面板堆噪声）
         if text:
             try:
-                raw_for_panel = _strip_thinking(text)  # 去掉 <think>…</think>
                 self.signals.thought_received.emit(
                     getattr(self, "side_cn", "?"),
                     getattr(self, "model_name", model),
-                    raw_for_panel,
+                    text,
                 )
             except Exception:  # noqa: BLE001
                 logger.debug("[chinese-chess] thought_received emit 失败")
 
-        return _strip_thinking(text), fr
+        return text, None
 
     # ================================================================
     #  校验
@@ -441,7 +565,16 @@ def start_ai_move(card):
         logger.warning("[chinese-chess] 未找到 main_widget，LLM 不可用")
         return False
 
-    llm_config = _get_llm_config(main_widget)
+    # 上下文 services（EP3 契约：get_provider_config / create_engine_session）
+    services: Dict[str, Any] = {}
+    ctx_provider = getattr(card, "_context_provider", None)
+    if callable(ctx_provider):
+        try:
+            services = (ctx_provider() or {}).get("services") or {}
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"[chinese-chess] 读取上下文 services 失败: {e}")
+
+    llm_config = _resolve_side_config(main_widget, services, card._side_to_move, card)
     if not llm_config:
         logger.warning("[chinese-chess] 未找到模型配置，LLM 不可用")
         return False
@@ -474,14 +607,9 @@ def start_ai_move(card):
 
         history.append(f"{side_cn}方 {coord_to_str(c1, r1)}-{coord_to_str(c2, r2)}")
 
-    # #7：根据 _side_to_move 决定执子方中文 + 模型名（#4 已用 _red_model/_black_model 字段）
+    # #7：根据 _side_to_move 决定执子方中文 + 模型展示名
     side_cn_now = "红" if card._side_to_move == RED else "黑"
     model_now = llm_config.get("模型名称", "unknown")
-    # 模型选择（在 #4 已实现，此处仅展示用默认模型）
-    if hasattr(card, "_red_model") and card._side_to_move == RED and card._red_model:
-        model_now = card._red_model
-    if hasattr(card, "_black_model") and card._side_to_move == BLACK and card._black_model:
-        model_now = card._black_model
 
     task = _AIMoveTask(
         board=card._board,
@@ -492,6 +620,7 @@ def start_ai_move(card):
         max_retries=1,
         side_cn=side_cn_now,
         model_name=model_now,
+        services=services,
     )
 
     pool = getattr(main_widget, "_gen_thread_pool", None) or QThreadPool.globalInstance()

@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "bailian-websearch": {
+      "type": "http",
+      "url": "https://dashscope.aliyuncs.com/api/v1/mcps/WebSearch/mcp",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {},
+      "credential": {
+        "label": "API Key",
+        "placeholder": "阿里云百炼 API Key",
+        "getUrl": "https://bailian.console.aliyun.com/?tab=model#/api-key",
+        "inject": {
+          "type": "header",
+          "name": "Authorization",
+          "scheme": "Bearer"
+        }
+      }
+    }
+  }
+}

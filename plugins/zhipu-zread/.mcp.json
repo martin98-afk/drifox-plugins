@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "zhipu-zread": {
+      "type": "http",
+      "url": "https://open.bigmodel.cn/api/mcp/zread/mcp",
+      "enabled": false,
+      "command": "",
+      "args": [],
+      "env": {},
+      "headers": {},
+      "credential": {
+        "label": "API Key",
+        "placeholder": "智谱开放平台 API Key",
+        "getUrl": "https://bigmodel.cn/usercenter/proj-mgmt/apikeys",
+        "inject": {
+          "type": "header",
+          "name": "Authorization",
+          "scheme": "Bearer"
+        }
+      }
+    }
+  }
+}

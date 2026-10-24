@@ -1,0 +1,25 @@
+{
+  "name": "baidu-ai-search",
+  "description": "百度 AI 搜索 — 用百度搜索全网实时信息。",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "liliMozi",
+    "url": "https://github.com/liliMozi/hana-connectors"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "user",
+  "min_host_version": "0.5.0",
+  "keywords": [
+    "mcp",
+    "connector",
+    "baidu-ai-search"
+  ],
+  "components": {
+    "mcp": true
+  },
+  "homepage": "https://appbuilder.baidu.com/v2/ai_search/mcp/sse"
+}

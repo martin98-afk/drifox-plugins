@@ -26,10 +26,12 @@ DriFox 内置的 `bash` 工具在 Windows 下底层也调 PowerShell，但它执
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `command` | string | 是 | 要执行的 PowerShell 脚本/命令/脚本块 |
-| `timeout` | integer | 否 | 超时秒数，默认 120（范围 1-3600） |
+| `timeout` | integer | 否 | 超时秒数，默认 120（范围 1-3600）。超时后 PowerShell 及其子进程树会被一并强杀 |
 | `description` | string | 是 | 一句话自然语言描述这条命令在做什么 |
 
 `danger = dangerous`：可执行任意命令，首次调用会触发权限确认。
+
+**超时行为**：到点后 `taskkill /T /F` 连带杀掉整棵进程树，孙进程（`npm run dev`、`python -m http.server` 等）不会变孤儿继续占端口。自行 detached、连 `taskkill /T` 也够不着的孙进程仍可能残留，但工具不会等它，返回耗时以 `timeout` 为准（上限约 `timeout + 2s`）。
 
 ## `description`：折叠卡上显示什么
 

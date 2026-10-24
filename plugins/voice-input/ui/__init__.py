@@ -10,6 +10,11 @@ idle → recording → recognizing → idle，识别中再点只提示不叠加�
 - MiniMax：asr-1.0，按量计费
 自动模式下硅基流动失败（限流/超时/key 无效）自动转 MiniMax，两个都配才互为备用；
 仅选单引擎时失败即报错。云端全部失败不落本地识别。
+
+录音后端按平台分派（manifest platforms 声明 windows / darwin）：
+- Windows：winmm (mciSendStringW)，见 recorder.py
+- macOS：AVFoundation (AVAudioRecorder)，见 recorder_mac.py；需宿主声明
+  NSMicrophoneUsageDescription，首次点按钮会弹系统授权弹窗
 """
 
 from __future__ import annotations
@@ -115,6 +120,39 @@ def _build_chain(cfg: Dict[str, str]) -> list:
     return chain
 
 
+def _make_recorder(wav_path: str):
+    """按平台造录音器：macOS 走 AVFoundation，其余（Windows）走 winmm。
+
+    两端接口同构：start() → stop_and_save(path) → close()。
+    Windows 模块顶层绑定 ctypes.windll（win 专属），必须按平台分发绕开 import。
+    """
+    if sys.platform == "darwin":
+        from .recorder_mac import MacVoiceRecorder
+
+        return MacVoiceRecorder(wav_path)
+    from .recorder import VoiceRecorder
+
+    return VoiceRecorder()
+
+
+def _mac_first_use_hint(main_widget) -> None:
+    """macOS 首次使用：提示即将弹出系统麦克风授权弹窗（本次录音可能为静音）。"""
+    if sys.platform != "darwin":
+        return
+    try:
+        from .recorder_mac import PERM_NOT_DETERMINED, permission_status
+
+        if permission_status() == PERM_NOT_DETERMINED:
+            _notify(
+                main_widget,
+                "info",
+                "语音听写",
+                "首次使用需授权麦克风：请在系统弹窗点「允许」，建议允许后再录一次",
+            )
+    except Exception as e:  # noqa: BLE001 — 提示失败不影响录音主流程
+        logger.warning(f"[voice-input] 权限提示失败（忽略）: {e}")
+
+
 def _reset_state() -> None:
     """回 idle：清引用、停定时器、删临时文件。"""
     global _state, _recorder, _overlay, _worker, _max_timer
@@ -163,11 +201,10 @@ def _on_button_clicked(context: Dict[str, Any]) -> None:
 
 
 def _start_recording(context: Dict[str, Any]) -> None:
-    """开始录音：读配置判可用性 → winmm 录音 → 弹浮窗 + 超时看门狗。"""
+    """开始录音：读配置判可用性 → 平台录音后端 → 弹浮窗 + 超时看门狗。"""
     global _state, _recorder, _overlay, _wav_path, _max_timer
     main_widget = context.get("main_widget")
     try:
-        from .recorder import VoiceRecorder
         from .overlay import RecordingOverlay
     except Exception as e:  # noqa: BLE001 — 子模块加载失败（热重载竞态等）
         logger.error(f"[voice-input] 模块加载失败: {e}")
@@ -189,7 +226,8 @@ def _start_recording(context: Dict[str, Any]) -> None:
         os.close(fd)
         _wav_path = wav_path
 
-        recorder = VoiceRecorder()
+        _mac_first_use_hint(main_widget)
+        recorder = _make_recorder(wav_path)
         recorder.start()
         _recorder = recorder
 

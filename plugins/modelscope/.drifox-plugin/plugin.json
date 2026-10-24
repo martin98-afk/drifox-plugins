@@ -1,0 +1,25 @@
+{
+  "name": "modelscope",
+  "description": "魔搭 MCP — 接入魔搭 MCP 广场上的托管服务。",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon.png"
+  },
+  "version": "1.0.0",
+  "author": {
+    "name": "liliMozi",
+    "url": "https://github.com/liliMozi/hana-connectors"
+  },
+  "license": "GPL-3.0-or-later",
+  "type": "user",
+  "min_host_version": "0.5.0",
+  "keywords": [
+    "mcp",
+    "connector",
+    "modelscope"
+  ],
+  "components": {
+    "mcp": true
+  },
+  "homepage": "https://www.modelscope.cn"
+}

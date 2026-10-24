@@ -4,6 +4,8 @@
 
 **纯云端双引擎**：硅基流动（免费模型，默认优先）+ MiniMax（按量计费）互为备用。自动模式下首选引擎失败（限流/超时/key 无效）自动转备用，单引擎选项失败即报错。识别带标点，秒级返回。
 
+**平台支持**：Windows（winmm）/ macOS（AVFoundation）。Linux 未实现，已用 `platforms` 声明支持范围，不兼容平台的市场卡片会置灰。
+
 ## 使用
 
 1. 点输入框工具栏的麦克风按钮 → 屏幕右下角弹出录音浮窗（红点脉冲 + 计时）
@@ -11,6 +13,14 @@
 3. 再次点按钮（或点浮窗主体）→ 结束录音并识别
 4. 识别文字插入输入框光标处，InfoBar 提示结果
 5. 取消：点浮窗「取消」键，丢弃本次录音
+
+### macOS 首次使用（麦克风授权）
+
+首次点麦克风按钮时，系统会弹出麦克风授权弹窗，点「允许」即可。
+
+- 未授权就点按钮：弹窗出现的同时本次录音已经开始，**这一轮录到的可能是静音**，允许后重新点一次即可。
+- 误点了「不允许」：到 系统设置 → 隐私与安全性 → 麦克风 勾选 Drifox，然后重开 DriFox。
+- 宿主 DriFox 必须在 Info.plist 声明 `NSMicrophoneUsageDescription`（`build.py` 的 `_mac_info_plist` 已内置）。缺这个键时 macOS 不弹窗、直接拒绝，录音全程数字静音。
 
 ## 配置（设置 → 语音听写配置）
 
@@ -33,13 +43,22 @@
 ## 工作原理
 
 ```
-点按钮 → winmm 录 16kHz/16bit/mono WAV（%TEMP%）
+点按钮 → 平台录音后端录 16kHz/16bit/mono WAV（临时目录）
+          ├─ Windows：winmm (mciSendStringW)
+          └─ macOS：AVFoundation (AVAudioRecorder，ctypes 直调，绕过 pyobjc 未打包问题)
         → 按配置生成识别链（自动模式：硅基流动 → MiniMax）
         → POST multipart（file + model，Bearer 认证）→ JSON {"text": ...}
         → 头部引擎失败自动转链内下一个；全部失败报错收场
         → 文本回主线程 → input_area 光标处 insertText → 删除临时 WAV
 ```
 
+录音后端按 `sys.platform` 分派（`_make_recorder`）：winmm 模块顶层绑定
+`ctypes.windll`（Windows 专属符号），非 Windows 平台必须绕开其 import。
+
 识别请求在 QThread 内执行（30 秒超时），不卡 UI；上传用标准库 urllib 手写
 multipart（宿主未收集 requests，插件零第三方依赖）。按钮位置锚定
 `after:quick-screenshot`（未安装该插件时降级到工具栏末尾）。
+
+WAV 头解析与电平统计在 `wav_utils.py`（两端共用）。注意 AVAudioRecorder 会在
+`fmt` 前插入 `JUNK`/`FLLR` 填充块（实测 data 偏移到 4096 字节），解析必须读够
+8KB 头，否则时长统计失败。

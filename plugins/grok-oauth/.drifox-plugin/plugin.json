@@ -1,0 +1,25 @@
+{
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "name": "grok-oauth",
+    "description": "xAI Grok 服务商（OAuth 登录制）— 用 SuperGrok / X Premium+ 订阅账号浏览器授权登录，直连 Grok 系列模型，无需 API Key",
+    "version": "0.1.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "min_host_version": "0.5.12",
+    "keywords": [
+        "xAI",
+        "Grok",
+        "SuperGrok",
+        "OAuth",
+        "服务商"
+    ],
+    "components": {
+        "providers": true
+    }
+}
