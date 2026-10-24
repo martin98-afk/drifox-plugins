@@ -1900,7 +1900,7 @@
             "components": {
                 "mcp": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "mcp",
                 "connector",
@@ -2923,6 +2923,7 @@
                 "skills": true,
                 "tools": true
             },
+            "downloads": 2,
             "keywords": [
                 "image-generation",
                 "video-generation",
@@ -3029,7 +3030,7 @@
                 "hooks": true,
                 "skills": true
             },
-            "downloads": 8,
+            "downloads": 9,
             "keywords": [
                 "prompt",
                 "optimizer",

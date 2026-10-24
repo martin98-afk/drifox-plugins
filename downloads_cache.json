@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1792834763.9358308,
+  "fetched_at": 1792849461.0542233,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -60,7 +60,7 @@
     "expert-teams": 1,
     "fe-fw": 9,
     "feature-dev": 3,
-    "figma": 1,
+    "figma": 2,
     "floating-chat": 0,
     "frontend-design": 1,
     "frontend-pro": 2,
@@ -92,9 +92,10 @@
     "ip-switcher": 3,
     "j-space": 3,
     "jam": 0,
+    "jimeng": 2,
     "jina": 0,
     "jsonl-storage": 0,
-    "kim-service": 8,
+    "kim-service": 9,
     "knowledge-base-skills": 2,
     "laputa-fog": 11,
     "linear": 0,
