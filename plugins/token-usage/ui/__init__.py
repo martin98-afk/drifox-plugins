@@ -9,8 +9,14 @@
 HTML 上挂 .context-tag data-type="tu-refresh"，主程序点击后经
 dispatch_welcome_action 派发回本插件，丢弃缓存并后台重采。
 
-采集在 QThread 跑：全库解压扫描 sessions.messages 约 0.6s（476 会话 / 85MB），
-主线程同步会卡 UI。首次打开显示「加载中」占位，采集完成自动重渲染。
+采集在 QThread 跑：全库解压扫描 sessions.messages（实测 227MB 库 535 会话，
+collect 期间 RSS +57.6MB / tracemalloc 瞬态尖峰 774MB，尖峰源 data.collect
+的 fetchall 全表加载），主线程同步会卡 UI。首次打开显示「加载中」占位，
+采集完成自动重渲染。
+
+预热策略（懒化，#22）：register_ui 不再无条件启动采集（旧实现装机即扫全库，
+实测 4.4s 后台占用）——采集由 render_tab 在页签首次打开时触发（缓存未命中
+路径自带 start()），没人打开页签就零开销。
 """
 
 import sys
@@ -65,9 +71,10 @@ def register_ui(registry):
             "「刷新用量」按钮不可用——请升级并重启 DriFox"
         )
 
-    # 预热：注册后立即后台采集一次，打开页签时大概率已就绪
-    from . import collector
+    # 预热已移除（#22 懒化）：采集由 render_tab 在页签首次打开时触发
+    # （缓存未命中路径自带 collector.get_collector().start()）。
+    # 旧实现注册即后台扫全库（227MB sessions.db 实测 4.4s / RSS +57.6MB /
+    # tracemalloc 瞬态尖峰 774MB），用户不打开用量页签时纯属浪费。
+    # TODO: 全量扫库改增量扫描（按会话 mtime 只解析新增），成本较高本轮不做。
 
-    collector.get_collector().start()
-
-    logger.info("[token-usage] welcome tab registered")
+    logger.info("[token-usage] welcome tab registered (collect on first open)")
