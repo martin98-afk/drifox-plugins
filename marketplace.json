@@ -735,7 +735,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "chinese",
                 "evolved",
@@ -2881,7 +2881,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 78,
+            "downloads": 81,
             "keywords": [
                 "git",
                 "source-control",
@@ -3738,7 +3738,7 @@
                 "providers": true,
                 "ui": true
             },
-            "downloads": 12,
+            "downloads": 13,
             "keywords": [
                 "magpie",
                 "网关",
@@ -4734,7 +4734,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 66,
+            "downloads": 67,
             "keywords": [
                 "prompt",
                 "enhance",
