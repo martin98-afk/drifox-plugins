@@ -258,8 +258,23 @@ class MagpieWebPage(QWidget):
         guide_lay.addStretch(1)
         root.addWidget(self._guide, 1)
 
+        # ★ webview 懒构造：不在构造期创建 QWebEngineView。
+        # 全卡场景下 webview 嵌在主窗 overlay 里，若构造期（服务未跑、页不可见）
+        # 就存在 Chromium 原生窗口，process.start 首启确认框的模态遮罩盖住它
+        # 重绘时 Qt 合成器会崩（dev 线崩 Qt5Gui / pyside6 线崩
+        # Qt6WebEngineCore，2026-10-25 实测）；独立弹窗时代无此叠加不崩。
+        # 改为探测到服务可用后才在 _ensure_webview 里创建。
         self._view = None
         self._page = None
+
+    def _ensure_webview(self) -> None:
+        """懒构造 QWebEngineView（探测到服务可用时调用）。
+
+        构造失败（缺 QtWebEngine）降级为指引面板：禁「在浏览器打开」不可用，
+        状态条提示无法内嵌。
+        """
+        if self._view is not None or self.layout() is None:
+            return
         try:
             from PyQt5.QtWebEngineWidgets import QWebEnginePage, QWebEngineView
 
@@ -270,7 +285,7 @@ class MagpieWebPage(QWidget):
             self._view.setPage(self._page)
             self._view.loadFinished.connect(self._on_load_finished)
             self._view.setVisible(False)
-            root.addWidget(self._view, 1)
+            self.layout().addWidget(self._view, 1)
         except Exception as e:  # noqa: BLE001 — 缺 QtWebEngine 时降级
             logger.warning(f"[magpie] QWebEngineView 不可用，降级为指引面板: {e}")
             self._view = None
@@ -308,6 +323,7 @@ class MagpieWebPage(QWidget):
             return
 
         self._guide.setVisible(False)
+        self._ensure_webview()
         if self._view is None:
             self._status.setText("已连接（缺 QtWebEngine，无法内嵌）")
             return
