@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1792904427.9993227,
+  "fetched_at": 1792921090.016781,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -100,7 +100,7 @@
     "gpt-image-2": 6,
     "grok-oauth": 3,
     "groq": 5,
-    "guizang-ppt-skill": 6,
+    "guizang-ppt-skill": 7,
     "hashline-edit": 7,
     "hookify": 2,
     "huggingface": 3,
