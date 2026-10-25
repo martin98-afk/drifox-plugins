@@ -563,7 +563,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 71,
+            "downloads": 72,
             "keywords": [
                 "browser",
                 "web",
@@ -624,6 +624,7 @@
                 "mcp": true,
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "mcp",
                 "connector",
@@ -1253,7 +1254,7 @@
                 "tools": true,
                 "hook_policies": true
             },
-            "downloads": 54,
+            "downloads": 55,
             "keywords": [
                 "cron",
                 "schedule",
@@ -1955,6 +1956,7 @@
             "components": {
                 "agents": true
             },
+            "downloads": 1,
             "keywords": [
                 "agents",
                 "experts",
@@ -2561,7 +2563,7 @@
                 "commands": false,
                 "ui": true
             },
-            "downloads": 7,
+            "downloads": 8,
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -2685,7 +2687,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 40,
+            "downloads": 41,
             "platforms": [
                 "windows",
                 "linux",
@@ -2878,7 +2880,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 75,
+            "downloads": 76,
             "keywords": [
                 "git",
                 "source-control",
@@ -3718,7 +3720,7 @@
         {
             "name": "magpie",
             "description": "magpie 本地网关 — 接入聚合后的全部订阅账号与路由组，一键启动 magpie web（自动固定 key），并内嵌网页界面直接管理模型与配额",
-            "version": "0.4.0",
+            "version": "0.5.0",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -3735,7 +3737,7 @@
                 "providers": true,
                 "ui": true
             },
-            "downloads": 3,
+            "downloads": 5,
             "keywords": [
                 "magpie",
                 "网关",
@@ -3931,7 +3933,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 9,
+            "downloads": 10,
             "keywords": [
                 "theme",
                 "dark",
@@ -4051,6 +4053,7 @@
             "components": {
                 "mcp": true
             },
+            "downloads": 1,
             "keywords": [
                 "mcp",
                 "connector",
@@ -4232,7 +4235,7 @@
             "components": {
                 "mcp": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "mcp",
                 "connector",
@@ -4729,7 +4732,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 63,
+            "downloads": 64,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -4809,7 +4812,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 36,
+            "downloads": 37,
             "keywords": [
                 "screenshot",
                 "clipboard",
@@ -5839,7 +5842,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 18,
+            "downloads": 19,
             "keywords": [
                 "welcome",
                 "token",
@@ -6041,7 +6044,7 @@
                 "tools": true,
                 "ui": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "vision",
                 "multimodal",
@@ -6125,7 +6128,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 27,
+            "downloads": 28,
             "keywords": [
                 "voice",
                 "dictation",
@@ -6178,7 +6181,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 10,
+            "downloads": 11,
             "keywords": [
                 "voice",
                 "tts",
@@ -6349,7 +6352,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 19,
+            "downloads": 20,
             "keywords": [
                 "webdav",
                 "backup",
@@ -6416,7 +6419,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 38,
+            "downloads": 39,
             "keywords": [
                 "powershell",
                 "windows",
