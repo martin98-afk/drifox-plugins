@@ -2180,28 +2180,60 @@ class _AIGenerateTask(QRunnable):
         self._llm = llm_config
         self._signals = signals
         self._services = services
+        self._cancelled = threading.Event()  # 用户点击停止
+        self._lock = threading.Lock()
+        self._session = None    # 当前活跃 EngineSession（供 cancel 打断）
+        self._turn_done = None  # 当前轮完成信号
         self.setAutoDelete(True)
+
+    def cancel(self):
+        """用户请求停止：置位并尽力打断当前 turn()（非阻塞，数秒内生效）"""
+        self._cancelled.set()
+        with self._lock:
+            session, done = self._session, self._turn_done
+        if session is not None and done is not None and not done.is_set():
+            try:
+                session.cancel()
+            except Exception:
+                pass
 
     def run(self):
         last_err = ""
         text = ""
         for attempt in range(1, _AI_MAX_ATTEMPTS + 1):
+            if self._cancelled.is_set():
+                return  # 用户已停止：静默退出（UI 已自行复位，不再回报）
             if attempt > 1:
                 self._signals.status.emit(
                     f"前次失败（{last_err[:40]}），自动重试 {attempt}/{_AI_MAX_ATTEMPTS}…"
                 )
-                time.sleep(_AI_RETRY_BACKOFF[min(attempt - 2, len(_AI_RETRY_BACKOFF) - 1)])
+                if self._cancelled.wait(_AI_RETRY_BACKOFF[min(attempt - 2, len(_AI_RETRY_BACKOFF) - 1)]):
+                    return
 
             holder: dict = {}
             done = threading.Event()
             self._spawn_turn(holder, done)
 
-            # 硬看门狗：不信任 turn() 内部超时（cron-tasks 实测 daemon 线程下超时收尾
-            # 可能整链不发生），到期放弃等待直接报错，避免按钮永久卡在「生成中…」
+            # 分段等待 + 硬看门狗：不信任 turn() 内部超时（cron-tasks 实测 daemon
+            # 线程下超时收尾可能整链不发生），到期放弃等待直接报错；等待期间发现
+            # 停止立即 session.cancel() 打断，turn 以 cancelled=True 快速返回
             retryable = True
-            if not done.wait(_AI_TURN_TIMEOUT + _AI_WATCHDOG_GRACE):
-                last_err = f"生成超时（>{int(_AI_TURN_TIMEOUT)}s）"
+            deadline = time.monotonic() + _AI_TURN_TIMEOUT + _AI_WATCHDOG_GRACE
+            while not done.wait(0.2):
+                if self._cancelled.is_set():
+                    with self._lock:
+                        session = self._session
+                    if session is not None:
+                        try:
+                            session.cancel()
+                        except Exception:
+                            pass
+                if time.monotonic() >= deadline:
+                    last_err = f"生成超时（>{int(_AI_TURN_TIMEOUT)}s）"
+                    break
             else:
+                if self._cancelled.is_set():
+                    return  # 已停止：丢弃本轮结果，不回填
                 text = holder.get("text", "")
                 err = holder.get("error")
                 cleaned = _clean_commit_message(text)
@@ -2219,23 +2251,29 @@ class _AIGenerateTask(QRunnable):
             if attempt >= _AI_MAX_ATTEMPTS or not retryable:
                 break
 
+        if self._cancelled.is_set():
+            return
         self._signals.error.emit(last_err or "生成失败")
 
     def _spawn_turn(self, holder: dict, done: threading.Event):
         """单次尝试：开 daemon 线程调 EngineSession，结果写入 holder 后 set(done)"""
 
         def _turn():
+            session: Any = None
             try:
                 create = (self._services or {}).get("create_engine_session")
                 if not callable(create):
                     holder["error"] = "主程序未提供 create_engine_session 服务，请升级 DriFox 至 0.5.10+"
                     return
-                session: Any = create(
+                session = create(
                     "git-panel",
                     model_config_override=self._llm,
                     # 全局 hook 全跳过：BuildSystemPrompt 等注入会混进提交描述指令污染输出
                     hook_policy_id="none",
                 )
+                with self._lock:
+                    self._session = session
+                    self._turn_done = done
                 try:
                     result = session.turn(
                         system=self._system,
@@ -2257,6 +2295,9 @@ class _AIGenerateTask(QRunnable):
                 logger.error(f"[git-panel] AI 生成提交描述失败: {e}")
                 holder["error"] = f"{type(e).__name__}: {e}"
             finally:
+                with self._lock:
+                    self._session = None
+                    self._turn_done = None
                 done.set()
 
         threading.Thread(target=_turn, daemon=True, name="git-panel-turn").start()
@@ -3201,6 +3242,7 @@ class GitPanelCard(QWidget):
         if not self._repo_path:
             return
         if getattr(self, "_ai_task_running", False):
+            self._on_ai_cancel()  # 生成中再点同一按钮 = 停止
             return
         ctx = self._context_provider() if self._context_provider else {}
         main_widget = ctx.get("main_widget")
@@ -3229,22 +3271,41 @@ class GitPanelCard(QWidget):
         user = f"暂存变更 diff（超长时已截断）：\n{diff_text[:9000]}"
         llm = {**llm, **_COMMIT_AI_PARAMS}
         self._ai_task_running = True
-        self._ai_btn.setEnabled(False)
-        self._ai_btn.setToolTip("正在生成提交描述…")
-        self._show_info_bar("info", "AI 生成", "正在根据暂存变更生成提交描述…")
+        self._set_ai_running(True)
+        self._show_info_bar("info", "AI 生成", "正在根据暂存变更生成提交描述…（再次点击可停止）")
 
         signals = _AISignals()
         signals.done.connect(self._on_ai_done)
         signals.error.connect(self._on_ai_error)
         signals.status.connect(self._on_ai_status)
         task = _AIGenerateTask(system, user, llm, signals, services=ctx.get("services"))
+        self._ai_task = task
         pool = getattr(main_widget, "_gen_thread_pool", None) or QThreadPool.globalInstance()
         pool.start(task)
 
+    def _on_ai_cancel(self):
+        """停止 AI 生成：打断后台 turn，按钮立即复位（迟到结果由任务侧静默丢弃）"""
+        task = getattr(self, "_ai_task", None)
+        if task is not None:
+            task.cancel()
+        self._ai_task = None
+        self._ai_task_running = False
+        self._set_ai_running(False)
+        self._show_info_bar("info", "AI 生成", "已停止生成")
+
+    def _set_ai_running(self, running: bool):
+        """AI 按钮状态机：空闲=机器人图标；生成中=停止图标（点击可取消）"""
+        if running:
+            self._ai_btn.setIcon(FluentIcon.PAUSE)
+            self._ai_btn.setToolTip("正在生成提交描述，点击停止")
+        else:
+            self._ai_btn.setIcon(FluentIcon.ROBOT)
+            self._ai_btn.setToolTip("根据暂存区变更由 AI 生成提交描述（失败自动重试）")
+
     def _on_ai_done(self, message: str):
         self._ai_task_running = False
-        self._ai_btn.setEnabled(True)
-        self._ai_btn.setToolTip("根据暂存区变更由 AI 生成提交描述（失败自动重试）")
+        self._ai_task = None
+        self._set_ai_running(False)
         if message:
             self._commit_input.setPlainText(message)
             self._show_info_bar("success", "AI 生成", "已生成提交描述，可编辑后提交")
@@ -3253,8 +3314,8 @@ class GitPanelCard(QWidget):
 
     def _on_ai_error(self, err: str):
         self._ai_task_running = False
-        self._ai_btn.setEnabled(True)
-        self._ai_btn.setToolTip("根据暂存区变更由 AI 生成提交描述（失败自动重试）")
+        self._ai_task = None
+        self._set_ai_running(False)
         self._show_info_bar("error", f"AI 生成失败（已重试 {_AI_MAX_ATTEMPTS} 次）", (err or "")[:80])
 
     def _on_ai_status(self, msg: str):

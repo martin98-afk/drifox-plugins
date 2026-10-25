@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+### ✨ git-panel v2.3.0：AI 生成按钮生成中变停止按钮，可点击取消（原禁用无反馈）
+- **改动**：`ui/cards.py` AI 生成启动后按钮切 `FluentIcon.PAUSE` 停止图标（原 `setEnabled(False)` 静默禁用，视觉上卡住不动），tooltip 提示「点击停止」；再次点击触发 `_on_ai_cancel`
+- **取消链路**：`_AIGenerateTask` 新增 `cancel()`：置位取消事件 + 对活跃 `EngineSession` 调 `cancel()`（宿主契约：turn 随后以 cancelled=True 返回，非阻塞）
+- **run 循环改造**：整段 `done.wait(150s)` 改 0.2s 分段轮询，等待期间发现停止立即 `session.cancel()` 打断；重试退避 `time.sleep` 改 `Event.wait`（停止立即生效，不再白等退避秒数）；取消后一律静默 return，迟到结果不回填输入框、不弹错误条
+- **验证**：插件 30 例测试全绿；pyright 零新增报错
 ### ✨ magpie v0.6.0：入口从标题栏常驻 tab 收拢到侧边栏「自定义插件」分组
 - **改动**：`ui/__init__.py` 删 `register_titlebar_tab`，改 `register_sidebar_item(group="custom", card_id="magpie:web")`；full 卡与命令 `/magpie:web` 不变；已注册独立 sidebar 项，宿主跳过该卡侧栏兼容派生（`sidebar_plugin_names` 优先），不重复列条目
 - **假死自愈保留**：webview 原生化「状态可见、容器不可见」死锁与入口无关，手写 on_click 的自愈探测（先 hide_card 清假状态再 toggle）原样搬到侧栏回调（签名 `(_context)`，对齐 sidebar 回调约定）
