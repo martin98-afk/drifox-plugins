@@ -41,7 +41,15 @@ def _ctx_provider() -> dict:
 
 
 def register_ui(registry):
-    """注册 magpie 网页工作页（标题栏常驻 tab 由 primary_entry 派生）。"""
+    """注册 magpie 网页工作页（标题栏 tab 手写回调：假死自愈 + 开合语义）。
+
+    为什么不用 primary_entry 声明式派生（show-only）：webview 首次构造触发
+    父链原生化，TOP 覆盖层容器短暂不可见，而 CardManager 状态层已置可见——
+    形成「状态可见、视觉不可见」死锁，show-only 语义下后续点击全被忽略
+    （实测连点无反应）。手写回调每次点击先检测该假死态（状态可见但容器
+    不可见 → 清状态），再走 toggle：假死自愈，正常态等于开合（点显示中的
+    页签即关闭，与 × 等价）。
+    """
     # 热重载：清掉本插件旧子模块缓存，避免 Python 复用已卸下的 .pyc
     prefix = f"ui_plugin_{_PLUGIN.replace('-', '_')}."
     for k in [k for k in sys.modules if k.startswith(prefix)]:
@@ -62,8 +70,32 @@ def register_ui(registry):
             "full_card": True,
             # 入口只有标题栏「magpie」常驻 tab，侧边栏不重复列出
             "hide_sidebar": True,
-            # 一处注册、多处分发：框架自动派生 tab（已可见忽略、否则唤出本卡）
-            "primary_entry": {"kind": "titlebar", "label": "magpie"},
+            # 入口 tab 由下方手写 register_titlebar_tab 承接（假死自愈回调）
         },
     )
-    logger.info("[magpie] 网页界面工作页已注册（full + titlebar tab）")
+
+    def _on_tab_click():
+        # 假死自愈：状态层可见但覆盖层容器不可见（webview 原生化副作用）
+        # → hide_card 清掉假状态，让下方 toggle 必走 show 分支
+        try:
+            host = registry._resolve_global_host()
+            if host is not None:
+                cm = getattr(host, "_card_manager", None)
+                wid = getattr(host, "_window_id", None)
+                cont = getattr(host, "_top_card_container", None)
+                if cm is not None and wid and cont is not None:
+                    if cm.is_card_visible(_CARD_ID, wid) and not cont.isVisible():
+                        logger.debug("[magpie] 检测到假可见态（容器不可见），先清状态")
+                        cm.hide_card(_CARD_ID, wid)
+        except Exception as e:  # noqa: BLE001 — 自愈探测失败不影响正常 toggle
+            logger.debug(f"[magpie] 假死探测跳过: {e}")
+        registry.toggle_floating_card(_CARD_ID)
+
+    registry.register_titlebar_tab(
+        plugin_name=_PLUGIN,
+        tab_id=_CARD_ID,
+        label="magpie",
+        card_id=_CARD_ID,
+        on_click=_on_tab_click,
+    )
+    logger.info("[magpie] 网页界面工作页已注册（full + 自愈 tab 回调）")
