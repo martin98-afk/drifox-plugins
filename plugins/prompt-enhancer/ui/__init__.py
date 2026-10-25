@@ -13,16 +13,16 @@
 
 实现要点：
 - 通过 UI 扩展点 context["main_widget"] 读取输入框（input_area）与当前模型配置；
-- 通过 PluginConfigStore 读写插件配置（enhance_prompt / enhance_model）；
+- 通过 PluginConfigStore 读写插件配置（enhance_prompt / enhance_provider / enhance_model，
+  服务商与模型分开存，对齐 vision-proxy）；enhance_model 存旧格式
+  「ProviderName:ModelName」时按兼容路径拆分。
 - 请求发出走宿主 services["create_engine_session"]（EP3 契约）：经 ModelAdapter /
   Serializer / Transport 三层分派，服务商伪装头、responses 协议、思考参数映射、
   智能重试全部自动生效，插件零协议知识；
 - 后台 QRunnable + 信号桥接，结果在主线程注回输入框，避免 UI 卡死。
 
 模型配置来自宿主 services["get_provider_config"]（主程序读内存态已解锁明文，
-「提示词增强模型」配置项为空时沿用调用方当前 provider/model，否则按
-「ProviderName:ModelName」格式解析（与主程序标题生成/子智能体模型选择器同格式）。
-"""
+服务商与模型均未配置时沿用调用方当前 provider/model。"""
 
 import json
 import os
@@ -141,66 +141,110 @@ def _load_system_config() -> Optional[Dict[str, Any]]:
     return data
 
 
-def _parse_provider_options() -> List[Tuple[str, str]]:
-    """扫描主程序 LLM.SavedProviders，返回「(显示文本, value)」列表。
+def _caps(name: str) -> Any:
+    """取宿主能力（设置卡无 ctx，走 caps_for 按插件名解析到活跃窗口）。"""
+    try:
+        from app.plugins.sdk import caps_for
 
-    显示文本与 value 均使用「服务商名:模型名」格式（与主程序标题生成/子智能体
-    模型选择器一致），重复条目按 (provider_name, model_name) 去重后排序，
-    空 provider/model 跳过。读取失败 → 返回 []，下拉只显示「当前模型」一项。
+        return caps_for(name, plugin=PLUGIN_NAME, surface="ui")
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"[PromptEnhancer] 取能力 {name} 失败: {e}")
+        return None
+
+
+def _load_provider_entries() -> List[Dict[str, Any]]:
+    """内存态服务商清单（provider.list 能力）；不可用返回 []（调用方回退磁盘扫描）。"""
+    fn = _caps("provider.list")
+    if not callable(fn):
+        return []
+    try:
+        items = fn() or []
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"[PromptEnhancer] provider.list 调用失败: {e}")
+        return []
+    return [p for p in items if isinstance(p, dict)]
+
+
+def _load_models_of(provider_id: str) -> List[str]:
+    """指定服务商的模型名列表（model.enumerate 能力）；不可用返回 []。"""
+    if not provider_id:
+        return []
+    fn = _caps("model.enumerate")
+    if not callable(fn):
+        return []
+    try:
+        items = fn(provider_id) or []
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"[PromptEnhancer] model.enumerate 调用失败: {e}")
+        return []
+    return [str(m.get("name") or "") for m in items if isinstance(m, dict) and m.get("name")]
+
+
+def _load_provider_tree() -> List[Tuple[str, str]]:
+    """服务商两级下拉第一级选项：[(display, config_id)]。
+
+    首选 provider.list（内存态，用户刚加的服务商立即可见）；能力不可用
+    （旧宿主 / 无活跃窗口）回退扫描 app.config 非密钥字段。
     """
+    out: List[Tuple[str, str]] = []
+    for p in _load_provider_entries():
+        pid = str(p.get("id") or "")
+        if not pid:
+            continue
+        label = str(p.get("display_name") or pid)
+        if p.get("is_current"):
+            label = f"{label}（当前）"
+        out.append((label, pid))
+    if out:
+        return out
+    # 降级：磁盘扫描（仅非密钥字段，与旧版渲染路径同源）
     data = _load_system_config()
     if data is None:
         return []
-
-    saved = (
-        (data.get("LLM") or {})
-        .get("SavedProviders")
-        or {}
-    )
+    saved = (data.get("LLM") or {}).get("SavedProviders") or {}
     seen: set = set()
-    out: List[Tuple[str, str]] = []
-    for _cid, p in saved.items():
+    for cid, p in saved.items():
         if not isinstance(p, dict):
             continue
-        provider_name = (
-            p.get("provider_name") or p.get("name") or ""
-        )
-        # 模型列表：模型列表 数组优先，否则回退到「模型名称」
-        models = list(p.get("模型列表") or [])
-        if not models and p.get("模型名称"):
-            models = [p.get("模型名称")]
-        for m in models:
-            provider = str(provider_name).strip()
-            m = str(m).strip()
-            if not provider or not m:
-                continue
-            display = f"{provider}:{m}"
-            if display in seen:
-                continue
-            seen.add(display)
-            out.append((display, display))
+        name = str(p.get("provider_name") or p.get("name") or cid).strip()
+        if not cid or not name or cid in seen:
+            continue
+        seen.add(cid)
+        out.append((name, cid))
     out.sort(key=lambda item: item[0].lower())
     return out
 
 
-def _parse_enhance_model(value: str) -> Optional[Tuple[str, str]]:
-    """解析「enhance_model」配置项 → (provider_name, model_name) 或 None。
+def _load_models_by_tree(provider_id: str) -> List[str]:
+    """服务商两级下拉第二级选项：模型名列表。首选 model.enumerate，回退磁盘。"""
+    models = _load_models_of(provider_id)
+    if models:
+        return models
+    data = _load_system_config()
+    if data is None:
+        return []
+    for cid, p in ((data.get("LLM") or {}).get("SavedProviders") or {}).items():
+        if cid != provider_id or not isinstance(p, dict):
+            continue
+        models = [str(m).strip() for m in (p.get("模型列表") or []) if str(m).strip()]
+        if not models and p.get("模型名称"):
+            models = [str(p["模型名称"]).strip()]
+        return models
+    return []
 
-    空值 / 格式不合法 / 服务商在主配置中不存在 → None（调用方回退到当前模型）。
+
+def _parse_enhance_model(value: str) -> Optional[Tuple[str, str]]:
+    """解析旧格式「enhance_model」合并值「服务商:模型名」→ (provider, model) 或 None。
+
+    仅用于兼容历史存量配置；有效性由 get_provider_config 五级解析兜底
+    （拆开的两键与设置卡新写入的完全同构），不再预校验 SavedProviders。
     """
-    if not value:
-        return None
-    if ":" not in value:
+    if not value or ":" not in value:
         return None
     provider, model = value.split(":", 1)
-    provider = provider.strip()
-    model = model.strip()
-    if not provider or not model:
-        return None
-    # 校验：provider/model 必须在主程序 SavedProviders 中存在（防历史脏值）
-    for display, _v in _parse_provider_options():
-        if display == f"{provider}:{model}":
-            return provider, model
+    provider, model = provider.strip(), model.strip()
+    if provider and model:
+        return provider, model
     return None
 
 
@@ -369,26 +413,31 @@ class _EnhanceConfigCard(_ConfigCardBase):
         self._edit.setMinimumHeight(140)
         self.viewLayout.addWidget(self._edit)
 
-        # ── 提示词增强模型下拉 ──
-        # 选项：当前模型（默认/空值） + 主程序 SavedProviders 中的 ProviderName:ModelName
+        # ── 提示词增强模型选择（服务商/模型两级联动，对齐 vision-proxy）──
+        self._provider_combo: Optional[ComboBox] = None
         self._model_combo: Optional[ComboBox] = None
         if ComboBox is not None:
+            self._providers = _load_provider_tree()
+
+            self._provider_combo = ComboBox(self.view)
+            self._provider_combo.setMinimumWidth(220)
+            self._provider_combo.setMaxVisibleItems(MAX_MODEL_VISIBLE_ITEMS)
+            for label, pid in self._providers:
+                # 关键字 userData：qfluentwidgets.addItem 第二参数是 icon，
+                # 位置传参 userData 会丢失 → currentData() 恒 None → 配置不固化
+                self._provider_combo.addItem(label, userData=pid)
+            self._provider_combo.setToolTip(
+                "执行提示词优化的服务商。两键均空（当前模型）= 沿用调用方当前 provider/model。"
+            )
+            self._provider_combo.currentIndexChanged.connect(self._on_provider_changed)
+            self.viewLayout.addWidget(self._provider_combo)
+
             self._model_combo = ComboBox(self.view)
             self._model_combo.setMinimumWidth(220)
-            # 阻断 currentTextChanged 循环（占位）
-            self._model_combo.blockSignals(True)
-            # qfluentwidgets.ComboBox.addItem 签名为 (text, icon=None, userData=None)，
-            # 第二参数是 icon 不是 userData；用关键字参数确保 userData 真正写入，
-            # 否则 currentData() 永远返回 None → set_values 视为空串删除键 → 配置不固化
-            self._model_combo.addItem(DEFAULT_ENHANCE_MODEL_LABEL, userData=DEFAULT_ENHANCE_MODEL_VALUE)
-            for display, value in _parse_provider_options():
-                self._model_combo.addItem(display, userData=value)
             self._model_combo.setMaxVisibleItems(MAX_MODEL_VISIBLE_ITEMS)
             self._model_combo.setToolTip(
-                "用于执行提示词优化的 LLM。留空（当前模型）= 沿用调用方当前 provider/model；"
-                "其余选项格式「服务商:模型名」，与系统「标题生成」「子智能体」模型选择器一致。"
+                "执行提示词优化的模型（清单随上方服务商联动）。"
             )
-            self._model_combo.blockSignals(False)
             self._model_combo.currentIndexChanged.connect(self._on_model_changed)
             self.viewLayout.addWidget(self._model_combo)
 
@@ -438,26 +487,55 @@ class _EnhanceConfigCard(_ConfigCardBase):
         self._edit.setPlainText(text)
         self._edit.textChanged.connect(self._on_changed)
 
-        # 模型下拉
-        if self._model_combo is not None:
-            stored = PluginConfigStore().get(PLUGIN_NAME, "enhance_model") or ""
-            stored_str = str(stored)
-            # value=stored 的项可能因主配置变化而消失；找不到则回退到「当前模型」
-            self._model_combo.blockSignals(True)
-            idx = self._model_combo.findData(stored_str if stored_str else DEFAULT_ENHANCE_MODEL_VALUE)
-            if idx < 0:
-                idx = 0  # 「当前模型」
-                # 配置项历史脏值（非空但当前下拉无对应项）→ 同步清空，避免下次回显再找不到
-                if stored_str:
-                    PluginConfigStore().set_values(PLUGIN_NAME, {"enhance_model": ""})
-            self._model_combo.setCurrentIndex(idx)
-            # idx==0（兜底到「当前模型」）时显式对齐文案，防止显示陈旧脏文本
-            if idx == 0:
-                self._model_combo.setCurrentText(DEFAULT_ENHANCE_MODEL_LABEL)
-            self._model_combo.blockSignals(False)
+        # 服务商/模型两级下拉回显（旧格式「服务商:模型」合并值拆开，不丢配置）
+        if self._provider_combo is None:
+            return
+        stored_provider = str(PluginConfigStore().get(PLUGIN_NAME, "enhance_provider") or "")
+        stored_model = str(PluginConfigStore().get(PLUGIN_NAME, "enhance_model") or "")
+        if not stored_provider and ":" in stored_model:
+            parsed_old = _parse_enhance_model(stored_model)
+            if parsed_old is not None:
+                stored_provider, stored_model = parsed_old
+
+        self._provider_combo.blockSignals(True)
+        idx = self._provider_combo.findData(stored_provider)
+        if idx < 0 and stored_provider:
+            # 已存值不在清单里（服务商被删/能力降级）：插到首位保住它
+            self._provider_combo.insertItem(0, stored_provider, userData=stored_provider)
+            idx = 0
+        self._provider_combo.setCurrentIndex(max(0, idx))
+        self._provider_combo.blockSignals(False)
+
+        self._fill_models(str(self._provider_combo.currentData() or ""), stored_model)
+
+    def _fill_models(self, provider_id: str, selected: str = "") -> None:
+        """按服务商重填模型下拉；首项「当前模型」= 空（沿用该服务商默认/当前窗口）。"""
+        if self._model_combo is None:
+            return
+        self._model_combo.blockSignals(True)
+        self._model_combo.clear()
+        self._model_combo.addItem(DEFAULT_ENHANCE_MODEL_LABEL, userData=DEFAULT_ENHANCE_MODEL_VALUE)
+        for name in _load_models_by_tree(provider_id):
+            self._model_combo.addItem(name, userData=name)
+        idx = self._model_combo.findData(selected)
+        if idx < 0 and selected:
+            # 已存模型不在清单里（服务商模型变更）：插到「当前模型」之后保住它
+            self._model_combo.insertItem(1, selected, userData=selected)
+            idx = 1
+        self._model_combo.setCurrentIndex(max(0, idx))
+        self._model_combo.blockSignals(False)
 
     def _on_changed(self) -> None:
         PluginConfigStore().set_values(PLUGIN_NAME, {"enhance_prompt": self._edit.toPlainText().strip()})
+
+    def _on_provider_changed(self, _index: int) -> None:
+        if self._provider_combo is None:
+            return
+        pid = str(self._provider_combo.currentData() or "")
+        PluginConfigStore().set_values(PLUGIN_NAME, {"enhance_provider": pid})
+        # 换服务商后模型清单全变，清空模型值避免指向不存在的模型
+        PluginConfigStore().set_values(PLUGIN_NAME, {"enhance_model": ""})
+        self._fill_models(pid)
 
     def _on_model_changed(self, _index: int) -> None:
         if self._model_combo is None:
@@ -468,7 +546,11 @@ class _EnhanceConfigCard(_ConfigCardBase):
     def _on_reset(self) -> None:
         PluginConfigStore().set_values(
             PLUGIN_NAME,
-            {"enhance_prompt": DEFAULT_ENHANCE_PROMPT, "enhance_model": DEFAULT_ENHANCE_MODEL_VALUE},
+            {
+                "enhance_prompt": DEFAULT_ENHANCE_PROMPT,
+                "enhance_provider": "",
+                "enhance_model": DEFAULT_ENHANCE_MODEL_VALUE,
+            },
         )
         self._echo()
 
@@ -549,15 +631,20 @@ def _get_llm_config(
 
 
 def _resolve_enhance_model(main_widget) -> Optional[Tuple[str, str]]:
-    """读取 enhance_model 配置，校验有效性 → (provider, model) 或 None。
+    """读取 enhance_provider + enhance_model 配置 → (provider, model) 或 None。
 
-    优先级：配置项有效 → (provider, model)；配置项空 / 解析失败 →
-    回退到调用方当前 provider/model（保证任务不空跑）；再失败 → None。
+    服务商、模型分开存（对齐 vision-proxy）；enhance_model 存旧格式
+    「服务商:模型名」时拆分兼容。两键均空/解析失败 → 回退到调用方当前
+    provider/model（保证任务不空跑）；再失败 → None。
     """
-    raw = PluginConfigStore().get(PLUGIN_NAME, "enhance_model")
-    parsed = _parse_enhance_model(str(raw) if raw else "")
-    if parsed is not None:
-        return parsed
+    provider = str(PluginConfigStore().get(PLUGIN_NAME, "enhance_provider") or "").strip()
+    model = str(PluginConfigStore().get(PLUGIN_NAME, "enhance_model") or "").strip()
+    if not provider and ":" in model:
+        parsed_old = _parse_enhance_model(model)
+        if parsed_old is not None:
+            provider, model = parsed_old
+    if provider or model:
+        return provider, model
     # 兜底：用调用方当前 provider + model（即便解析失败也保证能跑）
     valid = getattr(main_widget, "_valid_configs", None)
     if isinstance(valid, dict):
