@@ -4,9 +4,8 @@
 容器选型：内容页是 QWebEngineView，Windows 上是原生 HWND 子窗口，与主程序
 非原生浮层争 z-order（workbench_panel.py 记过这条）。full 容器走主窗口
 _content_stack 整页替换（QStackedWidget 互斥显示），webview 独占自己的页，
-不与浮层同屏重叠，标题栏 tab 在 stack 之外不受影响；此前为此选的独立弹窗
-已改成本形态。入口为主窗口顶部常驻 tab「magpie」（点击开合），命令
-/magpie:web 同义。
+不与浮层同屏重叠；此前为此选的独立弹窗已改成本形态。入口为侧边栏「自定义插件」分组的 magpie 项（点击开合），
+命令 /magpie:web 同义。
 
 前提：magpie 必须以网页模式启动（``magpie web`` / ``magpie serve --web`` /
 ``magpie daemon install --web``），监听 127.0.0.1:3430。装了桌面 App 不等于
@@ -41,14 +40,13 @@ def _ctx_provider() -> dict:
 
 
 def register_ui(registry):
-    """注册 magpie 网页工作页（标题栏 tab 手写回调：假死自愈 + 开合语义）。
+    """注册 magpie 网页工作页（侧栏项手写回调：假死自愈 + 开合语义）。
 
-    为什么不用 primary_entry 声明式派生（show-only）：webview 首次构造触发
+    为什么不用 card_id 声明式派生（toggle）：webview 首次构造触发
     父链原生化，TOP 覆盖层容器短暂不可见，而 CardManager 状态层已置可见——
-    形成「状态可见、视觉不可见」死锁，show-only 语义下后续点击全被忽略
+    形成「状态可见、视觉不可见」死锁，toggle 语义下后续点击全走 hide 分支
     （实测连点无反应）。手写回调每次点击先检测该假死态（状态可见但容器
-    不可见 → 清状态），再走 toggle：假死自愈，正常态等于开合（点显示中的
-    页签即关闭，与 × 等价）。
+    不可见 → 清状态），再走 toggle：假死自愈，正常态等于开合。
     """
     # 热重载：清掉本插件旧子模块缓存，避免 Python 复用已卸下的 .pyc
     prefix = f"ui_plugin_{_PLUGIN.replace('-', '_')}."
@@ -66,15 +64,14 @@ def register_ui(registry):
         default_visible=False,
         context_provider=_ctx_provider,
         metadata={
-            # 全窗口页（与设置卡同款：可被标题栏 full tab 接管，带 × 关闭钮）
+            # 全窗口页（与设置卡同款：整页替换内容区，带 × 关闭钮）
             "full_card": True,
-            # 入口只有标题栏「magpie」常驻 tab，侧边栏不重复列出
-            "hide_sidebar": True,
-            # 入口 tab 由下方手写 register_titlebar_tab 承接（假死自愈回调）
+            # 入口为侧栏项（下方 register_sidebar_item 手写假死自愈回调），
+            # 已注册独立 sidebar 项，宿主跳过该卡的侧栏兼容派生，不重复列条目
         },
     )
 
-    def _on_tab_click():
+    def _on_sidebar_click(_context):
         # 假死自愈：状态层可见但覆盖层容器不可见（webview 原生化副作用）
         # → hide_card 清掉假状态，让下方 toggle 必走 show 分支
         try:
@@ -91,11 +88,13 @@ def register_ui(registry):
             logger.debug(f"[magpie] 假死探测跳过: {e}")
         registry.toggle_floating_card(_CARD_ID)
 
-    registry.register_titlebar_tab(
+    registry.register_sidebar_item(
         plugin_name=_PLUGIN,
-        tab_id=_CARD_ID,
+        item_id=_CARD_ID,
         label="magpie",
+        group="custom",
+        default_visible=False,
         card_id=_CARD_ID,
-        on_click=_on_tab_click,
+        on_click=_on_sidebar_click,
     )
-    logger.info("[magpie] 网页界面工作页已注册（full + 自愈 tab 回调）")
+    logger.info("[magpie] 网页界面工作页已注册（full + 侧栏自定义插件项自愈回调）")

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""UI 注册桩测试：验证 full 容器注册、命令名 /magpie:web 与自愈 tab 回调。
+"""UI 注册桩测试：验证 full 容器注册、命令名 /magpie:web 与自愈侧栏回调。
 
 跑法（项目 venv）：
     python plugins/magpie/tests/smoke_ui_full_card.py
@@ -20,21 +20,21 @@ ui = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(ui)
 
 registered = {}
-tab_registered = {}
+sidebar_registered = {}
 
 
 class FakeRegistry:
     def register_floating_card(self, **kw):
         registered.update(kw)
 
-    def register_titlebar_tab(self, **kw):
-        tab_registered.update(kw)
+    def register_sidebar_item(self, **kw):
+        sidebar_registered.update(kw)
 
     def _resolve_global_host(self):
         return None  # 假死探测路径：无 host → 跳过自愈分支
 
     def toggle_floating_card(self, card_id):
-        tab_registered.setdefault("toggled", []).append(card_id)
+        sidebar_registered.setdefault("toggled", []).append(card_id)
 
 
 ui.register_ui(FakeRegistry())
@@ -46,15 +46,17 @@ assert registered["default_visible"] is False
 assert callable(registered["context_provider"])
 meta = registered["metadata"]
 assert meta["full_card"] is True
-assert meta["hide_sidebar"] is True
-assert "primary_entry" not in meta  # 入口 tab 改手写注册（假死自愈回调）
+assert "hide_sidebar" not in meta  # 入口改侧栏项，卡片可进侧栏列表
+assert "primary_entry" not in meta  # 入口侧栏项改手写注册（假死自愈回调）
 assert registered["widget_class"].__name__ == "MagpieWebPage"
 
-# tab 注册：card_id 带 ":" 保命令名；回调可调用且触发 toggle
-assert tab_registered["plugin_name"] == "magpie"
-assert tab_registered["tab_id"] == "magpie:web"
-assert tab_registered["label"] == "magpie"
-assert callable(tab_registered["on_click"])
-tab_registered["on_click"]()
-assert tab_registered["toggled"] == ["magpie:web"]
-print("UI full-card + self-heal tab OK:", registered["card_id"], "/", registered["container"])
+# 侧栏项注册：card_id 带 ":" 保命令名；group=custom 进「自定义插件」折叠区
+assert sidebar_registered["plugin_name"] == "magpie"
+assert sidebar_registered["item_id"] == "magpie:web"
+assert sidebar_registered["label"] == "magpie"
+assert sidebar_registered["group"] == "custom"
+assert sidebar_registered["card_id"] == "magpie:web"
+assert callable(sidebar_registered["on_click"])
+sidebar_registered["on_click"]({})
+assert sidebar_registered["toggled"] == ["magpie:web"]
+print("UI full-card + self-heal sidebar item OK:", registered["card_id"], "/", registered["container"])

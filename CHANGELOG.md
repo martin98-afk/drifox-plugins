@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+### ✨ magpie v0.6.0：入口从标题栏常驻 tab 收拢到侧边栏「自定义插件」分组
+- **改动**：`ui/__init__.py` 删 `register_titlebar_tab`，改 `register_sidebar_item(group="custom", card_id="magpie:web")`；full 卡与命令 `/magpie:web` 不变；已注册独立 sidebar 项，宿主跳过该卡侧栏兼容派生（`sidebar_plugin_names` 优先），不重复列条目
+- **假死自愈保留**：webview 原生化「状态可见、容器不可见」死锁与入口无关，手写 on_click 的自愈探测（先 hide_card 清假状态再 toggle）原样搬到侧栏回调（签名 `(_context)`，对齐 sidebar 回调约定）
+- **命令去重**：floating card 与 sidebar item 同 id "magpie:web" 各登记一次命令，账本保首个（card 语义，带 per-window context），无漂移
+- **验证**：桩测试 smoke_ui_full_card.py 改断言侧栏注册（item_id/group/card_id/on_click 触发 toggle）通过
 ### ✨ 新增 13 个专家智能体插件（243 个 @智能体，源自 WorkBuddy 专家市场）
 - **专家插件**：experts-tencent / product / engineering / data / finance / marketing / content / sales / ops / quality / legal / consulting / game（按 WorkBuddy 15 分类拆包，campus 与 global 两分类上游 prompt 全缺故未建）
 - **数据源**：expert_center.json（429 个专家清单）公开可下；prompt 文件 243 个成功（`baseUrl+/plugins/<plugin>/agents/<name>.md`），185 个上游 COS 404（清单先行、内容未上线，含腾讯专区 9 个），各插件 README 已附缺失名单，待上游补全后重跑 `.test/build_experts.py` 同步
