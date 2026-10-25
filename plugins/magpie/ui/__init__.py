@@ -13,6 +13,7 @@ _content_stack 整页替换（QStackedWidget 互斥显示），webview 独占自
 """
 
 import sys
+import threading
 
 from loguru import logger
 
@@ -97,4 +98,37 @@ def register_ui(registry):
         card_id=_CARD_ID,
         on_click=_on_sidebar_click,
     )
+    _register_agent_link_on_startup()
     logger.info("[magpie] 网页界面工作页已注册（full + 侧栏自定义插件项自愈回调）")
+
+
+def _register_agent_link_on_startup():
+    """加载期静默登记 DriFox 的 agent 条目，让用户装完插件打开 magpie 就看到。
+
+    这是「开箱即用」的关键：按钮是补救路径，不该是唯一入口。放后台线程做，
+    不拖慢插件加载；只在用户确实用过 magpie 时才写（没有 magpie 的机器上
+    不该凭空造 ~/.config/magpie）。
+
+    热重载会再跑一次，靠 ensure_registered 的幂等语义兜住。
+    """
+
+    def work():
+        try:
+            from . import agent_link
+
+            if not agent_link.magpie_in_use():
+                logger.debug("[magpie] 未检测到 magpie，跳过加载期 agent 登记")
+                return
+            if agent_link.is_registered():
+                logger.debug("[magpie] DriFox agent 条目已登记，无需处理")
+                return
+            state, info = agent_link.ensure_registered()
+            if state == "registered":
+                logger.info(f"[magpie] 启动时已登记 DriFox agent 条目: {info}")
+            elif state == "error":
+                logger.warning(f"[magpie] 启动时登记 DriFox agent 条目失败: {info}")
+        except Exception as e:  # noqa: BLE001 — 加载期副作用不允许影响插件可用性
+            logger.debug(f"[magpie] 启动期 agent 登记跳过: {e}")
+
+    threading.Thread(target=work, daemon=True, name="magpie-agent-link-startup").start()
+

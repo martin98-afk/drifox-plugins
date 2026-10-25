@@ -11,6 +11,12 @@
   或命令指引
 - 已连上：QWebEngineView 加载，顶部状态条保留「重新加载 / 在浏览器打开」
 
+识别 DriFox（同目录 ``agent_link.py``）：把本插件的 ``agent_plugin/`` 包登记进
+magpie 的插件注册表，magpie 的 Agents / Usage / Sessions 页就有 DriFox 一行与
+按会话分组的用量。三条路径都调同一个幂等登记函数：拉起 magpie web 前、写「让
+AI 帮我装」提示词前、指引面板的「让 magpie 认得 DriFox」按钮。登记只写配置
+文件，不依赖 magpie 是否已装，也不依赖 Bun。
+
 key：magpie web 每次启动会换一个随机 key，URL 必须带 ``?k=<key>``。插件自动
 管理：配置里没 key 时生成一个稳定随机值存进插件配置，启动进程时以环境变量
 ``MAGPIE_WEB_KEY`` 注入——之后每次（含插件拉起的每次重启）都是同一个 key，
@@ -49,6 +55,21 @@ def _caps(cap_id: str):
 def _magpie_installed() -> bool:
     """magpie 可执行文件是否在 PATH 上（决定引导文案走「启动」还是「安装」）。"""
     return shutil.which("magpie") is not None
+
+
+def _link_status() -> bool:
+    """magpie 的插件注册表里是否已有 DriFox 的 agent 条目。
+
+    只读注册表、不起子进程（「已登记」≠「已生效」，生效判定走
+    ``agent_link.probe_agent_active``，仅在显式同步时跑）。
+    """
+    try:
+        from . import agent_link
+
+        return agent_link.is_registered()
+    except Exception as e:  # noqa: BLE001 — 状态探测失败按未登记处理
+        logger.debug(f"[magpie] agent 登记状态探测失败: {e}")
+        return False
 
 
 def _new_web_key() -> str:
@@ -157,6 +178,7 @@ class MagpieWebPage(QWidget):
 
     _probe_done = pyqtSignal(bool)
     _start_done = pyqtSignal(bool, str)
+    _link_probed = pyqtSignal(bool, str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -172,6 +194,7 @@ class MagpieWebPage(QWidget):
         self._build_ui()
         self._probe_done.connect(self._on_probe_done)
         self._start_done.connect(self._on_start_done)
+        self._link_probed.connect(self._on_link_probed)
 
     # ── 三约定接口 ────────────────────────────────────────
 
@@ -253,6 +276,11 @@ class MagpieWebPage(QWidget):
         self._ask_btn.clicked.connect(self._ask_ai_to_install)
         btn_lay.addWidget(self._ask_btn)
 
+        # 让 magpie 认得 DriFox（登记 agent 条目；幂等，装没装 magpie 都能点）
+        self._link_btn = PushButton("让 magpie 认得 DriFox", self._guide_btns)
+        self._link_btn.clicked.connect(self._sync_agent_link)
+        btn_lay.addWidget(self._link_btn)
+
         btn_lay.addStretch(1)
         guide_lay.addWidget(self._guide_btns)
         guide_lay.addStretch(1)
@@ -329,9 +357,16 @@ class MagpieWebPage(QWidget):
             return
 
         self._view.setVisible(True)
-        self._status.setText(f"已连接 127.0.0.1:{cfg['port']}")
+        self._status.setText(self._connected_status(cfg["port"]))
         self._view.setUrl(QUrl(self._target_url()))
         self._loaded_once = True
+
+    @staticmethod
+    def _connected_status(port: int) -> str:
+        """已连接状态条文案：顺带告诉用户 magpie 认不认得 DriFox。"""
+        if _link_status():
+            return f"已连接 127.0.0.1:{port} · DriFox 已登记"
+        return f"已连接 127.0.0.1:{port} · 未登记 DriFox"
 
     def _on_load_finished(self, ok: bool):
         if ok:
@@ -343,8 +378,10 @@ class MagpieWebPage(QWidget):
     # ── 一键启动（经宿主 process.start 能力） ─────────────
 
     def _launch_magpie(self):
-        """拉起 magpie web：自动定 key → 启动进程 → 轮询端口 → 自动加载。
+        """拉起 magpie web：登记 DriFox 识别 → 自动定 key → 启动 → 轮询端口 → 加载。
 
+        登记先于启动：magpie 的 agent 条目是纯配置，不需要网关在跑；先登记好，
+        拉起后到 Agents / Usage 页就能看到 DriFox。
         全程后台线程，按钮期间禁用防重复点；结果经 _start_done 回主线程。
         """
         cfg = _read_config()
@@ -355,6 +392,7 @@ class MagpieWebPage(QWidget):
         def work():
             ok, err = False, ""
             try:
+                self._ensure_agent_link(log_only=True)
                 start = _caps("process.start")
                 if start is None:
                     err = "宿主未提供 process.start 能力（需 DriFox ≥ 0.6.11）"
@@ -399,6 +437,10 @@ class MagpieWebPage(QWidget):
         # 按钮按分支显隐：未装→只留安装引导；key 不匹配→只留重启对齐
         self._copy_btn.setVisible(installed and not load_failed)
         self._launch_btn.setVisible(installed)
+        # 识别按钮：已登记就只留「已认得」提示（无需再点），未登记时任意分支都可点
+        linked = _link_status()
+        self._link_btn.setVisible(not linked)
+        self._link_btn.setText("让 magpie 认得 DriFox")
         self._apply_theme()
 
     def _open_in_browser(self):
@@ -413,12 +455,91 @@ class MagpieWebPage(QWidget):
         QApplication.clipboard().setText(cmd)
         self._notify("已复制", cmd)
 
+    def _ensure_agent_link(self, log_only: bool = False):
+        """把 DriFox 的 agent 条目登记进 magpie（幂等）。
+
+        走注册表文件而非 ``magpie plugin add``：后者在无 Bun 的环境会去下载 Bun
+        并长时间卡住（实测 180s 无返回）。agent 插件本身不需要 Bun。
+
+        log_only=True 用于启动流程（不弹窗打扰，失败只记日志 + 回状态条）；
+        False 用于用户主动点按钮（结果要明确告知）。
+        """
+        try:
+            from . import agent_link
+
+            state, info = agent_link.ensure_registered()
+        except Exception as e:  # noqa: BLE001 — 登记失败不该阻断启动
+            logger.warning(f"[magpie] 登记 DriFox agent 条目失败: {e}")
+            if not log_only:
+                self._notify("登记失败", str(e))
+            return False
+
+        if state == "error":
+            logger.warning(f"[magpie] 登记 DriFox agent 条目失败: {info}")
+            if not log_only:
+                self._notify("登记失败", info)
+            return False
+        if state == "already":
+            logger.debug("[magpie] DriFox agent 条目已登记，跳过")
+        else:
+            logger.info(f"[magpie] 已登记 DriFox agent 条目: {info}")
+        return True
+
+    def _sync_agent_link(self):
+        """用户主动同步：登记 + 探测 magpie 是否真的认得（两级状态）。
+
+        探测要起 `magpie <id>` 子进程（冷启动可能几秒），放后台线程跑，别冻 UI。
+        """
+        from PyQt5.QtWidgets import QApplication
+
+        self._link_btn.setEnabled(False)
+        QApplication.setOverrideCursor(Qt.WaitCursor)
+        try:
+            if not self._ensure_agent_link():
+                return
+        finally:
+            QApplication.restoreOverrideCursor()
+            self._link_btn.setEnabled(True)
+
+        self._status.setText("正在确认 magpie 是否认得 DriFox …")
+
+        def work():
+            try:
+                from . import agent_link
+
+                active, detail = agent_link.probe_agent_active()
+            except Exception as e:  # noqa: BLE001 — 探测失败按未生效处理
+                active, detail = False, str(e)
+            try:
+                self._link_probed.emit(active, detail)
+            except RuntimeError:
+                pass  # 页面已销毁（窗口关闭）
+
+        threading.Thread(target=work, daemon=True, name="magpie-agent-probe").start()
+
+    def _on_link_probed(self, active: bool, detail: str):
+        self._link_btn.setEnabled(True)
+        if active:
+            self._status.setText(self._connected_status(_read_config()["port"]) if self._view else "DriFox 已登记")
+            self._notify("magpie 已认得 DriFox", f"{detail}（Agents / Usage 页可见）")
+            self._link_btn.setVisible(False)
+            return
+        self._status.setText("已登记，magpie 未确认")
+        if not _magpie_installed():
+            self._notify("已登记，magpie 未安装", "装好 magpie 后重新打开这一页即可生效")
+        else:
+            self._notify("已登记但 magpie 未加载", f"magpie 返回：{detail}")
+
     def _ask_ai_to_install(self):
         """把安装/启动指令写进输入框，交给对话里的模型去执行。
 
         用 input.write 而非自己 subprocess：装软件涉及下载、PATH、权限与平台
         差异，交给模型按当前环境处理比插件硬编码更稳；插件只负责把意图摆到
         用户眼前。
+
+        写提示词前先把 DriFox 的 agent 条目登记进 magpie 注册表：登记只写
+        配置文件，不依赖 magpie 是否已装，所以装好后第一次启动就认得 DriFox
+        （开箱即用）。登记失败不影响提示词（模型装完照样能用，用户可再点按钮）。
         """
         write = _caps("input.write")
 
@@ -426,11 +547,17 @@ class MagpieWebPage(QWidget):
             self._notify("无法写入输入框", "当前宿主未提供 input.write 能力，请手动安装 magpie")
             return
 
+        linked = self._ensure_agent_link(log_only=True)
         prompt = (
             "请帮我安装 magpie（https://github.com/yetone/magpie），安装好后启动它的网页服务，"
             "让 127.0.0.1:3430 能访问，然后告诉我一声。当前平台是 "
             f"{'Windows' if os.name == 'nt' else 'macOS/Linux'}。"
         )
+        if linked:
+            prompt += (
+                "\n\n装好后不用管 DriFox 的识别：插件已经把 DriFox 的 agent 条目登记进 magpie，"
+                "你只要确认 magpie 能正常启动即可。"
+            )
         try:
             write(prompt, append=False, focus=True)
         except Exception as e:  # noqa: BLE001

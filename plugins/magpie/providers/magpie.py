@@ -18,6 +18,14 @@ search / embed…），而 magpie 的 id 带厂商前缀，误杀率高于收益
 自己补该默认值（主程序在 Key 为空时会剥掉 Authorization 头，magpie 仍接受，
 但计数会落到 User-Agent 推断）。
 
+身份与会话识别（capabilities 声明，宿主 ``resolve_extra_headers`` 通用消费）：
+- ``session_header = X-Magpie-Session``：magpie 用它切会话，DriFox 的 session_id
+  自动填进去，Usage / Sessions 页按 DriFox 会话分组。
+- ``extra_headers = User-Agent: DriFox``：归属兜底，但 DriFox 实际发出的客户端头是
+  ``DriFox/1.0.0`` 形态，首词即 ``DriFox``，已足够。
+- Agents 页那一行由同目录的 ``agent_plugin/``（magpie 侧插件包）提供，与本服务商
+  定义互补：本文件管请求归属，那个包管 magpie 界面上的身份展示。
+
 已知限制（聚合网关的固有代价，非本插件缺陷）：
 - 能力表按「最宽」声明：magpie 背后横跨几十家厂商，同一张表无法同时准确描述
   全部 id。上下文窗口 / 思考能力以最宽松者声明，具体模型超限时由厂商返回 400。
@@ -34,6 +42,15 @@ from app.plugins.registries.provider_registry import ProviderDef
 _DEFAULT_BASE = "http://127.0.0.1:3425"
 # 让调用在 magpie 侧归到 drifox 名下（magpie 用 magpie-<app-id> 识别调用方）
 _DEFAULT_KEY = "magpie-drifox"
+
+# magpie 的会话标识头（实测：值原样落进 /v1/magpie/usage/requests 的 session 字段）。
+# 宿主 resolve_extra_headers 的 session_header 通道会自动填 DriFox 的 session_id，
+# 于是 magpie 的 Usage / Sessions 按 DriFox 会话分组。
+_SESSION_HEADER = "X-Magpie-Session"
+
+# 归属兜底：不带 magpie-<app-id> 形式的 key 时，magpie 取 User-Agent 首词当
+# agent 名（实测 "DriFox/0.6.11" → agent=drifox、agentName=DriFox）。
+_EXTRA_HEADERS = {"User-Agent": "DriFox"}
 
 
 def _gateway_base(api_url: str) -> str:
@@ -116,6 +133,9 @@ def register(registry):
             family="magpie",
             capabilities={
                 "models_hook": _fetch_models,
+                # magpie 侧身份与会话识别（对齐 Integrate 文档的网关约定）
+                "session_header": _SESSION_HEADER,
+                "extra_headers": _EXTRA_HEADERS,
                 # 聚合网关：按最宽声明，具体模型的真实上限由厂商侧把关
                 "context_limit": 200000,
                 "max_output_tokens": 32000,
