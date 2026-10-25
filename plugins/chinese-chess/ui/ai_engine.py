@@ -277,13 +277,17 @@ def _resolve_side_config(
 ) -> Optional[Dict[str, Any]]:
     """红/黑方各自生效的模型配置。
 
-    设置卡红/黑模型格式 "Provider:Model"，空 = 沿用主程序当前会话模型；
+    设置卡红/黑方服务商与模型分开存（对齐 vision-proxy）：provider 空 = 跟随
+    当前窗口，model 空 = 用该服务商默认模型，两者均空 = 沿用主程序当前会话
+    模型；旧格式「Provider:Model」合并值存于 model 键时拆分兼容。
     叠加象棋专用参数：关思考（走法无需 reasoning，提速）+ 低温度。
     """
-    sel = str(getattr(card, "_red_model" if side == RED else "_black_model", "") or "")
-    provider, model = "", ""
-    if ":" in sel:
-        provider, model = sel.split(":", 1)
+    provider = str(getattr(card, "_red_provider" if side == RED else "_black_provider", "") or "")
+    model = str(getattr(card, "_red_model" if side == RED else "_black_model", "") or "")
+    if not provider and ":" in model:
+        # 旧格式兼容：「Provider:Model」合并值
+        provider, model = model.split(":", 1)
+        provider, model = provider.strip(), model.strip()
     cfg = _get_llm_config(main_widget, provider, model, services)
     if not cfg:
         return None
