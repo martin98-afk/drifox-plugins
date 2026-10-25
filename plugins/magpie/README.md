@@ -14,7 +14,7 @@ Copilot / Gemini / Grok）、API Key、本地模型收进一个地方，对外�
    只要网关在跑）。没在跑？插件能直接帮你拉起（见下）。
 2. 在 magpie 里添加服务商 / 登录订阅，并给要用的 agent 选中模型。
 
-没在跑时，内嵌弹窗里点「启动 magpie web」即可：插件经宿主的 `process.start`
+没在跑时，magpie 页里点「启动 magpie web」即可：插件经宿主的 `process.start`
 能力后台拉起，不需要终端。
 
 ## 使用
@@ -33,25 +33,25 @@ Copilot / Gemini / Grok）、API Key、本地模型收进一个地方，对外�
 
 ## 内嵌 magpie 网页界面
 
-插件带一个独立弹窗（左侧插件栏「magpie」，或命令 `/magpie:web`），里面直接
-内嵌 magpie 自己的网页界面：切模型、加服务商、看配额与用量、改路由组，跟开
-浏览器里那个页面是同一套。
+插件带一个全屏工作页（主窗口顶部常驻 tab「magpie」，或命令 `/magpie:web`），
+里面直接内嵌 magpie 自己的网页界面：切模型、加服务商、看配额与用量、改路由
+组，跟开浏览器里那个页面是同一套。
 
 **它连的是 `127.0.0.1:3430`，不是网关的 3425。** 这两个是不同的东西：
 
 | 端口 | 用途 | 由谁开启 |
 |------|------|----------|
 | 3425 | LLM 网关（DriFox 聊天走这里） | App / `magpie serve` / 桌面版任一形态 |
-| 3430 | 网页界面（本弹窗走这里） | **只有** `magpie web` / `magpie serve --web` / `magpie daemon install --web` |
+| 3430 | 网页界面（本页走这里） | **只有** `magpie web` / `magpie serve --web` / `magpie daemon install --web` |
 
-所以只装了桌面 App 时，弹窗会引导你启动网页服务。要内嵌使用，得从终端
+所以只装了桌面 App 时，工作页会引导你启动网页服务。要内嵌使用，得从终端
 启动网页服务：
 
 ```sh
 magpie web --no-open          # 默认 3430
 ```
 
-弹窗会自动判断本地状态并给出对应引导：
+页面会自动判断本地状态并给出对应引导：
 
 | 状态 | 引导 |
 |------|------|
@@ -97,7 +97,7 @@ MAGPIE_WEB_KEY=mykey magpie web --no-open
 然后把 `mykey` 填进插件的设置卡（设置 → 插件 → magpie 网页界面 → Web Key）。
 设置里还有「网页端口」，改了 3430 就同步改这里。
 
-key 留空时弹窗仍会尝试加载，被拒绝时页面顶部会提示 key 不匹配（此时点
+key 留空时页面仍会尝试加载，被拒绝时页面顶部会提示 key 不匹配（此时点
 「启动 magpie web」让插件用固定 key 重新拉起即可）。
 
 ## 已知限制
@@ -135,12 +135,12 @@ key 留空时弹窗仍会尝试加载，被拒绝时页面顶部会提示 key �
 
 | 报错 | 原因 | 处理 |
 |------|------|------|
-| 连不上 magpie 网关 `http://...` | 网关没跑，或端口不对 | 内嵌弹窗点「启动 magpie web」，或核对端口 |
+| 连不上 magpie 网关 `http://...` | 网关没跑，或端口不对 | magpie 页点「启动 magpie web」，或核对端口 |
 | `... 不是 magpie 网关：/api/hello 返回 ...` | 该端口被别的服务占用 | 换端口，或停掉占用方 |
 | 读取 magpie 模型列表失败 | 网关在跑但 `/v1/models` 异常 | 在浏览器打开 `/v1/models` 看返回 |
 | magpie 返回的模型列表为空 | magpie 里还没加服务商，或模型对 agents 不可见 | 在 magpie 里添加服务商 |
-| 弹窗显示「启动失败」 | 找不到 magpie，或宿主缺 `process.start` 能力 | 按提示安装 magpie，或升级 DriFox ≥ 0.6.11 |
-| 弹窗显示「页面加载失败（多为 web key 不匹配）」 | 端口上的实例用的是另一次启动的随机 key | 退出现有 magpie 进程后点「启动 magpie web」对齐 key |
+| 页面显示「启动失败」 | 找不到 magpie，或宿主缺 `process.start` 能力 | 按提示安装 magpie，或升级 DriFox ≥ 0.6.11 |
+| 页面显示「页面加载失败（多为 web key 不匹配）」 | 端口上的实例用的是另一次启动的随机 key | 退出现有 magpie 进程后点「启动 magpie web」对齐 key |
 
 ## 许可
 
