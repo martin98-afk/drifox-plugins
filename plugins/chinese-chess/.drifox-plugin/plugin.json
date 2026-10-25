@@ -1,78 +1,96 @@
 {
-  "name": "chinese-chess",
-  "description": "中国象棋 — 与大模型对弈的浮动卡片游戏",
-  "version": "0.3.0",
-  "author": {
-    "name": "马丁"
-  },
-  "license": "GPL-3.0-or-later",
-  "type": "user",
-  "api_version": 2,
-  "min_host_version": "0.6.10",
-  "capabilities": [
-    "ui.notify",
-    "model.config",
-    "engine.session"
-  ],
-  "keywords": [
-    "chinese",
-    "evolved",
-    "xiangqi",
-    "象棋"
-  ],
-  "components": {
-    "tools": false,
-    "commands": false,
-    "agents": false,
-    "skills": false,
-    "hooks": false,
-    "mcp": false,
-    "lsp": false,
-    "themes": false,
-    "ui": true,
-    "providers": false,
-    "team_templates": false,
-    "model_adapters": false,
-    "loop_policies": false,
-    "storages": false,
-    "serializers": false,
-    "gateways": false,
-    "engines": false
-  },
-  "config_schema": {
-    "title": "中国象棋",
-    "fields": [
-      {
-        "key": "red_control",
-        "label": "我方控制方式",
-        "type": "select",
-        "options": [
-          {
-            "value": "manual",
-            "label": "手动操作"
-          },
-          {
-            "value": "ai",
-            "label": "AI 控制"
-          }
-        ],
-        "default": "manual",
-        "description": "选择红方（我方）走子是手动点击还是 AI 自动"
-      },
-      {
-        "key": "red_model",
-        "label": "我方模型",
-        "type": "text",
-        "default": "",
-        "description": "我方 AI 模型，格式 Provider:Model；留空用主程序当前模型（正常情况用自绘设置卡下拉选择，此字段仅供旧宿主降级手填）"
-      },
-      {
-        "key": "black_model",
-        "label": "对方模型",
-        "type": "text",
-        "default": "",
-        "description": "对方 AI 模型，格式 Provider:Model；留空用主程序当前模型（正常情况用自绘设置卡下拉选择，此字段仅供旧宿主降级手填）"
-      }
-    ]
-  }
+    "name": "chinese-chess",
+    "description": "中国象棋 — 与大模型对弈的浮动卡片游戏",
+    "version": "0.4.0",
+    "author": {
+        "name": "马丁"
+    },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "api_version": 2,
+    "min_host_version": "0.6.10",
+    "capabilities": [
+        "ui.notify",
+        "model.config",
+        "engine.session",
+        "provider.list",
+        "model.enumerate"
+    ],
+    "keywords": [
+        "chinese",
+        "evolved",
+        "xiangqi",
+        "象棋"
+    ],
+    "components": {
+        "tools": false,
+        "commands": false,
+        "agents": false,
+        "skills": false,
+        "hooks": false,
+        "mcp": false,
+        "lsp": false,
+        "themes": false,
+        "ui": true,
+        "providers": false,
+        "team_templates": false,
+        "model_adapters": false,
+        "loop_policies": false,
+        "storages": false,
+        "serializers": false,
+        "gateways": false,
+        "engines": false
+    },
+    "config_schema": {
+        "title": "中国象棋",
+        "fields": [
+            {
+                "key": "red_control",
+                "label": "我方控制方式",
+                "type": "select",
+                "options": [
+                    {
+                        "value": "manual",
+                        "label": "手动操作"
+                    },
+                    {
+                        "value": "ai",
+                        "label": "AI 控制"
+                    }
+                ],
+                "default": "manual",
+                "description": "选择红方（我方）走子是手动点击还是 AI 自动"
+            },
+            {
+                "key": "red_provider",
+                "label": "我方服务商（红方）",
+                "type": "text",
+                "default": "",
+                "placeholder": "留空则跟随当前窗口服务商",
+                "description": "红方 AI 的服务商（config_id / 显示名均可）。留空表示跟随当前窗口。"
+            },
+            {
+                "key": "red_model",
+                "label": "我方模型（红方）",
+                "type": "text",
+                "default": "",
+                "description": "红方 AI 模型名。与服务商分开选（正常情况用自绘设置卡两级下拉，此字段仅供旧宿主降级手填）；单独填「服务商:模型名」旧格式也可识别。留空时用上方服务商的默认模型，两者都空则用主程序当前模型。"
+            },
+            {
+                "key": "black_provider",
+                "label": "对方服务商（黑方）",
+                "type": "text",
+                "default": "",
+                "placeholder": "留空则跟随当前窗口服务商",
+                "description": "黑方 AI 的服务商（config_id / 显示名均可）。留空表示跟随当前窗口。"
+            },
+            {
+                "key": "black_model",
+                "label": "对方模型（黑方）",
+                "type": "text",
+                "default": "",
+                "description": "黑方 AI 模型名。与服务商分开选（正常情况用自绘设置卡两级下拉，此字段仅供旧宿主降级手填）；单独填「服务商:模型名」旧格式也可识别。留空时用上方服务商的默认模型，两者都空则用主程序当前模型。"
+            }
+        ]
+    }
 }

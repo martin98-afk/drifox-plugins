@@ -68,7 +68,6 @@ except Exception:  # noqa: BLE001
 DEFAULT_RED_CONTROL = "manual"   # 'manual' or 'ai'
 DEFAULT_RED_MODEL = ""           # 留空 = 沿用主程序当前模型
 DEFAULT_BLACK_MODEL = ""
-
 # ── 模块级 try/except：theme 容错导入 ──
 try:
     from . import theme as _theme  # type: ignore
@@ -83,7 +82,9 @@ def _load_config_defaults() -> dict:
     """
     defaults = {
         "red_control": DEFAULT_RED_CONTROL,
+        "red_provider": "",
         "red_model": DEFAULT_RED_MODEL,
+        "black_provider": "",
         "black_model": DEFAULT_BLACK_MODEL,
     }
     if PluginConfigStore is None:
@@ -96,7 +97,7 @@ def _load_config_defaults() -> dict:
                 continue
             if k == "red_control" and v in ("manual", "ai"):
                 defaults[k] = v
-            elif k in ("red_model", "black_model"):
+            elif k in ("red_provider", "black_provider", "red_model", "black_model"):
                 defaults[k] = "" if v == "__default__" else str(v)
     except Exception as e:  # noqa: BLE001
         logger.debug(f"[chinese-chess] 配置加载失败，使用默认: {e}")
@@ -121,7 +122,9 @@ class ChessCard(QWidget):
         # ── 配置（从 PluginConfigStore 读取，向后兼容老配置无字段）──
         cfg = _load_config_defaults()
         self._red_control = cfg["red_control"]
+        self._red_provider = cfg["red_provider"]
         self._red_model = cfg["red_model"]
+        self._black_provider = cfg["black_provider"]
         self._black_model = cfg["black_model"]
 
         # 游戏状态
@@ -225,12 +228,13 @@ class ChessCard(QWidget):
         self._config_change_callback = cb
 
     def update_config(self, new_cfg: dict) -> None:
-        """实时更新控制模式 / 模型选择，立即生效（无需重启插件）。
+        """实时更新控制模式 / 服务商与模型选择，立即生效（无需重启插件）。
 
         new_cfg 字段（容错，缺字段用原值）：
             red_control: 'manual' or 'ai'
-            red_model: 'Provider:Model' 或 ''
-            black_model: 'Provider:Model' 或 ''
+            red_provider / black_provider: 服务商（id 或显示名），空 = 跟随当前窗口
+            red_model / black_model: 模型名，空 = 跟随；旧格式 'Provider:Model'
+            合并值由 ai_engine._resolve_side_config 拆分兼容
         """
         if "red_control" in new_cfg and new_cfg["red_control"] in ("manual", "ai"):
             old = self._red_control
@@ -238,13 +242,18 @@ class ChessCard(QWidget):
             if old != self._red_control:
                 logger.info(f"[chinese-chess] 红方控制方式切换: {old} → {self._red_control}")
                 self._refresh_status()
+        if "red_provider" in new_cfg:
+            self._red_provider = str(new_cfg["red_provider"] or "")
         if "red_model" in new_cfg:
             self._red_model = str(new_cfg["red_model"] or "")
+        if "black_provider" in new_cfg:
+            self._black_provider = str(new_cfg["black_provider"] or "")
         if "black_model" in new_cfg:
             self._black_model = str(new_cfg["black_model"] or "")
         logger.debug(
             f"[chinese-chess] 配置更新: red_control={self._red_control}, "
-            f"red_model={self._red_model}, black_model={self._black_model}"
+            f"red=({self._red_provider}, {self._red_model}), "
+            f"black=({self._black_provider}, {self._black_model})"
         )
 
     # ── UI 搭建 ──

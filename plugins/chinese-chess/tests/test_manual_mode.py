@@ -112,7 +112,17 @@ class TestRedControlMode(unittest.TestCase):
         self.assertEqual(card._red_control, "manual")
 
     def test_update_config_model(self):
-        """运行时更新 model 配置立即生效。"""
+        """运行时更新服务商/模型配置立即生效（两键分开，对齐 vision-proxy）。"""
+        card = _make_card()
+        card.update_config({"red_provider": "prov_openai", "red_model": "gpt-4o"})
+        self.assertEqual(card._red_provider, "prov_openai")
+        self.assertEqual(card._red_model, "gpt-4o")
+        card.update_config({"black_provider": "prov_deepseek", "black_model": "deepseek-chat"})
+        self.assertEqual(card._black_provider, "prov_deepseek")
+        self.assertEqual(card._black_model, "deepseek-chat")
+
+    def test_update_config_model_legacy_merged_value(self):
+        """旧格式「Provider:Model」合并值原样存入 model 键（拆分由 ai_engine 兜底）。"""
         card = _make_card()
         card.update_config({"red_model": "OpenAI:gpt-4o"})
         self.assertEqual(card._red_model, "OpenAI:gpt-4o")
