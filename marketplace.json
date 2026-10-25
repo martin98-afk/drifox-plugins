@@ -2047,6 +2047,7 @@
             "components": {
                 "agents": true
             },
+            "downloads": 1,
             "keywords": [
                 "agents",
                 "experts",
@@ -2880,7 +2881,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 76,
+            "downloads": 78,
             "keywords": [
                 "git",
                 "source-control",
@@ -3440,7 +3441,7 @@
                 "skills": true,
                 "tools": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "image-generation",
                 "video-generation",
@@ -3737,7 +3738,7 @@
                 "providers": true,
                 "ui": true
             },
-            "downloads": 5,
+            "downloads": 12,
             "keywords": [
                 "magpie",
                 "网关",
@@ -4732,7 +4733,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 64,
+            "downloads": 66,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -6044,7 +6045,7 @@
                 "tools": true,
                 "ui": true
             },
-            "downloads": 2,
+            "downloads": 4,
             "keywords": [
                 "vision",
                 "multimodal",
