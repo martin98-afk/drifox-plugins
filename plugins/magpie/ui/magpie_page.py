@@ -179,7 +179,14 @@ class MagpieWebPage(QWidget):
         self._provider = provider
 
     def show_card(self):
-        """页显示/激活入口（宿主唤出浮动卡时调用）：取色 + 探测 + 加载。"""
+        """页显示/激活入口（宿主唤出浮动卡时调用）：显示 + 取色 + 探测 + 加载。
+
+        必须自管可见性：容器 add_card 时统一 setVisible(False) 藏卡，而
+        CardManager 对实现了 show_card() 的卡只调本方法、不再代为 setVisible
+        ——漏了这行卡永远 isHidden，容器判定无可见卡而折叠回对话区。
+        （独立弹窗时代的 show_card 只做业务激活，可见性由弹窗壳负责。）
+        """
+        self.setVisible(True)
         self._apply_theme()
         self._connect_and_load()
 
