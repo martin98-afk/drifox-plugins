@@ -36,7 +36,7 @@ _PROFILE_NAME = "magpie-web"
 
 
 def _caps(cap_id: str):
-    """取某能力（独立弹窗无 ctx，统一走 sdk 的 caps_for，host 由宿主解析）。
+    """取某能力（full 卡无独立 ctx，统一走 sdk 的 caps_for，host 由宿主解析）。
 
     抽成模块级函数而非在各处内联 import：无 ctx 场景下 host 解析只有这一条
     路径，内联会让「拿不到能力」的兜底散落多处；也便于测试替换。
@@ -153,7 +153,7 @@ def _probe(port: int, timeout: float = 2.0) -> bool:
 
 
 class MagpieWebPage(QWidget):
-    """magpie 网页界面（独立弹窗内容页）。"""
+    """magpie 网页界面（full 容器工作页）。"""
 
     _probe_done = Signal(bool)
     _start_done = Signal(bool, str)
@@ -179,7 +179,7 @@ class MagpieWebPage(QWidget):
         self._provider = provider
 
     def show_card(self):
-        """弹窗打开/激活入口：取色 + 探测 + 加载。"""
+        """页显示/激活入口（宿主唤出浮动卡时调用）：取色 + 探测 + 加载。"""
         self._apply_theme()
         self._connect_and_load()
 
@@ -418,7 +418,7 @@ class MagpieWebPage(QWidget):
         self._notify("已填入输入框", "发送后模型会按你的环境装 magpie（可能需要下载与权限确认）")
 
     def _notify(self, title: str, content: str):
-        """提示优先走 ui.notify 能力，拿不到就只记日志（弹窗内无 InfoBar parent）。"""
+        """提示优先走 ui.notify 能力，拿不到就只记日志（不依赖页内 InfoBar parent）。"""
         notify = _caps("ui.notify")
         if notify is not None:
             try:
