@@ -3,9 +3,11 @@
 
 复用主程序模型配置（与 prompt-enhancer 同约定）：
 - 明文 API_KEY 经宿主 services["get_provider_config"] 获取（内存态已解锁）；
-  磁盘 app.config 只用于读非密钥字段（渲染「服务商:模型名」下拉选项），
+  磁盘 app.config 只用于读非密钥字段（渲染「服务商/模型」两级下拉的降级路径），
   密钥模式下其 API_KEY 是密文/空串，不可用于请求。
-- PluginConfigStore 读取 commit_prompt / commit_model 配置
+- PluginConfigStore 读取 commit_prompt / commit_provider / commit_model 配置
+  （服务商、模型分开存，对齐 vision-proxy）；commit_model 存旧格式
+  「服务商:模型名」合并值时按兼容路径拆分。
 - get_llm_config：override 优先，回退调用方当前会话模型
 """
 
@@ -70,6 +72,104 @@ def _load_system_config() -> Optional[Dict[str, Any]]:
     return data
 
 
+def _caps(name: str) -> Any:
+    """取宿主能力（设置卡无 ctx，走 caps_for 按插件名解析到活跃窗口）。"""
+    try:
+        from app.plugins.sdk import caps_for
+
+        return caps_for(name, plugin=PLUGIN_NAME, surface="ui")
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"[git-panel] 取能力 {name} 失败: {e}")
+        return None
+
+
+def load_provider_entries() -> List[Dict[str, Any]]:
+    """内存态服务商清单（provider.list 能力）；不可用返回 []（调用方回退磁盘扫描）。"""
+    fn = _caps("provider.list")
+    if not callable(fn):
+        return []
+    try:
+        items = fn() or []
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"[git-panel] provider.list 调用失败: {e}")
+        return []
+    return [p for p in items if isinstance(p, dict)]
+
+
+def load_models_of(provider_id: str) -> List[str]:
+    """指定服务商的模型名列表（model.enumerate 能力）；不可用返回 []。"""
+    if not provider_id:
+        return []
+    fn = _caps("model.enumerate")
+    if not callable(fn):
+        return []
+    try:
+        items = fn(provider_id) or []
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"[git-panel] model.enumerate 调用失败: {e}")
+        return []
+    return [str(m.get("name") or "") for m in items if isinstance(m, dict) and m.get("name")]
+
+
+def load_provider_tree() -> List[Tuple[str, str]]:
+    """服务商两级下拉的第一级选项：[(display, config_id)]。
+
+    首选 provider.list（内存态，用户刚加的服务商立即可见）；能力不可用
+    （旧宿主 / 无活跃窗口）回退扫描 app.config 非密钥字段。
+    """
+    entries = load_provider_entries()
+    if entries:
+        out: List[Tuple[str, str]] = []
+        for p in entries:
+            pid = str(p.get("id") or "")
+            if not pid:
+                continue
+            label = str(p.get("display_name") or pid)
+            if p.get("is_current"):
+                label = f"{label}（当前）"
+            out.append((label, pid))
+        if out:
+            return out
+    # 降级：磁盘扫描（仅非密钥字段，与旧版渲染路径同源）
+    data = _load_system_config()
+    if data is None:
+        return []
+    saved = (data.get("LLM") or {}).get("SavedProviders") or {}
+    seen: set = set()
+    out = []
+    for cid, p in saved.items():
+        if not isinstance(p, dict):
+            continue
+        name = str(p.get("provider_name") or p.get("name") or cid).strip()
+        if not cid or not name or cid in seen:
+            continue
+        seen.add(cid)
+        out.append((name, cid))
+    out.sort(key=lambda item: item[0].lower())
+    return out
+
+
+def load_models_by_tree(provider_id: str) -> List[str]:
+    """服务商两级下拉的第二级选项：模型名列表。
+
+    首选 model.enumerate；不可用时回退 app.config 的「模型列表」。
+    """
+    models = load_models_of(provider_id)
+    if models:
+        return models
+    data = _load_system_config()
+    if data is None:
+        return []
+    for cid, p in ((data.get("LLM") or {}).get("SavedProviders") or {}).items():
+        if cid != provider_id or not isinstance(p, dict):
+            continue
+        models = [str(m).strip() for m in (p.get("模型列表") or []) if str(m).strip()]
+        if not models and p.get("模型名称"):
+            models = [str(p["模型名称"]).strip()]
+        return models
+    return []
+
+
 def parse_provider_options() -> List[Tuple[str, str]]:
     """扫描主程序 LLM.SavedProviders → [(「服务商:模型名」显示与值)]"""
     data = _load_system_config()
@@ -96,20 +196,6 @@ def parse_provider_options() -> List[Tuple[str, str]]:
             out.append((display, display))
     out.sort(key=lambda item: item[0].lower())
     return out
-
-
-def parse_model_value(value: str) -> Optional[Tuple[str, str]]:
-    """解析「服务商:模型名」→ (provider, model)；空/非法/不存在 → None"""
-    if not value or ":" not in value:
-        return None
-    provider, model = value.split(":", 1)
-    provider, model = provider.strip(), model.strip()
-    if not provider or not model:
-        return None
-    for display, _v in parse_provider_options():
-        if display == f"{provider}:{model}":
-            return provider, model
-    return None
 
 
 def _get_provider_config_from_memory(
@@ -177,11 +263,23 @@ def get_llm_config(
     return cfg
 
 
-def resolve_model(model_raw: str, main_widget) -> Optional[Tuple[str, str]]:
-    """commit_model 配置 → (provider, model)；空/失败回退当前会话模型"""
-    parsed = parse_model_value(str(model_raw) if model_raw else "")
-    if parsed is not None:
-        return parsed
+def resolve_model(
+    provider_raw: str, model_raw: str, main_widget
+) -> Optional[Tuple[str, str]]:
+    """commit_provider + commit_model 配置 → (provider, model)；空/失败回退当前会话模型。
+
+    新格式两键分开存（对齐 vision-proxy）；commit_model 存旧格式
+    「服务商:模型名」合并值时直接拆分。只配 provider 不配 model =
+    用该服务商的默认模型（get_provider_config 语义）。
+    """
+    provider = str(provider_raw or "").strip()
+    model = str(model_raw or "").strip()
+    if not provider and ":" in model:
+        # 旧格式兼容：「Provider:Model」合并值
+        provider, model = model.split(":", 1)
+        provider, model = provider.strip(), model.strip()
+    if provider or model:
+        return provider, model
     valid = getattr(main_widget, "_valid_configs", None)
     if isinstance(valid, dict):
         cur_name = getattr(main_widget, "_current_provider_name", None) or "系统默认配置"
