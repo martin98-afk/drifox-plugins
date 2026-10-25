@@ -1,0 +1,12 @@
+{
+  "name": "magpie-agent-drifox",
+  "version": "0.1.0",
+  "description": "DriFox on magpie's Agents page: its requests are named DriFox in Usage, its conversations grouped by session.",
+  "type": "module",
+  "files": ["drifox.agent.js", "README.md"],
+  "keywords": ["magpie", "magpie-plugin", "agent", "drifox"],
+  "license": "GPL-3.0-or-later",
+  "magpie": {
+    "agent": "./drifox.agent.js"
+  }
+}
