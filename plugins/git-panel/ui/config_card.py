@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-"""git-panel 设置卡 — 「Git 提交描述生成」：多行提示词编辑 + 模型下拉 + 恢复默认
+"""git-panel 设置卡 — 「Git 提交描述生成」：多行提示词编辑 + 服务商/模型两级下拉 + 恢复默认
 
-实现模式与 prompt-enhancer._EnhanceConfigCard 一致（同 card_id 覆盖 E1 自动卡）：
+实现模式与 vision-proxy._VisionConfigCard 一致（同 card_id 覆盖 E1 自动卡）：
 - 保存语义与 PluginConfigStore 一致：空内容 = 清除 → 回默认
-- 模型下拉「当前模型」= 空值（沿用调用方当前 provider/model），
-  其余为「ProviderName:ModelName」（与主程序标题生成/子智能体一致）
+- 服务商、模型分开选（对齐 vision-proxy）：服务商下拉换选后重填模型下拉；
+  数据源首选 provider.list / model.enumerate（内存态），能力不可用回退磁盘扫描
+- 「当前模型」= 两键均空（沿用调用方当前 provider/model）
 """
 
 from typing import Optional
@@ -24,7 +25,8 @@ from PyQt5.QtWidgets import QApplication, QPlainTextEdit, QToolTip, QPushButton
 from .llm_config import (
     DEFAULT_COMMIT_PROMPT,
     PLUGIN_NAME,
-    parse_provider_options,
+    load_models_by_tree,
+    load_provider_tree,
 )
 
 _CONFIG_CARD_BASE = ExpandSettingCard if ExpandSettingCard is not None else object  # type: ignore
@@ -35,7 +37,7 @@ _MAX_MODEL_VISIBLE_ITEMS = 8
 
 
 class _CommitConfigCard(_CONFIG_CARD_BASE):
-    """Git 提交描述生成配置卡：提示词多行编辑 + 模型下拉 + 恢复默认"""
+    """Git 提交描述生成配置卡：提示词多行编辑 + 服务商/模型两级下拉 + 恢复默认"""
 
     def __init__(self, parent=None):
         super().__init__(
@@ -52,20 +54,28 @@ class _CommitConfigCard(_CONFIG_CARD_BASE):
         self._edit.setMinimumHeight(140)
         self.viewLayout.addWidget(self._edit)
 
+        self._provider_combo: Optional[ComboBox] = None
         self._model_combo: Optional[ComboBox] = None
         if ComboBox is not None:
+            self._providers = load_provider_tree()
+
+            self._provider_combo = ComboBox(self.view)
+            self._provider_combo.setMinimumWidth(220)
+            self._provider_combo.setMaxVisibleItems(_MAX_MODEL_VISIBLE_ITEMS)
+            for label, pid in self._providers:
+                self._provider_combo.addItem(label, userData=pid)
+            self._provider_combo.setToolTip(
+                "生成提交描述用的服务商。选「当前模型」表示沿用当前窗口 provider/model。"
+            )
+            self._provider_combo.currentIndexChanged.connect(self._on_provider_changed)
+            self.viewLayout.addWidget(self._provider_combo)
+
             self._model_combo = ComboBox(self.view)
             self._model_combo.setMinimumWidth(220)
-            self._model_combo.blockSignals(True)
-            self._model_combo.addItem(_CURRENT_MODEL_LABEL, userData=_CURRENT_MODEL_VALUE)
-            for display, value in parse_provider_options():
-                self._model_combo.addItem(display, userData=value)
             self._model_combo.setMaxVisibleItems(_MAX_MODEL_VISIBLE_ITEMS)
             self._model_combo.setToolTip(
-                "用于生成提交描述的 LLM。留空（当前模型）= 沿用当前窗口 provider/model；"
-                "其余选项格式「服务商:模型名」，与系统「标题生成」「子智能体」一致。"
+                "生成提交描述用的模型（清单随上方服务商联动）。"
             )
-            self._model_combo.blockSignals(False)
             self._model_combo.currentIndexChanged.connect(self._on_model_changed)
             self.viewLayout.addWidget(self._model_combo)
 
@@ -116,24 +126,61 @@ class _CommitConfigCard(_CONFIG_CARD_BASE):
         self._edit.setPlainText(load_plugin_text_config("commit_prompt", DEFAULT_COMMIT_PROMPT))
         self._edit.textChanged.connect(self._on_prompt_changed)
 
-        # 模型下拉
-        if self._model_combo is not None:
-            from .llm_config import load_plugin_text_config
+        # 服务商下拉
+        if self._provider_combo is None:
+            return
+        from .llm_config import load_plugin_text_config
 
-            stored = load_plugin_text_config("commit_model", "")
-            self._model_combo.blockSignals(True)
-            idx = self._model_combo.findData(stored if stored else _CURRENT_MODEL_VALUE)
-            if idx < 0:
+        stored_provider = load_plugin_text_config("commit_provider", "")
+        stored_model = load_plugin_text_config("commit_model", "")
+        # 旧格式兼容：「服务商:模型」合并值存过 → 拆开回显，不丢用户配置
+        if not stored_provider and ":" in stored_model:
+            stored_provider, stored_model = stored_model.split(":", 1)
+            stored_provider, stored_model = stored_provider.strip(), stored_model.strip()
+
+        self._provider_combo.blockSignals(True)
+        idx = self._provider_combo.findData(stored_provider)
+        if idx < 0:
+            if stored_provider:
+                # 已存值不在清单里（服务商被删/能力降级）：插到首位保住它
+                self._provider_combo.insertItem(0, stored_provider, userData=stored_provider)
                 idx = 0
-                if stored:
-                    self._clear_model_config()
-            self._model_combo.setCurrentIndex(idx)
-            if idx == 0:
-                self._model_combo.setCurrentText(_CURRENT_MODEL_LABEL)
-            self._model_combo.blockSignals(False)
+            else:
+                idx = 0
+        self._provider_combo.setCurrentIndex(idx)
+        self._provider_combo.blockSignals(False)
+
+        current_pid = str(self._provider_combo.currentData() or "")
+        self._fill_models(current_pid, stored_model)
+
+    def _fill_models(self, provider_id: str, selected: str = "") -> None:
+        """按服务商重填模型下拉；首项「当前模型」= 空（沿用该服务商默认/当前窗口）。"""
+        if self._model_combo is None:
+            return
+        self._model_combo.blockSignals(True)
+        self._model_combo.clear()
+        self._model_combo.addItem(_CURRENT_MODEL_LABEL, userData=_CURRENT_MODEL_VALUE)
+        for name in load_models_by_tree(provider_id):
+            self._model_combo.addItem(name, userData=name)
+        idx = self._model_combo.findData(selected)
+        if idx < 0 and selected:
+            # 已存模型不在清单里（服务商模型变更）：插到「当前模型」之后保住它
+            self._model_combo.insertItem(1, selected, userData=selected)
+            idx = 1
+        self._model_combo.setCurrentIndex(max(0, idx))
+        self._model_combo.blockSignals(False)
 
     def _on_prompt_changed(self) -> None:
         self._save({"commit_prompt": self._edit.toPlainText().strip()})
+
+    def _on_provider_changed(self, _index: int) -> None:
+        if self._provider_combo is None:
+            return
+        pid = str(self._provider_combo.currentData() or "")
+        self._save({"commit_provider": pid})
+        # 换服务商后模型清单全变，清空模型值避免指向不存在的模型
+        self._save({"commit_model": ""})
+        self._fill_models(pid)
 
     def _on_model_changed(self, _index: int) -> None:
         if self._model_combo is None:
@@ -142,7 +189,13 @@ class _CommitConfigCard(_CONFIG_CARD_BASE):
         self._save({"commit_model": str(value)})
 
     def _on_reset(self) -> None:
-        self._save({"commit_prompt": DEFAULT_COMMIT_PROMPT, "commit_model": _CURRENT_MODEL_VALUE})
+        self._save(
+            {
+                "commit_prompt": DEFAULT_COMMIT_PROMPT,
+                "commit_provider": "",
+                "commit_model": _CURRENT_MODEL_VALUE,
+            }
+        )
         self._echo()
 
     # ── 配置读写（PluginConfigStore 不可用时静默降级为会话内编辑） ──
@@ -155,12 +208,3 @@ class _CommitConfigCard(_CONFIG_CARD_BASE):
             PluginConfigStore().set_values(PLUGIN_NAME, values)
         except Exception as e:  # noqa: BLE001
             logger.warning(f"[git-panel] 保存配置失败: {e}")
-
-    @staticmethod
-    def _clear_model_config() -> None:
-        try:
-            from app.plugins.managers.plugin_config_store import PluginConfigStore
-
-            PluginConfigStore().set_values(PLUGIN_NAME, {"commit_model": ""})
-        except Exception as e:  # noqa: BLE001
-            logger.warning(f"[git-panel] 清理模型配置失败: {e}")

@@ -3211,7 +3211,11 @@ class GitPanelCard(QWidget):
         if not diff_text:
             self._show_info_bar("info", "AI 生成", "暂存区为空，请先暂存要提交的文件")
             return
-        override = resolve_model(load_plugin_text_config("commit_model", ""), main_widget)
+        override = resolve_model(
+            load_plugin_text_config("commit_provider", ""),
+            load_plugin_text_config("commit_model", ""),
+            main_widget,
+        )
         llm = get_llm_config(
             main_widget,
             override_provider=override[0] if override else None,

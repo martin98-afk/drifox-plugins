@@ -5,7 +5,7 @@
         "light": "icon.svg",
         "dark": "icon_dark.svg"
     },
-    "version": "2.1.2",
+    "version": "2.2.0",
     "author": {
         "name": "DriFox Contributors"
     },
@@ -16,7 +16,9 @@
     "min_host_version": "0.6.10",
     "capabilities": [
         "engine.session",
-        "model.config"
+        "model.config",
+        "provider.list",
+        "model.enumerate"
     ],
     "keywords": [
         "git",
@@ -41,12 +43,20 @@
                 "description": "点击提交栏「AI 生成」按钮时，此指令作为 system prompt，根据暂存区 diff 生成提交描述。"
             },
             {
+                "key": "commit_provider",
+                "label": "提交服务商",
+                "type": "text",
+                "default": "",
+                "placeholder": "留空则跟随当前窗口服务商",
+                "description": "生成提交描述的服务商（config_id / 显示名均可）。留空表示跟随当前窗口，模型字段也留空时用当前模型。"
+            },
+            {
                 "key": "commit_model",
-                "label": "提交描述模型",
+                "label": "提交模型",
                 "type": "text",
                 "default": "",
                 "placeholder": "留空使用调用方当前模型",
-                "description": "用于生成提交描述的 LLM。格式「服务商:模型名」（与主程序标题生成/子智能体一致）。留空时沿用当前窗口正在使用的模型。"
+                "description": "用于生成提交描述的模型名。与服务商分开选（正常情况用设置卡两级下拉，此字段仅供旧宿主降级手填）；单独填「服务商:模型名」旧格式也可识别。留空时用上方服务商的默认模型，两者都空则沿用当前窗口模型。"
             }
         ]
     }
