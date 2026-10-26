@@ -735,7 +735,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 7,
+            "downloads": 8,
             "keywords": [
                 "chinese",
                 "evolved",
@@ -2881,7 +2881,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 82,
+            "downloads": 83,
             "keywords": [
                 "git",
                 "source-control",
@@ -4734,7 +4734,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 67,
+            "downloads": 68,
             "keywords": [
                 "prompt",
                 "enhance",
