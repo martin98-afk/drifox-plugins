@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1793015565.273888,
+  "fetched_at": 1793037340.0802226,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -18,6 +18,7 @@
     "bailian-amap": 0,
     "bailian-websearch": 0,
     "beautiful-article-skills": 3,
+    "bili-summary": 0,
     "breakout": 6,
     "browser": 72,
     "calendar": 27,
@@ -118,6 +119,7 @@
     "knowledge-base-skills": 2,
     "laputa-fog": 11,
     "linear": 0,
+    "live-data": 0,
     "magpie": 13,
     "mapbox": 0,
     "marketplace-recommend": 2,
@@ -193,7 +195,6 @@
     "voice-clone": 1,
     "voice-input": 28,
     "voice-reply": 11,
-    "weather-query": 0,
     "web-artifacts-builder": 3,
     "web-design-skills": 3,
     "webapp-testing": 2,
