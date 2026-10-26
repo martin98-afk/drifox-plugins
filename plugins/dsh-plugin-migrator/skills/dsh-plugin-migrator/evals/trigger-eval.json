@@ -1,0 +1,22 @@
+{
+  "skill_name": "dsh-plugin-migrator",
+  "purpose": "Portable trigger evaluation set: when does a dsh→DriFox migration request route to this skill.",
+  "cases": [
+    {"id":"T01","type":"should-trigger","query":"把 ~/.dsh 里那个 dsh 插件迁到这个仓库来，要能过 validate。","expected_route":"scan → mapping → migrate → validate"},
+    {"id":"T02","type":"should-trigger","query":"我拿到一个 DeepSeek Harness 的插件包，帮我转成 DriFox 插件。","expected_route":"locate source, then scan capability inventory"},
+    {"id":"T03","type":"should-trigger","query":"这个 dsh 包里有 skill bundle 和几个 cordis patch 行，判断哪些能搬哪些不能。","expected_route":"capability inventory with port/stub/skip verdicts"},
+    {"id":"T04","type":"should-trigger","query":"迁移出来的插件跑 validate_plugins.py 报错了，看看哪里不合规。","expected_route":"read drifox-target-contract and fix manifest/components"},
+    {"id":"T05","type":"should-trigger","query":"dsh-agent-preset 在 DriFox 侧应该落成什么？","expected_route":"mapping-rules §3.2 agents/<id>.md skeleton"},
+    {"id":"N01","type":"should-not-trigger","query":"帮我用 DriFox 从零写一个新插件，不涉及 dsh。","expected_route":"plugin-creator / ui-plugin-creator"},
+    {"id":"N02","type":"should-not-trigger","query":"把这个 Python 插件改成异步的。","expected_route":"normal refactor"},
+    {"id":"N03","type":"should-not-trigger","query":"dsh 是什么东西，给我讲讲它的架构。","expected_route":"explanation, unless migration is requested"},
+    {"id":"N04","type":"should-not-trigger","query":"把这个插件发布到市场。","expected_route":"release/publish workflow"},
+    {"id":"N05","type":"should-not-trigger","query":"Claude Code 的 .claude-plugin 怎么转成 DriFox 插件？","expected_route":"different source ecosystem; not dsh"},
+    {"id":"M01","type":"near-miss","query":"把 dsh 的一个 skill 抄过来。","expected_route":"trigger if converting into a DriFox plugin; single-file copy otherwise"},
+    {"id":"M02","type":"near-miss","query":"看看 ~/.dsh/profiles 里有什么能用的。","expected_route":"inventory only; trigger only if migration follows"},
+    {"id":"M03","type":"near-miss","query":"dsh 插件迁移那个 skill 写得不对，改一下。","expected_route":"this is about the migrator skill itself → meta-skill-creator"},
+    {"id":"A01","type":"ambiguous","query":"把这个迁过来。","expected_route":"ask which source ecosystem; trigger only if dsh"},
+    {"id":"A02","type":"ambiguous","query":"dsh 这个包好像能直接用？","expected_route":"inspect dsh declaration first; many @deepseek-ai/* are harness internals"},
+    {"id":"A03","type":"ambiguous","query":"生成的插件能用了吗。","expected_route":"report three proof layers; blocked while TODOs remain"}
+  ]
+}

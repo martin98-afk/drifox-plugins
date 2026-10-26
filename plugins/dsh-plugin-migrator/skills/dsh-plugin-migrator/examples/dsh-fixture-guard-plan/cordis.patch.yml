@@ -1,0 +1,41 @@
+# 施工平面图合规校验 —— 组合层 patch（示例 fixture）
+- insert:
+    - id: qc-skill
+      name: 'dsh-guard-plan-qc/skills'
+
+    - id: qc-command-check
+      name: 'dsh-command-guard-plan-check'
+
+    - id: qc-tool-lookup
+      name: 'dsh-tool-guard-plan-lookup'
+
+    - id: qc-audit
+      name: 'dsh-guard-plan-qc/audit'
+
+    - id: qc-mcp
+      name: 'dsh-mcp-client'
+
+    - id: qc-ui-panel
+      name: 'dsh-client-ui-guard-plan-panel'
+
+    - id: qc-ui-settings
+      name: 'dsh-client-ui-settings-guard-plan'
+
+    - id: qc-preset
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: guard-plan-qc
+        order: 5
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              prefix: You are a guard plan reviewer for the {{model}} model.
+          - id: tool-fs
+            name: '@deepseek-ai/dsh-tool-fs'
+          - id: skill-filesystem
+            name: '@deepseek-ai/dsh-skill-filesystem'
+
+    - id: qc-optional-telemetry
+      name: 'dsh-guard-plan-qc/telemetry'
+      disabled: true

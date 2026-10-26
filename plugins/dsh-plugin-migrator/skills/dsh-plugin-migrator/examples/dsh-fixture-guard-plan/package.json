@@ -1,0 +1,50 @@
+{
+  "name": "dsh-guard-plan-qc",
+  "description": "Guard plan quality control for DeepSeek Harness",
+  "version": "0.3.1",
+  "license": "MIT",
+  "type": "module",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "SKILL.md",
+    "references",
+    "scripts",
+    "README.md"
+  ],
+  "keywords": ["dsh", "dsh-plugin", "guard-plan", "compliance"],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "engines": {
+    "node": ">=24.0.0",
+    "dsh": ">=0.2.1-0 <0.3.0"
+  },
+  "dshWorkshop": {
+    "schema": "omdsh-workshop-package/v1",
+    "type": "plugin",
+    "integration": {
+      "protocol": "harness-profile",
+      "artifact": "cordis.patch.yml"
+    },
+    "lifecycle": {
+      "activation": "restart-profile",
+      "dispose": "supported"
+    },
+    "permissions": ["filesystem:read"],
+    "compatibility": {
+      "dshVersions": ["0.2.1-rc.2"]
+    },
+    "capability": {
+      "id": "dsh-guard-plan-qc",
+      "kind": "service",
+      "invocation": "ctx.skills.get('dsh-guard-plan-qc') resolves a complete SkillDefinition",
+      "expected": "session skill catalog lists dsh-guard-plan-qc"
+    }
+  }
+}
