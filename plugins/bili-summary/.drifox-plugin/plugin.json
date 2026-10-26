@@ -1,0 +1,26 @@
+{
+    "name": "bili-summary",
+    "description": "B 站视频总结 — 通过弹幕、评论、官方 AI 总结与抽帧识别，概括一个视频到底讲了什么。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "1.0.0",
+    "author": {
+        "name": "DriFox Contributor"
+    },
+    "license": "MIT",
+    "type": "user",
+    "min_host_version": "0.5.0",
+    "keywords": [
+        "bilibili",
+        "bili",
+        "视频总结",
+        "弹幕",
+        "字幕",
+        "抽帧"
+    ],
+    "components": {
+        "skills": true
+    }
+}

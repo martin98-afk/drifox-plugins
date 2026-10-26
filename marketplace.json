@@ -518,6 +518,38 @@
             }
         },
         {
+            "name": "bili-summary",
+            "description": "B 站视频总结 — 通过弹幕、评论、官方 AI 总结与抽帧识别，概括一个视频到底讲了什么。",
+            "version": "1.0.0",
+            "author": "DriFox Contributor",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/bili-summary",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "bilibili",
+                "bili",
+                "视频总结",
+                "弹幕",
+                "字幕",
+                "抽帧"
+            ],
+            "min_host_version": "0.5.0",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "breakout",
             "description": "经典打砖块游戏——在 DriFox 中直接玩的浮动卡片",
             "version": "0.3.0",
