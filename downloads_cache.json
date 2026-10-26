@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1793037340.0802226,
+  "fetched_at": 1793052356.2146196,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -18,7 +18,7 @@
     "bailian-amap": 0,
     "bailian-websearch": 0,
     "beautiful-article-skills": 3,
-    "bili-summary": 0,
+    "bili-summary": 1,
     "breakout": 6,
     "browser": 72,
     "calendar": 27,
@@ -51,6 +51,7 @@
     "dingtalk-todo": 1,
     "doc-coauthoring": 1,
     "dropbox": 0,
+    "dsh-plugin-migrator": 0,
     "dsh-presets": 1,
     "dsh-router": 1,
     "dsh-super-injector": 0,
