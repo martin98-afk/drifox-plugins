@@ -5,7 +5,10 @@
         "light": "icon.svg",
         "dark": "icon_dark.svg"
     },
-    "version": "0.1.5",
+    "version": "0.1.6",
+    "capabilities": [
+        "storage.data_dir"
+    ],
     "author": {
         "name": "DriFox Contributors"
     },

@@ -104,13 +104,20 @@ Qt 5.15.2 的 WebEngine 是 Chromium 83，下列特性**不可用**：
 展示时用 `getBoundingClientRect()` 实测格子与 tooltip 尺寸，把左右上下
 都钳制进视口（`Math.min/Math.max`），侧边列、底部行都不会溢出。
 
-## 缓存策略
+## 缓存与增量
 
 | 层 | key | 失效 |
 |----|-----|------|
-| 采集缓存 | `(db mtime_ns, 当天日期)` | db 写入即失效，切回页签自动重采 |
+| 采集缓存 | `(db mtime_ns, 当天日期)` | db 写入即失效，切回页签自动重采；db 没变则永远复用（无 TTL） |
 | error 结果 | 同上 + 60s TTL | 避免临时失败被永久固化 |
 | 手动刷新 | 强制 `invalidate()` | 「刷新用量」动作 |
+| 会话级增量摘要 | `plugin_data/token-usage/session_stats.json` | 指纹 `(updated_at, message_count)` 未变的会话零解压复用；格式变更由 version 字段整体作废重建 |
+
+增量语义：会话被删除（或归档清理）后摘要保留，历史统计**不随删除蒸发**；
+`sessions` 计数因此含已删除但曾产生用量的会话。
+
+数据目录三级取值：功能池 `storage.data_dir`（宿主能力，首选）→ 直接导入
+`app.utils.utils.get_app_data_dir`（旧宿主过渡）→ `~/.drifox`（兜底）。
 
 ## 依赖
 
@@ -123,8 +130,11 @@ Qt 5.15.2 的 WebEngine 是 Chromium 83，下列特性**不可用**：
 
 ## 性能
 
-- 全库扫描 476 会话 / 85MB 压缩 blob ≈ **0.6s**（QThread，不阻塞 UI）
-- 单次会话 messages 最大 13MB，SQL 层只取 `messages` 一列，不做全字段展开
+- 增量采集：未变会话不读 blob（轻量列指纹比对），只解压新增 / 变更会话；
+  稳态下每轮只处理个位数脏会话，亚 50ms
+- 首次运行（或摘要作废）退化为全量扫描：476 会话 / 85MB ≈ **0.6s**
+  （QThread，不阻塞 UI）
+- 单次会话 messages 最大 13MB，SQL 层只取所需列，不做全字段展开
 - orjson 可选：命中则 JSON 解析走 C 层
 
 ## 安装

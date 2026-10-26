@@ -18,8 +18,12 @@ usage 混在一起算不出输入/输出拆分；token_usage 是 API 返回的�
 
 数据形态：sessions.messages 是 zstd 压缩 blob（4 字节 magic "ZSTD" +
 1 字节版本 + frame），见主程序 app/core/store/serde.py。旧数据为裸 JSON
-（无 magic），兼容处理。全库解压扫描约 0.6s（476 会话 / 85MB），
+（无 magic），兼容处理。全量解压一轮约 0.6s（476 会话 / 85MB），
 必须走后台线程（本插件的 collector），不在主线程调。
+
+增量策略（collect）：每会话按天聚合摘要持久化到 plugin_data，指纹
+(updated_at, message_count) 未变的会话零解压复用，只重扫脏会话；
+会话被删除后摘要保留，历史统计不随删除蒸发（用户 2026-10-26 要求）。
 """
 
 import os
@@ -164,18 +168,137 @@ def _int_of(value) -> int:
     return n if n > 0 else 0
 
 
+# ── 会话级增量摘要（plugin_data 持久化）───────────────────
+# 摘要 = 每会话按天聚合的 [input, output, requests]。两个作用：
+# 1. 增量采集：指纹未变的会话直接复用摘要，跳过 zstd 解压
+# 2. 统计保留：会话被删除后摘要仍在，历史用量不随删除蒸发
+_SUMMARIES_VERSION = 1  # 口径 / 格式变更时 +1，旧摘要整体作废重建
+_PLUGIN_DATA_DIRNAME = "token-usage"
+
+
+def _stats_path() -> Path:
+    """摘要文件：<data_dir>/plugin_data/token-usage/session_stats.json
+
+    数据目录三级取值（宿主能力边界约定：插件取宿主能力走功能池）：
+    1. 功能池 ``storage.data_dir``（caps_for 按调用方路径推断插件名与 surface，
+       后台线程可用；旧宿主无此能力返回 None）
+    2. 直接导入 ``app.utils.utils.get_app_data_dir``（旧宿主过渡，主程序重构
+       后静默失效）
+    3. ``~/.drifox``（打包版标准位置兜底）
+    """
+    base: Optional[Path] = None
+    try:
+        from app.plugins.capabilities.resolve import caps_for
+
+        cap = caps_for("storage.data_dir")
+        if cap is not None:
+            base = Path(cap)
+    except Exception:
+        pass
+    if base is None:
+        try:
+            from app.utils.utils import get_app_data_dir
+
+            base = Path(get_app_data_dir())
+        except Exception:
+            base = Path.home() / ".drifox"
+    return base / "plugin_data" / _PLUGIN_DATA_DIRNAME / "session_stats.json"
+
+
+def _load_summaries() -> dict:
+    """读持久化摘要。文件缺失 / 损坏 / 版本不符 → 空表（退化为一次全量重扫自愈）"""
+    path = _stats_path()
+    if not path.exists():
+        return {}
+    try:
+        import json
+
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as e:
+        logger.warning(f"[token-usage] 摘要读取失败，按空表全量重扫: {e}")
+        return {}
+    if not isinstance(data, dict) or data.get("version") != _SUMMARIES_VERSION:
+        return {}
+    sessions = data.get("sessions")
+    return sessions if isinstance(sessions, dict) else {}
+
+
+def _save_summaries(sessions: dict) -> None:
+    """写回摘要。失败仅告警：本轮统计照常返回，下轮重扫补齐"""
+    path = _stats_path()
+    try:
+        import json
+
+        path.parent.mkdir(parents=True, exist_ok=True)
+        payload = json.dumps(
+            {"version": _SUMMARIES_VERSION, "sessions": sessions}, ensure_ascii=False
+        )
+        path.write_text(payload, encoding="utf-8")
+    except Exception as e:
+        logger.warning(f"[token-usage] 摘要写入失败（本轮不持久化）: {e}")
+
+
+def _fingerprint(message_count, updated_at) -> str:
+    """会话变更指纹 = updated_at(秒级) + message_count。
+
+    repo.save() 在消息未变时跳过写库（内容去重），指纹稳定不漂移；
+    同秒内追加消息由 message_count 兜底。真实内容哈希要读出整个
+    blob 才能算，增量场景下得不偿失，不用。
+    """
+    try:
+        n = int(message_count or 0)
+    except (TypeError, ValueError):
+        n = 0
+    return f"{updated_at or ''}|{n}"
+
+
+def _aggregate_session(messages: list) -> Dict[str, list]:
+    """单会话按天聚合 usage → {'YYYY-MM-DD': [input, output, requests]}"""
+    daily: Dict[str, list] = {}
+    for msg in messages:
+        if not isinstance(msg, dict):
+            continue
+        usage = msg.get("token_usage")
+        if not isinstance(usage, dict):
+            continue
+        day = str(msg.get("timestamp") or "")[:10]
+        if len(day) != 10:
+            continue
+        slot = daily.setdefault(day, [0, 0, 0])
+        # 全量口径：每轮 input / output 原样累加，不做会话内去重
+        slot[0] += _int_of(usage.get("input"))
+        slot[1] += _int_of(usage.get("output"))
+        slot[2] += 1  # 请求次数
+    return daily
+
+
+def _merge_daily(target: Dict[str, list], part: dict) -> None:
+    """把单会话按天表并入合计表（结构异常的条目跳过，防脏摘要崩采集）"""
+    for d, vals in (part or {}).items():
+        if not (isinstance(vals, (list, tuple)) and len(vals) == 3):
+            continue
+        slot = target.setdefault(d, [0, 0, 0])
+        slot[0] += vals[0]
+        slot[1] += vals[1]
+        slot[2] += vals[2]
+
+
 def collect() -> dict:
-    """扫描全库会话，按全量口径聚合每日 usage 序列。
+    """增量扫描会话库，按全量口径聚合每日 usage 序列。
 
     口径（全量求和，2026-10-21 确认）：
     - 输入 Token = 每轮 usage.input 原样累加（与 API 计费口径一致）
     - 输出 Token = 每轮 usage.output 之和
     - 请求次数 = 带 usage 的消息条数
 
+    增量：每会话摘要（指纹 + 按天聚合）持久化在 plugin_data，指纹未变
+    的会话零解压复用；库里已消失的会话（删除 / 归档）摘要保留，统计
+    不蒸发。首次运行摘要为空，自动退化为一次全量扫描。
+
     Returns:
         dict:
         - daily: Dict[str, [input, output, requests]]，键 'YYYY-MM-DD'
-        - sessions: 参与统计的会话数（含 usage 记录的）
+        - sessions: 参与统计的会话数（含 usage 记录的，含已删除会话）
         - error: Optional[str]
     """
     result = {"daily": {}, "sessions": 0, "error": None}
@@ -189,10 +312,52 @@ def collect() -> dict:
     try:
         conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=5)
         conn.text_factory = bytes
+        # 轻量列先行：未变会话不碰 messages blob，85MB 磁盘 IO 只落在脏会话上
         rows = conn.execute(
-            "SELECT messages FROM sessions "
+            "SELECT session_id, message_count, updated_at FROM sessions "
             "WHERE project NOT LIKE '__archived__%' AND messages IS NOT NULL"
         ).fetchall()
+
+        summaries = _load_summaries()
+        db_fps: Dict[str, str] = {}
+        for sid_raw, count, updated in rows:
+            sid = (
+                sid_raw.decode("utf-8", "replace")
+                if isinstance(sid_raw, bytes)
+                else str(sid_raw or "")
+            )
+            if sid:
+                db_fps[sid] = _fingerprint(count, updated)
+
+        daily: Dict[str, list] = {}
+        for sid, fp in db_fps.items():
+            entry = summaries.get(sid)
+            if not isinstance(entry, dict) or entry.get("fp") != fp:
+                # 脏会话（新增 / 变更）：单行取 blob 解压重算。
+                # 稳态下每轮只有个位数脏会话，逐个主键查询代价可忽略
+                row = conn.execute(
+                    "SELECT messages FROM sessions WHERE session_id = ?", (sid,)
+                ).fetchone()
+                s_daily = _aggregate_session(decode_messages(row[0] if row else None))
+                entry = {"fp": fp, "daily": s_daily}
+                summaries[sid] = entry
+            _merge_daily(daily, entry.get("daily") or {})
+
+        # 库里已消失的会话：摘要保留（统计不随删除蒸发），照常并入合计
+        for sid, entry in summaries.items():
+            if sid not in db_fps and isinstance(entry, dict):
+                _merge_daily(daily, entry.get("daily") or {})
+
+        result["daily"] = daily
+        result["sessions"] = sum(
+            1
+            for e in summaries.values()
+            if isinstance(e, dict)
+            and sum(v[2] for v in (e.get("daily") or {}).values() if isinstance(v, (list, tuple)) and len(v) == 3)
+            > 0
+        )
+        _save_summaries(summaries)
+        return result
     except Exception as e:
         result["error"] = f"读取数据库失败: {e}"
         logger.error(f"[token-usage] 读取数据库失败: {e}")
@@ -203,35 +368,6 @@ def collect() -> dict:
                 conn.close()
             except Exception:
                 pass
-
-    daily: Dict[str, list] = {}
-    counted_sessions = 0
-    for (raw,) in rows:
-        messages = decode_messages(raw)
-        if not messages:
-            continue
-        session_requests = 0
-        for msg in messages:
-            if not isinstance(msg, dict):
-                continue
-            usage = msg.get("token_usage")
-            if not isinstance(usage, dict):
-                continue
-            day = str(msg.get("timestamp") or "")[:10]
-            if len(day) != 10:
-                continue
-            slot = daily.setdefault(day, [0, 0, 0])
-            # 全量口径：每轮 input / output 原样累加，不做会话内去重
-            slot[0] += _int_of(usage.get("input"))
-            slot[1] += _int_of(usage.get("output"))
-            slot[2] += 1  # 请求次数
-            session_requests += 1
-        if session_requests:
-            counted_sessions += 1
-
-    result["daily"] = daily
-    result["sessions"] = counted_sessions
-    return result
 
 
 # ── 派生指标 ──────────────────────────────────────────────
