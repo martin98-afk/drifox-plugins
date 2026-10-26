@@ -1,0 +1,93 @@
+{
+  "skill": "bili-summary",
+  "version": "1.0.0",
+  "positive": [
+    {
+      "input": "帮我总结一下这个 B 站视频 https://www.bilibili.com/video/BV1GJ411x7h7",
+      "should_trigger": true,
+      "reason": "明确要求总结 + 完整 B 站链接"
+    },
+    {
+      "input": "BV1GJ411x7h7 这个视频讲了啥",
+      "should_trigger": true,
+      "reason": "BV 号 + 询问视频内容"
+    },
+    {
+      "input": "https://b23.tv/abc123 概括一下内容",
+      "should_trigger": true,
+      "reason": "b23 短链 + 概括请求"
+    },
+    {
+      "input": "av80433022 主要说了什么",
+      "should_trigger": true,
+      "reason": "av 号 + 内容询问"
+    },
+    {
+      "input": "这个 bilibili 视频太长了我懒得看，说下重点",
+      "should_trigger": true,
+      "reason": "bilibili 关键词 + 求要点"
+    }
+  ],
+  "negative": [
+    {
+      "input": "帮我总结这个 YouTube 视频",
+      "should_trigger": false,
+      "reason": "非 B 站平台"
+    },
+    {
+      "input": "把这篇文章概括成 200 字",
+      "should_trigger": false,
+      "reason": "文本总结，不涉及视频"
+    },
+    {
+      "input": "帮我装一下 bili-summary 插件",
+      "should_trigger": false,
+      "reason": "安装动作，非使用技能"
+    },
+    {
+      "input": "总结一下我们刚才讨论了什么",
+      "should_trigger": false,
+      "reason": "会话总结，非视频"
+    },
+    {
+      "input": "B 站的 API 签名算法是怎么实现的",
+      "should_trigger": false,
+      "reason": "技术问答，非总结具体视频"
+    }
+  ],
+  "near_miss": [
+    {
+      "input": "帮我看看这个视频值不值得看",
+      "should_trigger": false,
+      "reason": "未指明平台且非总结诉求，倾向不触发；除非上下文已给出 B 站链接",
+      "note": "边界案例：若前序消息含 B 站链接，应触发"
+    },
+    {
+      "input": "下载 BV1GJ411x7h7",
+      "should_trigger": false,
+      "reason": "下载而非总结"
+    },
+    {
+      "input": "总结一下 B 站上关于 AI 的讨论",
+      "should_trigger": false,
+      "reason": "总结话题而非单个视频；无视频标识"
+    }
+  ],
+  "ambiguous": [
+    {
+      "input": "这个视频怎么样",
+      "action": "先确认是否有 B 站视频链接；无链接则不触发",
+      "reason": "无平台与视频标识"
+    },
+    {
+      "input": "总结一下",
+      "action": "检查上下文中最近是否出现 B 站链接；有则触发，无则追问",
+      "reason": "省略了宾语"
+    },
+    {
+      "input": "BV1GJ411x7h7",
+      "action": "仅有标识无动作；询问用户是要总结还是别的",
+      "reason": "缺少动作意图"
+    }
+  ]
+}
