@@ -2,8 +2,8 @@
     "name": "office-docs",
     "description": "Office 文档处理 — docx / pdf / pptx / xlsx 4 类文档读、写、转换、生成，Python 脚本 + LibreOffice 模板。",
     "icon": {
-        "light": "icon.svg",
-        "dark": "icon_dark.svg"
+        "light": "icon.png",
+        "dark": "icon_dark.png"
     },
     "version": "1.0.0",
     "author": {

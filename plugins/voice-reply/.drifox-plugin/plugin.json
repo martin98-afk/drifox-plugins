@@ -2,8 +2,8 @@
     "name": "voice-reply",
     "description": "消息卡片页脚「朗读」按钮：点击播报本条 AI 回复。双引擎：本地系统语音（Windows SAPI5 / macOS say，免费零配置，默认）+ OpenAI 兼容在线 TTS API（默认预填硅基流动 CosyVoice2，可指向任意兼容服务）",
     "icon": {
-        "light": "icon.svg",
-        "dark": "icon_dark.svg"
+        "light": "icon.png",
+        "dark": "icon_dark.png"
     },
     "version": "1.5.0",
     "type": "user",
@@ -30,8 +30,14 @@
                 "type": "select",
                 "default": "local",
                 "options": [
-                    {"value": "local", "label": "本地系统语音（免费，Windows SAPI5 / macOS say）"},
-                    {"value": "api", "label": "在线 API（OpenAI 兼容 /audio/speech）"}
+                    {
+                        "value": "local",
+                        "label": "本地系统语音（免费，Windows SAPI5 / macOS say）"
+                    },
+                    {
+                        "value": "api",
+                        "label": "在线 API（OpenAI 兼容 /audio/speech）"
+                    }
                 ],
                 "description": "本地引擎零配置零成本；在线引擎音质更好，需填 API Key"
             },

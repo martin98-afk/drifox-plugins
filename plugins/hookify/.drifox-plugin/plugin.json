@@ -2,8 +2,8 @@
     "name": "hookify",
     "description": "Easily create hooks to prevent unwanted behaviors by analyzing conversation patterns",
     "icon": {
-        "light": "icon.svg",
-        "dark": "icon_dark.svg"
+        "light": "icon.png",
+        "dark": "icon_dark.png"
     },
     "version": "1.0.0",
     "type": "user",

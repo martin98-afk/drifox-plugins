@@ -1,26 +1,26 @@
 {
-  "name": "kdocs",
-  "description": "金山文档官方 Skill。对话即操作——知识一键存入、碎片内容整理、接龙转表格、文档转 Markdown、表格美化、收发表生成，全在一句话内完成。",
-  "icon": {
-    "light": "icon.svg",
-    "dark": "icon.svg"
-  },
-  "version": "1.0.0",
-  "author": {
-    "name": "金山文档|WPS云文档",
-    "url": "https://www.kdocs.cn"
-  },
-  "license": "GPL-3.0-or-later",
-  "type": "user",
-  "min_host_version": "0.5.0",
-  "keywords": [
-    "mcp",
-    "connector",
-    "kdocs"
-  ],
-  "components": {
-    "mcp": true,
-    "skills": true
-  },
-  "homepage": "https://www.kdocs.cn"
+    "name": "kdocs",
+    "description": "金山文档官方 Skill。对话即操作——知识一键存入、碎片内容整理、接龙转表格、文档转 Markdown、表格美化、收发表生成，全在一句话内完成。",
+    "icon": {
+        "light": "icon.png",
+        "dark": "icon_dark.png"
+    },
+    "version": "1.0.0",
+    "author": {
+        "name": "金山文档|WPS云文档",
+        "url": "https://www.kdocs.cn"
+    },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "min_host_version": "0.5.0",
+    "keywords": [
+        "mcp",
+        "connector",
+        "kdocs"
+    ],
+    "components": {
+        "mcp": true,
+        "skills": true
+    },
+    "homepage": "https://www.kdocs.cn"
 }

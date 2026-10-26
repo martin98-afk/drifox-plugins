@@ -2,8 +2,8 @@
     "name": "nuwa-skill",
     "description": "女娲·Skill造人术——输入人名自动深度调研并提炼出可运行的人物思维Skill，附14个已蒸馏人物视角。",
     "icon": {
-        "light": "icon.svg",
-        "dark": "icon_dark.svg"
+        "light": "icon.png",
+        "dark": "icon_dark.png"
     },
     "version": "1.0.0",
     "author": {

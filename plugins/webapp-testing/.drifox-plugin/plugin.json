@@ -2,8 +2,8 @@
     "name": "webapp-testing",
     "description": "Web 应用 E2E 测试 — 浏览器自动化 + Playwright/Chrome DevTools MCP + 测试策略 + 截图验证 + 调试技巧。",
     "icon": {
-        "light": "icon.svg",
-        "dark": "icon_dark.svg"
+        "light": "icon.png",
+        "dark": "icon_dark.png"
     },
     "version": "1.0.0",
     "author": {

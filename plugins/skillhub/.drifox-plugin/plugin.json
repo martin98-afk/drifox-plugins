@@ -2,8 +2,8 @@
     "name": "skillhub",
     "description": "SkillHub 技能工作流 — 内网技能注册中心（registry）的批量发布、搜索与安装。内置限流重试、断点续传与发布失败分类处理。",
     "icon": {
-        "light": "icon.svg",
-        "dark": "icon_dark.svg"
+        "light": "icon.png",
+        "dark": "icon_dark.png"
     },
     "version": "1.0.0",
     "author": {

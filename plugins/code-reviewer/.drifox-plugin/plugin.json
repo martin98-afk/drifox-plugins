@@ -2,8 +2,8 @@
     "name": "code-reviewer",
     "description": "自动化代码审查 — 基于 checklist 的 PR 审查、代码质量评分、审查报告生成，提升代码质量保障效率。",
     "icon": {
-        "light": "icon.svg",
-        "dark": "icon_dark.svg"
+        "light": "icon.png",
+        "dark": "icon_dark.png"
     },
     "version": "1.0.0",
     "author": {

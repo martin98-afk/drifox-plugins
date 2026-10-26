@@ -2,8 +2,8 @@
     "name": "token-usage",
     "description": "欢迎卡片 Token 用量 — 30 天四指标 + GitHub 风格年度活动热力图，数据取自会话里的真实 API usage",
     "icon": {
-        "light": "icon.svg",
-        "dark": "icon_dark.svg"
+        "light": "icon.png",
+        "dark": "icon_dark.png"
     },
     "version": "0.1.6",
     "capabilities": [
