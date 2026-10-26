@@ -1,6 +1,6 @@
 {
-    "name": "weather-query",
-    "description": "天气查询工具 — 输入城市名返回实时天气与未来预报（wttr.in 免费接口，无需 API key）",
+    "name": "live-data",
+    "description": "实时数据查询 — 汇率、A股、大盘指数、金价、npm/PyPI/GitHub 包信息、天气、B站视频数据、IP 归属地，8 个免密钥公开接口聚合为 4 个工具。",
     "icon": {
         "light": "icon.svg",
         "dark": "icon_dark.svg"
@@ -9,13 +9,18 @@
     "author": {
         "name": "black"
     },
-    "license": "GPL-3.0-or-later",
+    "license": "MIT",
     "type": "user",
     "min_host_version": "0.5.0",
     "keywords": [
+        "live-data",
+        "finance",
         "weather",
-        "wttr",
-        "query"
+        "npm",
+        "pypi",
+        "github",
+        "bilibili",
+        "ip"
     ],
     "components": {
         "tools": true,

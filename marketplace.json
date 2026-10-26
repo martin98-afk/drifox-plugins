@@ -3751,6 +3751,47 @@
             }
         },
         {
+            "name": "live-data",
+            "description": "实时数据查询 — 汇率、A股、大盘指数、金价、npm/PyPI/GitHub 包信息、天气、B站视频数据、IP 归属地，8 个免密钥公开接口聚合为 4 个工具。",
+            "version": "0.1.0",
+            "author": "black",
+            "license": "MIT",
+            "categories": [
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/live-data",
+                "ref": "main"
+            },
+            "components": {
+                "tools": true,
+                "commands": false,
+                "agents": false,
+                "skills": false,
+                "hooks": false,
+                "mcp": false,
+                "lsp": false,
+                "themes": false
+            },
+            "keywords": [
+                "live-data",
+                "finance",
+                "weather",
+                "npm",
+                "pypi",
+                "github",
+                "bilibili",
+                "ip"
+            ],
+            "min_host_version": "0.5.0",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "magpie",
             "description": "magpie 本地网关 — 接入聚合后的全部订阅账号与路由组，一键启动 magpie web（自动固定 key），内嵌网页界面直接管理模型与配额，并让 magpie 认得 DriFox（Agents 页有身份、Usage 按会话分组）",
             "version": "0.7.0",
@@ -6228,42 +6269,6 @@
             "platforms": [
                 "windows",
                 "darwin"
-            ],
-            "min_host_version": "0.5.0",
-            "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
-            }
-        },
-        {
-            "name": "weather-query",
-            "description": "天气查询工具 — 输入城市名返回实时天气与未来预报（wttr.in 免费接口，无需 API key）",
-            "version": "0.1.0",
-            "author": "black",
-            "license": "GPL-3.0-or-later",
-            "categories": [
-                "tool"
-            ],
-            "source": {
-                "type": "git-subdir",
-                "url": "https://github.com/martin98-afk/drifox-plugins",
-                "path": "plugins/weather-query",
-                "ref": "main"
-            },
-            "components": {
-                "tools": true,
-                "commands": false,
-                "agents": false,
-                "skills": false,
-                "hooks": false,
-                "mcp": false,
-                "lsp": false,
-                "themes": false
-            },
-            "keywords": [
-                "weather",
-                "wttr",
-                "query"
             ],
             "min_host_version": "0.5.0",
             "icon": {
