@@ -2881,7 +2881,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 83,
+            "downloads": 84,
             "keywords": [
                 "git",
                 "source-control",
@@ -4734,7 +4734,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 68,
+            "downloads": 69,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -5844,7 +5844,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 19,
+            "downloads": 22,
             "keywords": [
                 "welcome",
                 "token",
