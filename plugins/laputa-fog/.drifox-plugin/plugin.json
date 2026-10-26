@@ -2,8 +2,8 @@
     "name": "laputa-fog",
     "description": "浮岛·雾青主题 — 宫崎骏《天空之城》灵感浅色主题，灰蓝主调、琥珀暖金点缀、呼吸感光晕。",
     "icon": {
-        "light": "icon.svg",
-        "dark": "icon_dark.svg"
+        "light": "icon.png",
+        "dark": "icon_dark.png"
     },
     "version": "1.0.0",
     "author": {

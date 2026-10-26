@@ -2,8 +2,8 @@
     "name": "example-plugin",
     "description": "DriFox 插件的最小参考实现 — 展示全部 9 类组件（tools/commands/agents/skills/themes/hooks/mcp/lsp/ui）的标准写法。",
     "icon": {
-        "light": "icon.svg",
-        "dark": "icon_dark.svg"
+        "light": "icon.png",
+        "dark": "icon_dark.png"
     },
     "version": "1.0.0",
     "author": {

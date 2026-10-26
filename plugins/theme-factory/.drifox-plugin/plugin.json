@@ -2,8 +2,8 @@
     "name": "theme-factory",
     "description": "主题换肤工厂 — 10 套预设主题 + 即时生成新主题，给任何 HTML artifact 换肤。",
     "icon": {
-        "light": "icon.svg",
-        "dark": "icon_dark.svg"
+        "light": "icon.png",
+        "dark": "icon_dark.png"
     },
     "version": "1.0.0",
     "type": "user",

@@ -1,7 +1,7 @@
 {
     "icon": {
-        "light": "icon.svg",
-        "dark": "icon_dark.svg"
+        "light": "icon.png",
+        "dark": "icon_dark.png"
     },
     "name": "minesweeper",
     "description": "经典扫雷游戏——在 DriFox 中直接玩的浮動卡片",

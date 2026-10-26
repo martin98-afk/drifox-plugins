@@ -30,8 +30,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://inference.sh",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -61,8 +61,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://inference.sh",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -92,8 +92,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills/tree/main/skills/algorithmic-art",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -216,8 +216,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -291,8 +291,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -513,8 +513,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -570,8 +570,8 @@
             },
             "downloads": 6,
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -697,8 +697,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills/tree/main/skills/canvas-design",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -805,8 +805,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://docs.anthropic.com",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -960,8 +960,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -993,8 +993,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/code-simplifier",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -1053,8 +1053,8 @@
             "downloads": 9,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -1172,8 +1172,8 @@
             "min_host_version": "0.4.15",
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -1197,8 +1197,8 @@
             "downloads": 5,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -1550,8 +1550,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -1824,8 +1824,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -1855,8 +1855,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://github.com/github/awesome-copilot/tree/main/skills/excalidraw-diagram-generator",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -2366,8 +2366,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/feature-dev",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -2446,8 +2446,8 @@
             ],
             "min_host_version": "0.6.2",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -2509,8 +2509,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills/tree/main/skills/frontend-design",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -2542,8 +2542,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -2598,8 +2598,8 @@
             },
             "downloads": 8,
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -2949,8 +2949,8 @@
             },
             "downloads": 3,
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -2983,8 +2983,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -3105,8 +3105,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -3197,8 +3197,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -3256,8 +3256,8 @@
             },
             "downloads": 2,
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -3349,8 +3349,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -3379,8 +3379,8 @@
             ],
             "min_host_version": "0.6.2",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -3588,8 +3588,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://www.kdocs.cn",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -3683,8 +3683,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -3716,8 +3716,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -3787,8 +3787,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -3899,8 +3899,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -3956,8 +3956,8 @@
             },
             "downloads": 4,
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -4019,8 +4019,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -4044,8 +4044,8 @@
             },
             "downloads": 8,
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -4350,8 +4350,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://github.com/alchaincyf/nuwa-skill",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -4384,8 +4384,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -4657,8 +4657,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/playground",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -4785,8 +4785,8 @@
             "min_host_version": "0.4.15",
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -4849,8 +4849,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -4898,8 +4898,8 @@
             "min_host_version": "0.6.10",
             "api_version": 2,
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -4963,8 +4963,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://nextjs.org",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -4996,8 +4996,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/security-guidance",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -5031,8 +5031,8 @@
             "min_host_version": "0.6.10",
             "api_version": 2,
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -5124,8 +5124,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://github.com/coreyhaines31/marketingskills",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -5155,8 +5155,8 @@
             ],
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -5186,8 +5186,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/claude-plugins-official/tree/main/plugins/skill-creator",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -5217,8 +5217,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -5248,8 +5248,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills/tree/main/skills/slack-gif-creator",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -5303,8 +5303,8 @@
             },
             "downloads": 6,
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -5328,8 +5328,8 @@
             },
             "downloads": 1,
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -5635,8 +5635,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -5779,8 +5779,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -5804,8 +5804,8 @@
             },
             "downloads": 3,
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -5834,8 +5834,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills/tree/main/skills/theme-factory",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -5935,8 +5935,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -5966,8 +5966,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -6065,8 +6065,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -6165,8 +6165,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -6218,8 +6218,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -6272,8 +6272,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -6304,8 +6304,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://github.com/anthropics/skills/tree/main/skills/web-artifacts-builder",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -6336,8 +6336,8 @@
             ],
             "min_host_version": "0.5.0",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -6369,8 +6369,8 @@
             "min_host_version": "0.5.0",
             "homepage": "https://playwright.dev",
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
@@ -6559,8 +6559,8 @@
             },
             "downloads": 3,
             "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
+                "light": "icon.png",
+                "dark": "icon_dark.png"
             }
         },
         {
