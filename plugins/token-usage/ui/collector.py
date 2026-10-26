@@ -6,7 +6,8 @@ render_func 在主线程同步调用，而全库解压扫描约 0.6s（476 会�
 首次打开显示「加载中」占位，采集完成自动通知欢迎卡片重渲染。
 
 刷新策略：
-- 自动刷新：db mtime 变化时下次打开页签重采（key 含 mtime_ns）
+- 自动刷新：db mtime 变化时下次打开页签重采（key 含 mtime_ns）；正常结果
+  不设 TTL，db 没变就永远复用（采集本身是会话级增量，重采代价小，见 data.collect）
 - 手动刷新：页签「刷新用量」动作强制丢弃缓存重采
 - error 结果带 60s TTL，避免临时失败被永久固化
 """
@@ -46,18 +47,18 @@ def build_cache_key() -> tuple:
     return (mtime_ns, date.today().isoformat())
 
 
-def get_cached(max_age: float = 60.0) -> Optional[dict]:
-    """缓存命中返回 data；未命中或过期返回 None
+def get_cached() -> Optional[dict]:
+    """缓存命中返回 data；未命中或 error 过期返回 None
+
+    正常结果不设 TTL：新鲜度完全由 db mtime 判定（start() 里比对
+    _is_stale），db 没变就永远复用，避免「过 60 秒重开页签就白付
+    一次扫描」。
 
     ⚠️ 不用 db mtime 做读取判据（踩过的坑）：mtime 会因为**采集期间**新会话
     写入而变化，导致「写缓存时算一次 key、读缓存时又算一次」两次 key 不等，
     缓存永远判定为未命中 —— 表现是页签永远停在「加载中」：
     每次都重新起线程，采集完 mtime 又变了，永远追不上。
-    正确做法：写入时把 key 一起存下，读取时只比 TTL 与采集自否成功。
-
-    Args:
-        max_age: 缓存有效期（秒）。自动重采交给 db mtime 变化时
-                 由 start() 内部比对，见 _is_stale()。
+    正确做法：写入时把 key 一起存下，读取时只比采集自否成功。
     """
     with _lock:
         if _cache is None:
@@ -66,9 +67,6 @@ def get_cached(max_age: float = 60.0) -> Optional[dict]:
             # 错误结果短 TTL：避免临时失败被永久固化
             if time.monotonic() - _cache_ts >= _ERROR_TTL:
                 return None
-            return _cache
-        if time.monotonic() - _cache_ts >= max_age:
-            return None
         return _cache
 
 
