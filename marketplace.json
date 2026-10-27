@@ -720,6 +720,7 @@
             "components": {
                 "themes": true
             },
+            "downloads": 1,
             "keywords": [
                 "theme",
                 "catppuccin",
@@ -1635,6 +1636,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "dsh",
                 "deepseek-harness",
