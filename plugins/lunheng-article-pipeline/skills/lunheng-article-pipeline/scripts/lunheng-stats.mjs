@@ -1,0 +1,293 @@
+// 论衡运行时遥测看板（v18.5.0 新增，第三方审计 §五.1「lunheng-stats」落地）
+//
+// 用途：把 run/ 目录里真实项目散落的「闸门证据 / 修订轮数 / 字数 / 审稿」聚合成一张看板，
+//   让「机制是否真的在拦问题」从轶事变成数据——这是审计点名的「当前最大结构性空白」。
+//   纯只读聚合：不写盘、不改任何项目文件，也不参与 M 门判定（它只做**事后观测**，不是闸门）。
+//
+// 用法：node lunheng-stats.mjs [--run-dir <run目录>] [--json]
+//
+// 数据考古（如实声明，v18.5.0 探针实测）：run/ 横跨 4 个版本代际，M-Gate 报告位置与格式不一致：
+//   · 位置：final/M-Gate-Report.json（新）→ audits/M-Gate-Report-vN.json（旧，取最大 N）→ audits/M-Gate-final.json
+//   · 格式：① machine（有 `results[]` 数组，v18.x 机器报告，含/不含 exit、可能带 BOM、gate 总数 12 或 22）；
+//     ② llm-legacy（v2.5.2-dsh.x 的 LLM 兜底，形态多样：`M-Form_形式合规门` 嵌套 / `m_checks` 键值 /
+//       `exit_code`+`M-Form` 对象——共同点：无 `results[]` 数组）；③ 无报告。
+//   本脚本只对 machine 格式做机械聚合；llm-legacy 与「无报告」单独计数，作为「闸门证据覆盖率」如实呈现。
+import { readFileSync, readdirSync, existsSync, statSync, realpathSync } from 'node:fs';
+import { join, resolve, sep, basename, dirname } from 'node:path';
+import { countHan } from './_lib/han.mjs';   // 汉字口径真源（与 count-chars 同源）
+import { installExitGuard } from './_lib/exit-guard.mjs';   // 退出码硬化（v18.7.3 P1-5：旧版未装，run/ 下目录 readFileSync 抛错会以默认 exit 1 收场，与「1 = 内容失败」撞义）
+import { parseArgs, USAGE_CODE } from './_lib/cli-args.mjs'; // 参数解析唯一实现（v18.7.3 P1-5）
+installExitGuard();
+
+// === 参数解析（v18.7.3 P1-5 改走 _lib/cli-args.mjs，fail-closed 且唯一实现）===
+const USAGE = '用法: node lunheng-stats.mjs [--run-dir <dir>] [--json]';
+let stFlags, stOpts;
+try {
+  ({ flags: stFlags, opts: stOpts } = parseArgs(process.argv.slice(2), {
+    flags: ['--json', '-h', '--help'],
+    values: { '--run-dir': 'run' },
+  }));
+} catch (e) {
+  if (e && e.code === USAGE_CODE) { console.error(e.message); console.error(USAGE); process.exit(10); }
+  throw e;
+}
+if (stFlags.has('-h') || stFlags.has('--help')) {
+  console.log(`${USAGE}\n  缺省扫描 <cwd>/run，纯只读聚合。`);
+  process.exit(0);
+}
+const root = resolve(stOpts['--run-dir'] || join(process.cwd(), 'run'));
+// v18.67.0（批 3 E2E 实测新发现）：--run-dir 此前**只查存在性、无包含关系判定**——任何已存在
+//   目录（`--run-dir ..` 或绝对路径）都会被扫描聚合。本脚本虽是纯只读聚合，「读面」也不得指向
+//   <cwd>/run 之外（与 lib/run-path-fence.mjs「三层缺一不可」教义同旨；run-path-fence 头注释宣称
+//   的「白名单 + 包含关系」此前是声明＞实现）。
+//   为什么内联而不 import lib/run-path-fence.mjs：本脚本须在**镜像部署**（只复制 skills/ 目录、
+//   无 lib/）下自足运行（scripts/_lib 自足原则，同 exit-guard / cli-args）；故此处内联同口径判定——
+//   两侧同入 realpath 空间后判包含（防 junction 逃逸；realpath 失败降级字符串规范化，不劣于旧版）。
+const runBase = join(process.cwd(), 'run');
+// v18.80.1（全量审查修订批 · 第3批）：**大小写归一只在 Windows 做**——与真源 `lib/run-path-fence.mjs`
+//   的 `norm()` 逐字同口径。旧内联版**无条件 `toLowerCase()`**：POSIX 路径大小写敏感，
+//   两侧都压低会把「与被保护根仅差大小写的**真实路径**」（如 `<cwd>/RUN` 与 `<cwd>/run` 是两个目录）
+//   误判为命中 → 只读扫描面被指向 `run/` 之外，与「三层缺一不可」的声明相悖（Windows 上不可利用）。
+// v19.11.2（反哺 2026-10-17 §P2-14）：**realpath 失败时先解析最近的已存在祖先**，再拼回剩余段。
+//   病灶（与真源 `lib/run-path-fence.mjs:18-27` 记过的是同一个坑，内联副本复发了它）：旧版
+//   `catch { /* 用原路径 */ }` 在「<junction>/尚不存在的子目录」上完全不展开物理层 —— 前缀没解析，
+//   比较时按字面路径算，与「三层缺一不可」的声明相悖。现在与真源的 canonicalBest 同判据。
+const rpNorm = (p) => {
+  const want = resolve(p);
+  let cur = want, real = null;
+  const rest = [];
+  for (let i = 0; i < 64; i++) {
+    try { real = realpathSync.native(cur); break; } catch {
+      const parent = dirname(cur);
+      if (parent === cur) break;   // 一路到盘根仍不存在 → 退回字面路径
+      rest.unshift(basename(cur));
+      cur = parent;
+    }
+  }
+  const full = real ? join(real, ...rest) : want;
+  const s = full.replace(/[\\/]+$/, '').replace(/\//g, sep);
+  return process.platform === 'win32' ? s.toLowerCase() : s;
+};
+const aBase = rpNorm(runBase), aRoot = rpNorm(root);
+if (aRoot !== aBase && !aRoot.startsWith(aBase + sep)) {
+  console.error(`--run-dir 超出 <工作区>/run 范围：${root}（防止把只读扫描面指向任意目录）`);
+  process.exit(10);
+}
+if (!existsSync(root)) { console.error(`run 目录不存在: ${root}`); process.exit(10); }
+
+// === 定位 M-Gate 报告（三位置回退）===
+const latestVersioned = (dir, stem, ext = 'json') => {
+  let best = null, bestN = -1;
+  try { for (const f of readdirSync(dir)) { const m = f.match(new RegExp(`^${stem}-v(\\d+)\\.${ext}$`)); if (m && Number(m[1]) > bestN) { bestN = Number(m[1]); best = f; } } } catch {}
+  return best;
+};
+const findMgateReport = (base) => {
+  const cands = [];
+  if (existsSync(join(base, 'final', 'M-Gate-Report.json'))) cands.push(join(base, 'final', 'M-Gate-Report.json'));
+  const audits = join(base, 'audits');
+  if (existsSync(audits)) {
+    const v = latestVersioned(audits, 'M-Gate-Report');
+    if (v) cands.push(join(audits, v));
+    if (existsSync(join(audits, 'M-Gate-final.json'))) cands.push(join(audits, 'M-Gate-final.json'));
+  }
+  return cands[0] || null;
+};
+const stripBom = (s) => (s.charCodeAt(0) === 0xFEFF ? s.slice(1) : s);
+
+// 报告分类：machine（有 results[]）→ 抽指标；llm-legacy（无 results[]）；unparseable
+const classifyReport = (path) => {
+  try {
+    const j = JSON.parse(stripBom(readFileSync(path, 'utf8')));
+    if (Array.isArray(j.results)) {
+      const p0 = Number(j.p0 ?? 0), p1 = Number(j.p1 ?? 0), p2 = Number(j.p2 ?? 0);
+      const exit = typeof j.exit === 'number' ? j.exit : (p0 > 0 ? 2 : (p1 > 0 ? 1 : ((p2 > 0 || Number(j.soft ?? 0) > 0 || Number(j.skips ?? 0) > 0) ? 3 : 0)));
+      return {
+        format: 'machine', exit, p0, p1, p2, total: Number(j.total ?? 0), results: j.results,
+        bytes: Number(j.verdict_scope?.draft_bytes ?? 0),
+        // v19.6.0（架构与机制反哺批 §3.3）：T8 裁定证据本体（此前被逐条校验却不落盘 → 读不到）。
+        //   缺失（v19.6.0 之前写入的存量报告）⇒ 空数组，**不判**、不编造。
+        refutations: Array.isArray(j._t8_refutations) ? j._t8_refutations : [],
+        adjudicated: !!(j._t8_conclusion && typeof j.exit === 'number' && j.exit !== j.script_exit_raw),
+      };
+    }
+    return { format: 'llm-legacy' };
+  } catch { return { format: 'unparseable' }; }
+};
+
+// === 成本数字归一化（v18.6.3 看板反馈：原始 B 数字可达 10^9，秒级可读性差） ===
+//   B（字节，10^9 进制）+ K（10^3）+ M（10^6）按 size 自动换算到最可读单位
+function normalizeCost(value, unit) {
+  if (unit === 'B' && value >= 1e6) return Number((value / 1e6).toFixed(2)) + 'M';
+  if (unit === 'B' && value >= 1e3) return Number((value / 1e3).toFixed(2)) + 'K';
+  if (unit === 'K' && value >= 1e3) return Number((value / 1e3).toFixed(2)) + 'M';
+  return value + unit;
+}
+
+// === 逐项目抽取 ===
+const projects = [];
+for (const name of readdirSync(root)) {
+  if (name.startsWith('_')) continue;
+  const base = join(root, name);
+  if (!statSync(base).isDirectory()) continue;
+  const hasBrief = existsSync(join(base, '01-任务简报.md'));
+  const finDraft = join(base, 'final', '定稿.md');
+  const draftsDir = join(base, 'drafts');
+
+  let stage = 'empty';
+  if (existsSync(finDraft)) stage = 'final';
+  else if (existsSync(draftsDir) && readdirSync(draftsDir).some((f) => /^初稿-v\d+\.md$/.test(f))) stage = 'draft';
+  else if (existsSync(join(base, 'analysis')) || hasBrief) stage = 'analysis';
+
+  let rounds = 0;
+  const collect = (dir) => { if (!existsSync(dir)) return; for (const f of readdirSync(dir)) { const m = f.match(/^初稿-v(\d+)\.md$/); if (m) rounds = Math.max(rounds, Number(m[1])); } };
+  collect(draftsDir); collect(base);
+
+  let han = 0, textPath = null;
+  if (existsSync(finDraft)) textPath = finDraft;
+  else if (rounds > 0) textPath = join(base, 'drafts', `初稿-v${rounds}.md`);
+  if (textPath && existsSync(textPath)) han = countHan(readFileSync(textPath, 'utf8'));
+
+  const rep = findMgateReport(base);
+  let mgate = { format: 'none' };
+  if (rep) mgate = { ...classifyReport(rep), path: rep.replace(root.replace(/\\/g, '/'), '').replace(/^\//, '') };
+
+  let review = null;
+  const auditsDir = join(base, 'audits');
+  if (existsSync(auditsDir)) {
+    const v = latestVersioned(auditsDir, '审稿报告', 'md');
+    if (v) {
+      const rt = readFileSync(join(auditsDir, v), 'utf8');
+      let m = rt.match(/总评分[^\d]{0,8}(\d{1,2})\s*\/\s*30/);
+      if (m) review = Number(m[1]);
+      else { const dims = [...rt.matchAll(/\*\*(\d)\/5\*\*/g)].map((x) => Number(x[1])); if (dims.length >= 6) review = dims.slice(0, 6).reduce((a, b) => a + b, 0); }
+    }
+  }
+
+  // token：交付说明 §6 成本指标的多种写法（v18.6.3 看板反馈：原正则只认 `~NNM`，17/21 项目 token 列空；放宽）
+  //   标准 `~NN[MKB]`（推荐）+ 绝对值 `NN[MKB] token/缓存/cacheRead/cache_write` + 中文前缀「已耗/耗/消耗」
+  let cost = null;
+  let costStatus = '—';
+  const dd = join(base, 'final', '交付说明.md');
+  if (existsSync(dd)) {
+    const txt = readFileSync(dd, 'utf8');
+    // 前缀可选：~ / 已耗/耗/消耗/总用 + 可选空白；核心必须 NN + [KMB]；后可接 token/缓存/cacheRead/cache_write/chars/tokens
+    const re = /(?:~\s*|(?:已耗|耗|消耗|总用)\s*[~\s]*)?(\d+(?:\.\d+)?)\s*([KMB])(?:\s+(?:token|缓存|cacheRead|cache_write|chars|tokens))?/g;
+    const matches = [...txt.matchAll(re)];
+    // 「实测不可得」标记：写了说明但无实测值 → 显示「不可得 + 原因」
+    const unavail = txt.match(/实测不可得[：:]\s*([^\n\r]+)/);
+    if (matches.length) {
+      // 单位换算：K=10^3、M=10^6、B=10^9（**实测值是 cacheRead/cache_write，几乎都在 MB 或 GB 级**，B 是字节单位、不会超过 KB）
+      const order = { K: 1e3, M: 1e6, B: 1e9 };
+      const best = matches.reduce((a, b) => (Number(a[1]) * order[a[2]] >= Number(b[1]) * order[b[2]] ? a : b));
+      cost = best[1] + best[2];
+      costStatus = normalizeCost(Number(best[1]), best[2]);
+    } else if (unavail) {
+      costStatus = '不可得：' + unavail[1].trim().slice(0, 30);
+    }
+  }
+
+  projects.push({ name, stage, rounds, han, mgate, review, cost: costStatus });
+}
+
+// === 跨项目汇总 ===
+const n = projects.length;
+const byStage = {}; for (const p of projects) byStage[p.stage] = (byStage[p.stage] || 0) + 1;
+const byFormat = { machine: 0, 'llm-legacy': 0, none: 0, unparseable: 0 };
+const gateFreq = new Map();
+let sumRounds = 0, nRounds = 0, sumP0 = 0, sumP1 = 0, sumP2 = 0, sumHan = 0;
+// v19.6.0（架构与机制反哺批 §3.3）：**人工裁定侧**的按门项聚合。
+//   为什么必须补这一半：`gateFreq`/`topFailingGates` 只回答「机械最常报哪些门项」，
+//   回答不了「哪些门项最常被人工推翻」——而后者才是「规则判据该不该改」的信号：
+//     某门项被裁率 ~100% ⇒ 判据与真实文本形态不匹配（该改门）；零人工修正 ⇒ 判据判得准（可考虑加硬）。
+//   归一化键与 `gateFreq` **同源**（同一段 `.replace()` 口径），故两侧天然可 join，无需映射表。
+const adjFreq = new Map();
+const refReasonFreq = new Map();
+let nAdjudicated = 0, nRefTotal = 0;
+const normGate = (g) => (g || '').replace(/^([A-Za-z]+-[A-Za-z]+-\d+).*/, '$1');
+for (const p of projects) {
+  if (p.rounds > 0) { sumRounds += p.rounds; nRounds++; }
+  if (p.han > 0) sumHan += p.han;
+  const f = p.mgate.format;
+  if (f === 'machine') {
+    byFormat.machine++;
+    sumP0 += p.mgate.p0; sumP1 += p.mgate.p1; sumP2 += p.mgate.p2;
+    for (const r of p.mgate.results || []) {
+      if (r.pass === false && r.severity && /^P[012]$/.test(r.severity)) {
+        const key = normGate(r.gate);
+        if (!key) continue;
+        const e = gateFreq.get(key) || { p0: 0, p1: 0, p2: 0 };
+        e[r.severity.toLowerCase()]++;
+        gateFreq.set(key, e);
+      }
+    }
+    if (p.mgate.adjudicated) {
+      nAdjudicated++;
+      for (const r of p.mgate.refutations || []) {
+        const key = normGate(r && r.gate);
+        if (!key) continue;
+        adjFreq.set(key, (adjFreq.get(key) || 0) + 1);
+        nRefTotal++;
+        const rc = r && typeof r.reason_code === 'string' ? r.reason_code : '（未标）';
+        refReasonFreq.set(rc, (refReasonFreq.get(rc) || 0) + 1);
+      }
+    }
+  } else byFormat[f] = (byFormat[f] || 0) + 1;
+}
+const topGates = [...gateFreq.entries()].map(([g, e]) => ({ gate: g, ...e, total: e.p0 + e.p1 + e.p2 })).sort((a, b) => (b.p0 + b.p1) - (a.p0 + a.p1) || b.total - a.total);
+// 被裁率 = 该门项被人工裁定推翻的次数 / 该门项机械失败次数（分母为 0 时记 null，**不编 0**）
+const topAdjudicated = [...adjFreq.entries()].map(([g, n]) => {
+  const mech = gateFreq.get(g) || { p0: 0, p1: 0, p2: 0 };
+  const mechTotal = mech.p0 + mech.p1 + mech.p2;
+  return { gate: g, refuted: n, mechanicalFailures: mechTotal, refutedRatio: mechTotal > 0 ? Number((n / mechTotal).toFixed(2)) : null };
+}).sort((a, b) => b.refuted - a.refuted || a.gate.localeCompare(b.gate));
+
+const summary = {
+  root, totalProjects: n, byStage,
+  mGateEvidence: byFormat,
+  avgRevisionRounds: nRounds ? Number((sumRounds / nRounds).toFixed(1)) : null,
+  totalP0: sumP0, totalP1: sumP1, totalP2: sumP2, totalHanChars: sumHan,
+  topFailingGates: topGates,
+  // v19.6.0：人工裁定侧（缺失时全 0 / 空，如实表示「存量报告没有这一层」）
+  adjudicatedProjects: nAdjudicated,
+  totalRefutations: nRefTotal,
+  topAdjudicatedGates: topAdjudicated,
+  refutationReasons: [...refReasonFreq.entries()].map(([reason, n]) => ({ reason, count: n })).sort((a, b) => b.count - a.count),
+  adjudicationNote: '`refutedRatio` = 被裁次数 / 机械失败次数（同一归一口径，两侧可 join）；'
+    + '**分母为 0 记 null，不编 0**。存量报告（v19.6.0 之前写入）没有 `_t8_refutations` ⇒ 一律按「未裁定」计，'
+    + '不把「读不到」算成「没被推翻」。',
+};
+
+// === 输出 ===
+if (stFlags.has('--json')) {
+  console.log(JSON.stringify({ projects: projects.map((p) => ({ name: p.name, stage: p.stage, rounds: p.rounds, hanChars: p.han, mgate: p.mgate.format, exit: p.mgate.exit ?? null, p0: p.mgate.p0 ?? null, p1: p.mgate.p1 ?? null, p2: p.mgate.p2 ?? null, review: p.review, cost: p.cost })), summary }, null, 2));
+} else {
+  const fmt = (p) => p.mgate.format === 'machine' ? `exit=${p.mgate.exit}` : (p.mgate.format === 'llm-legacy' ? 'LLM兜底' : (p.mgate.format === 'none' ? '无证据' : `?${p.mgate.format}`));
+  console.log(`run 遥测看板（${root}）\n`);
+  console.log('项目 | 阶段 | 轮数 | M门 | P0/P1/P2 | 字数 | 审稿 | token');
+  console.log('---|---|---|---|---|---|---|---');
+  for (const p of projects) {
+    const sev = p.mgate.format === 'machine' ? `${p.mgate.p0}/${p.mgate.p1}/${p.mgate.p2}` : '—';
+    console.log(`${p.name} | ${p.stage} | ${p.rounds || '—'} | ${fmt(p)} | ${sev} | ${p.han || '—'} | ${p.review ?? '—'} | ${p.cost ?? '—'}`);
+  }
+  console.log(`\n== 汇总 ==`);
+  console.log(`项目 ${n} 个：${Object.entries(byStage).map(([k, v]) => `${k} ${v}`).join(' / ')}`);
+  console.log(`M 门证据：机器格式 ${byFormat.machine} / LLM 兜底 ${byFormat['llm-legacy']} / 无证据 ${byFormat.none} / 不可解析 ${byFormat.unparseable}`);
+  console.log(`平均修订轮数 ${summary.avgRevisionRounds ?? '—'}｜累计 P0=${sumP0} P1=${sumP1} P2=${sumP2}｜累计字数 ${sumHan}（全文汉字，含文末节）`);
+  console.log(`\n== 门拦截频率 TOP（仅机器报告，跨项目 P0/P1 合计）==`);
+  if (topGates.length === 0) console.log('（无可解析的机器报告）');
+  for (const g of topGates.slice(0, 12)) console.log(`  ${g.gate.padEnd(10)} P0×${g.p0}  P1×${g.p1}  P2×${g.p2}`);
+  // v19.6.0（§3.3）：人工裁定侧——**这才是「规则判据该不该改」的信号**
+  console.log(`\n== 人工裁定侧（T8 裁据）TOP ==`);
+  console.log(summary.adjudicationNote);
+  if (nAdjudicated === 0) {
+    console.log('（无带裁定的机器报告——存量报告（v19.6.0 之前写入）没有 `_t8_refutations`，属正常形态）');
+  } else {
+    console.log(`带裁定的项目 ${nAdjudicated} 个｜裁据合计 ${nRefTotal} 条`);
+    for (const g of topAdjudicated.slice(0, 12)) {
+      const ratio = g.refutedRatio === null ? '—' : `${(g.refutedRatio * 100).toFixed(0)}%`;
+      console.log(`  ${g.gate.padEnd(10)} 被裁×${g.refuted}  / 机械失败×${g.mechanicalFailures}  =  ${ratio}`);
+    }
+    const reasons = summary.refutationReasons;
+    if (reasons.length) console.log(`  原因分布：${reasons.map((r) => `${r.reason}×${r.count}`).join('  ')}`);
+  }
+}

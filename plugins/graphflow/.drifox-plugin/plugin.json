@@ -1,0 +1,25 @@
+{
+    "name": "graphflow",
+    "description": "省 Token 的代码手术引擎技能。用 gf_read/gf_edit/gf_exec/gf_macro 四个 MCP 工具替代整文件读取与全量测试，六语言真 AST、爆炸半径守卫。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "1.0.0",
+    "author": {
+        "name": "Roarpeng"
+    },
+    "license": "Apache-2.0",
+    "type": "user",
+    "min_host_version": "0.5.0",
+    "keywords": [
+        "code-graph",
+        "ast",
+        "token",
+        "mcp",
+        "graphflow"
+    ],
+    "components": {
+        "skills": true
+    }
+}

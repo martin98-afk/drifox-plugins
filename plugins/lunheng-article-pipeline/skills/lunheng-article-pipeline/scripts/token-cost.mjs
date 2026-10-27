@@ -1,0 +1,505 @@
+// 论衡终检 token 成本汇总脚本（v2.5.2-dsh 补丁）：Phase 5 终检显示全流程总 token 成本
+// 用法：
+//   node token-cost.mjs --sessions <主会话ID>,<子代理ID1>,<子代理ID2>...   # 项目精确统计（主控传本项目派发的全部会话）
+//   node token-cost.mjs --project run/<项目名>                             # 从项目日志自动提取会话 ID（v18.0.0 新增）
+//   node token-cost.mjs --tree <主会话ID>                                  # 整会话委托树统计（含历史项目）
+//   node token-cost.mjs [--dsh-home <path>] [--price-in N --price-cache N --price-out N]
+//   node token-cost.mjs --top N                  # 追加 cacheRead/成本 Top N 会话排名（与 --sessions/--tree 连用，用于优化决策）
+// 数据源：DSH 会话投影缓存 $DSH_HOME/storages/session_projcache.json（每会话 tokenUsage.totals）
+// 说明：主会话运行中时总量为「截至运行时刻」；成本为估算（默认 DeepSeek 价，--price-* 可覆盖）。
+// 退出码（v18.12.0，L-67 收口）：
+//   0  = 统计成功且**至少命中一个会话的用量记录**
+//   10 = **参数 / 路径 / 环境不可用**（未知参数、`--top` 非法、数值旗标收到非数字、
+//        未给任何模式、会话投影缓存不存在、`--project` 无日志或未提取到会话 ID、
+//        `--tree` 所需 Node 版本不足）——与全仓「10 = 参数或路径错误」一致
+//   70 = 内部错误（EX_SOFTWARE，见 _lib/exit-guard.mjs）
+//   ⚠️ 本脚本**不再使用 exit 1**（v18.12.0 起）：旧版把「未知参数 / 数值非法 / 缓存缺失 / 未给模式」
+//      一律记为 1，而主控统一按 M 门语义读码时会把 1 读成「**P1 内容失败**」→ 误触发 T5 修订轮。
+//      这正是 v18.0.5 引入 exit-guard 要消灭的那类撞码（本文件当时漏改）。
+//   ⚠️ 这里刻意**不**用 4（4 已在 AGENTS.md 登记为 model-routing 的「需人工决定」，不与他脚本共用语义）。
+import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import os from 'node:os';
+// v19.27.13（反哺 2026-10-26 F-3）：**zstd 不做顶层静态导入，统一走 tree 分支内的动态导入**。
+//   病灶：本行原是顶层 `import { zstdDecompressSync } from 'node:zlib'`（v18.48.0 F-AW），而 tree
+//   分支里另写了「动态 import + 缺失则提示 Node ≥ 22.15 并 exit 10」的降级设计——静态命名导入是
+//   模块加载期绑定，Node < 22.15 时**加载即抛** `ERR_EXPORT_NOT_FOUND`（发生在 `installExitGuard()`
+//   之前），降级分支永不可达，且**任何模式**全崩（`--sessions` / `--project` 不需要 zstd 也崩）。
+//   见 audits/反哺报告-2026-10-26-全量审计外部复审-v1.md F-3。
+import { installExitGuard } from './_lib/exit-guard.mjs';   // 退出码硬化（v18.0.5）：fs 类异常 → 10，内部错误 → 70
+import { parseArgs as parseCliArgs, USAGE_CODE as CLI_USAGE_CODE } from './_lib/cli-args.mjs';  // 参数解析唯一实现（v18.2.9，审计 A7）
+import { writeReport } from './_lib/destructive-write.mjs';  // 写盘唯一出口（v19.1.9：--out 落盘走同一道守卫 + .bak）
+// v19.27.13（F-3）：zstd 改**模块级动态导入**（top-level await）。旧形态是顶层**静态**命名导入——
+//   Node < 22.15 时加载即抛 ERR_EXPORT_NOT_FOUND、任何模式全崩（见本文件头注）。动态导入对缺失导出
+//   **不抛**（解构得 undefined）：tree 模式据此显式 exit 10（下方分支）；readLiveUsage 回落据此返回
+//   null（与「缓存里没有这个会话」同形——engines 已要求 Node ≥ 22.19，旧 Node 本就出包契约）。
+let zstdDecompressSync;
+try { ({ zstdDecompressSync } = await import('node:zlib')); } catch { zstdDecompressSync = undefined }
+installExitGuard();
+
+const args = process.argv.slice(2);
+const opt = { dshHome: process.env.DSH_HOME || join(os.homedir(), '.dsh'), prices: { in: 0.28, cache: 0.028, out: 0.42 }, ids: null, tree: null, top: 0, project: null, out: null, write: true };
+// 用法/帮助：v2.5.2-dsh.17 补（此前 `--help` 会被「未知参数」拦下，只报错不给用法）
+const USAGE = `用法: node token-cost.mjs --sessions <id1,id2,...> 或 --project <run/项目名> 或 --tree <主会话ID> [--top N]
+  --sessions <ids>   项目精确统计（主控传本项目派发的全部会话 id，逗号分隔）
+  --project <dir>    从项目日志（agents-log.md / status.md）自动提取其中的会话 ID 再统计（v18.0.0 新增；
+                     适合主控在会话内拿不到 session id 的场景——交接报告里的 session-<uuid> 会被自动提取）
+  --tree <id>        整会话委托树统计（含历史项目；需 Node ≥ 22.15）
+  --top N            追加 cacheRead/成本 Top N 排名（优化决策用）
+  --out <file>       落盘路径（v19.1.9 新增）。缺省：给了 --project 时写
+                     <项目>/final/token-cost.json（即面板「Token 消耗」卡读的那个文件）
+  --no-write         只打印不落盘（v19.1.9 新增；退回 v19.1.8 及以前的行为）
+  --dsh-home <path>  指定 DSH_HOME（默认 $DSH_HOME 或 ~/.dsh）
+  --price-in/--price-cache/--price-out <N>  覆盖默认单价（美元/百万 token）
+  -h, --help         显示本帮助`;
+if (args.includes('-h') || args.includes('--help')) { console.log(USAGE); process.exit(0); }
+// 参数解析：v18.2.9（第三方审计 A7）迁移到 `_lib/cli-args.mjs` 唯一实现；
+//   数值校验（尾随无值/非数字 → 明确报错而非静默 NaN）保留在调用处（v2.5.2-dsh.3 审计修复的行为不变）。
+try {
+  const parsed = parseCliArgs(args, {
+    flags: ['--no-write'],
+    values: {
+      '--dsh-home': '~/.dsh',
+      '--sessions': '<id1,id2,...>',
+      '--project': 'run/项目名',
+      '--tree': '<主会话ID>',
+      '--top': '10',
+      '--out': 'final/token-cost.json',
+      '--price-in': '0.28', '--price-cache': '0.028', '--price-out': '0.42',
+    },
+    maxPositionals: 0,
+  });
+  if (parsed.flags.has('--no-write')) opt.write = false;
+  if (parsed.opts['--out']) opt.out = parsed.opts['--out'];
+  if (parsed.opts['--dsh-home']) opt.dshHome = parsed.opts['--dsh-home'];
+  if (parsed.opts['--sessions']) opt.ids = parsed.opts['--sessions'].split(',').map((s) => s.trim()).filter(Boolean);
+  if (parsed.opts['--project']) opt.project = parsed.opts['--project'];
+  if (parsed.opts['--tree']) opt.tree = parsed.opts['--tree'];
+  const num = (flag, val, { integer = false } = {}) => {
+    const v = Number(val);
+    if (!Number.isFinite(v) || (integer && (!Number.isInteger(v) || v <= 0))) {
+      console.error(`${flag} 需为${integer ? '正整数' : '数字'}，收到: ${val}`);
+      process.exit(10);   // v18.12.0（L-67）：参数值错 = 参数错 → 10（旧版 1 与「P1 内容失败」撞义）
+    }
+    return v;
+  };
+  if (parsed.opts['--price-in']) opt.prices.in = num('--price-in', parsed.opts['--price-in']);
+  if (parsed.opts['--price-cache']) opt.prices.cache = num('--price-cache', parsed.opts['--price-cache']);
+  if (parsed.opts['--price-out']) opt.prices.out = num('--price-out', parsed.opts['--price-out']);
+  if (parsed.opts['--top']) opt.top = num('--top', parsed.opts['--top'], { integer: true });
+} catch (e) {
+  if (e && e.code === CLI_USAGE_CODE) { console.error(`${e.message}\n\n${USAGE}`); process.exit(10); }   // v18.12.0（L-67）
+  throw e;
+}
+
+// v18.2.9（第三方审计 B5）：未显式给 --price-* 时，默认价是 DeepSeek 单价——非 DeepSeek 模型
+//   的成本会系统性失真、且会被误当作「实价」写进交付说明。现**响亮标注**（不静默）：引用前须覆盖。
+if (!/--price-(in|cache|out)\b/.test(args.join(' '))) {
+  console.error('⚠️ 未指定 --price-*，成本按默认 DeepSeek 单价估算（0.28/0.028/0.42 美元/百万 token）——非 DeepSeek 模型将失真，交付说明引用前请用 --price-in/--price-cache/--price-out 覆盖');
+}
+
+// 数据源兼容两种布局（v2.5.2-dsh.10+ 适配）：
+//   旧版单文件  $DSH_HOME/storages/session_projcache.json  { tables.sessions: { id: { rows: {...} } } }
+//   新版目录式  $DSH_HOME/storages/session_projcache/sessions/<id>.json（每会话一个投影缓存，含 record.rows）
+// v18.0.5（第三方审计 P2-11）：**判序改为「目录优先」并与 `token-budget.mjs` 统一**——旧版这里
+//   单文件优先、token-budget 目录优先，同一台机器上两份报表取的数据源不同（实测夹具：一读 legacy
+//   一读目录，数字互不可比且都 exit 0 无告警）。另加「两种布局并存」显式告警。
+const projDir = join(opt.dshHome, 'storages', 'session_projcache');
+const legacyFile = join(opt.dshHome, 'storages', 'session_projcache.json');
+const sessions = {};
+let cacheDesc = '';
+const hasDirLayout = existsSync(join(projDir, 'sessions')) && statSync(join(projDir, 'sessions')).isDirectory();
+const hasLegacy = existsSync(legacyFile);
+if (hasDirLayout && hasLegacy) {
+  console.error(`⚠️ 检测到两种会话投影布局并存：${join(projDir, 'sessions')}（优先）与 ${legacyFile}（忽略）——升级残留会让不同脚本读到不同快照，本脚本一律以**目录式**为准`);
+}
+if (hasDirLayout) {
+  const sdir = join(projDir, 'sessions');
+  cacheDesc = sdir;
+  for (const f of readdirSync(sdir)) {
+    if (!f.endsWith('.json')) continue;
+    try {
+      const rec = JSON.parse(readFileSync(join(sdir, f), 'utf8'));
+      const key = f.slice(0, -'.json'.length); // 保留原名（含/不含 session- 前缀均可被查找）
+      sessions[key] = rec.record || rec;
+    } catch {}
+  }
+} else if (hasLegacy) {
+  const cache = JSON.parse(readFileSync(legacyFile, 'utf8'));
+  Object.assign(sessions, cache.tables?.sessions || {});
+  cacheDesc = legacyFile;
+} else {
+  console.error('找不到会话投影缓存（已尝试目录式与单文件两种布局）: ' + projDir); process.exit(10);   // v18.12.0（L-67）：路径错 → 10
+}
+
+// === --project 模式（v18.0.0 新增，P2-1）===
+// 背景：交付说明的「成本指标」字段此前**结构性填不上** —— `--sessions` 需要精确 session id，
+//   而主控在会话内**拿不到**（subagent 返回的是 agent id，不是 session id）。
+// 现规则：从项目日志（agents-log.md / status.md / 01-任务简报.md / audits/审计视图-v0.md
+//   / **model-routing.md** / **audits/闸门记录-*.md**）用 UUID 正则提取所有会话 ID，与 `--sessions` 传入者合并去重。
+//   子代理交接报告里常见的 `session-<uuid>` 形态会被自动提取。
+//   v18.79.0（反哺-v18.78.2 §七 T0-2 邻接缺陷）：后两项是**补进来的** —— 实测 test-v18-78-2-县中塌陷 的
+//     `agents-log.md` / `status.md` **一个 UUID 都没有**（子代理 session id 实际记在 `model-routing.md` 的 16 处
+//     与 `audits/闸门记录-T7.5.md` 的 1 处），于是 `--project` 直接 exit 10「未提取到会话 ID」，
+//     「本项目 token 成本」这一**强制实测字段**仍结构性填不上。
+//   判据：**提取面必须覆盖「本项目实际记 id 的地方」**，而不是「我们以为主控会记 id 的地方」。
+//   多提取到的非会话 UUID 只会落进「无用量记录」行，不影响判定（exit 只由「有没有命中」决定）。
+if (opt.project) {
+  const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+  const cand = ['agents-log.md', 'status.md', '01-任务简报.md', join('audits', '审计视图-v0.md'), 'model-routing.md'].map((f) =>
+    join(opt.project, f),
+  );
+  // `audits/闸门记录-*.md`：文件名带闸门号（T2.5/T7.5/…），只能枚举目录；`audits/` 不存在属合法形态（Phase ≤4 早期）。
+  try {
+    for (const n of readdirSync(join(opt.project, 'audits'))) {
+      if (/^闸门记录-.*\.md$/.test(n)) cand.push(join(opt.project, 'audits', n));
+    }
+  } catch { /* 目录不存在 → 该面为空即可 */ }
+  const found = new Set(opt.ids || []);
+  const srcFiles = [];
+  for (const p of cand) {
+    if (!existsSync(p)) continue;
+    srcFiles.push(p);
+    for (const m of readFileSync(p, 'utf8').matchAll(UUID_RE)) found.add(m[0]);
+  }
+  if (srcFiles.length === 0) {
+    console.error(`--project 未找到任何项目日志（已试: ${cand.join(' / ')}）`);
+    process.exit(10);   // v18.12.0（L-67）：路径错 → 10
+  }
+  opt.ids = [...found];
+  if (opt.ids.length === 0) {
+    console.error(
+      `--project 在 ${srcFiles.join(' / ')} 中未提取到会话 ID（UUID 形态）。\n` +
+        `  —— 请让主控在派发时把子代理 session id 记入 agents-log.md，或改用 --sessions 手工传入。`,
+    );
+    process.exit(10);   // v18.12.0（L-67）：参数不足（未给出可用会话 id）→ 10
+  }
+  console.error(`· --project ${opt.project}：从 ${srcFiles.length} 个日志文件提取到 ${opt.ids.length} 个会话 ID`);
+}
+
+// 树模式：扫描会话头 parentSession 建委托树
+if (opt.tree && !opt.ids) {
+  // v19.27.13（F-3）：zstd 已是模块级动态导入（见文件顶部）——此处只做「可用性判定」。
+  if (typeof zstdDecompressSync !== 'function') {
+    console.error('tree 模式需要 Node.js >= 22.15（node:zlib.zstdDecompressSync 缺失）——当前环境不支持，请改用 --sessions 显式列表，或升级 Node');
+    process.exit(10);   // v18.12.0（L-67）：环境/参数不可用 → 10
+  }
+  const { readdirSync, statSync } = await import('node:fs');
+  const headers = {};
+  const scan = (dir) => {
+    for (const d of readdirSync(dir, { withFileTypes: true })) {
+      if (!d.isDirectory()) continue;
+      const sdir = join(dir, d.name);
+      if (d.name.startsWith('--')) { scan(sdir); continue; }
+      const z = join(sdir, 'session.jsonl.zstd');
+      if (!existsSync(z)) continue;
+      try {
+        const h = JSON.parse(zstdDecompressSync(readFileSync(z)).toString('utf8').split('\n')[0]);
+        headers[h.id] = { id: h.id, parentSession: h.parentSession || null, mtime: statSync(z).mtimeMs };
+      } catch {}
+    }
+  };
+  scan(join(opt.dshHome, 'sessions'));
+  // 前缀归一化：parentSession 可能带/不带 session- 前缀，统一去前缀比对（v2.5.2-dsh.3 审计修复）
+  const strip = (id) => (id || '').replace(/^session-/, '');
+  const root = strip(opt.tree);
+  const ids = new Set([root]);
+  const collect = (pid) => {
+    for (const h of Object.values(headers)) {
+      if (strip(h.parentSession) === pid && !ids.has(strip(h.id))) { ids.add(strip(h.id)); collect(strip(h.id)); }
+    }
+  };
+  collect(root);
+  opt.ids = [...ids];
+  // 健全性断言：树模式至少应包含主会话自身（v2.5.2-dsh.3 审计修复：防静默缩成 1 个）
+  if (opt.ids.length === 1) {
+    console.error(`tree 模式警告：主会话 ${opt.tree} 未找到任何子代理会话（parentSession 链为空）——统计仅含主会话自身，结果可能不完整`);
+  }
+} else if (!opt.ids) {
+  console.error(USAGE);
+  process.exit(10);   // v18.12.0（L-67）：未给任何模式 = 用法错 → 10
+}
+
+// ── v18.48.0（反哺 F-AW / F-D）：**第三数据源 = 活会话存储**（仅对缓存里找不到的 id 回落） ──
+// 实测缺口（本机 2026-09-28）：`storages/session_projcache/` **停在 09-21**（185 个文件），而实验期
+//   （09-28）实际跑了 **500 个会话** → `--project` 抽到了 UUID 却 `matchedSessionCount: 0` / **exit 10**。
+//   即：**投影缓存是"某次投影的产物"，不是会话真源**；真源是
+//   `$DSH_HOME/sessions/<workspace>/<id>/session.v<N>.jsonl.zstd`（每行一条事件，**多帧 zstd**）。
+//   ⚠️ v18.79.0（反哺-v18.78.2 §七 T0-2 **真因修复**）：上面那个 `<N>` **不得写死**。
+//   本函数 v18.48.0 实装时写死 `session.v3.jsonl.zstd`，而宿主 2026-10 起落盘为 **`session.v4.jsonl.zstd`**
+//   → 回落**静默失效**，读数与「缓存里根本没有这个会话」完全同形（实测本机 test-v18-78-2-县中塌陷：
+//   26 个会话在盘、`--sessions <真实 uuid>` → `matchedSessionCount=0` / `matchedFromLiveStore=0` / exit 10）。
+//   判据：会话日志的**版本号属宿主契约、会随宿主升级漂移**；本脚本只依赖「`session.v` 前缀 + `.jsonl.zstd` 后缀」，
+//   取版本号最大者。**不得**据「文件名没命中」推断「没有用量数据」——那是把环境漂移误报成数据缺失。
+// 本节**只做补充**（不替换缓存口径）：对缓存未命中的 id 回落活存储，逐帧解压后累加
+//   `assistant/message.data.usage`，适配成与投影缓存**同形**的记录 → 下游消费代码零改动。
+// **判据：成本读数的"会话集真源"必须可回答"这个会话的用量从哪读到"——缓存读不到就回落真源，而不是报 0。**
+const liveStoreRoot = join(opt.dshHome, 'sessions');
+const liveCache = {};
+const ZSTD_MAGIC = Buffer.from([0x28, 0xb5, 0x2f, 0xfd]);
+/** 会话日志文件名解析（**不写死版本号**，理由见上方 v18.79.0 注）：取 `session.v<N>.jsonl.zstd` 中 N 最大者。 */
+const liveLogPath = (dir) => {
+  let best = null;
+  let bestV = -1;
+  try {
+    for (const n of readdirSync(dir)) {
+      const m = /^session\.v(\d+)\.jsonl\.zstd$/.exec(n);
+      if (!m) continue;
+      const v = Number(m[1]);
+      if (v > bestV) { bestV = v; best = n }
+    }
+  } catch { return null }
+  return best ? join(dir, best) : null;
+};
+const readLiveUsage = (id) => {
+  if (!existsSync(liveStoreRoot)) return null;
+  // v19.27.13（F-3）：zstd 动态导入在当前 Node 不可用（< 22.15）→ 回落整体不可用，返回 null
+  //   （与「缓存里没有这个会话」同形；engines 契约本就要求 ≥ 22.19，见文件头注）。
+  if (typeof zstdDecompressSync !== 'function') return null;
+  let dir = null;
+  for (const ws of readdirSync(liveStoreRoot)) {
+    const cand = join(liveStoreRoot, ws, id);
+    if (existsSync(cand) && statSync(cand).isDirectory()) { dir = cand; break }
+  }
+  if (!dir) return null;
+  const f = liveLogPath(dir);
+  if (!f) return null;
+  let buf;
+  try { buf = readFileSync(f) } catch { return null }
+  const offs = [];
+  for (let i = 0; i + 3 < buf.length; i++) if (buf.compare(ZSTD_MAGIC, 0, 4, i, i + 4) === 0) offs.push(i);
+  const frames = offs.length
+    ? offs.map((o, k) => buf.subarray(o, k + 1 < offs.length ? offs[k + 1] : buf.length))
+    : [buf];
+  let text = '';
+  for (const fr of frames) { try { text += zstdDecompressSync(fr).toString('utf8') } catch { /* 单帧坏不影响其余帧 */ } }
+  const t = { uncachedInputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 };
+  let seen = 0;
+  for (const line of text.split('\n')) {
+    if (!line.trim()) continue;
+    let r; try { r = JSON.parse(line) } catch { continue }
+    if (r.type === 'assistant/message' && r.data && r.data.usage) {
+      const u = r.data.usage;
+      t.uncachedInputTokens += u.inputTokens || 0;
+      t.cacheReadTokens += u.cacheReadTokens || 0;
+      t.cacheWriteTokens += u.cacheWriteTokens || 0;
+      t.outputTokens += u.outputTokens || 0;
+      seen++;
+    }
+  }
+  if (seen === 0) return null;
+  return { rows: { tokenUsage: { val: { totals: t } } }, __source: 'live-session-store' };
+};
+
+const totals = { uncachedInputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, outputTokens: 0 };
+const rows = [];
+let matchedSessions = 0;   // v18.2.6：命中的会话数（区分「真的 0 用量」与「id 根本查不到」）
+let matchedFromLive = 0;   // v18.48.0（F-AW）：其中有多少个来自活会话存储回落
+for (const id of opt.ids) {
+  const bare = id.replace(/^session-/, '');
+  const rec = sessions[id] || sessions[bare] || sessions[`session-${id}`]
+    || (liveCache[bare] !== undefined ? liveCache[bare] : (liveCache[bare] = readLiveUsage(bare)));
+  const usage = rec?.rows?.tokenUsage?.val?.totals;
+  if (!usage) { rows.push({ session: id, label: '无用量记录', tokens: null }); continue; }
+  matchedSessions++;
+  if (rec.__source === 'live-session-store') matchedFromLive++;
+  for (const k of Object.keys(totals)) totals[k] += usage[k] || 0;
+  rows.push({ session: id, label: (id === opt.ids[0] ? '主控' : '子代理'), tokens: { ...usage } });
+}
+
+const totalTokens = totals.uncachedInputTokens + totals.cacheReadTokens + totals.cacheWriteTokens + totals.outputTokens;
+// cacheWriteTokens = 写入上下文缓存（cache miss 语义）→ 按未命中价（in）计；cacheReadTokens = 命中读取 → 按低价计（v2.5.2-dsh.3 审计修正）
+
+const costUsd =
+  (totals.uncachedInputTokens / 1e6) * opt.prices.in +
+  (totals.cacheReadTokens / 1e6) * opt.prices.cache +
+  (totals.cacheWriteTokens / 1e6) * opt.prices.in +
+  (totals.outputTokens / 1e6) * opt.prices.out;
+
+// 单会话成本（与总量同口径：uncachedInput + cacheWrite 按未命中价，cacheRead 按命中价，output 按输出价）
+const sessionCost = (t) =>
+  (t.uncachedInputTokens / 1e6) * opt.prices.in +
+  (t.cacheReadTokens / 1e6) * opt.prices.cache +
+  (t.cacheWriteTokens / 1e6) * opt.prices.in +
+  (t.outputTokens / 1e6) * opt.prices.out;
+
+const out = {
+  mode: opt.tree ? 'tree' : 'explicit',
+  sessionCount: opt.ids.length,
+  // v18.2.6：把「命中数」显式给出来——0 就是「查不到」，不是「用量为 0」
+  matchedSessionCount: matchedSessions,
+  // v18.48.0（F-AW）：命中的会话里有多少个来自**活会话存储回落**（缓存未命中）——
+  //   这个数不为 0 就说明**投影缓存对这个项目是陈旧的**，读报表的人必须知道数据来自哪个源。
+  matchedFromLiveStore: matchedFromLive,
+  dataSourceDesc: cacheDesc,
+  tokens: { uncachedInput: totals.uncachedInputTokens, cacheRead: totals.cacheReadTokens, cacheWrite: totals.cacheWriteTokens, output: totals.outputTokens, total: totalTokens },
+  costEstimateUsd: Number(costUsd.toFixed(2)),
+  pricesPerMillion: opt.prices,
+  note: '成本为估算（默认 DeepSeek 价，--price-* 可覆盖）；uncachedInput 与 cacheWrite 按未命中价计，cacheRead 按命中价计（缓存写=miss 语义）；主会话为运行中会话，总量为截至运行时刻。',
+  rows
+};
+
+// ── v19.19.3（反哺报告-2026-10-19 M4b 配套）：**部分命中预警** ──
+// 为什么必须有（实测 2026-10-19，本机 4 个项目）：live 回流**不是全有或全无**——
+//   `run/中国古典学的学科划界` 3 个会话只命中 **2 个**，总量 2.1M，而其交付快照是 **10.9M**；
+//   若默默输出，读者会拿到一个**低 5 倍**的「实测值」。这正是本包最反感的
+//   「静默把缺失当数值」的第三种形态（前两种：查不到当 0 = v18.2.6；查得到的历史当没有 = 本条回落）。
+// 判据：命中数 < 请求数 且 > 0 → 打 `coverageWarning`（不改 exit、不改总量口径——**不猜补值**）。
+if (matchedSessions > 0 && matchedSessions < opt.ids.length) {
+  out.coverageWarning = `仅 ${matchedSessions}/${opt.ids.length} 个会话命中用量记录：缺失的 ${opt.ids.length - matchedSessions} 个未计入总量，**本读数偏低**，不得直接当实测成本。`
+    + '补法：① 核对 id 是否写错；② 若 `--project`，比对 `<项目>/final/token-cost.json` 快照（更完整时以快照为准并标 source）；③ 重跑时把 session id 记全。';
+}
+
+// ── v19.19.3（M4b 第三形态）：**live ↔ 交付快照对账** ──
+// 实测病灶（2026-10-19）：`run/中国古典学的学科划界` live 只命中 2 个会话 = **2.1M**，
+//   而交付快照是 **10.9M**——id 抽取面本身就少了（`model-routing.md` 后补的行不在旧日志里）。
+//   若不报，读者会把「低 5 倍」的 live 读数当实测值。故当两者都存在时一律对账：
+//   偏差 >20% 时并入 `coverageWarning`（口径：快照更完整 **或** 项目后期有修订，**两者都可能**，不预设结论）。
+if (opt.project && matchedSessions > 0) {
+  const snap = readDeliverySnapshot(opt.project);
+  const snapTotal = snap ? Number(snap.snap.tokens.total) : 0;
+  if (snapTotal > 0) {
+    const delta = (snapTotal - totalTokens) / snapTotal;
+    out.snapshotComparison = { snapshotTotal: snapTotal, liveTotal: totalTokens, deltaPct: Number((delta * 100).toFixed(1)), snapshotPath: snap.snapPath };
+    if (Math.abs(delta) > 0.2) {
+      out.coverageWarning = (out.coverageWarning ? out.coverageWarning + ' ' : '')
+        + `live 读数与交付快照差 ${(delta * 100).toFixed(0)}%（快照 ${(snapTotal / 1e6).toFixed(1)}M vs live ${(totalTokens / 1e6).toFixed(1)}M，见 snapshotComparison）——引用成本前必须说明取哪一个，不得两个数混用。`;
+    }
+  }
+}
+
+// --top N（v2.5.2-dsh.15 实现）：按 cacheRead 降序的 Top N 会话 —— 回答「哪一步最贵 / 优化有没有用」。
+// 这是后续一切 token 优化的量尺：没有排名，优化只能凭感觉（旧版该参数只有注释、无实现）。
+// v19.19.3（M4c）：抽成函数——**回落交付快照时也要能排名**（否则历史项目的离群轮永远看不见，
+//   而离群轮正是成本的主导项）。`rowList` 与 `totals` 各自来自 live 计算或快照，口径同构。
+function attachTop(outObj, rowList, grandCacheRead) {
+  const scored = rowList
+    .filter((r) => r.tokens)
+    .map((r) => ({
+      session: r.session,
+      label: r.label,
+      cacheRead: r.tokens.cacheReadTokens || 0,
+      uncachedInput: r.tokens.uncachedInputTokens || 0,
+      output: r.tokens.outputTokens || 0,
+      total: (r.tokens.uncachedInputTokens || 0) + (r.tokens.cacheReadTokens || 0) + (r.tokens.cacheWriteTokens || 0) + (r.tokens.outputTokens || 0),
+      costEstimateUsd: Number(sessionCost(r.tokens).toFixed(4)),
+      cacheReadShareOfTotalPct: grandCacheRead > 0
+        ? Number((((r.tokens.cacheReadTokens || 0) / grandCacheRead) * 100).toFixed(1))
+        : 0,
+    }))
+    .sort((a, b) => b.cacheRead - a.cacheRead || b.costEstimateUsd - a.costEstimateUsd);
+  outObj.topByCacheRead = scored.slice(0, opt.top);
+  outObj.topNote = `按 cacheRead 降序 Top ${Math.min(opt.top, scored.length)}（共 ${scored.length} 个有用量记录的会话；share 为占总量 cacheRead 的百分比）。优化动作应优先针对排名靠前者。`;
+  if (scored.length === 0) outObj.topNote = '没有任何会话带 tokenUsage 记录（先确认会话 id 是否正确）。';
+  // ── v19.19.3（反哺报告-2026-10-19 M4c）：**单会话尾部预警** ──
+  // 实测依据（11 篇 / 158 会话）：单会话占全篇 58%–80% 的三例（台海 56.5M / 生成式AI 78.7M /
+  //   中国古典学 8.8M）全部不是常规单轮——两例角色未登记、一例是「43 条一轮」的深化轮。
+  //   即：**一篇的成本被一两个离群轮定义**，而中位数只有 66.7M。故在 Top 排名上打一行预警（不改 exit）。
+  // 边界（如实）：阈值 20M 取自实测分布的空档（常规 spawn 3–8M，离群 56–86M），不是统计分位数。
+  const BURST_LIMIT = 20_000_000;
+  const bursts = scored.filter((s) => s.total > BURST_LIMIT);
+  if (bursts.length) {
+    outObj.topWarnings = bursts.map((s) => `单会话 ${(s.total / 1e6).toFixed(1)}M token（>${BURST_LIMIT / 1e6}M 阈值）session=${s.session} label=${s.label}——离群轮通常意味着「单轮承载过多条目」或「上下文反复重读同一批材料」，请对其触发原因单独复核，不要按角色均值理解成本`);
+    outObj.topNote += ` ⚠️ 其中 ${bursts.length} 个会话单轮 >${BURST_LIMIT / 1e6}M（见 topWarnings）。`;
+  }
+  return scored;
+}
+if (opt.top > 0) attachTop(out, rows, totals.cacheReadTokens);
+
+// === v18.2.6 审计修复（第三方审计 P1-5）：全部会话未命中用量记录 → 非 0 退出 ===
+// 旧行为（实测）：`--sessions <假 UUID>` → `sessionCount:1 / tokens 全 0 / costEstimateUsd:0` 且 **exit 0**，
+//   唯一线索是 `rows[0].label:"无用量记录"` —— 而交付说明要求贴**实测成本**，主控会把这个 0
+//   当成「本项目真的没花 token」写进交付说明（「查不到」被写成「实测 0」）。这是本包最反感的
+//   「静默把缺失当数值」。现规则：**一个会话都没命中 → exit 10（参数或路径错）** + 明确报错文案。
+//   注意判据是 `matchedSessions === 0` 而非 `totalTokens === 0`：后者在「会话存在但确实没用 token」时
+//   也会为 0，那是合法的真实数据，不得误判为错误（故这里必须用命中数，不能看总量）。
+//
+// ── v19.19.3（反哺报告-2026-10-19 M4b）在 exit 10 之前插入**交付快照回落** ──
+// 病灶（2026-10-19 实测，4 个项目）：`session_projcache` 与活存储**都会轮转**——xingbie 的 21 个
+//   id 现在一个都不在盘（`matchedSessionCount: 0`），台海 / 生成式AI / 不能评估的忠诚 同为 0。
+//   于是「交付时落盘的 `final/token-cost.json`」成了**唯一残留证据**，而官方工具自己读不到它：
+//   要么报 exit 10，要么（更糟）让人拿一个 0 去填交付说明。这正是 v18.2.6 那道门的**另一半**——
+//   它防「把查不到当 0」，本条防「把查得到的历史当没有」。
+// 判据：`matchedSessions === 0` + 给了 `--project` + `<项目>/final/token-cost.json` 在盘且总量 > 0
+//   → 读该快照、**原样输出**并显式标 `source: 'delivery-snapshot'`，exit 0。
+// 边界（如实，三条）：① 只回落**项目默认路径**（`--sessions`/`--tree`/显式 `--out` 不猜）；
+//   ② 回落模式**不写盘**（快照就是它自己：覆盖无意义，且会撞同文件守卫）；
+//   ③ 快照里的 `costEstimateUsd` 是**当时**单价算的，回落时照原样给，不重算、不修正。
+function readDeliverySnapshot(projectDir) {
+  const snapPath = join(projectDir, 'final', 'token-cost.json');
+  if (!existsSync(snapPath)) return null;
+  let snap = null;
+  try { snap = JSON.parse(readFileSync(snapPath, 'utf8')); } catch { return null; }
+  if (!snap || !snap.tokens || !(Number(snap.tokens.total) > 0)) return null;
+  return { snapPath, snap };
+}
+if (matchedSessions === 0) {
+  const fb = opt.project ? readDeliverySnapshot(opt.project) : null;
+  if (fb) {
+    const merged = {
+      ...fb.snap,
+      source: 'delivery-snapshot',
+      snapshotPath: fb.snapPath,
+      liveMatchedSessionCount: 0,
+      liveRequestedSessionCount: opt.ids.length,
+      note: (fb.snap.note ? fb.snap.note + ' ' : '')
+        + '【v19.19.3 回落】本次 live 会话投影与活存储均未命中（已轮转/已清理），'
+        + '数据取自**交付时落盘**的快照；它是当时的读数，**不是复算值**，金额按当时的单价估算。',
+    };
+    if (opt.top > 0) attachTop(merged, Array.isArray(merged.rows) ? merged.rows : [], Number(merged?.tokens?.cacheRead) || 0);
+    console.log(JSON.stringify(merged, null, 2));
+    console.error(`· live 未命中 ${opt.ids.length} 个 id → 已回落读交付快照 ${fb.snapPath}（source=delivery-snapshot；未复算、未写盘）`);
+    process.exit(0);
+  }
+  console.error(
+    `✗ 给出的会话 id 未在 ${cacheDesc} 找到任何用量记录，请核对 id 或 --sessions 参数。\n` +
+      `  共查 ${opt.ids.length} 个 id，全部未命中（仅前 5 个：${opt.ids.slice(0, 5).join(', ')}${opt.ids.length > 5 ? ' …' : ''}）。\n` +
+      `  · 常见原因：id 写错 / 该会话未落投影缓存 / 用的是 agent id 而非 session id；\n` +
+      `  · 若确实没有用量数据，请勿把上面的 0 当作「实测成本」（退出码 10 = 参数或路径错误）；\n` +
+      `  · 可改用 --project <run/项目名>（从项目日志自动提取会话 id）或 --tree <主会话ID>。`,
+  );
+  process.exit(10);
+}
+
+console.log(JSON.stringify(out, null, 2));
+
+// === v19.1.9：落盘（闭合契约缺口）===
+// 病灶：`SKILL.md` §主控亲跑路径 与 `pipeline-readme.md` 一直宣称本脚本「产 final/token-cost.json」，
+//   而本脚本**只 console.log**——于是运行面板的「Token 消耗」卡在全库 31/34 个项目上恒空
+//   （数据就在会话投影缓存里，只是**没人写那个文件**）。
+// 现规则：① `--out <file>` 显式指定；② 未给 `--out` 但给了 `--project` → 默认写
+//   `<项目>/final/token-cost.json`（即文档承诺、面板要读的那个文件）；③ `--no-write` 退回只打印；
+//   ④ `--sessions` / `--tree` 模式没有项目目录 → 仍只打印（不猜路径）。
+// **位置要求（刻意）**：必须在 `matchedSessions === 0 → exit 10` **之后**——绝不能在「查不到用量」时
+//   落一个 0 值文件，那正是 v18.2.6 立那道门要防的「静默把缺失当数值」。
+const outPath = (opt.write ? (opt.out || (opt.project ? join(opt.project, 'final', 'token-cost.json') : null)) : null);
+if (outPath) {
+  // ── v19.19.3（反哺报告-2026-10-19 M4b 的**破坏面**修复）：**历史快照不得被部分读数覆盖** ──
+  // 病灶实测（本批自查，20:00 发生并已恢复）：对一个**已交付**项目跑 `--project` 时，live 只命中了
+  //   2/3 个会话 → 脚本按 v19.1.9 的默认路径把 `final/token-cost.json` **覆盖成 2.14M**，
+  //   而原快照是 10.90M（差距 5 倍）。即：一条只读的"看看成本"命令，同时**销毁了唯一的历史证据**
+  //   （`session_projcache` 轮转后，快照就是唯一真源）。这正是「静默把缺失当数值」的第四种形态。
+  // 现规则：① **命中不全**（matched < 请求数）或 ② 与已有快照**偏差 >20%** → **拒绝覆盖**，
+  //   改写到 `<path>.new`（同目录旁路，供人比对），并在 stderr 点名原因；
+  //   ③ 完整命中且偏差 ≤20% → 照旧覆盖（正常交付路径不变，仍走 destructive-write 的 .bak 守卫）。
+  // 边界（如实）：判据只在**目标已存在**时生效——首次交付写盘不受影响；`.new` 是普通文件，
+  //   不进证据包、不被面板读，专门用来"别丢东西"。
+  const prevSnap = existsSync(outPath) ? (() => { try { return JSON.parse(readFileSync(outPath, 'utf8')) } catch { return null } })() : null;
+  const complete = matchedSessions === opt.ids.length;
+  const prevTotal = prevSnap && prevSnap.tokens ? Number(prevSnap.tokens.total) || 0 : 0;
+  const delta = prevTotal > 0 ? Math.abs(prevTotal - totalTokens) / prevTotal : 0;
+  if (prevTotal > 0 && (!complete || delta > 0.2)) {
+    const alt = outPath + '.new';
+    writeReport(alt, JSON.stringify(out, null, 2), { label: '--out' });
+    console.error(
+      `· **已拒绝覆盖** ${outPath}：本次 live 读数${complete ? `与历史快照差 ${(delta * 100).toFixed(0)}%` : `命中不全（${matchedSessions}/${opt.ids.length}）`}——`
+      + `历史快照不得被部分读数覆盖（反哺 M4b）。本次结果写入旁路 ${alt}，请人工比对后再决定是否替换。`,
+    );
+  } else {
+    // 写盘走 `_lib/destructive-write.mjs`（同文件守卫 + 时间戳 .bak），与其余报告脚本同一条出口
+    writeReport(outPath, JSON.stringify(out, null, 2), { label: '--out' });
+    console.error(`· 已落盘：${outPath}（运行面板「Token 消耗」卡读的就是它）`);
+  }
+} else if (opt.write && !opt.out && !opt.project) {
+  console.error('· 仅打印（未给 --project / --out：该模式没有可推断的落盘位置）');
+}

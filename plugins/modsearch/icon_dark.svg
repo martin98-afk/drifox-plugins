@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="modsearch web search dark">
+  <circle cx="27" cy="27" r="15" fill="none" stroke="#4FC79E" stroke-width="4"/>
+  <path d="M38 38 L53 53" stroke="#4FC79E" stroke-width="5" stroke-linecap="round"/>
+  <path d="M20 22 h14" stroke="#4FC79E" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M20 27 h14" stroke="#4FC79E" stroke-width="2.6" stroke-linecap="round"/>
+  <path d="M20 32 h9" stroke="#4FC79E" stroke-width="2.6" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="modlens vision dark">
+  <rect x="5" y="14" width="54" height="36" rx="8" fill="none" stroke="#7FA8F2" stroke-width="3.5"/>
+  <circle cx="22" cy="28" r="5.5" fill="#7FA8F2"/>
+  <path d="M5 44 L22 31 L35 44" fill="none" stroke="#7FA8F2" stroke-width="3.5" stroke-linejoin="round"/>
+  <path d="M31 45 L44 33 L59 45" fill="none" stroke="#B7CDF7" stroke-width="3.5" stroke-linejoin="round"/>
+</svg>
