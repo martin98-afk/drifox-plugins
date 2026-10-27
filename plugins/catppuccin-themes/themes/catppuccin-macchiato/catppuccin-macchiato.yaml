@@ -43,13 +43,13 @@ colors:
   send_btn_end: '#f5bde6'
   send_btn_hover_start: '#b7bdf8'
   send_btn_hover_end: '#f4dbd6'
-  send_btn_radius: '10'
-  input_glow_primary_alpha: '200'
-  input_glow_primary_blur: '20'
-  input_glow_ambient_alpha: '90'
-  input_glow_ambient_blur: '38'
-  input_glow_unfocused_ambient_alpha: '0'
-  input_glow_unfocused_ambient_blur: '0'
+  send_btn_radius: 10
+  input_glow_primary_alpha: 200
+  input_glow_primary_blur: 20
+  input_glow_ambient_alpha: 90
+  input_glow_ambient_blur: 38
+  input_glow_unfocused_ambient_alpha: 0
+  input_glow_unfocused_ambient_blur: 0
   user_card_bg: 'rgba(73, 77, 100, 0.62)'
   user_card_accent: '#91d7e3'
   user_card_text: '#cad3f5'
