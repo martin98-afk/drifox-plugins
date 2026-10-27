@@ -16,9 +16,11 @@ description: 总结 B 站（bilibili）视频讲了什么 — 抓取弹幕、评
 2. **环境自检**：跑 `python scripts/check_env.py`。
    - 报告 ffmpeg 是否可用、能否连通 B 站、是否检测到 SESSDATA。
    - **ffmpeg 不可用 → 照 `references/fallback.md` 降级，不要尝试抽帧后静默失败。**
-3. **按 §2 的阶梯逐层采数据**，每层都把结果落到临时目录，最后按 §3 出报告。
+3. **采集**：跑 `python scripts/bili_fetch.py <视频标识> --out <临时目录> --json`，一条命令完成 L0~L5 全阶梯（内置 WBI 签名、gzip/deflate 解压、自适应抽帧），产出 `report.json` 与各层落盘。**不要照 api.md 手写采集脚本**。最后按 §3 出报告。
 
 ## 2. 采集阶梯（按序尝试，拿到就记录，拿不到就降级）
+
+**默认主路径是 `scripts/bili_fetch.py`（一条命令跑完全阶梯）。** 下表用于理解降级逻辑与逐层排障；仅当脚本某层输出异常或接口疑似变动时，才按「加载」列读对应契约文档。
 
 | 级别 | 数据源 | 免登录可用性 | 加载 |
 |------|--------|------------|------|
@@ -60,7 +62,8 @@ description: 总结 B 站（bilibili）视频讲了什么 — 抓取弹幕、评
 
 | 阶段 | 读取 |
 |------|------|
-| 采集任一数据源 | `references/api.md` |
+| 采集数据源 | 跑 `scripts/bili_fetch.py`，禁止手写采集代码 |
+| 脚本某层失败/结果异常，逐层排障 | `references/api.md` |
 | 需要抽帧 | `references/frames.md` |
 | 任一数据源失败 | `references/fallback.md` |
 | 组织最终输出 | `assets/summary-template.md` |
@@ -79,6 +82,7 @@ description: 总结 B 站（bilibili）视频讲了什么 — 抓取弹幕、评
 ```bash
 python scripts/check_env.py          # 环境自检（ffmpeg/连通性/SESSDATA）
 python scripts/check_package.py      # 包结构自检（入口/引用/资产完整性）
+python scripts/bili_fetch.py BV1GJ411x7h7 --out out_smoke --frames 2 --json   # 采集器冒烟（跑完删 out_smoke）
 ```
 
 触发与输出评测见 `evals/`。
