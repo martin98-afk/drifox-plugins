@@ -32,6 +32,8 @@ Thumbs.db
 memory/
 *.jsonl
 !plugins/*/skills/**/*.jsonl
+# 技能包自带的 references/memory 是上游文档，不是运行时产物
+!plugins/*/skills/**/memory/
 
 # 临时文件
 *.log
