@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1793107582.0634215,
+  "fetched_at": 1793126929.366748,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -192,7 +192,7 @@
     "theme-factory": 0,
     "tiktok": 0,
     "todoist": 0,
-    "token-usage": 23,
+    "token-usage": 24,
     "tool-locator": 7,
     "tripo-3d": 0,
     "twin-chat": 10,
