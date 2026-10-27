@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="catppuccin themes">
+  <rect x="6" y="10" width="52" height="44" rx="9" fill="#1e1e2e" stroke="#cba6f7" stroke-width="2.5"/>
+  <circle cx="18" cy="22" r="3.5" fill="#f5c2e7"/>
+  <circle cx="30" cy="22" r="3.5" fill="#fab387"/>
+  <circle cx="42" cy="22" r="3.5" fill="#a6e3a1"/>
+  <circle cx="18" cy="34" r="3.5" fill="#89dceb"/>
+  <circle cx="30" cy="34" r="3.5" fill="#89b4fa"/>
+  <circle cx="42" cy="34" r="3.5" fill="#cba6f7"/>
+  <rect x="14" y="43" width="36" height="4" rx="2" fill="#585b70"/>
+</svg>

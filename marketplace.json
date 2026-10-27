@@ -703,6 +703,38 @@
             }
         },
         {
+            "name": "catppuccin-themes",
+            "description": "Catppuccin 四套主题 — Latte / Frappé / Macchiato / Mocha，102 个颜色 token 全量映射，含窗口渐变与侧栏背景。",
+            "version": "1.0.0",
+            "author": "Catppuccin (palette) / DriFox 翻译",
+            "license": "MIT",
+            "categories": [
+                "theme"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/catppuccin-themes",
+                "ref": "main"
+            },
+            "components": {
+                "themes": true
+            },
+            "keywords": [
+                "theme",
+                "catppuccin",
+                "dark",
+                "light",
+                "主题"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://github.com/catppuccin/catppuccin",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "caveman",
             "description": "Ultra-compressed communication mode for AI agents. Cuts output tokens ~65% (measured) while keeping full technical accuracy. 含 caveman-compress 记忆文件压缩工具与 cavecrew 子智能体预设。",
             "version": "1.0.0",

@@ -1,0 +1,26 @@
+{
+    "name": "catppuccin-themes",
+    "description": "Catppuccin 四套主题 — Latte / Frappé / Macchiato / Mocha，102 个颜色 token 全量映射，含窗口渐变与侧栏背景。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "1.0.0",
+    "author": {
+        "name": "Catppuccin (palette) / DriFox 翻译"
+    },
+    "license": "MIT",
+    "type": "user",
+    "min_host_version": "0.5.0",
+    "homepage": "https://github.com/catppuccin/catppuccin",
+    "keywords": [
+        "theme",
+        "catppuccin",
+        "dark",
+        "light",
+        "主题"
+    ],
+    "components": {
+        "themes": true
+    }
+}
