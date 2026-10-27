@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1793084523.481195,
+  "fetched_at": 1793107582.0634215,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -52,7 +52,7 @@
     "dingtalk-todo": 1,
     "doc-coauthoring": 1,
     "dropbox": 0,
-    "dsh-plugin-migrator": 1,
+    "dsh-plugin-migrator": 2,
     "dsh-presets": 1,
     "dsh-router": 1,
     "dsh-super-injector": 0,
@@ -136,8 +136,8 @@
     "minimax-h3": 5,
     "miro": 0,
     "modelscope": 1,
-    "modlens": 0,
-    "modsearch": 0,
+    "modlens": 1,
+    "modsearch": 1,
     "monday": 0,
     "moomoo-mcp": 0,
     "moonshot": 1,

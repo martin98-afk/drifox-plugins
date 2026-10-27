@@ -1636,7 +1636,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "dsh",
                 "deepseek-harness",
@@ -4320,6 +4320,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "vision",
                 "ocr",
@@ -4351,6 +4352,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "search",
                 "web",
