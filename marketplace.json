@@ -3143,6 +3143,37 @@
             }
         },
         {
+            "name": "graphflow",
+            "description": "省 Token 的代码手术引擎技能。用 gf_read/gf_edit/gf_exec/gf_macro 四个 MCP 工具替代整文件读取与全量测试，六语言真 AST、爆炸半径守卫。",
+            "version": "1.0.0",
+            "author": "Roarpeng",
+            "license": "Apache-2.0",
+            "categories": [
+                "stats"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/graphflow",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "code-graph",
+                "ast",
+                "token",
+                "mcp",
+                "graphflow"
+            ],
+            "min_host_version": "0.5.0",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "grok-oauth",
             "description": "xAI Grok 服务商（OAuth 登录制）— 用 SuperGrok / X Premium+ 订阅账号浏览器授权登录，直连 Grok 系列模型，无需 API Key",
             "version": "0.1.0",
@@ -3825,6 +3856,38 @@
             }
         },
         {
+            "name": "lunheng-article-pipeline",
+            "description": "论衡深度长文流水线。9 个独立角色 T1-T9 加主控，三角验证、M 门、G 审计、修订回环，适用 2000 字以上证据可追溯的论文与行业分析。",
+            "version": "1.0.0",
+            "author": "zuoyunlai",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/lunheng-article-pipeline",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "writing",
+                "article",
+                "pipeline",
+                "agents",
+                "research",
+                "lunheng"
+            ],
+            "min_host_version": "0.5.0",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "magpie",
             "description": "magpie 本地网关 — 接入聚合后的全部订阅账号与路由组，一键启动 magpie web（自动固定 key），内嵌网页界面直接管理模型与配额，并让 magpie 认得 DriFox（Agents 页有身份、Usage 按会话分组）",
             "version": "0.7.0",
@@ -3934,6 +3997,37 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            }
+        },
+        {
+            "name": "mattpocock-skills",
+            "description": "mattpocock 工程技能中文版精选 11 个：TDD、代码审查、领域建模、缺陷诊断、原型、研究、写作等可直接调用的开发方法。",
+            "version": "1.0.0",
+            "author": "mattpocock / FeatherHunter (中文版)",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/mattpocock-skills",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "skills",
+                "tdd",
+                "code-review",
+                "workflow",
+                "mattpocock"
+            ],
+            "min_host_version": "0.5.0",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -4172,6 +4266,68 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon.png"
+            }
+        },
+        {
+            "name": "modlens",
+            "description": "文本模型的视觉桥。把图片路径/URL 交给 modlens CLI，返回结构化 JSON 证据：逐字转写、版面区块、语义与视觉线索。",
+            "version": "1.0.0",
+            "author": "Leon Liu (liustack)",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/modlens",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "vision",
+                "ocr",
+                "image",
+                "multimodal",
+                "modlens"
+            ],
+            "min_host_version": "0.5.0",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "modsearch",
+            "description": "文本模型的联网搜索桥。返回结构化 JSON 证据：网页搜索、X(Twitter) 搜索、指定 URL 抓取，带来源链接。",
+            "version": "1.0.0",
+            "author": "Leon Liu (liustack)",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/modsearch",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "search",
+                "web",
+                "fetch",
+                "twitter",
+                "modsearch"
+            ],
+            "min_host_version": "0.5.0",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
