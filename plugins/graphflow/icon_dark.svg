@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="graphflow code graph dark">
+  <circle cx="14" cy="18" r="5.5" fill="none" stroke="#A695FF" stroke-width="3"/>
+  <circle cx="14" cy="46" r="5.5" fill="none" stroke="#A695FF" stroke-width="3"/>
+  <circle cx="34" cy="32" r="6.5" fill="#A695FF"/>
+  <circle cx="52" cy="16" r="5" fill="none" stroke="#A695FF" stroke-width="3"/>
+  <circle cx="52" cy="48" r="5" fill="none" stroke="#A695FF" stroke-width="3"/>
+  <path d="M19 21 L28 29" stroke="#A695FF" stroke-width="2.6"/>
+  <path d="M19 43 L28 35" stroke="#A695FF" stroke-width="2.6"/>
+  <path d="M40 29 L47 20" stroke="#A695FF" stroke-width="2.6"/>
+  <path d="M40 35 L47 44" stroke="#A695FF" stroke-width="2.6"/>
+</svg>

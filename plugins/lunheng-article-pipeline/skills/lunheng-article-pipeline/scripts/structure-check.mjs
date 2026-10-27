@@ -1,0 +1,253 @@
+#!/usr/bin/env node
+// 论衡学术结构合规门（v18.10.0 战略反哺新增 / P0-4 / scripts 白名单 17→18）
+// 用法：node structure-check.mjs <文件.md> [--humanities] [--report <path>]
+//   --humanities   = 人文学科豁免 Methods，改检 IMRaD-Alternate（Introduction / Discussion / Conclusion）
+//   --report <p>   = JSON 结果写入 <p>（默认 stdout）
+//
+// 退出码（与 M 门语义同源）：
+//   0  = 三项检查全过
+//   1  = P1 问题（IMRaD 节缺 1-2 / 漏斗结构缺 1-2 / 讨论要素缺 2-3）
+//   2  = P0 问题（IMRaD 节缺 ≥3 / 漏斗结构 3 项全缺 / 讨论要素 4 项全缺）
+//   3  = 仅 P2 软提示（如讨论要素缺 1 项；v19.22.0 起「无讨论节」也归此档，转 T7 人工）
+//   10 = 参数或路径错误（与 M 门 10 同语义）
+//   70 = 内部错误
+//
+// 3 项检查：
+//   S-IMRaD        = Introduction / Methods / Results / Discussion / Conclusion 五节是否齐备
+//                    （--humanities 改检 IMRaD-Alternate：Introduction / Discussion / Conclusion 三节）
+//   S-Intro-Funnel = 引言是否含「领域重要性」+「知识缺口」+「本文贡献」三要素（关键词扫描）
+//   S-Discussion-4 = Discussion 是否含「主要发现重述」+「与既有研究比较」+「机制解释」+「局限性与未来方向」四要素
+//
+// v19.22.0（人文结构门纠错批 · 审计 2026-10-20 E1/E2 + B1/B2，主人授权）：
+//   ① 「结论」节接受同义组 结语 / 余论（中文人文长文常规体例 = 章节式论证 + 结语，实测 5 份中 3 份
+//      因字面不认被判双缺；刻意不收「小结」——章节小结若为 H2 会抢先命中、截断真结论节，误伤更重）。
+//   ② 「无讨论节」从「四要素全缺 P0」降为 **P2 + T7 人工必核**（Alternate 族的讨论常由结语/各章过渡
+//      承担，机器字面缺席 ≠ 结构缺失；与「N/A ≠ 跳过」同族——降档不等于放行，四要素转人工）。
+//   ③ 漏斗词表补人文**缺口侧**词面（问题的提出/学界长期/争论/聚讼/莫衷一是/既有研究/重估/再检讨/历来；
+//      贡献侧「本文/尝试」已覆盖人文写法，不加冗余词），依 v18.73.0 F-9 既有判据：
+//      「关键词表是语义的近似，近似不足时应补词面，不应让作者迁就词表」。
+
+import { readFileSync, existsSync } from 'node:fs';
+import { installExitGuard, requireExistingFile } from './_lib/exit-guard.mjs';
+import { sectionBody, sectionBodyAny } from './_lib/sections.mjs';
+import { writeReport } from './_lib/destructive-write.mjs';   // 报告写盘守卫（v18.12.0，全量审计 L-50）
+import { packageVersionTag } from './_lib/pkg-version.mjs';   // §8.3 #39：产物 version 单一真源
+installExitGuard();
+
+// --- CLI 参数解析 ---
+const argv = process.argv.slice(2);
+let file = null;
+let humanities = false;
+let kaiti = false;   // v19.8.0 反哺 v9 D7：开题报告九节模式
+let reportPath = null;
+for (let i = 0; i < argv.length; i++) {
+  const a = argv[i];
+  if (a === '--humanities') humanities = true;
+  else if (a === '--kaiti') kaiti = true;
+  else if (a === '--report') {
+    // v18.12.0（全量审计 L-62）：缺值守卫（旧版静默不落盘却 exit 0）
+    const v = argv[++i];
+    if (!v || v.startsWith('--')) { console.error(`--report 缺少值（示例：--report audits/structure.json）\n用法: node structure-check.mjs <文件.md> [--humanities] [--report <path>]`); process.exit(10); }
+    reportPath = v;
+  }
+  else if (a.startsWith('--')) {
+    console.error(`未知参数: ${a}\n用法: node structure-check.mjs <文件.md> [--humanities] [--report <path>]`);
+    process.exit(10);
+  } else if (file === null) file = a;
+  else {
+    console.error(`多次传入文件参数: ${a}`);
+    process.exit(10);
+  }
+}
+if (!file) { console.error('用法: node structure-check.mjs <文件.md> [--humanities] [--report <path>]'); process.exit(10); }
+if (!existsSync(file)) { console.error(`文件不存在: ${file}`); process.exit(10); }
+requireExistingFile(file, '待检查论文');
+
+// --- 编码体检（与 count-chars.mjs 同源，v18.2.6 契约） ---
+{
+  const probe = readFileSync(file);
+  if (probe.length >= 2 && ((probe[0] === 0xff && probe[1] === 0xfe) || (probe[0] === 0xfe && probe[1] === 0xff))) {
+    console.error(`${file}: 检测到 UTF-16 BOM —— 本脚本只接受 UTF-8（契约见 .gitattributes）。请转码后重跑。`);
+    process.exit(10);
+  }
+  if (probe.toString('utf8').includes('\uFFFD')) {
+    console.error(`${file}: 解码出现替换字符 U+FFFD —— 该文件不是合法 UTF-8（GBK/GB18030 等）。请转码后重跑。`);
+    process.exit(10);
+  }
+}
+
+const text = readFileSync(file, 'utf8');
+
+// v19.8.0（反哺 v9 D7）：开题报告九节模式——开题是学位/长文的前置交付物，结构门与 IMRaD 完全不同。
+//   只做**节存在性**判定（≥3 缺 → P0 / 1-2 缺 → P1），不判漏斗/讨论要素（那些是正文的结构件，开题没有）。
+if (kaiti) {
+  // 节序列真源 = `references/_shared/正文骨架.md` 的 `kaiti` 行（本数组是它的机检投影，
+  //   tests/batch30-正文骨架真源.test.mjs 对账三方：本数组 ↔ 那张表 ↔ `templates/开题报告-template.md` 的 `##` 标题）。
+  const KAITI_SECTIONS = ['研究背景', '研究目的', '研究意义', '文献综述', '研究内容', '研究方法', '研究框架', '预期成果', '参考文献'];
+  const missing = KAITI_SECTIONS.filter((sec) => {
+    const b = sectionBody(text, sec);
+    return b === null || b.trim().length === 0;
+  });
+  const severity = missing.length >= 3 ? 'P0' : missing.length > 0 ? 'P1' : 'PASS';
+  const out = {
+    file,
+    mode: 'kaiti（开题九节）',
+    version: packageVersionTag(),
+    sections: KAITI_SECTIONS,
+    missing,
+    pass: missing.length === 0,
+    severity,
+    detail: missing.length === 0
+      ? '开题九节齐备'
+      : `开题报告缺 ${missing.length} 节：${missing.join(' / ')}`,
+  };
+  const payload = JSON.stringify(out, null, 2);
+  if (reportPath) writeReport(reportPath, payload + '\n', { protect: [file], label: '--report' });
+  else console.log(payload);
+  process.exit(severity === 'P0' ? 2 : (severity === 'P1' ? 1 : 0));
+}
+
+// --- S-IMRaD 检查 ---
+// IMRaD 5 节（自然科学/实证论文）；人文学科用 IMRaD-Alternate 3 节
+const IMRAD_SECTIONS = ['引言', '方法', '结果', '讨论', '结论'];
+const IMRAD_ALT_SECTIONS = ['引言', '讨论', '结论'];
+// v19.22.0：结论同义组（人文结构门纠错批 ①）。「结语/余论」是章节式人文长文的常规收束名，
+//   titleMatches 只认全等/前缀 ⇒ 字面不命中 ⇒ 判「结论缺」。「讨论与局限」已被前缀匹配覆盖，无需加。
+//   刻意不收「小结」：章节小结若为 H2，findIndex 首个命中会截断真结论节（误伤 > 漏判）。
+const CONCLUSION_ALIASES = ['结论', '结语', '余论'];
+const markerFor = (sec) => (sec === '结论' ? CONCLUSION_ALIASES : [sec]);
+const imradList = humanities ? IMRAD_ALT_SECTIONS : IMRAD_SECTIONS;
+const imradFound = [];
+const imradMissing = [];
+for (const sec of imradList) {
+  const body = sectionBodyAny(text, markerFor(sec));
+  if (body !== null && body.trim().length > 0) imradFound.push(sec);
+  else imradMissing.push(sec);
+}
+const sImradPass = imradMissing.length === 0;
+// v18.16.0（S-1 反哺 · 三档落地）：≥3 缺 → P0、1-2 缺 → P1、0 缺 → PASS。
+//   原三元两支同值 `>=2 ? 'P1' : ===1 ? 'P1' : 'PASS'` 把 ≥3 与 1 同判 P1，掩盖最严重缺失。
+const sImradSeverity = imradMissing.length >= 3 ? 'P0' : imradMissing.length > 0 ? 'P1' : 'PASS';
+
+// --- S-Intro-Funnel 检查 ---
+// 引言漏斗：领域重要性 → 知识缺口 → 本文贡献
+// 关键词扫描（接受变体形式）
+// v18.73.0（反哺报告-v7 F-9）：**补等价词面** ——
+//   实测（《不能评估的忠诚》）：「已经构成一组嵌套的制度装置」（领域重要性）与
+//   「但尚无研究从…」（知识缺口）**内容都在**，却因词表只收「已成为」不收「已形成」、
+//   只收「尚未」不收「尚无」而报 P1。**该假阳性无法靠正当手段消除**——只能把正文用词
+//   改成词表形态，即**为过门而改内容**；T7 在 v1/v2/v3 三轮独立复核中均判为「词面错位假阳性」，
+//   主人于 Phase 5 裁定「按已知偏差记载，不改稿迎合词表」。
+//   判据：**关键词表是语义的近似，近似不足时应补词面，不应让作者迁就词表。**
+const introBody = sectionBody(text, '引言');
+const introText = introBody || '';
+const FIELD_IMPORTANCE_KEYWORDS = ['重要性', '意义', '背景', '现状', '领域', '关注', '已成为', '已形成', '已经构成', '已构成', '近年来', '在全球', '在我国', '历来'];
+const KNOWLEDGE_GAP_KEYWORDS = ['不足', '缺乏', '尚未', '尚无', '未有', '未充分', '鲜有', '缺少', '有待', '仍未', '还不清楚', '有待进一步', '尚未形成', '问题的提出', '学界长期', '争论', '聚讼', '莫衷一是', '既有研究', '重估', '再检讨'];
+const CONTRIBUTION_KEYWORDS = ['本文', '本研究', '本课题', '我们', '笔者', '尝试', '旨在', '提出', '拟', '目标', '目的', '主要贡献', '边际贡献', '创新点', '推进'];
+// v19.22.0 词面增补说明：本表未加「本文尝试/重审」等——「本文」「尝试」已在表内，任何「本文尝试…」
+//   形态都被覆盖，加了只是噪声（判据同上：补的是缺口侧词面，不是把已有覆盖再写一遍）。
+function hasKeyword(text, keywords) {
+  return keywords.some((k) => text.includes(k));
+}
+const introHasImportance = hasKeyword(introText, FIELD_IMPORTANCE_KEYWORDS);
+const introHasGap = hasKeyword(introText, KNOWLEDGE_GAP_KEYWORDS);
+const introHasContribution = hasKeyword(introText, CONTRIBUTION_KEYWORDS);
+const introMissing = [];
+if (!introHasImportance) introMissing.push('领域重要性');
+if (!introHasGap) introMissing.push('知识缺口');
+if (!introHasContribution) introMissing.push('本文贡献');
+const sIntroFunnelPass = introMissing.length === 0;
+// v18.16.0（S-1 反哺 · 三档落地）：3 项全缺 → P0（漏斗完全失败）、1-2 缺 → P1。
+const sIntroFunnelSeverity = introMissing.length === 3 ? 'P0' : introMissing.length > 0 ? 'P1' : 'PASS';
+
+// --- S-Discussion-4 检查 ---
+// Discussion 四要素：主要发现重述 + 与既有研究比较 + 机制解释 + 局限性与未来方向
+const discussionBody = sectionBody(text, '讨论');
+const discussionText = discussionBody || '';
+const DISC_FINDING_KEYWORDS = ['本文', '本研究', '我们发现', '结果表明', '结果显示', '本研究发现', '上述', '主要发现'];
+// v18.62.4（全量审计-v18.62.3 §8.2 #18）：**「词表门槛」本身也是可空转项，须按信号强度分层**。
+//   实测病灶：旧表里 `DISC_MECHANISM_KEYWORDS` 含 `表明`/`说明`/`由于`、`DISC_COMPARISON_KEYWORDS`
+//   含 `相比`/`一致` —— 这几个词在中文行文里**无处不在**（「表 3 表明」「由于数据可得性」「与前述一致」），
+//   于是 `discMissing` 永远到不了 4，**「四要素全缺 → P0」这一档在正常行文下不可达**（死档）。
+//   判据：**当某项的成立条件里混入高频泛用词，该项事实上恒真**。修法 = 把「用什么词判该项」与
+//   「该项本身是否属于可强判定的形态」分开：**机制解释 / 与既有比较属复杂项，只认特征性短语**，
+//   泛用连接词不再单独作为成立证据。
+//   边界（如实）：本门只做**格式与措辞层**机检；「机制讲得对不对」「是否真在与既有研究对话」是语义判断，
+//   归 T7（`07-审计-auditor.md` 的 G/T7 分工）。收紧后本项**更保守**：宁可判缺（交 T7 目视），
+//   也不再用一个泛用词冒充「已写」。
+const DISC_COMPARISON_KEYWORDS = ['与既有', '与已有', '与现有', '不同于', '前人', '已有研究', '既有研究', '相较', '对照', '呼应', '印证', '相悖', '不符', '[L'];
+const DISC_MECHANISM_KEYWORDS = ['机制', '机理', '可能的原因是', '可以解释', '解释为', '这意味着', '揭示了', '反映了', '成因', '驱动因素', '之所以'];
+const DISC_LIMITATION_KEYWORDS = ['局限', '限制', '不足', '本文未', '本研究未', '未来', '进一步', '展望', '后续研究', '有待探索'];
+const discHasFinding = hasKeyword(discussionText, DISC_FINDING_KEYWORDS);
+const discHasComparison = hasKeyword(discussionText, DISC_COMPARISON_KEYWORDS);
+const discHasMechanism = hasKeyword(discussionText, DISC_MECHANISM_KEYWORDS);
+const discHasLimitation = hasKeyword(discussionText, DISC_LIMITATION_KEYWORDS);
+const discMissing = [];
+// v19.22.0（人文结构门纠错批 ②，主人授权）：「无讨论节」（discussionBody === null）不再走
+//   四要素全缺的 P0 档——Alternate 族的讨论常由结语/各章过渡承担，字面缺席 ≠ 结构缺失。
+//   降为 **P2 + T7 人工必核**（07-审计-auditor.md §学术结构合规段同批写明人工义务，防四要素空转）。
+//   「有讨论节但四项特征词全无」仍判 P0（那才是 v18.62.4 收紧后要抓的「写了个空壳讨论」）。
+const discAbsent = discussionBody === null;
+if (discAbsent) {
+  discMissing.push('无「讨论」节（人文/综述可由结语或各章过渡承担——四要素转 T7 人工必核，降档不等于放行）');
+} else {
+  if (!discHasFinding) discMissing.push('主要发现重述');
+  if (!discHasComparison) discMissing.push('与既有研究比较');
+  if (!discHasMechanism) discMissing.push('机制解释');
+  if (!discHasLimitation) discMissing.push('局限性与未来方向');
+}
+const sDiscussionPass = discMissing.length === 0;
+// v18.16.0（S-1 反哺 · 三档落地）：4 项全缺 → P0、2-3 缺 → P1、1 缺 → P2、0 缺 → PASS。
+// v19.22.0：无讨论节单列 → P2（见上）；「有节而四项全缺」维持 P0。
+const sDiscussionSeverity = discAbsent ? 'P2'
+  : discMissing.length === 4 ? 'P0'
+  : discMissing.length >= 2 ? 'P1'
+  : discMissing.length === 1 ? 'P2'
+  : 'PASS';
+
+// --- 汇总与退出 ---
+const allPass = sImradPass && sIntroFunnelPass && sDiscussionPass;
+const allSeverities = [sImradSeverity, sIntroFunnelSeverity, sDiscussionSeverity];
+const hasP0 = allSeverities.includes('P0');
+const hasP1 = allSeverities.includes('P1');
+// v18.16.0（S-1 反哺 · exit 2/3 可达）：原写法 `(hasP1 ? 1 : 3)` 把 P0 误判 P1、且 P2 走 3 也掩盖了差异；
+//   现按 P0>P1>P2 优先级选最高严重度对应的 exit。
+const exitCode = allPass ? 0 : (hasP0 ? 2 : (hasP1 ? 1 : 3));
+
+const result = {
+  file,
+  mode: humanities ? 'IMRaD-Alternate (人文)' : 'IMRaD (实证)',
+  version: packageVersionTag(),
+  checks: {
+    'S-IMRaD': {
+      pass: sImradPass,
+      severity: sImradSeverity,
+      found: imradFound,
+      missing: imradMissing,
+    },
+    'S-Intro-Funnel': {
+      pass: sIntroFunnelPass,
+      severity: sIntroFunnelSeverity,
+      missing: introMissing,
+    },
+    'S-Discussion-4': {
+      pass: sDiscussionPass,
+      severity: sDiscussionSeverity,
+      missing: discMissing,
+    },
+  },
+  overall: { pass: allPass, exitCode },
+  meta: {
+    timestamp: new Date().toISOString(),
+    description: '论衡学术结构合规门 / v18.10.0 战略反哺 P0-4 / scripts 白名单 17→18',
+    notes: '本脚本为机检骨架，主控与 T7 须依据 missing 字段补查或修改；非致命项仅提示',
+  },
+};
+
+const output = JSON.stringify(result, null, 2);
+if (reportPath) writeReport(reportPath, output, { protect: [file] });   // v18.12.0（L-50）：同文件 → exit 10
+// v19.11.2（反哺 §P2-11）：**--report 不吞 stdout**——与 `count-chars` / `m-gate-check` 同口径。
+//   旧版是 if/else：给了 `--report` 就一行不打印，于是「跑完解析 stdout」的消费方拿到空串（同旗标两套 IO 契约）。
+console.log(output);
+
+process.exit(exitCode);

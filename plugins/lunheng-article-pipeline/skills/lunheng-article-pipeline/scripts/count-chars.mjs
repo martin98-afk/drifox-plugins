@@ -1,0 +1,391 @@
+#!/usr/bin/env node
+// 论衡字数统计脚本（v2.5.2-dsh.5 新增，v2.5.2-dsh.7 加 --summary，v18.2.3 修 --summary body 终点）
+// 用法：node count-chars.mjs <文件.md> [--full | --summary | --warn-threshold <N>] [--genre <code>]
+//   --full    = 统计全文纯汉字（含题名/摘要/文末五节）；默认只统计正文区（## 摘要 之后、## 参考文献 之前）
+//   --summary = 关键节点分段字数 + 全文配比（T7/T8 一眼可见结构，省 LLM 读全文）
+//               ⚠️ 其 `body.hanChars` **与默认口径同源**（v18.2.3 修：此前误用含「关键词」的列表求终点 → 只剩摘要正文，差 21 倍）
+//   --genre <code> = v19.14.0（反哺 R-11 方案 A）：非学术文类（biz-review/wechat/industry/report-3rd/policy/
+//                    book-review）的正文区起点改用「首个二级标题行末」，不再要求 `## 摘要`；不传或传学术文类时行为不变
+//   --warn-threshold <N> = 字数软警告阈值；不参与 `hanChars` 口径与退出码语义，
+//                          仅当实际字数 > N 时在 JSON 输出里加 `warnOvershoot: true`（v18.16.0 S-2 反哺实装）
+// 口径：纯中文字符数（Unicode 汉字 \u4e00-\u9fff），不含标点/数字/英文/引用编号
+//   正文区 = `## 摘要` 标题行之后 → 第一个文末节之前；**含摘要正文与关键词段，不含题名/文末五节/脚注**
+//   ⚠️ 精确边界 v18.12.3 写死（此前「摘要后」措辞歧义，2026-09 复核曾据此误判出「含题名」假缺陷）：
+//      `from` = 摘要标题行**行终止符**位置 → 切片以 `\n` 开头、**不含摘要标题汉字**；`to` = 首个文末节
+//      **标题行首**（同样不含其标题汉字）。实测夹具（题名 3 / 摘要正文 50 / 正文节标题 3 / 正文 300 / 文末 20）：
+//      H2 = 摘要@7 / 一、正文@66 / 参考文献@377，`from=13`、`to=377`、切片汉字 = **353 = 50+3+300**，
+//      **题名 3 与文末 20 均不计入**（`--full` 才是 407 行的全文口径 378）。
+// v18.2.6 修（第三方审计 §4.2）：正文区**边界解析**改走 `_lib/sections.mjs`（与 m-gate-check 同一真源）——
+//   旧版用精确字面量 `text.indexOf('## 参考文献')`，标题写成 `##  参考文献`（两空格）即失配
+//   → 正文区终点退化为文件末尾 → `hanChars` 实测 503 → **1707**（虚高 3.4 倍）且不置 degraded。
+// 用途：写手写完即跑（替代 LLM 推理估算）；T7 G8 字数核验；T8 终检权威回填
+import { readFileSync, existsSync } from 'node:fs';
+import { writeReport } from './_lib/destructive-write.mjs';   // 报告类写盘唯一出口（v18.73.0 F-6）
+import { countHan } from './_lib/han.mjs';   // 汉字口径唯一真源（v2.5.2-dsh.13 抽 _lib；v18.0.3 计数改走 countHan）
+// v18.2.6：`HAN_RE` 曾是**死导入**（v18.0.3 计数改走 countHan 后无人引用）——连带把 `_lib/han.mjs`
+//   的模块级 `g` 正则状态问题遮住（见该文件注释）。现删除死导入，边界口径改走 sections。
+import { ENDNOTE_SECTIONS, bodyStartAfterAbstract, bodyStartForGenre, firstEndnoteIndex, sectionBody } from './_lib/sections.mjs';
+import { installExitGuard, requireExistingFile } from './_lib/exit-guard.mjs'; // 退出码硬化（v18.0.5）
+installExitGuard();   // 传目录/权限错 → exit 10（旧版未捕获 EISDIR → exit 1 = 被读成「P1 内容失败」）
+
+// v18.16.0（S-2 反哺）：argv 解析从 4 token 扩到 ≤5 token，允许 `--warn-threshold <N>` 双 token。
+// v18.73.0（反哺报告-v7 F-6）：新增 `--report <path>`（可出现在任意位置）。
+//   病灶实测（《不能评估的忠诚》）：T7 复核轮的交接报告声称落盘 `count-chars-v2.json`，**该文件并不存在**
+//   （目录实测只有 4 份报告）——因为**本脚本从来没有 `--report` 旗标**，角色按同类脚本的惯例假定它有。
+//   判据：**同一族脚本的旗标面不一致时，调用方会按惯例假定最全的那一套** → 要么补齐旗标，要么显式写死「本工具无报告输出」。
+//   实现策略：**把 `--report <path>` 从 token 流里摘出，其余 token 原样喂给既有位置式逻辑** ——
+//   不传该旗标时，`argvTokens` 与旧版逐 token 相同，**行为零变化**。
+const rawTokens = process.argv.slice(2);
+// v19.19.0（反哺 2026-10-19 U-11）：**补 `--help`（exit 0）**——此前 `--help` 被当位置参数，
+//   报「文件不存在: --help」+ exit 10，与 `handoff-check --help`（exit 0）不一致。
+//   本段同时是**工具面旗标对账的派生真源**（`tests/batch21-seam-gates-v18-80-1.test.mjs` 从这里解析旗标）
+//   ——新增旗标必须同步写进本帮助，否则该门直接红。
+if (rawTokens.includes('--help')) {
+  console.log(
+    '用法: node count-chars.mjs <文件.md> [--full | --summary] [--warn-threshold <N>] [--genre <code>] [--report <path>] [--word-metric]\n'
+    + '\n旗标：\n'
+    + '  --full                按全文统计（不受正文区起点影响）\n'
+    + '  --summary             分段字数 + 结构密度\n'
+    + '  --warn-threshold <N>  字数告警阈值（正整数）\n'
+    + '  --genre <code>        文类 code（非学术文类改用首个正文二级标题为起点；缺省 = 学术口径）\n'
+    + '  --report <path>       把结果 JSON 落盘\n'
+    + '  --word-metric         附 Word 口径字数列（估算，不进 M 门）\n'
+    + '  --help                本帮助\n'
+    + '\n退出码：0 已统计 / 10 参数或路径错 / 70 内部错（本脚本不做内容判定，故无 1/2/3）',
+  );
+  process.exit(0);
+}
+let reportPath = null;
+let wordMetric = false;
+let withNotes = false;   // v19.25.0：`--with-notes` 双读数（正文 + 注释；仅报告）
+let genre = null;   // v19.14.0（反哺 R-11 方案 A）：文类 code；非学术文类改走「首个二级标题」起点   // v19.8.0 反哺 v9 D4：加 Word 口径字数列（估算，不作门判据）
+const argvTokens = [];
+for (let i = 0; i < rawTokens.length; i++) {
+  if (rawTokens[i] === '--report') {
+    const v = rawTokens[++i];
+    if (!v || v.startsWith('-')) {
+      console.error('--report 缺少值（示例：--report audits/count-chars.json）');
+      console.error('用法: node count-chars.mjs <文件.md> [--full | --summary | --warn-threshold <N>] [--genre <code>] [--report <path>]');
+      process.exit(10);
+    }
+    reportPath = v;
+    continue;
+  }
+  if (rawTokens[i] === '--word-metric') {
+    wordMetric = true;
+    continue;
+  }
+  // v19.25.0（页下注/著者-年份交付档批 · 审计 E4/B4）：`--with-notes` 双读数。
+  //   口径 = 正文读数 +「## 注释」节 +「数据来源」节内 `### 脚注` 子节；**仅报告、不参与判级**
+  //   （判级仍用正文读数——与 deliverable「预算按正文」一致）。人文档需要「含注」读数时用它。
+  if (rawTokens[i] === '--with-notes') {
+    withNotes = true;
+    continue;
+  }
+  // v19.14.0（反哺 R-11 方案 A）：`--genre <code>` / `--genre=<code>` 可选；从 token 流摘出，其余原样喂既有逻辑。
+  if (rawTokens[i] === '--genre' || rawTokens[i].startsWith('--genre=')) {
+    const eq = rawTokens[i].indexOf('=');
+    const v = eq >= 0 ? rawTokens[i].slice(eq + 1) : rawTokens[++i];
+    if (!v || v.startsWith('-')) {
+      console.error('--genre 缺少值（示例：--genre biz-review）');
+      console.error('用法: node count-chars.mjs <文件.md> [--full | --summary | --warn-threshold <N>] [--genre <code>] [--report <path>] [--genre <code>]');
+      process.exit(10);
+    }
+    genre = v;
+    continue;
+  }
+  argvTokens.push(rawTokens[i]);
+}
+if (argvTokens.length === 0) {
+  console.error('用法: node count-chars.mjs <文件.md> [--full | --summary | --warn-threshold <N>] [--genre <code>] [--report <path>]');
+  process.exit(10);
+}
+const file = argvTokens[0];
+let flag = argvTokens[1];
+let warnThreshold = null;
+// `--warn-threshold` 双 token 形态；值必须为正整数（缺值或非法 → 10）
+if (flag === '--warn-threshold') {
+  const v = argvTokens[2];
+  if (!v || v.startsWith('-')) {
+    console.error('--warn-threshold 缺少值（必须紧跟一个正整数）');
+    console.error('用法: node count-chars.mjs <文件.md> [--full | --summary | --warn-threshold <N>] [--genre <code>]');
+    process.exit(10);
+  }
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0 || !Number.isInteger(n)) {
+    console.error(`--warn-threshold 须为正整数，得到 "${v}"`);
+    process.exit(10);
+  }
+  warnThreshold = n;
+  // v18.62.4（全量审计-v18.62.3 §8.3 #40）：**带值旗标之后的多余 token 也必须拒绝**。
+  //   病灶：旧版取完 `argvTokens[2]` 就 `flag = undefined` 了事 —— 于是 `--warn-threshold 12000 --ful`
+  //   （`--ful` 是本脚本从未支持的拼写）里那个 token **被静默吞掉**，用户以为旗标生效。
+  //   本仓政策是**严格解析**（其余脚本已统一走 `_lib/cli-args.mjs`，本脚本未迁），
+  //   且同类守卫在紧邻的 else 分支里**已经存在**（`:55` 拒绝多余 token）——本分支漏了同一件事。
+  const extra = argvTokens.slice(3);
+  if (extra.length > 0) {
+    console.error(`--warn-threshold 之后有多余参数: ${extra.join(' ')}（--warn-threshold 不与其它旗标同用）`);
+    console.error('用法: node count-chars.mjs <文件.md> [--full | --summary | --warn-threshold <N>] [--genre <code>]');
+    process.exit(10);
+  }
+  flag = undefined;  // 不与 --full/--summary 同用
+} else if (argvTokens.length > 2) {
+  // 非 --warn-threshold 形态下，多余 token 一律拒绝（与 handoff-check 同源「带值旗标缺值守卫」）
+  console.error(`多余参数: ${argvTokens.slice(1).join(' ')}`);
+  console.error('用法: node count-chars.mjs <文件.md> [--full | --summary | --warn-threshold <N>] [--genre <code>]');
+  process.exit(10);
+}
+if (!file) { console.error('用法: node count-chars.mjs <文件.md> [--full | --summary | --warn-threshold <N>] [--genre <code>]'); process.exit(10); } // v18.0.2：参数/路径错统一 10
+if (!existsSync(file)) { console.error(`文件不存在: ${file}`); process.exit(10); } // v18.0.2：同上
+requireExistingFile(file, '待统计文件');   // v18.0.5：必须是文件（目录 → 10，不再等到 readFileSync 炸）
+// 未知 flag（如 `--ful` 拼错）静默降级会走错口径 —— v18.0.5 改为显式拒绝（第三方审计 P3）
+if (flag !== undefined && !['--full', '--summary'].includes(flag)) {
+  console.error(`未知参数: ${flag}\n用法: node count-chars.mjs <文件.md> [--full | --summary | --warn-threshold <N>] [--genre <code>]`);
+  process.exit(10);
+}
+
+// 编码体检（v18.0.5 引入；v18.2.6 审计修复 P2：注释与实现对齐）
+//   v18.0.5 的注释写「非 UTF-8 一律响亮失败」，**实现只覆盖 UTF-16 BOM**——实测 GBK 文件既不报错也不
+//   命中该分支，`readFileSync(file,'utf8')` 产出满篇 U+FFFD → `hanChars: 0`，只是**侥幸**被「缺 ## 摘要」
+//   的 degraded 兜住（exit 0），原因提示还指向「摘要缺失」而非「编码不对」= 误导。现补真实体检：
+//   解码后出现替换字符 U+FFFD → 判定非 UTF-8（或含非法字节），**响亮失败 exit 10**，与注释一致。
+{
+  const probe = readFileSync(file);
+  if (probe.length >= 2 && ((probe[0] === 0xff && probe[1] === 0xfe) || (probe[0] === 0xfe && probe[1] === 0xff))) {
+    console.error(`${file}: 检测到 UTF-16 BOM —— 本脚本只接受 UTF-8（契约见 .gitattributes）。请转码后重跑。`);
+    process.exit(10);
+  }
+  if (probe.length > 0 && probe[0] === 0xef && probe[1] === 0xbb && probe[2] === 0xbf) {
+    console.error(`⚠️ ${file}: 含 UTF-8 BOM（机检硬格式要求无 BOM），本次按 UTF-8 正常统计`);
+  }
+  // 非 UTF-8（GBK/GB18030/Big5…）用 utf8 解码**必然**产生 U+FFFD；反过来，合法 UTF-8 文本里
+  // 出现 U+FFFD 只可能是作者手写该字符（本包场景不存在）——故以替换字符为判据足够稳。
+  if (probe.toString('utf8').includes('\uFFFD')) {
+    const badIdx = probe.toString('utf8').indexOf('\uFFFD');   // v18.2.9（审计轻微）：附首个替换字符位置，帮助定位粘贴/编码坏点
+    console.error(
+      `${file}: 解码出现替换字符 U+FFFD（首个出现在解码后第 ${badIdx} 字符处）—— 该文件不是合法 UTF-8（常见为 GBK/GB18030 保存，或从网页粘贴带入非法字节）。\n` +
+        `  本脚本只接受 UTF-8（契约见 .gitattributes）；请转码后重跑（旧版此处会静默给出 hanChars 0）。`,
+    );
+    process.exit(10);
+  }
+}
+
+const text = readFileSync(file, 'utf8');
+
+// v19.8.0（反哺 v9 D4）：Word 口径字数估算——汉字 + 全/半角标点 + 数字串 + 英文连续串，
+//   与论衡内部「纯汉字」口径（hanChars）**双轨并存**，互不替换。**只作展示换算，不进 M 门、
+//   不改变退出码**（防再造第二个口径家族，QLT-5 前车之鉴）。journal-fit 的限额按 Word 口径录入时
+//   用本列对期刊限额、hanChars 对内预算——两轨分离、各自真源。
+const countWordMetric = (t) => {
+  let n = 0;
+  const CJK_PUNCT_RE = /[\u3000-\u303f\uff00-\uffef]/;      // 全角标点（，。；：、（）【】等）
+  const ASCII_PUNCT_RE = /[!"#$%&'()*+,\-./:;<=>?@\[\\\]^_`{|}~]/;
+  const run = t.replace(/[A-Za-z0-9]+/g, (m) => { n += 1; return ''; });   // 英文/数字连续串 = 1 个词
+  for (const ch of run) {
+    if (/[\u4e00-\u9fff]/.test(ch)) n += 1;
+    else if (CJK_PUNCT_RE.test(ch) || ASCII_PUNCT_RE.test(ch)) n += 1;
+  }
+  return n;
+};
+
+// 正文区起点（缺「## 摘要」）的标记计算（v18.0.5：从默认分支**提到 summary 之前**——旧版
+//   `--summary` 在标记逻辑之前就 process.exit(0)，导致该模式口径失真却**不带 degraded 标记**，
+//   正是 v2.5.2-dsh.13 专门要消灭的静默退化；第三方审计 P1-3）。
+// v18.2.6：起点解析改走 `_lib/sections.mjs`（标题按「行首 ## + 任意空白」解析，不再依赖 `'## 摘要'` 字面量）。
+// v19.14.0（反哺 R-11 方案 A）：非学术文类（无摘要）改用「首个二级标题」起点；学术文类与不传 genre 时行为完全不变。
+const abstractStart = bodyStartForGenre(text, genre);
+const bodyStartIdx = abstractStart.index;
+// v19.19.0（反哺 2026-10-19 U-10）：**`scope` 标签必须说真话**。
+//   病灶：标签硬编码「摘要后~文末节前」，而 v19.17.0 起无摘要稿的起点已回落到「首个正文二级标题」——
+//   数字对了、解释错了（实测无摘要稿仍回显「摘要后」）。现按 `source` 派生标签。
+const bodyScopeLabel = abstractStart.source === 'abstract'
+  ? '摘要后~文末节前'
+  : abstractStart.source === 'first-h2'
+    ? '首个正文二级标题后~文末节前'
+    : '文件开头~文末节前（起点失真）';
+// v19.17.0（F-03）：degraded 只在「连正文起点都没有」时置位——无摘要但有二级标题 = 起点可用，不再算降级。
+const degraded = (abstractStart.source || 'none') === 'none';
+if (degraded && flag !== '--full') {
+  console.error(abstractStart.genre
+    ? `⚠️ ${file}：文类 ${abstractStart.genre} 下既无「## 摘要」也无正文二级标题（## ），正文区起点退化为文件开头（口径已失真）——请给正文加小标题，或改用 --full`
+    : `⚠️ ${file}：未找到「## 摘要」，也没有正文二级标题（## ；文末节不计），正文区起点退化为文件开头（口径已失真）——请给正文加节标题，或改用 --full 明确按全文统计`);
+}
+const degradedFields = degraded && flag !== '--full'
+  ? {
+    degraded: true,
+    degradedReason: abstractStart.genre
+      ? `文类 ${abstractStart.genre} 下既无「## 摘要」也无正文二级标题 → 正文区起点退化为文件开头`
+      : '缺「## 摘要」且无正文二级标题（文末节不计）→ 正文区起点退化为文件开头',
+  }
+  : {};   // `--full` 不受正文区起点影响，故不标 degraded（v18.0.5：与既有契约一致）
+
+// === 文末五节标记 + 正文区终点（v18.2.3：单一真源，默认口径与 --summary **共用**）===
+// v18.2.2 缺陷（主人授权修订；依据 2026-09-12 全量测试后主人反问「字数限定仅指正文吗」的取证）：
+//   `--summary` 分支此前用**含「摘要/关键词」的 segs** 求 body 终点 → 命中 `## 关键词` 即截断
+//   → `body.hanChars` 只剩摘要正文（**实测 243**），而默认口径是 **5112**（差 **21 倍**）；
+//   派生字段 `bodyRatio`(4.1%) / `avgPerSection`(16) 亦随之失真。
+//   ⚠️ 危害在于脚本头注释写「--summary = …（**T7/T8 一眼可见结构**，省 LLM 读全文）」
+//   —— T7/T8 若照注释取用该 body 值，**会把一篇 5112 字的论文判成「仅 4% 篇幅」**，
+//   进而下达完全错误的「P0 立即精简」指令。默认分支用的是正确的 5 元素列表，
+//   **同一脚本两条路径各写一份**即根因；现抽为共用助手，从结构上杜绝再次发散。
+// v18.2.6 修（第三方审计 §4.2）：本处旧实现 `text.indexOf('## 参考文献')` 是**精确字面量**匹配，
+//   标题带额外空白（`##  参考文献`）即失配 → 正文区终点退化为文件末尾（实测量 503 → 1707）。
+//   现改用 `_lib/sections.mjs` 的 `firstEndnoteIndex`（行首 `##` + 任意空白解析），**与 m-gate-check 同源**。
+const bodyEndOf = (from) => {
+  const i = firstEndnoteIndex(text, from);
+  return i === -1 ? text.length : i;
+};
+
+/** v19.25.0（页下注/著者-年份交付档批 · 审计 E4/B4）：注释文字区间。
+ *  取「数据来源」节内 `### 注释` / `### 脚注` 两个子节（与 M-Exist-1 的扩展编号闭环同一宿主），
+ *  外加（前向兼容）若存在 `## 注释` 节也计入。
+ *  ⚠️ **为什么不做成独立 `## 注释` 节**：M-Form-7 的文末节白名单只有九节（五必需 + 四声明），
+ *  第十个 H2 会被判「文末节白名单违规」P0——故人文档的注释必须挂在 `## 数据来源` 之下（子节）。
+ *  只服务 `--with-notes` 的**展示读数**，不参与任何判级。 */
+const notesText = () => {
+  const parts = [];
+  const noteBody = sectionBody(text, '注释');
+  if (noteBody !== null) parts.push(noteBody);
+  const src = sectionBody(text, '数据来源');
+  if (src) {
+    for (const name of ['注释', '脚注']) {
+      const re = new RegExp(`^###[ \\t]*${name}[ \\t]*$`, 'm');
+      const m = re.exec(src);
+      if (!m) continue;
+      const rest = src.slice(m.index + m[0].length);
+      const nextH3 = rest.search(/^#{3}\s+/m);
+      parts.push(nextH3 === -1 ? rest : rest.slice(0, nextH3));
+    }
+  }
+  return parts.join('\n');
+};
+
+/**
+ * v19.11.2（反哺 2026-10-17 §P0-1）：`--report` 落盘**两个模式共用同一出口**。
+ *
+ * 病灶（已复现）：旧版 `--summary` 打印完就 `process.exit(0)`，而落盘块在它**之后** ——
+ *   `count-chars 定稿.md --summary --report out.json` = **exit 0、out.json 不存在、stderr 无告警**。
+ *   而 `--summary` 恰是 T7/T8 的标准调用方式 ⇒ 「闸门实据」静默缺失。同类事故本仓已发生过一次：
+ *   `run/不能评估的忠诚/audits/闸门记录-T7.5.md` 第 6 条记着「声称落盘的字数报告实际不存在」。
+ * 落盘失败**改为 exit 70**（与 `m-gate-check.mjs` 的「机械证据缺失」同码）：
+ *   证据存在与否属于门的语义，不再「warn 一句后照常返回 0」。
+ */
+const emitReport = (payload) => {
+  if (!reportPath) return;
+  try {
+    writeReport(reportPath, JSON.stringify(payload, null, 2) + '\n', { protect: [file], label: '--report' });
+  } catch (e) {
+    console.error(`✗ --report 落盘失败（闸门实据缺失，按内部错误 70 退出）：${e.message}`);
+    process.exit(70);
+  }
+};
+
+if (flag === '--summary') {
+  // 分段：标题/摘要/关键词/正文/参考文献/数据来源/案例来源/先行者文献/AI 使用声明
+  const segs = ['摘要', '关键词', ...ENDNOTE_SECTIONS];
+  const sections = {};
+  for (const s of segs) {
+    // v18.2.3：不计**节标题自身的汉字**（实测 `关键词` 21 vs 标题式口径 18，差 3 = 「关键词」三字），
+    //   与下方 `sectionsByHeading` 的口径一致。
+    // v18.2.6：定位改走 `_lib/sections.mjs` 的 `sectionBody`（旧版 `indexOf('## ' + s)` 同样怕多余空白）
+    const bodyText = sectionBody(text, s);
+    sections[s] = bodyText === null ? 0 : countHan(bodyText);   // v18.0.3：改用 _lib/han.mjs 的 countHan（旧版在此内联 match）
+  }
+  // 正文区 = 摘要之后到第一个文末节之前（v18.2.3：改走共用助手 bodyEndOf，
+  //   不再用含「摘要/关键词」的 segs 求终点 —— 那正是 21 倍失真的根因）
+  const bodyFrom = bodyStartIdx;
+  const bodyEnd = bodyEndOf(bodyFrom);
+  const bodyCount = countHan(text.slice(bodyFrom, bodyEnd));   // v18.0.3：走 _lib 真源
+  const totalCount = countHan(text);                            // v18.0.3：同上
+  // 各章节 H2/H3 标题 + 字数（top 10 节）
+  const headingRe = /^(#{2,3})\s+(.+)$/gm;
+  const headingCounts = [];
+  for (const m of text.matchAll(headingRe)) {
+    const title = m[2].trim();
+    // 找该标题到下一个同级/上级标题之间的内容
+    const start = m.index + m[0].length;
+    const level = m[1].length;
+    const nextRe = new RegExp(`^#{1,${level}}\\s+`, 'gm');
+    nextRe.lastIndex = start;
+    const next = nextRe.exec(text);
+    const end = next ? next.index : text.length;
+    const han = countHan(text.slice(start, end));   // v18.0.3：走 _lib 真源
+    headingCounts.push({ level: m[1], title, hanChars: han });
+  }
+  const summaryOut = {
+    file,
+    mode: 'summary',
+    total: { hanChars: totalCount },
+    body: { hanChars: bodyCount, scope: bodyScopeLabel, scopeSource: abstractStart.source },
+    endnotes: sections,
+    sectionsByHeading: headingCounts.slice(0, 15),
+    density: {
+      bodyRatio: totalCount > 0 ? +(bodyCount / totalCount * 100).toFixed(1) : 0,
+      // v18.0.5：分母为 0 时给 0（旧版 Infinity → JSON.stringify 变 null，看着像「缺失」）——第三方审计 P3
+      avgPerSection: (() => {
+        const h2 = headingCounts.filter((s) => s.level === '##').length;
+        return h2 > 0 ? Math.round(bodyCount / h2) : 0;
+      })(),
+    },
+    ...degradedFields,   // v18.0.5：--summary 也必须带 degraded 标记（旧版在标记前就 exit 0）
+  };
+  console.log(JSON.stringify(summaryOut, null, 2));
+  emitReport(summaryOut);   // v19.11.2 P0-1：落盘必须在 exit 之前（旧版此处直接 exit，--report 永不到达）
+  process.exit(0);
+}
+
+let target = text;
+if (flag !== '--full') {
+  // 正文区：## 摘要 之后 到 ## 参考文献（或文末）之前
+  // v2.5.2-dsh.13 修订（第三方审计 P1）：无「## 摘要」时旧版静默把起点退化为文件开头（口径前移、
+  // 若文末节标记也缺失则等于全文），却仍自称 body(正文区) → 双口径坍缩、字数分级系统性偏大。
+  // 现在：显式置 degraded 标记并在 stderr 告警（计算已提到 summary 之前，两模式共用）。
+  const from = bodyStartIdx;
+  // v18.2.3：终点改走与 --summary 共用的 bodyEndOf（消除「两条路径各写一份 → 发散」）
+  target = text.slice(from, bodyEndOf(from));
+}
+
+const count = countHan(target);   // v18.0.3：走 _lib/han.mjs 真源（旧版在此内联 match）
+const out = {
+  file,
+  scope: flag === '--full' ? 'full(全文纯汉字)' : `body(正文区纯汉字: ${bodyScopeLabel})`,
+  scopeSource: flag === '--full' ? 'full' : abstractStart.source,
+  hanChars: count,
+  ...degradedFields,
+};
+// v19.8.0（反哺 v9 D4）：`--word-metric` 时附加 Word 口径估算（纯展示换算，不做门判据）。
+if (wordMetric) out.wordChars = countWordMetric(target);
+// v19.25.0（页下注/著者-年份交付档批）：`--with-notes` 时附加**双读数**（正文 + 注释）。
+//   只对 body 口径有意义（--full 已含注释，再加会重复计数）→ full 下不输出该段并说明。
+if (withNotes) {
+  if (flag === '--full') {
+    out.notes = { skipped: true, reason: '--full 已含注释文字，双读数仅对正文口径有意义' };
+  } else {
+    const notesHan = countHan(notesText());
+    out.notes = {
+      hanChars: notesHan,
+      scope: '「数据来源」内 ### 注释 / ### 脚注 子节（+ 前向兼容的 ## 注释 节）；仅报告，不参与判级',
+    };
+    out.bodyWithNotes = { hanChars: count + notesHan };
+  }
+}
+// v18.16.0（S-2 反哺）：仅当 `--warn-threshold <N>` 被传入且字数超阈值时附加警告字段。
+//   不影响退出码（仍 0），不参与 M 门判定；供主控与审计视图按需消费。
+if (warnThreshold !== null) {
+  out.warnThreshold = warnThreshold;
+  if (count > warnThreshold) {
+    out.warnOvershoot = true;
+    out.warnDetail = `字数 ${count} > 阈值 ${warnThreshold}（差 ${count - warnThreshold}）`;
+  } else {
+    out.warnOvershoot = false;
+  }
+}
+// v18.73.0（反哺报告-v7 F-6）：`--report <path>` 落盘 —— **与 stdout 同一份 JSON**（不另造结构）。
+//   写盘走 `_lib/destructive-write` 的 `writeReport`（而非裸 `writeFileSync`）—— 它给三条硬保证：
+//   ① 不与本次运行**读过的源文件**同文件（`protect` 防不可回滚地销毁被审正文）；
+//   ② 覆盖既有文件前留**时间戳 `.bak`**；③ 缺失父目录自动建。
+//   判据：**报告类写盘一律经 `writeReport`** —— 裸写会绕开这三条，而本脚本的 `protect` 正是被审正文本身。
+// v19.11.2（反哺 2026-10-17 §P0-1）：出口抽成 `emitReport`，与 `--summary` 分支共用（见上方函数注释）。
+emitReport(out);
+console.log(JSON.stringify(out, null, 2));
+process.exit(0);

@@ -1,0 +1,118 @@
+#!/usr/bin/env node
+// normalize-trust-level.mjs — 数据卡「信任级别」独立行规范化
+//
+// 用法: node scripts/normalize-trust-level.mjs <数据卡.md> [<数据卡2.md> ...] [--write]
+//   默认 **dry-run**：只打印将为每条 [Dxx] 追加的行，不落盘。
+//   --write：落盘，写盘统一走 `_lib/destructive-write.mjs:writeWithSafety`（v18.7.3 P1-1）——
+//     覆盖前落**带时间戳**的同目录备份 `<数据卡.md>.<YYYYMMDD-HHmmss>.bak`（一轮多次写不抹上一次
+//     回滚点；上限 20 个自动回收）+ temp-rename 原子写（中途被杀不留半写文件）。
+//     回滚命令：`cp <卡>.<最新时间戳>.bak <卡>`。
+//
+// 幂等性（v18.2.6 审计修复 P2）：判据是 `_lib/trust.mjs:TRUST_COMPLIANT_RE` ——
+//   只要块内已有合规的「信任级别：<档>」声明就**不插入**。旧版该正则不容忍
+//   `信任级别：**已发布**`（加粗档位词）与「信任级别 : 已发布」（冒号前有空格）→
+//   同一档位被重复插入第二条（实测确认）。现正则已容纳 `*` 与空白变体，本脚本随之幂等。
+//
+// 与 m-gate M-Form-6 同款切块（cardRe），为每条 [Dxx] 追加独立行：
+//   `信任级别：<已发布|主人投喂|二手转引>（<备注>）`
+//
+// ⚠️ **绝不推断**（v2.5.2-dsh.13 修订，第三方审计 P0）：
+//   旧版在卡内完全无信任级别 token 时默认填「已发布」——等于用**最高信任档**掩盖未核验数据，
+//   且会让 M-Form-6 的判定正则机械判过（证据链污染，比误删更隐蔽）。
+//   现在：无 token → 该条**不写**、列入未决清单，脚本以 exit 1 收尾，由 T2/人工显式判定后重跑。
+//   ⚠️ 退出码命名空间（v18.0.2 澄清）：本脚本**不是流水线闸门**，`1` 在本脚本里表示「有未决条目/用法错」，
+//      与 M 门约定（`1`=P1 内容失败 / `10`=参数路径错）**不共用语义**；但「参数/路径错」仍统一用 `10` 以降低误读。
+import { readFileSync, existsSync } from 'node:fs';
+import { dataCardIds } from './_lib/refs.mjs';              // 引用编号口径真源
+import { TRUST_COMPLIANT_RE, pickTrustToken } from './_lib/trust.mjs';   // 信任级别口径真源
+import { splitCard } from './_lib/cards.mjs';               // 卡片切块口径真源
+import { writeWithSafety } from './_lib/destructive-write.mjs';  // 破坏性写统一策略（v18.7.3 P1-1）
+import { installExitGuard } from './_lib/exit-guard.mjs';   // 退出码硬化（v18.0.5）
+installExitGuard();   // 传目录等 fs 类异常 → 10（旧版未捕获 EISDIR → exit 1 = 与「有未决条目」撞义）
+
+const rawArgs = process.argv.slice(2);
+// v18.12.0（全量审计 L-62）：**未知旗标此前被静默丢弃** —— 旧实现 `rawArgs.includes('--write')` +
+//   `filter(a => !a.startsWith('--'))`，于是 `--wrtie`（拼错）既不被识别也不报错 → 脚本按 dry-run 跑完
+//   并 **exit 0**，用户以为已落盘（正是本模块头注释记载的 B-4 同族事故）。本脚本是**唯一改写素材卡的
+//   持有者**，静默降级代价最高，故严判。
+const KNOWN_FLAGS = ['--write'];
+for (const a of rawArgs) {
+  if (a.startsWith('-') && !KNOWN_FLAGS.includes(a)) {
+    console.error(`未知参数: ${a}（本脚本只认 ${KNOWN_FLAGS.join(' / ')}；注：拼错的旗标不会被视为「不写盘」以外的行为）`);
+    console.error('用法: node normalize-trust-level.mjs <数据卡.md> ... [--write]（默认 dry-run，不落盘）');
+    process.exit(10);
+  }
+}
+const write = rawArgs.includes('--write');
+const files = rawArgs.filter((a) => !a.startsWith('-'));
+if (files.length === 0) {
+  console.error('用法: node normalize-trust-level.mjs <数据卡.md> ... [--write]（默认 dry-run，不落盘）');
+  process.exit(10); // v18.0.2：参数错统一 10（下方「有未决条目」仍为 1，属本脚本自有语义）
+}
+// 信任级别口径已上收到 _lib/trust.mjs（TOKENS / COMPLIANT → TRUST_COMPLIANT_RE / pickTrustToken）
+const unresolved = [];
+// v18.0.5（第三方审计 P2）：本脚本按批量语义设计（缺文件「跳过」），但**全部输入都不存在**时会
+//   静默以 exit 0 收场——调用方（主控）会以为「已规范化 0 条 = 没有需要规范化的卡」。
+//   现收紧：一个都没处理到且至少一个输入缺失 → exit 10（参数/路径错），并给明确提示。
+let processed = 0;
+let missing = 0;
+
+for (const file of files) {
+  if (!existsSync(file)) { console.error(`跳过（不存在）: ${file}`); missing++; continue; }
+  processed++;
+  let text = readFileSync(file, 'utf8');
+  const ids = dataCardIds(text);
+  let changed = 0;
+  for (const id of ids) {
+    const card = splitCard(text, id);
+    if (!card) continue;
+    const block = card.block;
+    // 幂等判据（v18.2.6）：已有合规独立行（含 `信任级别：**已发布**` / `信任级别 : 已发布` 变体）→ 不插入
+    if (TRUST_COMPLIANT_RE.test(block)) continue;
+    const token = pickTrustToken(block);
+    if (!token) { unresolved.push(`${file} [D${id}]`); continue; }   // 绝不推断
+    const im = block.match(/信任级别\**[:：]\s*([^\n（）()|，,;；]*)/);
+    const detail = im && im[1].trim() ? `（${im[1].trim().replace(/[🟢🟡🔴]/g, '').trim()}）` : '';
+    // v18.12.0（全量审计 L-52 连带）：旧版 `block.indexOf('\n')` 对**行内式** block（其首字符就是 `\n`）
+    //   恒得 0 → 插入点落在条目**之前**（块外）→ 该条永不达标；且第二次运行再插一条 → 幂等性失效
+    //   （审计实测「信任级别」行数 2→3 且仍打印「1 条已规范化」）。改为 `indexOf('\n', 1)`：
+    //   跳过行内式 block 起始的那个换行，落在条目首行之后（标题式行为不变——其首行是标题行）。
+    const nl = block.indexOf('\n', 1);
+    const pos = card.index + (nl === -1 ? block.length : nl);
+    const inserted = `\n信任级别：${token}${detail}`;
+    text = text.slice(0, pos) + inserted + text.slice(pos);
+    changed++;
+    if (!write) console.log(`  · ${file} [D${id}] → ${inserted.trim()}`);
+  }
+  if (write && changed > 0) {
+    // v18.7.3（P1-1，全量审计）：写盘改走 _lib/destructive-write.mjs 的 writeWithSafety——
+    //   旧实现「固定名 .bak + writeFileSync 直接覆写」有两缺陷：① 固定名 .bak 会抹掉上一次回滚点
+    //   （destructive-write 头注释批判过的形态）；② 非原子写，进程中途被杀留半写文件。
+    //   现获得：带时间戳 .bak（一轮多次写不丢回滚点）+ 上限回收 + temp-rename 原子写。
+    //   上限值不复述（真源 = _lib/destructive-write.mjs 的 BAK_MAX）——2026-10-15 审计 P2-2：
+    //   本行原写「BAK_MAX=20」而真值已是 6，属「同一常量多处复述」的漂移形态。
+    //   回滚命令相应变为：`cp <卡>.<时间戳>.bak <卡>`（取目录下最新 .bak）。
+    // v19.6.1（审计 2026-10-15 全量批 P2-4）：**原地重写，源即目标，故不设 `source`**——`source` 是
+    //   「本次运行读过的源文件路径」槽位（给出即启用同文件守卫）；此处规范化的是卡文件自身，
+    //   `inPlace: true` 已显式声明覆盖意图。本注释只为让「无 source」的调用点一眼可辨（不是省略）。
+    const r = writeWithSafety(file, text, { inPlace: true });
+    console.log(`✓ ${file}: ${changed} 条已规范化（备份 ${r.backup ?? '（原文件新建，无备份可做）'}）`);
+  } else if (!write) {
+    console.log(`· ${file}: 将规范化 ${changed} 条（dry-run 未落盘；加 --write 生效）`);
+  } else {
+    console.log(`· ${file}: 无需改动`);
+  }
+}
+
+// v18.0.5：全部输入都不存在 → 参数/路径错（10），不要以 exit 0 佯装成功
+if (processed === 0 && missing > 0) {
+  console.error(`\n✗ ${missing} 个输入路径都不存在，未处理任何文件——退出码 10（参数或路径错误）。请核对路径后重跑。`);
+  process.exit(10);
+}
+
+if (unresolved.length > 0) {
+  console.error(`\n✗ ${unresolved.length} 条素材卡缺少信任级别依据，**拒绝推断**（旧版会默认填「已发布」，让 M-Form-6 误判通过）：`);
+  for (const u of unresolved) console.error('  - ' + u);
+  console.error('请由 T2/人工判定其信任级别（已发布 / 主人投喂 / 二手转引）后再重跑本脚本。');
+  process.exit(1);
+}

@@ -1,0 +1,25 @@
+{
+    "name": "modsearch",
+    "description": "文本模型的联网搜索桥。返回结构化 JSON 证据：网页搜索、X(Twitter) 搜索、指定 URL 抓取，带来源链接。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "1.0.0",
+    "author": {
+        "name": "Leon Liu (liustack)"
+    },
+    "license": "MIT",
+    "type": "user",
+    "min_host_version": "0.5.0",
+    "keywords": [
+        "search",
+        "web",
+        "fetch",
+        "twitter",
+        "modsearch"
+    ],
+    "components": {
+        "skills": true
+    }
+}

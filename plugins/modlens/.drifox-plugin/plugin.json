@@ -1,0 +1,25 @@
+{
+    "name": "modlens",
+    "description": "文本模型的视觉桥。把图片路径/URL 交给 modlens CLI，返回结构化 JSON 证据：逐字转写、版面区块、语义与视觉线索。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "1.0.0",
+    "author": {
+        "name": "Leon Liu (liustack)"
+    },
+    "license": "MIT",
+    "type": "user",
+    "min_host_version": "0.5.0",
+    "keywords": [
+        "vision",
+        "ocr",
+        "image",
+        "multimodal",
+        "modlens"
+    ],
+    "components": {
+        "skills": true
+    }
+}

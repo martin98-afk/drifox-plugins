@@ -1,0 +1,278 @@
+// 文末节 / 正文区边界口径（全流水线唯一真源，v18.2.6 审计修复 §4.2）
+//
+// 背景（第三方审计 §4.2「count-chars 与 m-gate-check 对『正文区起点』两套口径」）：
+//   两个脚本各写了一份「文末节起点」的实现，且实现方式不同——
+//     · `count-chars.mjs:63,66-70` 用**精确字面量** `text.indexOf('## 参考文献')`（写死一个半角空格）；
+//     · `m-gate-check.mjs:215-221` 用 `^##\s+(.+)$` 解析标题后 `startsWith` 比对。
+//   实测把文末节标题写成 `##  参考文献`（**两个空格**，手写 markdown 极易发生）：
+//     · count-chars 的 indexOf 失配 → 正文区终点退化为「文件末尾」→ 文末五节被整体计入正文区，
+//       同一份稿件 `hanChars` 由 **503 → 1707**（虚高 3.4 倍）**且不置 degraded**（所有门全绿而字数是错的）；
+//     · m-gate-check 归一化 `\s+` 后照常识别 → 同一次交付里两个脚本对「正文区」给出不同答案。
+//   这正是本仓反复踩的「同一事实两处维护」形态（教训：两处口径必然发散）。现抽到本模块，
+//   两个脚本共用一套解析：**标题一律按「行首 `##` + 至少一个空白（半角/制表/全角）+ 标题文本」解析**，
+//   多余空白、尾随空白、CRLF 的 `\r` 都不再改变边界。
+//
+// 口径（与 `references/deliverables.md` / `任务简报-template.md` 一致）：
+//   · 文末五节 = 参考文献 / 数据来源 / 案例来源 / 先行者文献 / AI 使用声明（**顺序固定**，见 M-Form-7）
+//   · 正文区 = `## 摘要` 之后 → 第一个文末节之前（含摘要正文与关键词段；不含题名与文末五节）
+
+/** 文末**必需**五节（顺序即 M-Form-7 规定顺序；M-Form-2 的存在性检查以本数组为准）。 */
+export const ENDNOTE_SECTIONS = ['参考文献', '数据来源', '案例来源', '先行者文献', 'AI 使用声明']
+
+/** 学术四声明（v18.12.0 新增，依据 2026-09-25 全量审计 L-17）——**可选**，不参与存在性检查。
+ *
+ * 背景：v18.10.0 起写手卡与交付说明模板已要求「文末九节」（四声明按学术伦理标准排在 AI 使用声明前），
+ *   而机检白名单仍是五节 → **照规范写必被 M-Form-7 判 P0**，且该门属「不可 LLM 兜底的红线」→ 学术论文无出口
+ *   （审计实测：按九节写 → `exit=2`，`违规节: CRediT 声明,COI 声明,数据可用性声明,伦理审批声明`）。
+ *
+ * 为什么不能直接把它们并进 `ENDNOTE_SECTIONS`：四声明是**学术论文专用**——
+ *   商业评论 / 行业分析 / 公众号稿件不该被强制要求 CRediT 与伦理审批；并入会让一切稿件都必须写四声明。
+ *
+ * 现拆两层：**必需五节**（存在性）+ **可选四声明**（仅参与白名单成员资格与顺序）→
+ *   学术稿写九节通过、非学术稿写五节也通过，两边都不再被迫绕门。
+ *   标记文本取自四份声明模板的 `##` 标题真源（`templates/{CRediT,COI,数据可用性,伦理审批}*.md`）；
+ *   比对走 `titleMatches`（全等或前缀），故「CRediT 作者贡献声明（14 角色）」这类变体同样命中。 */
+export const ENDNOTE_SECTIONS_OPTIONAL = ['CRediT 作者贡献声明', 'COI 利益冲突声明', '数据可用性声明', '伦理审批声明']
+
+/** 文末合规顺序（**九节**，M-Form-7 顺序断言的唯一真源）：必需五节 + 可选四声明。
+ *  由 `ENDNOTE_SECTIONS` 派生（前四节 → 四声明 → 末节 AI 使用声明），避免两处各写一份清单又发散。 */
+export const ENDNOTE_ORDER = [
+  ...ENDNOTE_SECTIONS.slice(0, -1),
+  ...ENDNOTE_SECTIONS_OPTIONAL,
+  ENDNOTE_SECTIONS[ENDNOTE_SECTIONS.length - 1],
+]
+
+/** 围栏代码块感知（v18.12.0 新增，依据 2026-09-25 全量审计 L-51）——**本模块唯一实现**。
+ *
+ * 为什么必须在**解析层**做，而不是在某个调用方做：
+ *   围栏内的 `## 参考文献`（正文里被引用的格式示例 / 规范片段 / 模板片段）此前会被当成**真文末节起点**。
+ *   实测：一份正文含 ```` ```markdown ```` 示例、其内含 `## 参考文献` 行的稿件，
+ *   `count-chars` 报 **15 汉字**（手算 31）、**exit 0、stderr 空、无 degraded**。
+ *   而 `count-chars` 的 body 纯汉字是 `glossary.md` 明定的**唯一字数验收口径**——偏小即可能把
+ *   「超目标篇幅」判成「在区间内」（字数判级错误放行）；M 门的 body/endnote 分界同源同错，两个消费者
+ *   一起错、互不发现。故修在解析层：`h2Headings` / `h3Headings` 的下游全部自动获得围栏感知
+ *   （count-chars / m-gate-check / segment-chars / fix-gates / mform-gates / mintegrity-gate / cite-coverage-check …）。
+ *
+ * 语义（贴近 CommonMark 的最小实现，只做「遮罩」不做完整解析）：
+ *   · 起栏 = 行首（允许 ≤3 个空格缩进）连续 ≥3 个 `` ` `` 或 `~`；
+ *   · 止栏 = 之后第一行「同种字符且数量 ≥ 起栏」；**未闭合则遮罩到文末**（与 CommonMark 一致）；
+ *   · 遮罩 = 把区间内**非换行**字符替换成等长空格 → 偏移与行结构**逐字节不变**，
+ *     故所有既有「用 index 回原文切片」的调用方（`sectionBody` / `allHeadings` / …）无需改动。
+ */
+export const maskFences = (text) => {
+  const s = String(text ?? '')
+  const ch = s.split('')
+  const blank = (a, b) => { for (let k = a; k < b; k++) ch[k] = ' ' }
+  let i = 0
+  while (i < s.length) {
+    const nl = s.indexOf('\n', i)
+    const lineEnd = nl === -1 ? s.length : nl
+    const m = /^ {0,3}(`{3,}|~{3,})/.exec(s.slice(i, lineEnd))
+    if (!m) { i = nl === -1 ? s.length : nl + 1; continue }
+    const mark = m[1]
+    // v18.80.1（全量审查修订批 · B11）：闭合栅栏**其后只允许空白**（CommonMark §4.5）。
+    //   旧式无该约束 → 嵌套示例里的 ` ```js ` 这种**内层开栏**被当成闭合 → 围栏内的 `## 参考文献`
+    //   被提升为**真**文末节 → `count-chars` 正文区被截断（实测 356 vs 378，只差内层那一行）。
+    const closer = new RegExp('^ {0,3}' + (mark[0] === '`' ? '`' : '~') + '{' + mark.length + ',}[ \\t]*$')
+    blank(i, lineEnd)                                  // 起栏行本身
+    let j = nl === -1 ? s.length : nl + 1
+    while (j < s.length) {
+      const n2 = s.indexOf('\n', j)
+      const e2 = n2 === -1 ? s.length : n2
+      const isCloser = closer.test(s.slice(j, e2))
+      blank(j, e2)
+      j = n2 === -1 ? s.length : n2 + 1
+      if (isCloser) break                              // 止栏行也遮罩，其后恢复正常解析
+    }
+    i = j
+  }
+  return ch.join('')
+}
+
+/** 二级标题行：行首 `##` + **至少一个**空白（半角/制表/全角）+ 标题文本。
+ *  与旧 `^##\s+(.+)$` 的两点差别（均为收紧，不是放宽）：
+ *    ① `\s` 含换行 → 旧式会把「`##` 空行 + 下一行文本」也读成一个二级标题；本式不会；
+ *    ② 标题尾随空白与 `\r` 不进标题（CRLF 文件不会把 `\r` 带进标题 → `startsWith` 比对不再被 CRLF 破坏）。
+ *  `##标题`（无空白）**不予识别**——与 CommonMark 及本包其余门一致，避免把正文里的 `## 号` 当标题。 */
+export const H2_LINE_RE = /^##[ \t\u3000]+(\S.*?)[ \t\u3000]*\r?$/gm
+
+/** 解析全部二级标题：`[{ index, title }]`，index = 标题行首在原文中的偏移。
+ *  v18.12.0（L-51）：先在 `maskFences` 遮罩后的文本上匹配——围栏代码块内的 `## …` 不算标题；
+ *  因遮罩逐字节保长，返回的 index 仍可直接用于**原文**切片。 */
+export const h2Headings = (text) =>
+  [...maskFences(text).matchAll(H2_LINE_RE)].map((m) => ({ index: m.index, title: m[1].trim() }))
+
+/** 三级标题行：与 H2 **同一条规则**（行首 `###` + 至少一个空白 + 文本；尾随空白与 `\r` 不入标题）。
+ *  v18.2.7 新增（依据 2026-09-20 全流程实战反哺 P0-1：`segment-chars.mjs` 需按任意 H2/H3 节取字数）。
+ *  刻意与 `H2_LINE_RE` 共用同一字符类，避免「H2 认全角空格、H3 不认」这类两套口径发散。 */
+export const H3_LINE_RE = /^###[ \t\u3000]+(\S.*?)[ \t\u3000]*\r?$/gm
+
+/** 解析全部三级标题：`[{ index, title }]`（v18.12.0：与 H2 同走围栏遮罩）。 */
+export const h3Headings = (text) =>
+  [...maskFences(text).matchAll(H3_LINE_RE)].map((m) => ({ index: m.index, title: m[1].trim() }))
+
+/** 全部标题（H2+H3，按出现顺序，带 `level`）——供按标题切片取字数的调用方使用。 */
+export const allHeadings = (text) => {
+  const out = [
+    ...h2Headings(text).map((h) => ({ ...h, level: 2 })),
+    ...h3Headings(text).map((h) => ({ ...h, level: 3 })),
+  ]
+  return out.sort((a, b) => a.index - b.index)
+}
+
+/** 标题行的**下一行**起点偏移（取节体用；导出给 `segment-chars.mjs` 复用，避免各写一份）。 */
+export const bodyStartOfHeading = (text, headingIndex) => nextLineAfter(text, headingIndex)
+
+/**
+ * 标题是否属于某节：**全等、前缀，或「序号前缀 + marker」**。
+ *
+ * v18.49.0（反哺 F-T）：旧实现是**纯前缀**口径（`title === marker || title.startsWith(marker)`），
+ *   于是**带序号的标题一个都匹配不上**：`## 4 描述性结果` / `## 4.1 结果` / `## 四、结果` 对 marker「结果」
+ *   全部返回 false → `structure-check` / `methodology-check` 把**整节判缺**。
+ *   **实测影响（非推测）**：题1（描述性研究，正文用 `## 4 描述性结果` 这类带序号标题）被判
+ *   `structure` exit 2 / `methodology` exit 2；题2（概念论证型）因走 N/A 而免疫 →
+ *   **同一门对不同体例的计分影响不对称**，且读数差异源于排版格式而非研究质量。
+ *   双重实证：T7 控制探针（只改 5 个标题字面 → exit 2→1）+ T9-m 独立复现。
+ *
+ * **判据**：序号是**排版前缀**，不是标题语义的一部分，比对前应剥离。
+ * 剥离规则从严（防误伤）：数字/中文数字前缀**后面必须紧跟分隔符或空白**——
+ *   `「4 描述性结果」`（空格）✓、`「四、结果」`（顿号）✓、`「4.1 结果」`✓；
+ *   而 `「第一作者声明」`（「一」后紧跟汉字「作」）**不剥离**。
+ */
+export const titleMatches = (title, marker) => {
+  if (title === marker || title.startsWith(marker)) return true
+  const stripped = stripMcDecor(title)
+  return stripped === marker || stripped.startsWith(marker)
+}
+
+/**
+ * 机检锚点**文本归一化**（v19.21.0 · 反哺 2026-10-20 插件级 §1 统一层）。
+ *
+ * 为什么要有这一层：本次实战 7 次失败同源于「**合法 markdown 装饰 / 排版前缀破坏机检正则**」，
+ *   而每条门各自定义了一套「合法文本形态」——没有一处负责归一化：
+ *     · `## §5 引言` → `titleMatches` 只剥数字/中文序号、不剥 `§` → IMRaD 五节全判缺失；
+ *     · `## 6. 修订任务书` / `**修订任务书**` → M-Exist-4 的 `^#{2,4}\s*修订任务书` 不认序号与加粗；
+ *     · `**sha256**：<hex>` → M-Exist-7 的 `sha256\s*[:：]?\s*hex` 被中间的 `**` 截断；
+ *     · `exit **21**` → M-Exist-5 的 `exit\s*[=:：]?\s*\d` 不认加粗。
+ *   判据（可迁移）：**「锚点比对」与「排版装饰」必须解耦**——机器只看语义文本，装饰在入参处剥掉。
+ *
+ * 只做**锚点级**归一化，不改语义：剥行内代码/加粗标记、行首 `#`、`§` 前缀、编号前缀、尾随冒号。
+ *   **不得用于「实据」「数值」的原文改写**——那里只允许在正则里容忍装饰，不允许改值。
+ */
+export const stripMcDecor = (title) => {
+  let t = String(title ?? '').trim()
+  t = t.replace(/^#{1,6}\s*/, '')                    // 误传整行时的标题标记
+  t = t.replace(/`/g, '').replace(/\*\*/g, '')       // 行内代码 / 加粗（成对标记）
+  t = t.replace(/^§+\s*/, '')                        // §5 / § 5
+  t = t.replace(
+    /^(?:第\s*)?(?:[0-9]+(?:\.[0-9]+)*|[一二三四五六七八九十]+)\s*(?:[、.．:：)）]|章|节|部分|\s)\s*/,
+    '',
+  )
+  t = t.replace(/[：:]\s*$/, '')                     // 尾随冒号（`修订任务书：`）
+  return t.trim()
+}
+
+/** 标题行末的下一行起点（用于「取标题之后的段体」）。 */
+const nextLineAfter = (text, headingIndex) => {
+  const nl = text.indexOf('\n', headingIndex)
+  return nl === -1 ? text.length : nl + 1
+}
+
+/** 第一个文末节的标题行首偏移；无文末节 → -1。`from` 之前的不计（供「从正文区起点之后」搜索）。 */
+export const firstEndnoteIndex = (text, from = 0) => {
+  for (const h of h2Headings(text)) {
+    if (h.index < from) continue
+    if (ENDNOTE_SECTIONS.some((w) => titleMatches(h.title, w))) return h.index
+  }
+  return -1
+}
+
+/** 正文区起点 = `## 摘要` 标题行之后。
+ *
+ *  ⚠️ **精确边界（v18.12.3 写死，此前「标题之后」措辞歧义）**：返回 `nextLineAfter(headingIndex)`
+ *  = 标题行**行终止符的位置**（不是其后第一个字符），故 `text.slice(from, end)` **以 `\n` 开头**，
+ *  **不含摘要标题自身的汉字**；末端 `end` = 首个文末节标题的**行首**（同样不含其标题）。
+ *  实测取证（夹具 `# 大标题 / ## 摘要 / 摘×50 / ## 一、正文 / 甲×300 / ## 参考文献 / 参×20`，
+ *  LF 换行，文件长 407）：H2 = 摘要@7 / 一、正文@66 / 参考文献@377；`from = 13`、`to = 377`、
+ *  切片汉字 **353 = 摘要正文 50 + 正文节标题 3（一、正文）+ 正文 300**；
+ *  **题名区 `[0,7)` 的 3 汉字不计入**（题名区自身 = 3）。
+ *  2026-09 复核曾据该歧义措辞误判出「正文区含题名」的假缺陷（实为把返回值与段长度混算），
+ *  故把边界公式与实测数字写死在注释里，避免二次误判。
+ *
+ *  `found=false` 表示无该节 → **调用方必须显式置 degraded 并告警**（禁止静默退化，v2.5.2-dsh.13 契约）。 */
+export const bodyStartAfterAbstract = (text, marker = '摘要') => {
+  const hs = h2Headings(text)
+  const h = hs.find((x) => titleMatches(x.title, marker))
+  if (h) return { index: nextLineAfter(text, h.index), found: true, source: 'abstract' }
+  // v19.17.0（反哺 F-03 · 主人 2026-10-18 定案「不留开关」）：**无摘要不再退化为文件开头**。
+  //   旧行为把题名与任何前言都算进正文（实测夹具 35 vs 真实 27），而本函数被 **7 个消费者共享**
+  //   （count-chars / g-audit / quality-score / apply-*-cycle / cite-coverage / run-report）。
+  //   新行为：回落到「首个二级标题行末」——**口径统一，不保留旧口径开关**。
+  //   `found` 仍表示「是否找到摘要」（要区分来源看 `source`）；`index` 恒为**可直接使用**的正文起点。
+  //   注意：回落**必须跳过文末节标题**（参考文献 / 数据来源 / 案例来源 / 先行者文献 / AI 使用声明）——
+  //   「首个二级标题」若正好是文末节，起点会落到正文之后，反而算出 0 字（本批自测抓到的实现缺陷：
+  //   夹具 `# 标题 + 正文 + ## 参考文献` 曾因此把起点定到参考文献之后）。
+  const firstBody = hs.find((x) => !ENDNOTE_SECTIONS.some((m) => titleMatches(x.title, m)))
+  if (firstBody) return { index: bodyStartOfHeading(text, firstBody.index), found: false, source: 'first-h2' }
+  return { index: 0, found: false, source: 'none' }
+}
+
+/** 非学术文类的正文区起点（v19.14.0 反哺 R-11，方案 A）。
+ *  **为什么**：`bodyStartAfterAbstract` 把起点绑在 `## 摘要` 上，而评论/公众号/行业分析类文类（`biz-review` /
+ *  `wechat` / `industry` / `report-3rd` / `policy` / `book-review`）本无摘要 → 起点退化为**文件开头**（含题名），
+ *  字数虚高且置 `degraded`（实测夹具：35 vs 真实 25）。此前唯一绕法是给评论稿硬加一段「摘要」，属文体异物。
+ *  **口径**：非学术文类取「**首个二级标题行末**」为起点（题名 H1 与任何前言都不计入），终点仍是首个文末白名单节。
+ *  **兼容**：默认行为不变——不传 genre 或传学术文类时，本函数原样委托 `bodyStartAfterAbstract`。
+ *  其余消费者（m-gate / g-audit / quality-score / apply-*-cycle / cite-coverage）**未接**本函数、仍走旧口径；
+ *  对**有摘要**的稿件两者等价，对无摘要稿件需按 R-11b 逐个接入（已登记反哺报告）。 */
+export const NON_ACADEMIC_GENRES = ['biz-review', 'wechat', 'industry', 'report-3rd', 'policy', 'book-review']
+export const bodyStartForGenre = (text, genre) => {
+  const g = String(genre || '').trim()
+  if (!NON_ACADEMIC_GENRES.includes(g)) return bodyStartAfterAbstract(text)
+  const hs = h2Headings(text)
+  // 同样跳过文末节标题（与 bodyStartAfterAbstract 的回落同源，避免两处口径漂移）。
+  const firstBody = hs.find((x) => !ENDNOTE_SECTIONS.some((m) => titleMatches(x.title, m)))
+  if (!firstBody) return { index: 0, found: false, genre: g, source: 'none' }
+  return { index: bodyStartOfHeading(text, firstBody.index), found: true, genre: g, source: 'first-h2' }
+}
+
+/** 取某二级节的段体（标题行之后 → 下一个二级标题之前）；无该节 → 返回 null（区分「空节」与「无此节」）。 */
+export const sectionBody = (text, marker) => {
+  const hs = h2Headings(text)
+  const i = hs.findIndex((h) => titleMatches(h.title, marker))
+  if (i === -1) return null
+  const from = nextLineAfter(text, hs[i].index)
+  const to = i + 1 < hs.length ? hs[i + 1].index : text.length
+  return to > from ? text.slice(from, to) : ''
+}
+
+/** v19.22.0（人文结构门纠错批 · 审计 E1/B1）：带同义标题组的节段体。
+ *  为什么需要：`titleMatches` 是全等/前缀匹配，「结语」「余论」不命中「结论」——中文人文长文的
+ *  常规体例（章节式论证 + 结语）因此被判「结论缺」+「讨论缺」双 P0（实测 5 份中 3 份 exit 2，
+ *  `audits/定位错配审计-2026-10-20` E1）。同义组由调用方给出（词表真源 = 各调用方自己的数组）。
+ *  语义：任一同义词命中即取**首个命中**的节体；全不命中 → null（与 sectionBody 的
+ *  「无此节」语义一致，调用方据此区分「无节」与「空节」）。 */
+export const sectionBodyAny = (text, markers) => {
+  for (const m of markers) {
+    const body = sectionBody(text, m)
+    if (body !== null) return body
+  }
+  return null
+}
+
+/** 正文区范围 `{ from, to, abstractFound, endnoteFound }`——`to` 为第一个文末节起点（无则文末）。
+ *  两个脚本的**起点**语义不同（count-chars 从 `## 摘要` 之后起算；m-gate-check 的 `body` 从文件头起算
+ *  以便扫题名/摘要），故此处只提供共用的**边界解析**，切片由各自组装。 */
+export const bodyBounds = (text) => {
+  const src = bodyStartAfterAbstract(text)
+  const e = firstEndnoteIndex(text)
+  // v19.17.0（F-03）：额外暴露 `bodyStartFound`——「有没有可用正文起点」与「有没有摘要」是两件事，
+  //   旧调用方把二者当同一件事，导致「无摘要但有节标题」被判降级。
+  return {
+    to: e === -1 ? String(text ?? '').length : e,
+    abstractFound: src.found,
+    bodyStartFound: src.source !== 'none',
+    bodyStartSource: src.source,
+    endnoteFound: e !== -1,
+  }
+}

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="mattpocock engineering skills dark">
+  <rect x="9" y="9" width="46" height="46" rx="9" fill="none" stroke="#F09A67" stroke-width="3.5"/>
+  <path d="M22 26 L15 32 L22 38" fill="none" stroke="#F09A67" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M42 26 L49 32 L42 38" fill="none" stroke="#F09A67" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M36 21 L28 43" stroke="#F09A67" stroke-width="3.6" stroke-linecap="round"/>
+</svg>
