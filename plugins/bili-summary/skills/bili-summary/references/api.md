@@ -19,6 +19,8 @@ HEADERS = {
 
 ## 解压约定
 
+⚠ **JSON 接口响应同样可能带 gzip**（实测 playurl 返回 gzip 流，首字节 `1f8b`）。任何 `get_json` 都必须按 `Content-Encoding` 解压，直接 `json.loads(r.read())` 会在 playurl 上抛 UnicodeDecodeError。`scripts/bili_fetch.py` 的 `decode_body` 已兜底。
+
 弹幕接口返回的是 **deflate（zlib 裸流，非 zlib 头）**，实测首字节 `b4fde972`。两种都要兜：
 
 ```python
@@ -221,6 +223,8 @@ GET https://api.bilibili.com/x/player/wbi/playurl?{signed}
 ```
 
 签名参数：`{"bvid": bvid, "cid": cid, "fnval": 16, "fnver": 0, "fourk": 1}`
+
+⚠ 响应体带 **gzip**，必须解压后再 `json.loads`（见「解压约定」）。
 
 返回 `data.dash.video[]`（含 `id` 画质、`baseUrl`）与 `data.dash.audio[]`。
 
