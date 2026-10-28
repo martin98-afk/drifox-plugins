@@ -75,6 +75,25 @@ def _exit_status(chan, deadline):
         return -1
 
 
+def _store_api():
+    """取 _store 模块并保证是最新实现（热重载自愈）。
+
+    宿主热重载只清 ``_plugin_tool_<plugin>_*`` 前缀的模块，tools 之间共享的
+    顶层名模块（_store/_pool/_args）会滞留在 sys.modules；新版工具调用新增
+    函数时报 "module '_store' has no attribute 'upsert_connection'"。
+    按文件重载一次即可拿到当前实现（_store 无运行态，重载无副作用）。
+    """
+    if hasattr(store, "upsert_connection"):
+        return store
+    import importlib
+
+    try:
+        return importlib.reload(store)
+    except Exception as e:  # noqa: BLE001 — 重载失败按旧接口降级，不阻断连接
+        logger.warning(f"[ssh-toolkit] 重载 _store 失败: {e}")
+        return store
+
+
 def _connect_impl(tool_ctx, **kwargs):
     name = kwargs.get("name")
     conn = store.get_connection(name)
@@ -107,7 +126,11 @@ def _connect_impl(tool_ctx, **kwargs):
         }
         if name:
             record["name"] = name
-        saved_name, created = store.upsert_connection(record)
+        api = _store_api()
+        upsert = getattr(api, "upsert_connection", None)
+        if upsert is None:
+            raise RuntimeError("_store 模块版本过旧，重启宿主后生效")
+        saved_name, created = upsert(record)
         saved_note = f"\n[已{'记录' if created else '更新'}连接] {saved_name}（设置 → SSH 远程连接 可查看/删除）"
     except Exception as e:  # noqa: BLE001 — 落库失败不影响本次连接
         logger.warning(f"[ssh-toolkit] 连接配置落库失败: {e}")

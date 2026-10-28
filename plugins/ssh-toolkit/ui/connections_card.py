@@ -222,7 +222,9 @@ def _pool_active(name):
         return False
     try:
         for handle, client in list(_pool.POOL.items()):
-            if handle.split(":", 1)[0] != name:
+            # handle = "<连接名>:<uuid>"，连接名可能自带冒号（user@host:port），
+            # 必须从右侧切掉 uuid 才能还原名字
+            if handle.rsplit(":", 1)[0] != name:
                 continue
             transport = None
             try:
@@ -414,7 +416,7 @@ class _ConnectionsCard(_CARD_BASE):
         self._dots[c.get("name") or ""] = dot
         lay.addWidget(dot, 0, Qt.AlignTop)
 
-        # 三行信息：名称 + 最后连接 / 地址 + 认证 / 次数 + 备注
+        # 两行信息：名称 + 右侧「时间 · 次数」/ 地址（名字已含地址时省略）+ 认证 + 备注
         text_col = QVBoxLayout()
         text_col.setContentsMargins(0, 0, 0, 0)
         text_col.setSpacing(2)
@@ -427,28 +429,25 @@ class _ConnectionsCard(_CARD_BASE):
         name_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         title_row.addWidget(name_label, 0)
         title_row.addStretch(1)
-        last_label = QLabel(f"最后连接 {last}")
-        last_label.setFont(_ui_font(9))
-        last_label.setStyleSheet("color: gray;")
-        title_row.addWidget(last_label, 0)
+        # 右侧一行化：「3 分钟前 · 2 次」，没有次数就只留时间，不占额外行
+        brief = " · ".join(x for x in (last, f"{count} 次" if count else "") if x)
+        brief_label = QLabel(brief)
+        brief_label.setFont(_ui_font(9))
+        brief_label.setStyleSheet("color: gray;")
+        title_row.addWidget(brief_label, 0)
         text_col.addLayout(title_row)
 
-        meta = QLabel(f"{addr} · {self._describe(c)}")
+        parts = []
+        if addr != name:  # 名字就是 user@host:port 时不重复平铺
+            parts.append(addr)
+        parts.append(self._describe(c))
+        if note:
+            parts.append(note)
+        meta = _ElidedLabel(" · ".join(parts))
         meta.setFont(_ui_font(10))
         meta.setStyleSheet("color: gray;")
         meta.setTextInteractionFlags(Qt.TextSelectableByMouse)
         text_col.addWidget(meta)
-
-        extras = []
-        if count:
-            extras.append(f"已连 {count} 次")
-        if note:
-            extras.append(f"备注：{note}")
-        if extras:
-            extra_label = _ElidedLabel(" · ".join(extras))
-            extra_label.setFont(_ui_font(10))
-            extra_label.setStyleSheet("color: gray;")
-            text_col.addWidget(extra_label)
 
         lay.addLayout(text_col, 1)
 

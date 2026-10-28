@@ -8,7 +8,9 @@ POOL: dict = {}
 
 
 def put_connection(name, client):
-    handle = f"{name}:{uuid4().hex[:8]}"
+    # 连接名可能为空（直连且落库失败）：用 conn 占位，避免出现 "None:xxx" 这种 handle
+    label = str(name or "").strip() or "conn"
+    handle = f"{label}:{uuid4().hex[:8]}"
     POOL[handle] = client
     return handle
 
@@ -17,7 +19,7 @@ def get_client(ref):
     if ref in POOL:
         return POOL[ref]
     for handle, client in POOL.items():
-        if handle.split(":", 1)[0] == ref:
+        if handle.rsplit(":", 1)[0] == ref:
             return client
     return None
 
@@ -69,7 +71,7 @@ def close_by_name(name):
     供设置页删除连接配置时调用：配置已删，池里残留的 client 若不关会一直
     持有 socket，且 ensure_client 的懒连接会让旧配置复活。
     """
-    keys = [h for h in POOL if h.split(":", 1)[0] == name]
+    keys = [h for h in POOL if h.rsplit(":", 1)[0] == name]
     for h in keys:
         try:
             POOL[h].close()

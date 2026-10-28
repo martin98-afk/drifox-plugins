@@ -33,3 +33,19 @@ def test_close_all():
     P.put_connection("h4", c)
     P.close_all()
     assert c.closed is True
+
+
+def test_name_with_colon_resolves():
+    """连接名含冒号（user@host:port）时，按名查池与按名断连必须命中。"""
+    c = FakeClient()
+    P.put_connection("root@10.0.0.5:22022", c)
+    assert P.get_client("root@10.0.0.5:22022") is c
+    assert P.close_by_name("root@10.0.0.5:22022") == 1
+    assert c.closed is True
+
+
+def test_empty_name_gets_placeholder():
+    c = FakeClient()
+    h = P.put_connection(None, c)
+    assert not h.startswith("None:")
+    assert P.get_client("conn") is c
