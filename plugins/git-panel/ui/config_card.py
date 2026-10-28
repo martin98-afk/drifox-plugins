@@ -13,14 +13,24 @@ from typing import Optional
 from loguru import logger
 
 try:  # qfluentwidgets 由 DriFox 运行时提供；缺失时降级原生控件
-    from qfluentwidgets import ComboBox, ExpandSettingCard, TextEdit
+    from qfluentwidgets import BodyLabel, ComboBox, ExpandSettingCard, PushButton, TextEdit
 except Exception:  # noqa: BLE001
     ExpandSettingCard = None  # type: ignore
+    BodyLabel = None  # type: ignore
     ComboBox = None  # type: ignore
+    PushButton = None  # type: ignore
     TextEdit = None  # type: ignore
 
-from PyQt5.QtCore import QEvent, QObject
-from PyQt5.QtWidgets import QApplication, QPlainTextEdit, QToolTip, QPushButton
+from PyQt5.QtCore import QEvent, QObject, Qt
+from PyQt5.QtWidgets import (
+    QApplication,
+    QHBoxLayout,
+    QLabel,
+    QPlainTextEdit,
+    QToolTip,
+    QPushButton,
+    QWidget,
+)
 
 from .llm_config import (
     DEFAULT_COMMIT_PROMPT,
@@ -34,6 +44,36 @@ _CONFIG_CARD_BASE = ExpandSettingCard if ExpandSettingCard is not None else obje
 _CURRENT_MODEL_LABEL = "当前模型"
 _CURRENT_MODEL_VALUE = ""
 _MAX_MODEL_VISIBLE_ITEMS = 8
+# 标签列宽度（与主程序 PluginConfigCard._FieldRow 一致，全卡字段名对齐）
+_LABEL_MIN_WIDTH = 120
+_RESET_BTN_WIDTH = 140
+
+
+def _field_row(label_text: str, control: QWidget, parent=None, valign=Qt.AlignVCenter) -> QWidget:
+    """字段行：左侧定宽 label，右侧控件撑满剩余宽度（不固定窄宽、不右对齐）。
+
+    多行控件（TextEdit）传 valign=Qt.AlignTop，标签顶对齐更好看。
+    """
+    row = QWidget(parent)
+    layout = QHBoxLayout(row)
+    layout.setContentsMargins(0, 4, 0, 4)
+    layout.setSpacing(12)
+    label = BodyLabel(label_text, row) if BodyLabel is not None else QLabel(label_text, row)
+    label.setMinimumWidth(_LABEL_MIN_WIDTH)
+    layout.addWidget(label, 0, Qt.AlignLeft | valign)
+    layout.addWidget(control, 1)
+    return row
+
+
+def _reset_row(button: QWidget, parent=None) -> QWidget:
+    """重置按钮行：右对齐定宽，不撑满整行。"""
+    row = QWidget(parent)
+    layout = QHBoxLayout(row)
+    layout.setContentsMargins(0, 4, 0, 4)
+    button.setFixedWidth(_RESET_BTN_WIDTH)
+    layout.addStretch(1)
+    layout.addWidget(button)
+    return row
 
 
 class _CommitConfigCard(_CONFIG_CARD_BASE):
@@ -47,12 +87,12 @@ class _CommitConfigCard(_CONFIG_CARD_BASE):
             parent,
         )
         self.viewLayout.setContentsMargins(48, 8, 48, 8)
-        self.viewLayout.setSpacing(8)
+        self.viewLayout.setSpacing(4)
 
         self._edit = TextEdit(self.view) if TextEdit is not None else QPlainTextEdit(self.view)
         self._edit.setPlaceholderText("根据暂存变更生成提交描述的 system 指令，留空回默认")
         self._edit.setMinimumHeight(140)
-        self.viewLayout.addWidget(self._edit)
+        self.viewLayout.addWidget(_field_row("生成提示词", self._edit, self.view, Qt.AlignTop))
 
         self._provider_combo: Optional[ComboBox] = None
         self._model_combo: Optional[ComboBox] = None
@@ -60,7 +100,6 @@ class _CommitConfigCard(_CONFIG_CARD_BASE):
             self._providers = load_provider_tree()
 
             self._provider_combo = ComboBox(self.view)
-            self._provider_combo.setMinimumWidth(220)
             self._provider_combo.setMaxVisibleItems(_MAX_MODEL_VISIBLE_ITEMS)
             for label, pid in self._providers:
                 self._provider_combo.addItem(label, userData=pid)
@@ -68,20 +107,19 @@ class _CommitConfigCard(_CONFIG_CARD_BASE):
                 "生成提交描述用的服务商。选「当前模型」表示沿用当前窗口 provider/model。"
             )
             self._provider_combo.currentIndexChanged.connect(self._on_provider_changed)
-            self.viewLayout.addWidget(self._provider_combo)
+            self.viewLayout.addWidget(_field_row("服务商", self._provider_combo, self.view))
 
             self._model_combo = ComboBox(self.view)
-            self._model_combo.setMinimumWidth(220)
             self._model_combo.setMaxVisibleItems(_MAX_MODEL_VISIBLE_ITEMS)
             self._model_combo.setToolTip(
                 "生成提交描述用的模型（清单随上方服务商联动）。"
             )
             self._model_combo.currentIndexChanged.connect(self._on_model_changed)
-            self.viewLayout.addWidget(self._model_combo)
+            self.viewLayout.addWidget(_field_row("模型", self._model_combo, self.view))
 
-        self._reset_btn = QPushButton("恢复默认", self.view)
+        self._reset_btn = PushButton("恢复默认", self.view) if PushButton is not None else QPushButton("恢复默认", self.view)
         self._reset_btn.clicked.connect(self._on_reset)
-        self.viewLayout.addWidget(self._reset_btn)
+        self.viewLayout.addWidget(_reset_row(self._reset_btn, self.view))
 
         self._echo()
 

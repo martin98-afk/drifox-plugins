@@ -43,6 +43,7 @@ cp -r plugins/example-plugin plugins/your-plugin
 - [themes.md](themes.md)
 - [mcp.md](mcp.md)
 - [lsp.md](lsp.md)
+- [settings-card.md](settings-card.md)：往「设置」页注册配置卡的布局与交互口径
 - ui 组件：见 [architecture.md](architecture.md#ui-组件) 与 [`plugins/git-panel/`](../plugins/git-panel/) 示例
 
 ## 4. 本地测试

@@ -35,6 +35,8 @@ _CARD_BASE = ExpandSettingCard if ExpandSettingCard is not None else object  # t
 _CURRENT_LABEL = "当前模型（跟随窗口）"
 _CURRENT_VALUE = ""
 _MAX_VISIBLE_ITEMS = 10
+# 标签列宽度（与主程序 PluginConfigCard._FieldRow 一致，全卡字段名对齐）
+_LABEL_MIN_WIDTH = 120
 
 
 def _caps(name: str) -> Any:
@@ -96,15 +98,15 @@ def _save(values: Dict[str, Any]) -> None:
 
 
 def _field_row(label_text: str, control: QWidget, parent=None) -> QWidget:
+    """字段行：左侧定宽 label，右侧控件撑满剩余宽度（不固定窄宽、不右对齐）。"""
     row = QWidget(parent)
     layout = QHBoxLayout(row)
     layout.setContentsMargins(0, 4, 0, 4)
     layout.setSpacing(12)
     label = BodyLabel(label_text, row)
-    label.setMinimumWidth(120)
+    label.setMinimumWidth(_LABEL_MIN_WIDTH)
     layout.addWidget(label, 0, Qt.AlignLeft | Qt.AlignVCenter)
-    control.setMinimumWidth(280)
-    layout.addWidget(control, 1, Qt.AlignRight)
+    layout.addWidget(control, 1)
     return row
 
 
@@ -131,7 +133,7 @@ class _VisionConfigCard(_CARD_BASE):
             parent,
         )
         self.viewLayout.setContentsMargins(48, 8, 48, 8)
-        self.viewLayout.setSpacing(8)
+        self.viewLayout.setSpacing(4)
 
         self._providers: List[Dict[str, Any]] = _load_providers()
         self._provider_combo: Optional[ComboBox] = self._build_provider_combo()
@@ -149,6 +151,9 @@ class _VisionConfigCard(_CARD_BASE):
                 self.view,
             )
             hint.setWordWrap(True)
+            # 与控件列对齐（跳过 label 列），不顶到卡片左边距上
+            hint.setContentsMargins(_LABEL_MIN_WIDTH + 12, 0, 0, 0)
+            self._hint = hint
             self.viewLayout.addWidget(hint)
 
         self._echo()
@@ -242,6 +247,15 @@ class _VisionConfigCard(_CARD_BASE):
 
     def _adjustViewSize(self):
         h = self.viewLayout.sizeHint().height()
+        # 自动换行提示行的 sizeHint 在未布局时按默认宽度算，会少算高度：
+        # 有 heightForWidth 时按卡片实际内容宽（宽 - 左右边距）重算，避免底部被截。
+        # 注意不能用 self.view.width()：构造期它还是默认小值，会把提示行算成几十行高。
+        try:
+            width = self.width() - 96
+            if width > 200 and self.viewLayout.hasHeightForWidth():
+                h = max(h, self.viewLayout.heightForWidth(width))
+        except Exception:  # noqa: BLE001 — 旧宿主布局无 heightForWidth
+            pass
         try:
             self.spaceWidget.setFixedHeight(0)
         except Exception:  # noqa: BLE001
