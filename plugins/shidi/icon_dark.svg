@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="shidi research">
+  <path d="M12 14h28a4 4 0 0 1 4 4v34H16a4 4 0 0 1-4-4z" fill="none" stroke="#5FCB95" stroke-width="3"/>
+  <path d="M20 24h16M20 32h16M20 40h10" stroke="#5FCB95" stroke-width="2.6" stroke-linecap="round"/>
+  <circle cx="44" cy="42" r="9" fill="none" stroke="#5FCB95" stroke-width="3"/>
+  <path d="M51 49l6 6" stroke="#5FCB95" stroke-width="3" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,28 @@
+{
+    "name": "video-pipeline",
+    "description": "短视频生产与多平台发布流水线 — 火山方舟生图生视频、中文 TTS 读音校正、素材合成与封面、抖音/B站/小红书/视频号自动化投稿，19 个原子技能可组合。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "1.0.0",
+    "author": {
+        "name": "439436269-ctrl",
+        "url": "https://github.com/439436269-ctrl/dsh-video-pipeline"
+    },
+    "license": "MIT",
+    "type": "user",
+    "min_host_version": "0.5.0",
+    "keywords": [
+        "video",
+        "short-video",
+        "douyin",
+        "bilibili",
+        "xiaohongshu",
+        "tts",
+        "publish"
+    ],
+    "components": {
+        "skills": true
+    }
+}

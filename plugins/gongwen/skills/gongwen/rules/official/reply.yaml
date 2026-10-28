@@ -1,0 +1,33 @@
+# (c) 2026 Jose AI (https://www.linhut.cn)
+# https://github.com/linhut/gongwen-skill
+# Licensed under the MIT License. See the LICENSE file for details.
+
+template_name: 批复
+document_type: reply
+
+check_rules:
+  - id: CHK-RP001
+    name: 批复对象检查
+    severity: P0
+    field: content.reply_to
+    expected: 引述请示标题
+    message: 批复开头应引述下级机关请示的标题和文号
+    category: content
+
+  - id: CHK-RP002
+    name: 批复结语检查
+    severity: P2
+    field: ending.check
+    expected: 包含规范结语
+    message: 批复应以"此复"、"特此批复"等结语结尾
+    category: content
+
+  - id: CHK-RP003
+    name: 批复态度检查
+    severity: P1
+    field: content.attitude
+    expected: 态度明确
+    message: 批复应明确表态（同意/不同意/部分同意）
+    category: content
+
+fix_rules: []

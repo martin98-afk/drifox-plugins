@@ -1,0 +1,3 @@
+# PPT 生成器的 Node 依赖（用户在技能目录跑 npm install 时产生，不入库）
+node_modules/
+package-lock.json

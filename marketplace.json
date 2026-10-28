@@ -3147,6 +3147,40 @@
             }
         },
         {
+            "name": "gongwen",
+            "description": "中文公文全流程处理 — 按 GB/T 9704 国家标准做格式检查与自动修复、Word 原生修订式内容优化、模板生成与样式学习、Markdown 转公文，覆盖 25 类公文。",
+            "version": "1.0.0",
+            "author": "Jose AI",
+            "license": "MIT",
+            "categories": [
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/gongwen",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true,
+                "tools": true
+            },
+            "keywords": [
+                "gongwen",
+                "docx",
+                "公文",
+                "word",
+                "gb/t 9704",
+                "format-check"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://github.com/linhut/gongwen-skill",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "gpt-image-2",
             "description": "GPT Image 2 图像生成/编辑技能——18 大类 80+ 结构化模板，支持 Garden 本地生图/宿主委托/提示词顾问三种模式。",
             "version": "1.0.0",
@@ -4950,6 +4984,39 @@
             }
         },
         {
+            "name": "ppt-deck",
+            "description": "演示文稿生成 — 一句话或一篇文档变成独立 HTML 网页放映加可编辑 PPTX，5 套视觉主题、页间转场与要点动画，中英双语，支持数据溯源与逐页 PNG/PDF 渲染。",
+            "version": "1.0.0",
+            "author": "dsh-ppt",
+            "license": "MIT",
+            "categories": [
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/ppt-deck",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true,
+                "tools": true
+            },
+            "keywords": [
+                "ppt",
+                "pptx",
+                "slides",
+                "deck",
+                "演示文稿",
+                "幻灯片"
+            ],
+            "min_host_version": "0.5.0",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "prisma",
             "description": "Prisma — 管理 Prisma Postgres 数据库、备份与连接。",
             "version": "1.0.0",
@@ -5383,6 +5450,38 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            }
+        },
+        {
+            "name": "shidi",
+            "description": "科研「师弟」— 把一句话想法拆成可交付成果：文献调研与评分、实验方案设计、科研作图、论文精读、数据整理，Pro 深度与 Flash 快速双流程。",
+            "version": "1.0.0",
+            "author": "shidi-dsh-plugin",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/shidi",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "research",
+                "literature-review",
+                "paper",
+                "科研",
+                "文献调研",
+                "师弟"
+            ],
+            "min_host_version": "0.5.0",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
@@ -6323,6 +6422,39 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon.png"
+            }
+        },
+        {
+            "name": "video-pipeline",
+            "description": "短视频生产与多平台发布流水线 — 火山方舟生图生视频、中文 TTS 读音校正、素材合成与封面、抖音/B站/小红书/视频号自动化投稿，19 个原子技能可组合。",
+            "version": "1.0.0",
+            "author": "439436269-ctrl",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/video-pipeline",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "video",
+                "short-video",
+                "douyin",
+                "bilibili",
+                "xiaohongshu",
+                "tts",
+                "publish"
+            ],
+            "min_host_version": "0.5.0",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {

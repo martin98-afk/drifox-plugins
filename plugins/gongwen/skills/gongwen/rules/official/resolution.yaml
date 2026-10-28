@@ -1,0 +1,33 @@
+# (c) 2026 Jose AI (https://www.linhut.cn)
+# https://github.com/linhut/gongwen-skill
+# Licensed under the MIT License. See the LICENSE file for details.
+
+template_name: 决议
+document_type: resolution
+
+check_rules:
+  - id: CHK-RS001
+    name: 决议事项检查
+    severity: P1
+    field: content.resolution_items
+    expected: 决议事项明确
+    message: 决议事项应明确、具体
+    category: content
+
+  - id: CHK-RS002
+    name: 决议程序检查
+    severity: P1
+    field: content.procedure
+    expected: 注明会议名称和日期
+    message: 决议应注明通过的会议名称和日期
+    category: content
+
+  - id: CHK-RS003
+    name: 决议标题格式检查
+    severity: P2
+    field: title.pattern
+    expected: 包含"决议"字样
+    message: 决议标题应包含"关于……的决议"格式
+    category: format
+
+fix_rules: []
