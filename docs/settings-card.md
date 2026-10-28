@@ -66,18 +66,63 @@ layout.addWidget(control, 1)                   # 控件 stretch=1，撑满剩余
 - 长文本回显后 `setCursorPosition(0)`：默认光标在末尾，会把 `FunAudioLLM/CosyVoice2-0.5B` 显示成 `…2-0.5B`
 - 回显结束调一次状态刷新（置灰 / 联动），保证首屏就是正确状态
 
-## 5. 折叠高度
+## 5. 折叠高度与动画
 
-qfluentwidgets 的 `ExpandSettingCard` 展开会把 `spaceWidget` 撑成内容等高，导致展开高度 = 内容 + 等高空白、卡片关不上。统一覆写：
+qfluentwidgets 的 `ExpandSettingCard` 展开会把 `spaceWidget` 撑成内容等高，导致展开高度 = 内容 + 等高空白、卡片关不上。同时基类的折叠动画依赖这个占位，占位归零后就没了动画。
+
+插件不能 import 主程序的 `expand_height_mixin`（`app.widgets.*` 不是稳定契约），所以每个卡内联一份高度动画：
 
 ```python
-def _adjustViewSize(self):
-    h = self.viewLayout.sizeHint().height()
+class _CardHeightDriver(QObject):
+    """把动画值写成卡片 fixedHeight（QPropertyAnimation 不能直接驱动 setFixedHeight）。"""
+
+    def __init__(self, card):
+        super().__init__(card)
+        self._card = card
+        self._value = 0
+
+    def _get_value(self):
+        return self._value
+
+    def _set_value(self, value):
+        self._value = int(value)
+        try:
+            self._card.setFixedHeight(self._value)
+        except RuntimeError:  # 卡片已销毁
+            pass
+
+    value = pyqtProperty(int, _get_value, _set_value)
+
+
+def _animate_card_height(card, target: int, duration: int = 180) -> None:
+    from PyQt5.QtCore import QEasingCurve, QPropertyAnimation
+
+    ani = getattr(card, "_expand_height_ani", None)
+    if ani is None:
+        driver = _CardHeightDriver(card)
+        ani = QPropertyAnimation(driver, b"value", card)
+        ani.setDuration(duration)
+        ani.setEasingCurve(QEasingCurve.OutCubic)
+        card._expand_height_driver = driver
+        card._expand_height_ani = ani
+    ani.stop()
+    ani.setStartValue(int(card.height()))
+    ani.setEndValue(max(0, int(target)))
+    ani.start()
+```
+
+卡片侧：`_adjustViewSize()` 只负责「直接定格」（供基类与内容变化后调用），`setExpand()` 走动画：
+
+```python
+def _target_height(self, is_expand: bool) -> int:
     try:
         self.spaceWidget.setFixedHeight(0)
     except Exception:
         pass
-    self.setFixedHeight(self.card.height() + (h if self.isExpand else 0))
+    return self.card.height() + (self.viewLayout.sizeHint().height() if is_expand else 0)
+
+def _adjustViewSize(self):
+    self.setFixedHeight(self._target_height(self.isExpand))
 
 def setExpand(self, isExpand: bool):
     if self.isExpand == isExpand:
@@ -86,8 +131,12 @@ def setExpand(self, isExpand: bool):
     self.setProperty("isExpand", isExpand)
     self.setStyle(QApplication.style())
     self.card.expandButton.setExpand(isExpand)
-    self._adjustViewSize()
+    _animate_card_height(self, self._target_height(isExpand))
 ```
+
+列表型卡把 `_target_height` 换成自己的实测函数（`_measure_content_height()`）：动态重建的行还没 show，`viewLayout.sizeHint()` 会漏算。
+
+验证方法：连续采样 `card.height()`，展开/折叠都应是渐变序列（如 `70 → 175 → 381 → 397`），而不是一步跳到终点。
 
 列表型卡在增删行后，若处于展开态要补一次 `_adjustViewSize()`，否则留白。
 
@@ -110,7 +159,7 @@ def setExpand(self, isExpand: bool):
 3. `config_schema` 里的 `link` / `action` 在自绘卡里都有对应入口
 4. 不适用的字段已置灰（整行），布局不跳动
 5. 重置按钮右对齐不撑满
-6. 展开无空白、折叠能收回去，增删行后高度同步
+6. 展开无空白、折叠能收回去，展开/折叠有高度动画（帧序列渐变，见第 5 节），增删行后高度同步
 7. 深浅主题都正常：优先用 qfluentwidgets 控件自带配色，必须自定义时用 `rgba()`
 8. 文案中文、标点统一，不出现「请点击下方按钮进行…」式冗余
 

@@ -36,7 +36,7 @@ from .voice_presets import (
 
 _UI_AVAILABLE = False
 try:  # 宿主可能未装 qfluentwidgets（理论上必然有），缺失时降级不注册卡
-    from PyQt5.QtCore import Qt, QThread, pyqtSignal
+    from PyQt5.QtCore import Qt, QObject, QThread, pyqtProperty, pyqtSignal
     from PyQt5.QtWidgets import QHBoxLayout, QWidget
     from qfluentwidgets import (
         BodyLabel,
@@ -64,6 +64,47 @@ _CUSTOM_PROVIDER = ""
 
 
 if _UI_AVAILABLE:
+
+    class _CardHeightDriver(QObject):
+        """把动画值写成卡片 fixedHeight。
+
+        QPropertyAnimation 不能直接驱动 setFixedHeight（min/max 两个属性），
+        所以用中间对象的 value 属性驱动，setter 里写 fixedHeight。
+        """
+
+        def __init__(self, card):
+            super().__init__(card)
+            self._card = card
+            self._value = 0
+
+        def _get_value(self) -> int:
+            return self._value
+
+        def _set_value(self, value) -> None:
+            self._value = int(value)
+            try:
+                self._card.setFixedHeight(self._value)
+            except RuntimeError:  # 卡片已销毁（设置面板关闭）
+                pass
+
+        value = pyqtProperty(int, _get_value, _set_value)
+
+    def _animate_card_height(card, target: int, duration: int = 180) -> None:
+        """展开/折叠高度动画：逐帧写 fixedHeight，避免高度瞬移。"""
+        from PyQt5.QtCore import QEasingCurve, QPropertyAnimation
+
+        ani = getattr(card, "_expand_height_ani", None)
+        if ani is None:
+            driver = _CardHeightDriver(card)
+            ani = QPropertyAnimation(driver, b"value", card)
+            ani.setDuration(duration)
+            ani.setEasingCurve(QEasingCurve.OutCubic)
+            card._expand_height_driver = driver
+            card._expand_height_ani = ani
+        ani.stop()
+        ani.setStartValue(int(card.height()))
+        ani.setEndValue(max(0, int(target)))
+        ani.start()
 
     class _FieldRow(QWidget):
         """字段行：左侧定宽 label，右侧控件撑满剩余宽度。"""
@@ -473,14 +514,17 @@ if _UI_AVAILABLE:
 
         # ── 折叠动画（对齐主程序 PluginConfigCard 的处理） ──
 
-        def _adjustViewSize(self):
-            """空白占位置零，展开高度 = 内容高度，避免卡片关不上。"""
-            h = self.viewLayout.sizeHint().height()
+        def _target_height(self, is_expand: bool) -> int:
+            """目标高度：空白占位归零后，header + 内容。"""
             try:
                 self.spaceWidget.setFixedHeight(0)
             except Exception:  # noqa: BLE001 — 旧版宿主无该成员时跳过
                 pass
-            self.setFixedHeight(self.card.height() + (h if self.isExpand else 0))
+            return self.card.height() + (self.viewLayout.sizeHint().height() if is_expand else 0)
+
+        def _adjustViewSize(self):
+            """内容尺寸变化后直接定格（不动画，供基类/回显后调用）。"""
+            self.setFixedHeight(self._target_height(self.isExpand))
 
         def setExpand(self, isExpand: bool):
             if self.isExpand == isExpand:
@@ -491,7 +535,7 @@ if _UI_AVAILABLE:
 
             self.setStyle(QApplication.style())
             self.card.expandButton.setExpand(isExpand)
-            self._adjustViewSize()
+            _animate_card_height(self, self._target_height(isExpand))
 
 else:  # pragma: no cover — 仅在没有 qfluentwidgets 的环境走到
 

@@ -25,7 +25,7 @@ except Exception:  # noqa: BLE001
     ExpandSettingCard = None  # type: ignore
     FluentIcon = None  # type: ignore
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QObject, pyqtProperty
 from PyQt5.QtWidgets import QHBoxLayout, QWidget
 
 PLUGIN_NAME = "vision-proxy"
@@ -95,6 +95,45 @@ def _save(values: Dict[str, Any]) -> None:
         PluginConfigStore().set_values(PLUGIN_NAME, values)
     except Exception as e:  # noqa: BLE001
         logger.warning(f"[vision-proxy] 保存配置失败: {e}")
+
+
+class _CardHeightDriver(QObject):
+    """把动画值写成卡片 fixedHeight（QPropertyAnimation 不能直接驱动 setFixedHeight）。"""
+
+    def __init__(self, card):
+        super().__init__(card)
+        self._card = card
+        self._value = 0
+
+    def _get_value(self) -> int:
+        return self._value
+
+    def _set_value(self, value) -> None:
+        self._value = int(value)
+        try:
+            self._card.setFixedHeight(self._value)
+        except RuntimeError:  # 卡片已销毁（设置面板关闭）
+            pass
+
+    value = pyqtProperty(int, _get_value, _set_value)
+
+
+def _animate_card_height(card, target: int, duration: int = 180) -> None:
+    """展开/折叠高度动画：逐帧写 fixedHeight，避免高度瞬移。"""
+    from PyQt5.QtCore import QEasingCurve, QPropertyAnimation
+
+    ani = getattr(card, "_expand_height_ani", None)
+    if ani is None:
+        driver = _CardHeightDriver(card)
+        ani = QPropertyAnimation(driver, b"value", card)
+        ani.setDuration(duration)
+        ani.setEasingCurve(QEasingCurve.OutCubic)
+        card._expand_height_driver = driver
+        card._expand_height_ani = ani
+    ani.stop()
+    ani.setStartValue(int(card.height()))
+    ani.setEndValue(max(0, int(target)))
+    ani.start()
 
 
 def _field_row(label_text: str, control: QWidget, parent=None) -> QWidget:
@@ -245,7 +284,8 @@ class _VisionConfigCard(_CARD_BASE):
 
     # ── 折叠高度（与 git-panel 同款：不用 spaceWidget 滚动动画）──
 
-    def _adjustViewSize(self):
+    def _target_height(self, is_expand: bool) -> int:
+        """目标高度：空白占位归零 + 按实际宽度修正换行提示行。"""
         h = self.viewLayout.sizeHint().height()
         # 自动换行提示行的 sizeHint 在未布局时按默认宽度算，会少算高度：
         # 有 heightForWidth 时按卡片实际内容宽（宽 - 左右边距）重算，避免底部被截。
@@ -260,10 +300,11 @@ class _VisionConfigCard(_CARD_BASE):
             self.spaceWidget.setFixedHeight(0)
         except Exception:  # noqa: BLE001
             pass
-        if self.isExpand:
-            self.setFixedHeight(self.card.height() + h)
-        else:
-            self.setFixedHeight(self.card.height())
+        return self.card.height() + (h if is_expand else 0)
+
+    def _adjustViewSize(self):
+        """内容尺寸变化后直接定格（不动画，供基类/回显后调用）。"""
+        self.setFixedHeight(self._target_height(self.isExpand))
 
     def setExpand(self, isExpand: bool):
         if self.isExpand == isExpand:
@@ -272,4 +313,4 @@ class _VisionConfigCard(_CARD_BASE):
         self.setProperty("isExpand", isExpand)
         self.setStyle(__import__("PyQt5.QtWidgets", fromlist=["QApplication"]).QApplication.style())
         self.card.expandButton.setExpand(isExpand)
-        self._adjustViewSize()
+        _animate_card_height(self, self._target_height(isExpand))

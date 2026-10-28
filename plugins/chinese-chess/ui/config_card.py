@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from loguru import logger
+from PyQt5.QtCore import QObject, pyqtProperty
 
 try:  # 宿主必然装有 qfluentwidgets；缺失时降级不注册卡
     from qfluentwidgets import (
@@ -195,6 +196,45 @@ def _field_row(label_text: str, control, parent=None):
 _CardBase = ExpandSettingCard if ExpandSettingCard is not None else object  # type: ignore
 
 
+class _CardHeightDriver(QObject):
+    """把动画值写成卡片 fixedHeight（QPropertyAnimation 不能直接驱动 setFixedHeight）。"""
+
+    def __init__(self, card):
+        super().__init__(card)
+        self._card = card
+        self._value = 0
+
+    def _get_value(self) -> int:
+        return self._value
+
+    def _set_value(self, value) -> None:
+        self._value = int(value)
+        try:
+            self._card.setFixedHeight(self._value)
+        except RuntimeError:  # 卡片已销毁（设置面板关闭）
+            pass
+
+    value = pyqtProperty(int, _get_value, _set_value)
+
+
+def _animate_card_height(card, target: int, duration: int = 180) -> None:
+    """展开/折叠高度动画：逐帧写 fixedHeight，避免高度瞬移。"""
+    from PyQt5.QtCore import QEasingCurve, QPropertyAnimation
+
+    ani = getattr(card, "_expand_height_ani", None)
+    if ani is None:
+        driver = _CardHeightDriver(card)
+        ani = QPropertyAnimation(driver, b"value", card)
+        ani.setDuration(duration)
+        ani.setEasingCurve(QEasingCurve.OutCubic)
+        card._expand_height_driver = driver
+        card._expand_height_ani = ani
+    ani.stop()
+    ani.setStartValue(int(card.height()))
+    ani.setEndValue(max(0, int(target)))
+    ani.start()
+
+
 class _ChessConfigCard(_CardBase):
     """中国象棋设置卡 — 我方控制方式 + 红方/对方模型选择
 
@@ -267,13 +307,16 @@ class _ChessConfigCard(_CardBase):
 
     # ── 折叠动画（对齐主程序 PluginConfigCard 的处理，防卡片关不上）──
 
-    def _adjustViewSize(self):
-        h = self.viewLayout.sizeHint().height()
+    def _target_height(self, is_expand: bool) -> int:
         try:
             self.spaceWidget.setFixedHeight(0)
         except Exception:  # noqa: BLE001 — 旧版宿主无该成员时跳过
             pass
-        self.setFixedHeight(self.card.height() + (h if self.isExpand else 0))
+        return self.card.height() + (self.viewLayout.sizeHint().height() if is_expand else 0)
+
+    def _adjustViewSize(self):
+        """内容尺寸变化后直接定格（不动画，供基类调用）。"""
+        self.setFixedHeight(self._target_height(self.isExpand))
 
     def setExpand(self, isExpand: bool):
         if self.isExpand == isExpand:
@@ -284,7 +327,7 @@ class _ChessConfigCard(_CardBase):
         self.setProperty("isExpand", isExpand)
         self.setStyle(QApplication.style())
         self.card.expandButton.setExpand(isExpand)
-        self._adjustViewSize()
+        _animate_card_height(self, self._target_height(isExpand))
 
     # ── 对外 ──
 
