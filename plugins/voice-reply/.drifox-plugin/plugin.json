@@ -5,7 +5,7 @@
         "light": "icon.png",
         "dark": "icon_dark.png"
     },
-    "version": "1.5.0",
+    "version": "1.6.0",
     "type": "user",
     "platforms": [
         "windows",
@@ -47,7 +47,7 @@
                 "type": "text",
                 "default": "https://api.siliconflow.cn/v1/audio/speech",
                 "placeholder": "OpenAI 兼容 /audio/speech 端点",
-                "description": "任何 OpenAI 兼容 TTS 服务均可，包括自部署免费方案（如 openai-edge-tts）"
+                "description": "任何 OpenAI 兼容 TTS 服务均可，包括自部署免费方案（如 openai-edge-tts）；设置卡内可用「服务商」下拉预填，也可直接手改"
             },
             {
                 "key": "api_model",
@@ -75,10 +75,10 @@
             },
             {
                 "key": "api_console",
-                "label": "获取硅基流动 Key",
+                "label": "获取 API Key",
                 "type": "link",
                 "url": "https://cloud.siliconflow.cn/account/ak",
-                "placeholder": "前往硅基流动创建 API Key"
+                "placeholder": "前往服务商控制台创建 API Key（此链接指向硅基流动）"
             }
         ]
     },
