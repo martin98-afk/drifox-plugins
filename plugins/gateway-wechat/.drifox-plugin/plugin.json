@@ -4,17 +4,18 @@
         "dark": "icon_dark.svg"
     },
     "name": "gateway-wechat",
-    "description": "微信机器人适配器（iLink 官方接口）：扫码登录、长轮询收发单聊消息；无需公众号配置，复用宿主 httpx。",
-    "version": "0.2.2",
+    "description": "微信机器人适配器（iLink 官方接口）：设置卡扫码登录、长轮询收发单聊消息；无需公众号配置，复用宿主 httpx。",
+    "version": "0.3.0",
     "author": {
         "name": "DriFoxx Team"
     },
     "homepage": "https://github.com/martin98-afk/drifox-plugins2",
     "license": "MIT",
     "type": "user",
+    "min_host_version": "0.6.10",
     "components": {
         "gateways": true,
-        "tools": true
+        "ui": true
     },
     "config_schema": {
         "title": "微信机器人配置",
@@ -26,43 +27,12 @@
                 "default": false
             },
             {
-                "key": "qr_login",
-                "label": "扫码登录",
-                "type": "action",
-                "placeholder": "扫码登录",
-                "description": "点击生成二维码弹窗，微信扫码确认后自动写入 token",
-                "action": {
-                    "tool": "wechat_login",
-                    "args": {
-                        "action": "get_qr"
-                    },
-                    "image_width": 420,
-                    "dialog_width": 500,
-                    "dialog_height": 620,
-                    "poll": {
-                        "args": {
-                            "action": "poll",
-                            "qrcode_id": "{data.qrcode_id}"
-                        },
-                        "interval_ms": 4000,
-                        "max_rounds": 45,
-                        "stop_when": {
-                            "data.status": [
-                                "confirmed",
-                                "expired"
-                            ],
-                            "error": true
-                        }
-                    }
-                }
-            },
-            {
                 "key": "bot_token",
                 "label": "Bot Token",
                 "type": "password",
                 "default": "",
-                "placeholder": "扫码登录后自动写入（ilink bot_token）",
-                "description": "推荐使用设置卡「扫码登录」按钮或 wechat_login 工具；token 失效（约 24h 无活动）后需重新扫码"
+                "placeholder": "设置卡「扫码登录」后自动写入（ilink bot_token）",
+                "description": "推荐用设置卡「扫码登录」按钮；token 失效（约 24h 无活动）后需重新扫码"
             }
         ]
     }
