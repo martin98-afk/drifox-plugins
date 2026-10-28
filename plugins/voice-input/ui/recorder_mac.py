@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import ctypes
 import os
+from contextlib import contextmanager
 from ctypes import (
     c_bool,
     c_char_p,
@@ -136,6 +137,21 @@ def _nserror_message(err_ptr) -> str:
         return ""
 
 
+@contextmanager
+def _autorelease_pool():
+    """当前同步块内的 autorelease pool，退出即 drain。
+
+    禁止把池作为字段跨事件持有：objc 的池是栈式的，Qt 每个事件结束都会 pop
+    自己的池，位于其上层的本池会被连带销毁，等下一次事件再 drain 就触发
+    AutoreleasePoolPage::badPop → SIGABRT。
+    """
+    pool = _msg(c_void_p)(_cls("NSAutoreleasePool"), _sel("new"))
+    try:
+        yield
+    finally:
+        _msg(None)(pool, _sel("drain"))
+
+
 def permission_status() -> int:
     """当前麦克风授权状态（AVAuthorizationStatus）。无权限框架时返回 -1。"""
     try:
@@ -155,7 +171,6 @@ class MacVoiceRecorder:
     def __init__(self, wav_path: str) -> None:
         self._wav_path = wav_path
         self._recorder = None
-        self._pool = None
         self._recording = False
 
     def start(self) -> None:
@@ -167,15 +182,14 @@ class MacVoiceRecorder:
             # 首次使用：本次 record() 会触发系统授权弹窗，用户允许前录到的是静音
             logger.info("[voice-input] 麦克风权限未决定，本次将触发系统授权弹窗")
 
-        # 自管 autorelease pool：跨事件循环持有，close() 时统一 drain
-        self._pool = _msg(c_void_p)(_cls("NSAutoreleasePool"), _sel("new"))
         try:
-            self._recorder = self._create_recorder()
-            if not _msg(c_bool)(self._recorder, _sel("prepareToRecord")):
-                raise RuntimeError("录音设备准备失败")
-            if not _msg(c_bool)(self._recorder, _sel("record")):
-                raise RuntimeError("录音启动失败")
-            self._recording = True
+            with _autorelease_pool():
+                self._recorder = self._create_recorder()
+                if not _msg(c_bool)(self._recorder, _sel("prepareToRecord")):
+                    raise RuntimeError("录音设备准备失败")
+                if not _msg(c_bool)(self._recorder, _sel("record")):
+                    raise RuntimeError("录音启动失败")
+                self._recording = True
             logger.info("[voice-input] 录音开始（macOS/AVFoundation，16kHz/16bit/mono）")
         except Exception:
             self.close()
@@ -224,20 +238,15 @@ class MacVoiceRecorder:
         """停止录音（stop() 即完成落盘）。wav_path 仅为与 Windows 版接口同构。"""
         if self._recorder is None:
             raise RuntimeError("录音器未打开")
-        if self._recording:
-            _msg(None)(self._recorder, _sel("stop"))
-            self._recording = False
+        self.close()  # 内含 stop + release，池自管
         log_saved(self._wav_path, "AVFoundation")
-        self.close()
 
     def close(self) -> None:
-        """释放 recorder 与 autorelease pool。重复调用安全。"""
-        if self._recorder is not None:
-            if self._recording:
-                _msg(None)(self._recorder, _sel("stop"))
-                self._recording = False
-            _msg(None)(self._recorder, _sel("release"))
-            self._recorder = None
-        if self._pool is not None:
-            _msg(None)(self._pool, _sel("drain"))
-            self._pool = None
+        """释放 recorder。重复调用安全（池只在本次调用内存在）。"""
+        with _autorelease_pool():
+            if self._recorder is not None:
+                if self._recording:
+                    _msg(None)(self._recorder, _sel("stop"))
+                    self._recording = False
+                _msg(None)(self._recorder, _sel("release"))
+                self._recorder = None
