@@ -801,7 +801,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 9,
+            "downloads": 10,
             "keywords": [
                 "chinese",
                 "evolved",
@@ -1636,7 +1636,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "dsh",
                 "deepseek-harness",
@@ -5312,7 +5312,7 @@
                 "tools": true,
                 "skills": true
             },
-            "downloads": 22,
+            "downloads": 23,
             "keywords": [
                 "self-evolve",
                 "plugin",
