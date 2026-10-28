@@ -198,6 +198,22 @@
         "team_templates": {
           "type": "boolean",
           "description": "启用 team_templates/*.md 团队模板"
+        },
+        "transports": {
+          "type": "boolean",
+          "description": "启用 transports/ 协议传输层（契约 app.plugins.contracts.protocol_transport）"
+        },
+        "stream_sinks": {
+          "type": "boolean",
+          "description": "启用 stream_sinks/ 流式输出落点（契约 app.plugins.contracts.stream_sink）"
+        },
+        "context_tiers": {
+          "type": "boolean",
+          "description": "启用 context_tiers/ 系统上下文分层（契约 app.plugins.contracts.context_policy）"
+        },
+        "budget_resolvers": {
+          "type": "boolean",
+          "description": "启用 budget_resolvers/ 上下文预算解析器（与 context_tiers 配套）"
         }
       }
     },

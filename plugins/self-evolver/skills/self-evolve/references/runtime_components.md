@@ -1,10 +1,10 @@
 # Runtime 组件注册契约速查
 
-> **何时读这份**：scaffold 时选了 `storages / serializers / gateways / model_adapters / loop_policies / engines` 等"runtime 类"组件，或用户提到"系统配置卡片"、"注册一个 X 引擎"。
+> **何时读这份**：scaffold 时选了 `storages / serializers / gateways / model_adapters / loop_policies / hook_policies / transports / stream_sinks / context_tiers / budget_resolvers / engines` 等"runtime 类"组件，或用户提到"系统配置卡片"、"注册一个 X 引擎"。
 >
 > **来源**：jsonl-storage v0.1.0 开发实战 + gateway-feishu 对照分析。
 
-## 一、17 类组件分类
+## 一、22 类组件分类
 
 | 类型 | 是否 runtime | 注册契约 | 是否有 config_schema 卡片 |
 |------|-------------|----------|--------------------------|
@@ -24,6 +24,11 @@
 | **`gateways`** | **✅** | **def 对象 + 3 个回调** | ✅ 渲染+保存 |
 | **`model_adapters`** | **✅** | 实例直接注册 | ✅ |
 | **`loop_policies`** | **✅** | 实例直接注册 | ✅ |
+| **`hook_policies`** | **✅** | **类属性 id/scope + should_trigger(event)→HookDecision**（参考 `cron-tasks/hook_policies/cron_selective.py`） | 否 |
+| **`transports`** | **✅** | 实现 ProtocolTransport（create_stream / classify_error） | 否 |
+| **`stream_sinks`** | **✅** | 实现 StreamEventSink（消费 StreamEvent） | 否 |
+| **`context_tiers`** | **✅** | 实现 ContextTier（should_apply / apply → TierOutcome） | 否 |
+| **`budget_resolvers`** | **✅** | 实现 ContextBudgetResolver（resolve → BudgetResult） | 否 |
 | **`engines`** | **✅** | 实例直接注册 | ✅ |
 
 **runtime 类 = 注册到主程序运行时注册池，主程序从池里选一个 active 实例消费。**

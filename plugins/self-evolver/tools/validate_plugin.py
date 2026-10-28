@@ -31,8 +31,9 @@ _SEMVER_RE = re.compile(
 )
 _VALID_COMPS = (
     "commands", "agents", "skills", "themes", "hooks", "mcp", "lsp",
-    "ui", "tools", "providers", "team_templates",
-    "model_adapters", "loop_policies", "storages", "serializers", "gateways", "engines",
+    "ui", "tools", "providers", "team_templates", "hook_policies",
+    "model_adapters", "loop_policies", "storages", "serializers", "gateways",
+    "transports", "stream_sinks", "context_tiers", "budget_resolvers", "engines",
 )
 _CMD_RE = re.compile(r"^[a-z][a-z0-9-]*\.md$")
 
@@ -293,7 +294,8 @@ def _check_plugin_dir(base: Path, manifest: dict, name: str) -> tuple[list, list
                     errors.append(f"team_templates/{y.name} 缺 agents 列表")
 
     # 运行时组件（与 tools/providers 对称：目录 + *.py + register 入口）
-    for kind in ("model_adapters", "loop_policies", "storages", "serializers", "gateways", "engines"):
+    for kind in ("model_adapters", "loop_policies", "hook_policies", "storages", "serializers",
+                 "gateways", "transports", "stream_sinks", "context_tiers", "budget_resolvers", "engines"):
         if comps.get(kind):
             d = base / kind
             if not d.is_dir():

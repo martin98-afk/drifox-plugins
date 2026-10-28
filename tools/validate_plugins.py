@@ -153,10 +153,14 @@ def basic_manifest_check(manifest: dict) -> list[str]:
             )
 
         comps = manifest.get("components", {})
+        # 与 schemas/plugin.schema.json 的 components.properties 对齐（22 类）。
+        # 这条是「未安装 jsonschema 时的兜底」，少了任何一类都会把合法插件误判成未知键。
         valid_comps = {
             "commands", "agents", "skills", "themes", "hooks", "mcp", "lsp",
             "ui", "tools", "providers", "storages", "serializers", "engines",
-            "gateways", "loop_policies", "model_adapters", "team_templates",
+            "gateways", "loop_policies", "hook_policies", "model_adapters",
+            "team_templates", "transports", "stream_sinks", "context_tiers",
+            "budget_resolvers",
         }
         extra = set(comps) - valid_comps
         if extra:

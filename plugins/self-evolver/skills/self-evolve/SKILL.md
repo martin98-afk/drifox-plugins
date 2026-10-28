@@ -6,13 +6,13 @@ description: DriFox 自进化工作流 — 当用户要求开发新插件、优�
 # self-evolve — DriFox 自进化工作流
 
 DriFox 的工具/插件全部可热重载（user 根 `~/.drifox/plugins/` 保存即生效）。
-配合本插件的 5 个 evolution_* 工具，实现「AI 自己给自己开发能力」。
+配合本插件的 7 个 evolution_* 工具，实现「AI 自己给自己开发能力」。
 
 ## 工具速查
 
 | 工具 | 用途 | 关键参数 |
 |------|------|----------|
-| `evolution_scaffold` | 需求 → 插件骨架（17 类组件模板） | `name`(kebab-case 必填) `description` `components=[...]` `force`(覆盖) `author` |
+| `evolution_scaffold` | 需求 → 插件骨架（22 类组件模板） | `name`(kebab-case 必填) `description` `components=[...]` `force`(覆盖) `author` |
 | `evolution_validate` | 插件结构校验（准入门槛） | `plugin_name` `deep`(bool，改工具逻辑/发布前 true，隔离实跑) |
 | `evolution_inspect` | 扫描已装插件/深查结构/TODO 定位 | `plugin_name` 或 `list_all=true` |
 | `evolution_mcp` | 读写 .mcp.json 管理 MCP 服务器 | `operation`(add/remove/enable/disable/list) `plugin_name` `server_name` `command`/`url` `args` `env`/`headers` |
@@ -55,6 +55,15 @@ DriFox 的工具/插件全部可热重载（user 根 `~/.drifox/plugins/` 保存
 4. evolution_journal operation=log action=mcp plugin_name=<name> summary=...
 ```
 
+**凭据纪律（硬性。`docs/mcp.md` 原文：密钥不要写进 `.mcp.json` 提交到 git）**
+
+| 场景 | 做法 |
+|---|---|
+| 有设置界面（默认） | `credential={"label":"Token","placeholder":"…","getUrl":"…","inject":{"type":"header","name":"Authorization","scheme":"Bearer"}}`。Key 存 `plugin_data/<插件>/config.json`，DriFox 在设置 → MCP 连接器渲染输入框 |
+| CI / 脚本 | `env`、`headers`、`url` 的值写 `${env.VAR}` 占位，连接时读进程环境变量 |
+
+`evolution_mcp` 检测到 `env` / `headers` 里有像密钥的明文值会直接告警并给出两种改法。看到告警就改——插件仓库是公开的。
+
 ### ⑤ 发布到市场（三模式）
 
 ```
@@ -78,6 +87,19 @@ DriFox 的工具/插件全部可热重载（user 根 `~/.drifox/plugins/` 保存
 
 scaffold 的 force 覆盖会把旧版备份为 `<name>.bak.<ts>`。
 回滚 = 把备份目录内容移回原位，然后 journal 记 `action=rollback`。
+## manifest 字段速记（手改 manifest 时别退回旧写法）
+
+`evolution_scaffold` 已按当前契约生成；手改时对齐下表：
+
+| 字段 | 当前口径 | 别用 |
+|---|---|---|
+| `min_host_version` | 宿主版本门禁，`version_gate.check_host_version` 读它，不满足整插件拒载。全仓 193 个插件用它 | ~~`drifox.min_version`~~（全仓 0 个插件在用） |
+| `api_version` | 当前 `HOST_PLUGIN_API_VERSION = 2` | 缺省=1，走旧契约 |
+| `capabilities` | 宿主受保护能力清单，`api_version=2` 时参与裁剪。空清单=不申请任何能力 | 猜能力名（写错就是拿不到） |
+| `config_schema` | 要用户填 Key/开关/路径时的第一选择，宿主渲染 E1 自动卡 | 一上来就写 `ui/` 自绘卡（自绘卡 `priority > 0` 会盖掉自动卡，还得自己补回 link/action 入口） |
+
+能力名照 `references/capabilities.md` 里实测过的 22 个抄，别自己造；拿不到时返回 `None`，代码必须有降级分支
+
 ## storages 开发速记（高频坑，详见 references/storage_engine.md）
 
 做"存储替换插件 / 会话换格式"时**必记三点**（jsonl-storage 实战踩出的）：
@@ -176,6 +198,7 @@ for k in stale:
 |----------|--------|
 | `references/runtime_components.md` | scaffold 选了 `storages/serializers/gateways/model_adapters/loop_policies/engines`，或用户提到"系统配置卡片/注册一个 X 引擎" |
 | `references/storage_engine.md` | 用户要做"存储替换插件/会话换格式/xlsx/jsonl/csv 存会话"等；接口对齐 `system/storages/sqlite.py` |
+| `references/capabilities.md` | 要给插件声明 `capabilities`，或代码里要用通知/模型配置/对话引擎/数据目录等宿主 API 时 |
 | `references/troubleshooting.md` | **任何报错/异常/不生效时**：日志拆分（`all.log` 兜底 + `llm`/`mcp`/`lsp`/`plugins`/`gateway`/`tools`/`team`/`store`/`ui` 分文件）的位置与按场景查询命令、Windows python 命令 9009 坑、MCP 排障实例 |
 
 > 排障第一反射：`evolution_log_query operation=triage`（扫日志 ERROR + 检测工具调用 LOOP + 关联 journal 动作），细节见 troubleshooting.md。

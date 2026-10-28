@@ -1,6 +1,6 @@
 # evolver_scaffold — DriFox 自进化工具集
 
-让 DriFox **自己给自己开发插件**：AI 可调用的 5 个工具 + 1 个技能引导。
+让 DriFox **自己给自己开发插件**：AI 可调用的 7 个工具 + 1 个技能引导。
 
 ## 设计理念
 
@@ -16,21 +16,23 @@
 
 修复闭环：`evolution_inspect`（找到目标插件）→ read/edit 修改 → `evolution_validate` 复验 → 热重载生效。
 
-scaffold 支持 DriFox 全部 **17 类组件**（对齐主程序 `kernel.KNOWN_COMPONENTS`）：
+scaffold 支持 DriFox 全部 **22 类组件**（对齐主程序 `kernel.KNOWN_COMPONENTS` 与 `schemas/plugin.schema.json`）：
 tools / commands / agents / skills / hooks / mcp / lsp / themes / ui / providers /
-team_templates / model_adapters / loop_policies / storages / serializers / gateways / engines。
+team_templates / hook_policies / model_adapters / loop_policies / storages / serializers /
+gateways / transports / stream_sinks / context_tiers / budget_resolvers / engines。
 
 MCP 闭环：`evolution_mcp` 读写任意插件的 `.mcp.json`，为 DriFox 连接新 MCP 服务器。
 
-## 工具清单（6 个）
+## 工具清单（7 个）
 
 | 工具 | 功能 | danger |
 |------|------|--------|
-| `evolution_scaffold` | 按需求生成插件骨架（17 类组件模板，manifest/README） | safe |
+| `evolution_scaffold` | 按需求生成插件骨架（22 类组件模板，manifest/README） | safe |
 | `evolution_validate` | 校验插件结构合规（manifest/组件/py_compile/frontmatter）；`deep=true` 额外隔离实跑 tools | safe |
 | `evolution_inspect` | 扫描已装插件，返回结构摘要与文件清单 | safe |
 | `evolution_mcp` | 增/删/列/读 MCP 服务器配置（.mcp.json） | safe |
 | `evolution_journal` | 记录/查询进化审计日志（append-only） | safe |
+| `evolution_log_query` | 系统日志查询/诊断：list / query / context / triage（ERROR 扫描 + 工具调用循环检测 + 关联 journal） | safe |
 | `evolution_publish` | 发布到市场仓库：local（本地 commit）/ direct（直推，需官方权限）/ fork（推 fork+PR 链接，社区标准流程） | dangerous |
 
 写入操作（scaffold/mcp 写入）默认落在 **user 根**（`~/.drifox/plugins/`），热重载即时生效。
