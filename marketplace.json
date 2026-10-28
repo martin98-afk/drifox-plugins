@@ -1049,7 +1049,7 @@
             "components": {
                 "providers": true
             },
-            "downloads": 14,
+            "downloads": 15,
             "keywords": [
                 "CodeBuddy",
                 "国际版",
@@ -2897,7 +2897,7 @@
                 "gateways": true,
                 "ui": true
             },
-            "downloads": 9,
+            "downloads": 10,
             "min_host_version": "0.6.10",
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
@@ -2981,7 +2981,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 84,
+            "downloads": 86,
             "keywords": [
                 "git",
                 "source-control",
@@ -5033,7 +5033,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 69,
+            "downloads": 71,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -5608,7 +5608,7 @@
                 "tools": true,
                 "ui": true
             },
-            "downloads": 20,
+            "downloads": 22,
             "platforms": [
                 "windows",
                 "linux",
@@ -6429,7 +6429,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 28,
+            "downloads": 30,
             "keywords": [
                 "voice",
                 "dictation",
