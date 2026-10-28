@@ -596,7 +596,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 72,
+            "downloads": 73,
             "keywords": [
                 "browser",
                 "web",
@@ -801,7 +801,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 8,
+            "downloads": 9,
             "keywords": [
                 "chinese",
                 "evolved",
@@ -1049,7 +1049,7 @@
             "components": {
                 "providers": true
             },
-            "downloads": 15,
+            "downloads": 17,
             "keywords": [
                 "CodeBuddy",
                 "国际版",
@@ -1320,7 +1320,7 @@
                 "tools": true,
                 "hook_policies": true
             },
-            "downloads": 55,
+            "downloads": 56,
             "keywords": [
                 "cron",
                 "schedule",
@@ -2897,7 +2897,7 @@
                 "gateways": true,
                 "ui": true
             },
-            "downloads": 10,
+            "downloads": 11,
             "min_host_version": "0.6.10",
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
@@ -2981,7 +2981,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 86,
+            "downloads": 88,
             "keywords": [
                 "git",
                 "source-control",
@@ -3942,7 +3942,7 @@
                 "providers": true,
                 "ui": true
             },
-            "downloads": 13,
+            "downloads": 14,
             "keywords": [
                 "magpie",
                 "网关",
@@ -5033,7 +5033,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 71,
+            "downloads": 73,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -5113,7 +5113,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 37,
+            "downloads": 38,
             "keywords": [
                 "screenshot",
                 "clipboard",
@@ -5245,7 +5245,7 @@
                 "tools": true,
                 "skills": true
             },
-            "downloads": 21,
+            "downloads": 22,
             "keywords": [
                 "self-evolve",
                 "plugin",
@@ -6143,7 +6143,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 24,
+            "downloads": 25,
             "keywords": [
                 "welcome",
                 "token",
@@ -6429,7 +6429,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 30,
+            "downloads": 34,
             "keywords": [
                 "voice",
                 "dictation",
@@ -6482,7 +6482,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 11,
+            "downloads": 13,
             "keywords": [
                 "voice",
                 "tts",
@@ -6617,7 +6617,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 20,
+            "downloads": 21,
             "keywords": [
                 "webdav",
                 "backup",
@@ -6684,7 +6684,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 39,
+            "downloads": 40,
             "keywords": [
                 "powershell",
                 "windows",
