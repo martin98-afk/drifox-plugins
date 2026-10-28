@@ -27,15 +27,27 @@
 
 | 配置项 | 默认值 | 说明 |
 |--------|--------|------|
-| 语音引擎 | 本地系统语音 | `local` / `api` |
-| API 地址 | 硅基流动端点 | 可编辑下拉：硅基流动 / OpenAI / 智谱 / MiniMax / 月之暗面 / 手填 |
+| 语音引擎 | 本地系统语音 | `local` / `api`；选本地时在线相关行整体置灰 |
+| 服务商 | 硅基流动 | 界面辅助行（不落盘）：选中即预填 API 地址，并联动行尾「获取 Key」链接 |
+| API 地址 | 硅基流动端点 | 真实 URL 输入框，可手改；改成已知平台域名时服务商自动跟随，认不出则显示「自定义」并收起 Key 链接 |
 | 模型 | `FunAudioLLM/CosyVoice2-0.5B` | 可编辑下拉：CosyVoice2-0.5B / Fish-Speech 1.5 / MOSS-TTSD-v0.5 / 手填 |
 | 音色 | `FunAudioLLM/CosyVoice2-0.5B:alex` | 可编辑下拉，随模型换批；CosyVoice2 与 Fish-Speech 1.5 共用 8 个预置音色 |
-| API Key | 空 | 环境变量 `TTS_API_KEY` 可覆盖 |
+| API Key | 空 | 环境变量 `TTS_API_KEY` 可覆盖；行尾「获取 Key」直达对应平台密钥页 |
 
-「模型」「音色」「API 地址」均为可编辑下拉（qfluentwidgets `EditableComboBox`）：
+预置服务商与其 API Key 管理页（2026-10 逐个验证可访问）：
+
+| 服务商 | 端点 | Key 页 |
+|--------|------|--------|
+| 硅基流动 | `api.siliconflow.cn` | https://cloud.siliconflow.cn/account/ak |
+| OpenAI | `api.openai.com` | https://platform.openai.com/api-keys |
+| 智谱 BigModel | `open.bigmodel.cn` | https://bigmodel.cn/usercenter/proj-mgmt/apikeys |
+| MiniMax | `api.minimaxi.com` | https://platform.minimaxi.com/user-center/basic-information/interface-key |
+| 月之暗面 Kimi | `api.moonshot.cn` | https://platform.moonshot.cn/console/api-keys |
+
+「模型」「音色」为可编辑下拉（qfluentwidgets `EditableComboBox`）：
 既可从预置项里选，也能直接键入任意值（回车后该值进入下拉列表）。
 切换模型时音色下拉整体换批，且 `音色` 存储值的模型前缀同步跟随，避免用旧模型的音色名请求新模型报错。
+「API 地址」是普通输入框（显示真实 URL 而非平台名），平台选择交给「服务商」下拉。
 
 > 为什么自绘设置卡：主程序 E1 自动卡（plugin.json config_schema）只把字段渲染成
 > 不可编辑 ComboBox 或纯 LineEdit，无法「下拉选 + 手填」二合一。插件用更高 priority

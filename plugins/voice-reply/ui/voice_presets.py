@@ -15,15 +15,78 @@
 from __future__ import annotations
 
 from typing import Dict, List, NamedTuple
+from urllib.parse import urlsplit
+
+
+class EndpointPreset(NamedTuple):
+    """一个在线 TTS 服务商：端点 + 平台名 + 密钥获取页。
+
+    key_url 是各平台控制台的 API Key 管理页（2026-10 逐个验证可访问）。
+    """
+
+    url: str
+    label: str
+    key_url: str
+    key_label: str
+
 
 # ── 服务商端点预设（OpenAI 兼容 /audio/speech） ──
-ENDPOINT_PRESETS: List[tuple] = [
-    ("https://api.siliconflow.cn/v1/audio/speech", "硅基流动 SiliconFlow（默认，低价）"),
-    ("https://api.openai.com/v1/audio/speech", "OpenAI 官方"),
-    ("https://open.bigmodel.cn/api/paas/v4/audio/speech", "智谱 BigModel"),
-    ("https://api.minimaxi.com/v1/audio/speech", "MiniMax"),
-    ("https://api.moonshot.cn/v1/audio/speech", "月之暗面 Kimi"),
+ENDPOINT_PRESETS: List[EndpointPreset] = [
+    EndpointPreset(
+        "https://api.siliconflow.cn/v1/audio/speech",
+        "硅基流动 SiliconFlow（默认）",
+        "https://cloud.siliconflow.cn/account/ak",
+        "去硅基流动创建 Key",
+    ),
+    EndpointPreset(
+        "https://api.openai.com/v1/audio/speech",
+        "OpenAI 官方",
+        "https://platform.openai.com/api-keys",
+        "去 OpenAI 创建 Key",
+    ),
+    EndpointPreset(
+        "https://open.bigmodel.cn/api/paas/v4/audio/speech",
+        "智谱 BigModel",
+        "https://bigmodel.cn/usercenter/proj-mgmt/apikeys",
+        "去智谱创建 Key",
+    ),
+    EndpointPreset(
+        "https://api.minimaxi.com/v1/audio/speech",
+        "MiniMax",
+        "https://platform.minimaxi.com/user-center/basic-information/interface-key",
+        "去 MiniMax 创建 Key",
+    ),
+    EndpointPreset(
+        "https://api.moonshot.cn/v1/audio/speech",
+        "月之暗面 Kimi",
+        "https://platform.moonshot.cn/console/api-keys",
+        "去 Kimi 创建 Key",
+    ),
 ]
+
+
+def find_endpoint(url: str) -> EndpointPreset | None:
+    """按端点查预设：先全等，再同域名兜底（用户手改路径仍认回平台）。
+
+    同域名兜底的意义：自部署兼容服务的地址通常与官方同域不同路径的场景少，
+    但用户手滑多写/少写 `/v1` 时仍能给出正确的 Key 链接；域名不同则不猜。
+    """
+    target = (url or "").strip().rstrip("/")
+    if not target:
+        return None
+    for preset in ENDPOINT_PRESETS:
+        if preset.url.rstrip("/") == target:
+            return preset
+    try:
+        host = urlsplit(target).netloc.lower()
+    except ValueError:
+        return None
+    if not host:
+        return None
+    for preset in ENDPOINT_PRESETS:
+        if urlsplit(preset.url).netloc.lower() == host:
+            return preset
+    return None
 
 
 class VoicePreset(NamedTuple):

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""voice-reply 自绘设置卡：模型 / 音色可编辑下拉（qfluentwidgets EditableComboBox）。
+"""voice-reply 自绘设置卡：引擎 / 服务商 / 地址 / 模型 / 音色 / API Key。
 
 为什么不用主程序 E1 自动卡（plugin.json config_schema）：
 宿主 PluginConfigCard 只把字段渲染成 text/password/bool/select/number/textarea，
@@ -7,7 +7,12 @@
 需要 EditableComboBox，主程序当前没有对应字段类型（FIELD_TYPES 闭集），
 故按 prompt-enhancer 的范式自绘设置卡，用更高 priority 覆盖 E1 自动卡。
 
-音色联动：切模型 → 音色下拉整体换一批（各模型预置音色名一致，voice 值前缀不同）。
+布局口径（与宿主 PluginConfigCard 一致）：每行「定宽 label + 控件撑满剩余宽度」，
+控件不再右对齐限宽，避免长模型名/平台名被裁成一截。
+
+「服务商」是纯粹的界面辅助行，不落盘：选中即把端点填进「API 地址」（仍可手改），
+并联动 API Key 行的「获取 Key」链接（跳到该平台控制台的密钥管理页）。
+地址被手改成已知平台域名时，服务商下拉自动跟随；认不出则显示「自定义」并收起链接。
 """
 
 from __future__ import annotations
@@ -17,293 +22,401 @@ from typing import Any, List
 from loguru import logger
 
 from .voice_presets import (
+    DEFAULT_API_URL,
     DEFAULT_MODEL,
     DEFAULT_VOICE_NAME,
     ENDPOINT_PRESETS,
     MODEL_PRESETS,
     VoicePreset,
     default_voice_value,
+    find_endpoint,
     find_model,
     split_voice,
 )
 
+_UI_AVAILABLE = False
 try:  # 宿主可能未装 qfluentwidgets（理论上必然有），缺失时降级不注册卡
+    from PyQt5.QtCore import Qt
+    from PyQt5.QtWidgets import QHBoxLayout, QWidget
     from qfluentwidgets import (
         BodyLabel,
         ComboBox,
         EditableComboBox,
         ExpandSettingCard,
         FluentIcon,
+        HyperlinkButton,
+        LineEdit,
         PasswordLineEdit,
         PushButton,
     )
+
+    _UI_AVAILABLE = True
 except Exception:  # noqa: BLE001 — 导入失败时 _ConfigCardBase 退化为空基类
     ExpandSettingCard = None  # type: ignore
 
-_ConfigCardBase = ExpandSettingCard if ExpandSettingCard is not None else type("_CardBase", (), {})
-
-# 输入区最小宽度：模型/音色字符串较长（FunAudioLLM/CosyVoice2-0.5B:alex 约 40 字符），
-# 默认 LineEdit 宽度会截断显示，故显式放宽。
-_FIELD_MIN_WIDTH = 320
-
 # 标签列宽度（与主程序 PluginConfigCard._FieldRow 的 120 一致，视觉对齐）
 _LABEL_MIN_WIDTH = 120
+# 自定义服务商项的标识（userData 为空串）
+_CUSTOM_PROVIDER = ""
 
 
-class _FieldRow:
-    """字段行：左侧 label，右侧控件。无 Qt 时退化为占位（不会走到）。"""
+if _UI_AVAILABLE:
 
-    def __new__(cls, label_text: str, control: Any, parent: Any = None):  # noqa: N804
-        if ExpandSettingCard is None:
-            return None
-        from PyQt5.QtCore import Qt
-        from PyQt5.QtWidgets import QHBoxLayout, QWidget
+    class _FieldRow(QWidget):
+        """字段行：左侧定宽 label，右侧控件撑满剩余宽度。"""
 
-        row = QWidget(parent)
-        layout = QHBoxLayout(row)
-        layout.setContentsMargins(0, 4, 0, 4)
-        layout.setSpacing(12)
-        label = BodyLabel(label_text, row)
-        label.setObjectName("fieldLabel")
-        label.setMinimumWidth(_LABEL_MIN_WIDTH)
-        layout.addWidget(label, 0, Qt.AlignLeft | Qt.AlignVCenter)
-        control.setMinimumWidth(_FIELD_MIN_WIDTH)
-        layout.addWidget(control, 1, Qt.AlignRight)
-        return row
+        def __init__(self, label_text: str, control: Any, parent=None):
+            super().__init__(parent)
+            layout = QHBoxLayout(self)
+            layout.setContentsMargins(0, 4, 0, 4)
+            layout.setSpacing(12)
+            label = BodyLabel(label_text, self)
+            label.setObjectName("fieldLabel")
+            label.setMinimumWidth(_LABEL_MIN_WIDTH)
+            layout.addWidget(label, 0, Qt.AlignLeft | Qt.AlignVCenter)
+            layout.addWidget(control, 1)
 
+    class _InlineRow(QWidget):
+        """一行放两个控件：主轴控件撑满，尾部控件固定宽（API Key + 获取链接）。"""
 
-class _VoiceConfigCard(_ConfigCardBase):
-    """语音播报配置卡：引擎 + 端点 + 模型 + 音色（均可编辑下拉）+ API Key。
+        def __init__(self, control: Any, tail: Any, parent=None):
+            super().__init__(parent)
+            layout = QHBoxLayout(self)
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(8)
+            layout.addWidget(control, 1)
+            layout.addWidget(tail, 0, Qt.AlignRight | Qt.AlignVCenter)
 
-    保存语义与主程序 PluginConfigStore 一致：空内容 = 清除 → 回退默认。
-    构造签名 (parent=None) 满足 register_settings_card 的 widget_class 约定。
-    """
+    class _VoiceConfigCard(ExpandSettingCard):
+        """语音播报配置卡：引擎 + 服务商 + 端点 + 模型 + 音色 + API Key。
 
-    def __init__(self, parent=None):
-        if ExpandSettingCard is None:
-            raise RuntimeError("qfluentwidgets 不可用，无法构建语音播报配置卡")
-        super().__init__(
-            FluentIcon.VOLUME,
-            "语音播报配置",
-            "本地引擎零配置；在线引擎需填 API Key",
-            parent,
-        )
-        self.viewLayout.setContentsMargins(48, 8, 48, 8)
-        self.viewLayout.setSpacing(4)
-
-        # ── 语音引擎 ──
-        self._engine_combo = ComboBox(self.view)
-        self._engine_combo.addItem("本地系统语音（免费，Windows SAPI5 / macOS say）", userData="local")
-        self._engine_combo.addItem("在线 API（OpenAI 兼容 /audio/speech）", userData="api")
-        self._engine_combo.currentIndexChanged.connect(self._on_engine_changed)
-        self.viewLayout.addWidget(_FieldRow("语音引擎", self._engine_combo, self.view))
-
-        # ── API 地址（可编辑下拉：端点预设 + 手填） ──
-        self._url_combo = EditableComboBox(self.view)
-        self._url_combo.setPlaceholderText("OpenAI 兼容 /audio/speech 端点")
-        for url, label in ENDPOINT_PRESETS:
-            self._url_combo.addItem(label, userData=url)
-        self._url_combo.textChanged.connect(self._on_url_changed)
-        self.viewLayout.addWidget(_FieldRow("API 地址", self._url_combo, self.view))
-
-        # ── 模型（可编辑下拉：模型预设 + 手填） ──
-        self._model_combo = EditableComboBox(self.view)
-        self._model_combo.setPlaceholderText(DEFAULT_MODEL)
-        for preset in MODEL_PRESETS:
-            self._model_combo.addItem(preset.label, userData=preset.model)
-        self._model_combo.currentIndexChanged.connect(self._on_model_changed)
-        self._model_combo.textChanged.connect(self._on_model_text_changed)
-        self.viewLayout.addWidget(_FieldRow("模型", self._model_combo, self.view))
-
-        # ── 音色（可编辑下拉：随模型换批 + 手填） ──
-        self._voice_combo = EditableComboBox(self.view)
-        self._voice_combo.setPlaceholderText(default_voice_value())
-        self._voice_combo.textChanged.connect(self._on_voice_changed)
-        self.viewLayout.addWidget(_FieldRow("音色", self._voice_combo, self.view))
-
-        # ── API Key ──
-        self._key_edit = PasswordLineEdit(self.view)
-        self._key_edit.setClearButtonEnabled(True)
-        self._key_edit.setPlaceholderText("仅在线引擎需要")
-        self._key_edit.editingFinished.connect(self._on_key_finished)
-        self.viewLayout.addWidget(_FieldRow("API Key", self._key_edit, self.view))
-
-        # ── 恢复默认 ──
-        self._reset_btn = PushButton("恢复默认", self.view)
-        self._reset_btn.clicked.connect(self._on_reset)
-        self.viewLayout.addWidget(self._reset_btn)
-
-        self._echo()
-
-    # ── 回显 ────────────────────────────────────────────
-
-    def _echo(self) -> None:
-        """回显当前生效值（默认兜底可见）；blockSignals 阻断写盘循环。"""
-        from app.plugins.managers.plugin_config_store import PluginConfigStore
-
-        store = PluginConfigStore()
-        engine = str(store.get("voice-reply", "engine") or "local")
-        url = str(store.get("voice-reply", "api_url") or "")
-        model = str(store.get("voice-reply", "api_model") or "") or DEFAULT_MODEL
-        voice = str(store.get("voice-reply", "api_voice") or "") or default_voice_value(model)
-        api_key = str(store.get("voice-reply", "api_key") or "")
-
-        for combo, value in (
-            (self._engine_combo, engine),
-            (self._url_combo, url),
-            (self._model_combo, model),
-        ):
-            combo.blockSignals(True)
-            self._select_or_set_text(combo, value)
-            combo.blockSignals(False)
-
-        # 音色：先按模型重建选项，再选中（存储值里音色名可能不在新模型音色包中）
-        _model, voice_name = split_voice(voice)
-        self._rebuild_voices(model, select_name=voice_name or DEFAULT_VOICE_NAME)
-        self._voice_combo.blockSignals(True)
-        self._select_or_set_text(self._voice_combo, voice_name or voice)
-        self._voice_combo.blockSignals(False)
-
-        self._key_edit.blockSignals(True)
-        self._key_edit.setText(api_key)
-        self._key_edit.blockSignals(False)
-
-    @staticmethod
-    def _select_or_set_text(combo, value: str) -> None:
-        """下拉里有该项则选中，否则直接填文本（手填值回显）。
-
-        EditableComboBox.findData 只在预设项里找，找不到时 setText 让用户看到
-        自己的历史值，避免回显把配置「洗」成第一项。
+        保存语义与主程序 PluginConfigStore 一致：空内容 = 清除 → 回退默认。
+        构造签名 (parent=None) 满足 register_settings_card 的 widget_class 约定。
         """
-        index = combo.findData(value) if value else -1
-        if index >= 0:
-            combo.setCurrentIndex(index)
-        else:
-            combo.setText(value or "")
 
-    # ── 音色包重建 ──────────────────────────────────────
+        def __init__(self, parent=None):
+            super().__init__(
+                FluentIcon.VOLUME,
+                "语音播报配置",
+                "本地引擎零配置；在线引擎按服务商填 Key（可一键跳转获取）",
+                parent,
+            )
+            self.viewLayout.setContentsMargins(48, 8, 48, 8)
+            self.viewLayout.setSpacing(4)
 
-    def _rebuild_voices(self, model: str, select_name: str = "") -> None:
-        """按模型重建音色下拉项（该模型无预置音色时清空，仅留手填）。"""
-        preset = find_model(model)
-        voices: List[VoicePreset] = preset.voices if preset else []
-        self._voice_combo.blockSignals(True)
-        self._voice_combo.clear()
-        for vp in voices:
-            self._voice_combo.addItem(vp.label, userData=vp.value)
-        if voices:
-            # 预置音色的 userData 存短名（alex），选中后按当前模型拼 voice 值
-            target = select_name if select_name in [v.value for v in voices] else voices[0].value
-            index = self._voice_combo.findData(target)
-            self._voice_combo.setCurrentIndex(index if index >= 0 else 0)
-        self._voice_combo.blockSignals(False)
+            # 在线引擎专属行：本地引擎时整行置灰，避免「一堆填了没用的空框」
+            self._api_rows: List[QWidget] = []
 
-    # ── 事件 ────────────────────────────────────────────
+            # ── 语音引擎 ──
+            self._engine_combo = ComboBox(self.view)
+            self._engine_combo.addItem("本地系统语音（免费，Windows SAPI5 / macOS say）", userData="local")
+            self._engine_combo.addItem("在线 API（OpenAI 兼容 /audio/speech）", userData="api")
+            self._engine_combo.currentIndexChanged.connect(self._on_engine_changed)
+            self.viewLayout.addWidget(_FieldRow("语音引擎", self._engine_combo, self.view))
 
-    def _on_engine_changed(self, _index: int) -> None:
-        self._save("engine", str(self._engine_combo.currentData() or "local"))
+            # ── 服务商（界面辅助：填地址 + 决定 Key 链接） ──
+            self._provider_combo = ComboBox(self.view)
+            for preset in ENDPOINT_PRESETS:
+                self._provider_combo.addItem(preset.label, userData=preset.url)
+            self._provider_combo.addItem("自定义（手填地址）", userData=_CUSTOM_PROVIDER)
+            self._provider_combo.currentIndexChanged.connect(self._on_provider_changed)
+            self._api_rows.append(_FieldRow("服务商", self._provider_combo, self.view))
 
-    def _on_url_changed(self, text: str) -> None:
-        """URL 变更：仅手填内容与当前预设项不同时写盘。
+            # ── API 地址（纯输入框：显示真实 URL，服务商下拉负责预填） ──
+            self._url_edit = LineEdit(self.view)
+            self._url_edit.setPlaceholderText("OpenAI 兼容 /audio/speech 端点")
+            self._url_edit.setClearButtonEnabled(True)
+            self._url_edit.editingFinished.connect(self._on_url_finished)
+            self._api_rows.append(_FieldRow("API 地址", self._url_edit, self.view))
 
-        EditableComboBox.textChanged 在回显 setText 时也会触发，_echo 已用
-        blockSignals 拦住；用户选中预设项时 currentData 即目标值，直接写完整 URL。
-        """
-        index = self._url_combo.currentIndex()
-        preset_url = str(self._url_combo.itemData(index)) if index >= 0 else ""
-        value = text.strip() or preset_url
-        if value:
-            self._save("api_url", value)
+            # ── 模型（可编辑下拉：显示真实模型名，可手填） ──
+            self._model_combo = EditableComboBox(self.view)
+            self._model_combo.setPlaceholderText(DEFAULT_MODEL)
+            for preset in MODEL_PRESETS:
+                self._model_combo.addItem(preset.model, userData=preset.model)
+            self._model_combo.setToolTip(
+                "可手填任意模型名。预置：" + "；".join(p.model + " — " + p.label for p in MODEL_PRESETS)
+            )
+            self._model_combo.currentIndexChanged.connect(self._on_model_changed)
+            self._model_combo.textChanged.connect(self._on_model_text_changed)
+            self._api_rows.append(_FieldRow("模型", self._model_combo, self.view))
 
-    def _on_model_changed(self, _index: int) -> None:
-        model = str(self._model_combo.currentData() or "")
-        if not model:
-            return
-        self._save("api_model", model)
-        self._rebuild_voices(model)
-        # 切模型后音色值的前缀必须跟着换，否则 API 用旧模型音色名报错
-        voice_name = str(self._voice_combo.currentData() or DEFAULT_VOICE_NAME)
-        self._save("api_voice", f"{model}:{voice_name}")
+            # ── 音色（可编辑下拉：随模型换批 + 手填） ──
+            self._voice_combo = EditableComboBox(self.view)
+            self._voice_combo.setPlaceholderText(default_voice_value())
+            self._voice_combo.textChanged.connect(self._on_voice_changed)
+            self._api_rows.append(_FieldRow("音色", self._voice_combo, self.view))
 
-    def _on_model_text_changed(self, text: str) -> None:
-        """手填模型名：同步写盘（与 currentIndexChanged 互补，覆盖非预设值）。"""
-        value = text.strip()
-        if value:
-            self._save("api_model", value)
+            # ── API Key（行尾挂「获取 Key」外链，随服务商联动） ──
+            self._key_edit = PasswordLineEdit(self.view)
+            self._key_edit.setClearButtonEnabled(True)
+            self._key_edit.setPlaceholderText("仅在线引擎需要")
+            self._key_edit.editingFinished.connect(self._on_key_finished)
+            self._key_link = HyperlinkButton(self.view)
+            self._key_link.setIcon(FluentIcon.LINK)
+            self._key_link.setText("获取 Key")
+            self._key_link.setVisible(False)
+            self._api_rows.append(_FieldRow("API Key", _InlineRow(self._key_edit, self._key_link, self.view), self.view))
 
-    def _on_voice_changed(self, text: str) -> None:
-        """手填/选择音色：存完整 voice 值（模型名:音色名）。
+            for row in self._api_rows:
+                self.viewLayout.addWidget(row)
 
-        textChanged 在手填时拿到的是用户输入（可能只写了音色短名，也可能写了
-        完整值），统一按当前模型补齐前缀，兼容两种输入。
-        """
-        value = text.strip()
-        if not value:
-            return
-        _, name = split_voice(value)
-        self._save("api_voice", f"{self._current_model()}:{name or value}")
+            # ── 恢复默认（右对齐定宽，不撑满整行） ──
+            reset_row = QWidget(self.view)
+            reset_layout = QHBoxLayout(reset_row)
+            reset_layout.setContentsMargins(0, 4, 0, 4)
+            self._reset_btn = PushButton("恢复默认", reset_row)
+            self._reset_btn.setFixedWidth(_LABEL_MIN_WIDTH + 20)
+            self._reset_btn.clicked.connect(self._on_reset)
+            reset_layout.addStretch(1)
+            reset_layout.addWidget(self._reset_btn)
+            self.viewLayout.addWidget(reset_row)
 
-    def _current_model(self) -> str:
-        """当前生效模型名：选中预设项取 userData，手填文本取输入内容。
+            self._echo()
 
-        手填时 EditableComboBox.currentIndex 为 -1、currentData() 返回 None，
-        若直接 fallback 到默认模型，会把用户自填的模型名洗掉，voice 前缀跟着错。
-        """
-        data = self._model_combo.currentData()
-        if data:
-            return str(data)
-        return self._model_combo.text().strip() or DEFAULT_MODEL
+        # ── 回显 ────────────────────────────────────────────
 
-    def _on_key_finished(self) -> None:
-        self._save("api_key", self._key_edit.text().strip())
-
-    def _on_reset(self) -> None:
-        from app.plugins.managers.plugin_config_store import PluginConfigStore
-
-        store = PluginConfigStore()
-        store.set_values(
-            "voice-reply",
-            {
-                "engine": "",
-                "api_url": "",
-                "api_model": "",
-                "api_voice": "",
-                "api_key": "",
-            },
-        )
-        self._echo()
-
-    # ── 存储 ────────────────────────────────────────────
-
-    @staticmethod
-    def _save(key: str, value: str) -> None:
-        try:
+        def _echo(self) -> None:
+            """回显当前生效值（默认兜底可见）；blockSignals 阻断写盘循环。"""
             from app.plugins.managers.plugin_config_store import PluginConfigStore
 
-            PluginConfigStore().set_values("voice-reply", {key: value})
-        except Exception as e:  # noqa: BLE001 — 写盘失败不影响界面操作
-            logger.warning(f"[voice-reply] 配置保存失败({key}): {e}")
+            store = PluginConfigStore()
+            engine = str(store.get("voice-reply", "engine") or "local")
+            url = str(store.get("voice-reply", "api_url") or "")
+            model = str(store.get("voice-reply", "api_model") or "") or DEFAULT_MODEL
+            voice = str(store.get("voice-reply", "api_voice") or "") or default_voice_value(model)
+            api_key = str(store.get("voice-reply", "api_key") or "")
 
-    # ── 折叠动画（对齐主程序 PluginConfigCard 的处理） ──
+            for combo, value in (
+                (self._engine_combo, engine),
+                (self._model_combo, model),
+            ):
+                combo.blockSignals(True)
+                self._select_or_set_text(combo, value)
+                combo.blockSignals(False)
+            self._move_cursor_to_start(self._engine_combo)
+            self._move_cursor_to_start(self._model_combo)
 
-    def _adjustViewSize(self):
-        """空白占位置零，展开高度 = 内容高度，避免卡片关不上。"""
-        if ExpandSettingCard is None:
-            return
-        h = self.viewLayout.sizeHint().height()
-        try:
-            self.spaceWidget.setFixedHeight(0)
-        except Exception:  # noqa: BLE001 — 旧版宿主无该成员时跳过
-            pass
-        self.setFixedHeight(self.card.height() + (h if self.isExpand else 0))
+            self._url_edit.blockSignals(True)
+            self._url_edit.setText(url)
+            self._url_edit.blockSignals(False)
+            self._sync_provider_from_url()
 
-    def setExpand(self, isExpand: bool):
-        if ExpandSettingCard is None or self.isExpand == isExpand:
-            return
-        self.isExpand = isExpand
-        self.setProperty("isExpand", isExpand)
-        from PyQt5.QtWidgets import QApplication
+            # 音色：先按模型重建选项，再选中（存储值里音色名可能不在新模型音色包中）
+            _model, voice_name = split_voice(voice)
+            self._rebuild_voices(model, select_name=voice_name or DEFAULT_VOICE_NAME)
+            self._voice_combo.blockSignals(True)
+            self._select_or_set_text(self._voice_combo, voice_name or voice)
+            self._voice_combo.blockSignals(False)
+            self._move_cursor_to_start(self._voice_combo)
 
-        self.setStyle(QApplication.style())
-        self.card.expandButton.setExpand(isExpand)
-        self._adjustViewSize()
+            self._key_edit.blockSignals(True)
+            self._key_edit.setText(api_key)
+            self._key_edit.blockSignals(False)
+
+            self._apply_engine_state()
+
+        @staticmethod
+        def _select_or_set_text(combo, value: str) -> None:
+            """下拉里有该项则选中，否则直接填文本（手填值回显）。
+
+            EditableComboBox.findData 只在预设项里找，找不到时 setText 让用户看到
+            自己的历史值，避免回显把配置「洗」成第一项。
+            """
+            index = combo.findData(value) if value else -1
+            if index >= 0:
+                combo.setCurrentIndex(index)
+            else:
+                combo.setText(value or "")
+
+        @staticmethod
+        def _move_cursor_to_start(combo) -> None:
+            """可编辑下拉的文本超出可视宽时，默认光标停在末尾会显示成「后半截」。
+
+            回显后把光标拨到开头：长模型名（FunAudioLLM/CosyVoice2-0.5B）能读到前缀。
+            EditableComboBox 自身就是 QLineEdit，普通 ComboBox 没有 setCursorPosition。
+            """
+            try:
+                combo.setCursorPosition(0)
+            except Exception:  # noqa: BLE001 — 不可编辑下拉没有光标概念
+                return
+
+        # ── 音色包重建 ──────────────────────────────────────
+
+        def _rebuild_voices(self, model: str, select_name: str = "") -> None:
+            """按模型重建音色下拉项（该模型无预置音色时清空，仅留手填）。"""
+            preset = find_model(model)
+            voices: List[VoicePreset] = preset.voices if preset else []
+            self._voice_combo.blockSignals(True)
+            self._voice_combo.clear()
+            for vp in voices:
+                self._voice_combo.addItem(vp.label, userData=vp.value)
+            if voices:
+                # 预置音色的 userData 存短名（alex），选中后按当前模型拼 voice 值
+                target = select_name if select_name in [v.value for v in voices] else voices[0].value
+                index = self._voice_combo.findData(target)
+                self._voice_combo.setCurrentIndex(index if index >= 0 else 0)
+            self._voice_combo.blockSignals(False)
+
+        # ── 服务商 / Key 链接 ───────────────────────────────
+
+        def _set_provider_index(self, url: str) -> None:
+            """按地址定位服务商项（认不出则落到「自定义」），不触发写盘。"""
+            preset = find_endpoint(url or DEFAULT_API_URL)
+            target = preset.url if preset else _CUSTOM_PROVIDER
+            index = self._provider_combo.findData(target)
+            self._provider_combo.blockSignals(True)
+            self._provider_combo.setCurrentIndex(index if index >= 0 else 0)
+            self._provider_combo.blockSignals(False)
+
+        def _sync_provider_from_url(self) -> None:
+            """地址 → 服务商 + Key 链接（用户手改地址后调用）。"""
+            self._set_provider_index(self._url_edit.text())
+            self._update_key_link()
+
+        def _update_key_link(self) -> None:
+            """Key 链接跟随当前地址所属平台；认不出平台（自部署端点）时收起。
+
+            地址为空 = 运行时回退默认端点，链接也按默认平台展示。
+            """
+            preset = find_endpoint(self._url_edit.text().strip() or DEFAULT_API_URL)
+            if preset is None:
+                self._key_link.setVisible(False)
+                return
+            self._key_link.setUrl(preset.key_url)
+            self._key_link.setText("获取 Key")
+            self._key_link.setToolTip(f"{preset.key_label}\n{preset.key_url}")
+            self._key_link.setVisible(True)
+
+        # ── 引擎状态 ────────────────────────────────────────
+
+        def _apply_engine_state(self) -> None:
+            """本地引擎时置灰在线相关行（配置结构仍可见，避免布局跳动）。"""
+            online = str(self._engine_combo.currentData() or "local") == "api"
+            for row in self._api_rows:
+                row.setEnabled(online)
+
+        # ── 事件 ────────────────────────────────────────────
+
+        def _on_engine_changed(self, _index: int) -> None:
+            self._save("engine", str(self._engine_combo.currentData() or "local"))
+            self._apply_engine_state()
+
+        def _on_provider_changed(self, _index: int) -> None:
+            url = str(self._provider_combo.currentData() or "")
+            if url:
+                self._url_edit.blockSignals(True)
+                self._url_edit.setText(url)
+                self._url_edit.blockSignals(False)
+                self._save("api_url", url)
+            self._update_key_link()
+
+        def _on_url_finished(self) -> None:
+            """地址编辑完成：保存真实 URL，并让服务商与链接跟着走。"""
+            url = self._url_edit.text().strip()
+            if url:
+                self._save("api_url", url)
+            self._sync_provider_from_url()
+
+        def _on_model_changed(self, _index: int) -> None:
+            model = str(self._model_combo.currentData() or "")
+            if not model:
+                return
+            self._save("api_model", model)
+            self._rebuild_voices(model)
+            # 切模型后音色值的前缀必须跟着换，否则 API 用旧模型音色名报错
+            voice_name = str(self._voice_combo.currentData() or DEFAULT_VOICE_NAME)
+            self._save("api_voice", f"{model}:{voice_name}")
+
+        def _on_model_text_changed(self, text: str) -> None:
+            """手填模型名：同步写盘（与 currentIndexChanged 互补，覆盖非预设值）。"""
+            value = text.strip()
+            if value:
+                self._save("api_model", value)
+
+        def _on_voice_changed(self, text: str) -> None:
+            """选中或手填音色：存完整 voice 值（模型名:音色名）。
+
+            从下拉选中时 lineEdit 文本是 label（「沉稳男声 alex」），真正的音色名在
+            userData；手填时 currentIndex 为 -1，只能解析文本。优先取 userData，
+            否则会把 label 整串当音色名存进配置，请求时报「音色不存在」。
+            """
+            data = self._voice_combo.currentData()
+            if data:
+                name = str(data)
+            else:
+                value = text.strip()
+                if not value:
+                    return
+                _, name = split_voice(value)
+                name = name or value
+            self._save("api_voice", f"{self._current_model()}:{name}")
+
+        def _current_model(self) -> str:
+            """当前生效模型名：选中预设项取 userData，手填文本取输入内容。
+
+            手填时 EditableComboBox.currentIndex 为 -1、currentData() 返回 None，
+            若直接 fallback 到默认模型，会把用户自填的模型名洗掉，voice 前缀跟着错。
+            """
+            data = self._model_combo.currentData()
+            if data:
+                return str(data)
+            return self._model_combo.text().strip() or DEFAULT_MODEL
+
+        def _on_key_finished(self) -> None:
+            self._save("api_key", self._key_edit.text().strip())
+
+        def _on_reset(self) -> None:
+            from app.plugins.managers.plugin_config_store import PluginConfigStore
+
+            store = PluginConfigStore()
+            store.set_values(
+                "voice-reply",
+                {
+                    "engine": "",
+                    "api_url": "",
+                    "api_model": "",
+                    "api_voice": "",
+                    "api_key": "",
+                },
+            )
+            self._echo()
+
+        # ── 存储 ────────────────────────────────────────────
+
+        @staticmethod
+        def _save(key: str, value: str) -> None:
+            try:
+                from app.plugins.managers.plugin_config_store import PluginConfigStore
+
+                PluginConfigStore().set_values("voice-reply", {key: value})
+            except Exception as e:  # noqa: BLE001 — 写盘失败不影响界面操作
+                logger.warning(f"[voice-reply] 配置保存失败({key}): {e}")
+
+        # ── 折叠动画（对齐主程序 PluginConfigCard 的处理） ──
+
+        def _adjustViewSize(self):
+            """空白占位置零，展开高度 = 内容高度，避免卡片关不上。"""
+            h = self.viewLayout.sizeHint().height()
+            try:
+                self.spaceWidget.setFixedHeight(0)
+            except Exception:  # noqa: BLE001 — 旧版宿主无该成员时跳过
+                pass
+            self.setFixedHeight(self.card.height() + (h if self.isExpand else 0))
+
+        def setExpand(self, isExpand: bool):
+            if self.isExpand == isExpand:
+                return
+            self.isExpand = isExpand
+            self.setProperty("isExpand", isExpand)
+            from PyQt5.QtWidgets import QApplication
+
+            self.setStyle(QApplication.style())
+            self.card.expandButton.setExpand(isExpand)
+            self._adjustViewSize()
+
+else:  # pragma: no cover — 仅在没有 qfluentwidgets 的环境走到
+
+    class _VoiceConfigCard:  # type: ignore[no-redef]
+        def __init__(self, parent=None):
+            raise RuntimeError("qfluentwidgets 不可用，无法构建语音播报配置卡")
