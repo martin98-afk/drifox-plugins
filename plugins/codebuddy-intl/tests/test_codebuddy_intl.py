@@ -321,6 +321,42 @@ def test_capabilities_carry_intl_disguise_headers(fresh_provider_registry, monke
         assert callable(extra[key])
 
 
+def test_capabilities_declare_conversation_headers(fresh_provider_registry, monkeypatch, tmp_path):
+    """渠道校验三头（2026-10-28 真机：缺任一 → 400 code 11128）"""
+    mod = _install_provider(monkeypatch, tmp_path)
+    mod.register(fresh_provider_registry)
+    caps = fresh_provider_registry.family_capabilities("codebuddy_intl")
+    extra = caps["extra_headers"]
+    cfg = {"API_KEY": "rt-abc"}
+    for key in ("X-Conversation-ID", "X-Conversation-Request-ID", "X-Conversation-Message-ID"):
+        assert callable(extra[key])
+    conv = extra["X-Conversation-ID"](cfg)
+    assert len(conv) == 36 and conv.count("-") == 4
+    # 账号级稳定（会话 ID 缺失时的兜底值不随请求漂移）
+    assert extra["X-Conversation-ID"](cfg) == conv
+    assert extra["X-Conversation-ID"]({"API_KEY": "rt-other"}) != conv
+    # 请求级唯一
+    assert extra["X-Conversation-Request-ID"](cfg) != extra["X-Conversation-Request-ID"](cfg)
+    assert extra["X-Conversation-Message-ID"](cfg) != ""
+    # 会话头声明：宿主按当前会话 ID 覆盖兜底值
+    assert caps["session_header"] == "X-Conversation-ID"
+
+
+def test_resolve_extra_headers_overrides_conversation_id(fresh_provider_registry, monkeypatch, tmp_path):
+    """主程序解析链：session_header 用真实会话 ID，请求头兜底仍非空"""
+    from app.core.modelmeta.provider_profile import resolve_extra_headers
+
+    mod = _install_provider(monkeypatch, tmp_path)
+    mod.register(fresh_provider_registry)
+    cfg = {"provider_name": "CodeBuddy International", "API_KEY": "rt-x"}
+    headers = resolve_extra_headers(cfg, "sess-123")
+    assert headers["X-Conversation-ID"] == "sess-123"
+    assert headers["X-Conversation-Request-ID"]
+    no_session = resolve_extra_headers(cfg, "")
+    assert no_session["X-Conversation-ID"]
+    assert no_session["X-Conversation-Message-ID"]
+
+
 def test_family_declaration_via_registry(fresh_provider_registry, monkeypatch, tmp_path):
     """provider_name → family 声明优先链路（主程序 detect 的主路径）"""
     from app.utils.provider_ui_meta import get_family

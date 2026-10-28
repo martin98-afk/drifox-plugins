@@ -22,6 +22,11 @@
 - **多账号**：一条服务商配置 = 一个号；API Key 各存各的 refresh_token，
   余额各显，切换配置即切号
 - **自动签到**：每日签到（幂等，活动关闭不领取）
+- **渠道校验兼容**：2026-10-15 起国际版 `/v2` 对话路由要求三个会话头
+  （`X-Conversation-ID` / `-Request-ID` / `-Message-ID`），缺任一报 400
+  `code 11128 "request illegal"`；插件已自动补齐（会话 ID 取当前会话，
+  request/message 每请求新生成）。另：首条消息必须是 system，否则同样
+  11128（文案 `first message is not system prompt`）
 - 与国内版插件（system-providers 内 CodeBuddy）互不干扰，凭据缓存分流
 
 ## 使用
