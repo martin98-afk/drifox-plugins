@@ -71,3 +71,9 @@ multipart（宿主未收集 requests，插件零第三方依赖）。按钮位�
 WAV 头解析与电平统计在 `wav_utils.py`（两端共用）。注意 AVAudioRecorder 会在
 `fmt` 前插入 `JUNK`/`FLLR` 填充块（实测 data 偏移到 4096 字节），解析必须读够
 8KB 头，否则时长统计失败。
+
+macOS 侧 objc 调用必须包在 `_autorelease_pool()` 内（同一同步块进出）。objc 的
+autorelease pool 是栈式的，Qt 每个事件结束都会 pop 自己的池；若把池作为字段跨事件
+持有（start 建池、stop 时再 drain），中间任何一次事件都会把本池连带销毁，下一次
+drain 触发 `AutoreleasePoolPage::badPop` → SIGABRT，宿主直接闪退且 Python 日志无痕迹。
+`tests/smoke_recorder_mac.py` 在子进程里模拟 Qt 的每事件 push/pop 语义锁住这条约束。

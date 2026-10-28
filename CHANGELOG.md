@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+
+### 🔧 voice-input v0.6.2：修 macOS 结束录音必闪退——autorelease pool 跨事件持有触发 badPop
+
+- **症状**：macOS 上点麦克风能正常开始录音（浮窗计时正常），点结束的瞬间整个 Drifox 闪退，Python 日志无任何异常栈
+- **根因**：`ui/recorder_mac.py` 把 `NSAutoreleasePool` 作为实例字段跨事件持有（`start()` 建池存 `self._pool`，`stop_and_save()` 才 drain）。objc 的池是栈式的，Qt 每个事件派发结束都会 pop 自己的池，位于其上层的本池被连带销毁；下一次事件再 `drain` 就走到 `AutoreleasePoolPage::badPop` → `_objc_fatal` → SIGABRT。崩溃报告栈指纹：`_CFAutoreleasePoolPop → -[NSAutoreleasePool drain] → badPop → _objc_fatal → abort_with_reason`，faulting thread 为 `com.apple.main-thread`（主线程，故整个 App 挂掉）
+- **修复**：新增 `_autorelease_pool()` 上下文管理器，池与 objc 调用同同步块进出；`start()` / `close()` 各自开池，删除 `_pool` 字段；`stop_and_save()` 改为先 `close()`（内含 stop + release）再打日志，不再有裸 objc 调用在池外
+- **回归测试**：新增 `tests/smoke_recorder_mac.py`，在子进程内用 objc 手工 push/pop 池模拟 Qt 每事件语义，跑 3 轮「开始 → 200 次事件 → 停止 → 200 次事件」，同时断言 WAV 头为 16000Hz/1ch/16bit 且数据区非空（防「不崩但录空」的假通过）；非 macOS 或未授权麦克风自动 skip
+- **验证**：修复前 `exit=-6`（SIGABRT，stderr 打印 `Invalid or prematurely-freed autorelease pool`），修复后 3 轮全绿；另做 5 轮压力测试（每轮穿插 600 次事件）零崩溃；录音数据有效性实测 3.24 秒录得 104778 字节、时长 3.15s、头 16000Hz/1ch/16bit，与预期 103635 字节吻合；`validate_plugins.py --strict` 中 voice-input 为 OK，`generate_marketplace.py --check` 一致
 ### ✨ git-panel v2.3.0：AI 生成按钮生成中变停止按钮，可点击取消（原禁用无反馈）
 - **改动**：`ui/cards.py` AI 生成启动后按钮切 `FluentIcon.PAUSE` 停止图标（原 `setEnabled(False)` 静默禁用，视觉上卡住不动），tooltip 提示「点击停止」；再次点击触发 `_on_ai_cancel`
 - **取消链路**：`_AIGenerateTask` 新增 `cancel()`：置位取消事件 + 对活跃 `EngineSession` 调 `cancel()`（宿主契约：turn 随后以 cancelled=True 返回，非阻塞）
