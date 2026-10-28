@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="video pipeline">
+  <rect x="6" y="16" width="34" height="32" rx="6" fill="none" stroke="#2F6FED" stroke-width="3"/>
+  <path d="M40 26 L56 18 L56 46 L40 38 Z" fill="#2F6FED" fill-opacity="0.18" stroke="#2F6FED" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="16" cy="32" r="3" fill="#2F6FED"/>
+  <circle cx="25" cy="32" r="3" fill="#2F6FED" fill-opacity="0.6"/>
+  <circle cx="34" cy="32" r="3" fill="#2F6FED" fill-opacity="0.3"/>
+</svg>

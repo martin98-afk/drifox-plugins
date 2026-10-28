@@ -1,0 +1,22 @@
+# 公文文档格式化 Skill —— 独立运行依赖
+# (c) 2026 Jose AI (https://www.linhut.cn)
+# https://github.com/linhut/gongwen-skill
+# Licensed under the MIT License. See the LICENSE file for details.
+#
+# 仅需三个纯 Python 依赖，无数据库、无 Web 框架、无桌面端耦合。
+# lxml 由 python-docx 自动带入，无需单独声明。
+#
+# Python 版本：>= 3.10（typing 联合类型语法 | None 等）
+# 测试推荐：pytest>=7.0（如需运行测试套件）
+#
+# 安装：pip install -r requirements.txt
+# 测试安装：pip install -r requirements.txt pytest
+#
+# P2-5：依赖单源化——以 pyproject.toml 为权威声明，requirements.txt 仅用于
+# `pip install -r` 传统安装方式。版本下限以 pyproject.toml 为准。
+# （python-docx>=1.1.0 / pydantic>=2.0.0 / pyyaml>=6.0 见 pyproject.toml）
+
+python-docx>=1.1.0
+pydantic>=2.0.0
+pyyaml>=6.0
+

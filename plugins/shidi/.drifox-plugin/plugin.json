@@ -1,0 +1,26 @@
+{
+    "name": "shidi",
+    "description": "科研「师弟」— 把一句话想法拆成可交付成果：文献调研与评分、实验方案设计、科研作图、论文精读、数据整理，Pro 深度与 Flash 快速双流程。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "1.0.0",
+    "author": {
+        "name": "shidi-dsh-plugin"
+    },
+    "license": "MIT",
+    "type": "user",
+    "min_host_version": "0.5.0",
+    "keywords": [
+        "research",
+        "literature-review",
+        "paper",
+        "科研",
+        "文献调研",
+        "师弟"
+    ],
+    "components": {
+        "skills": true
+    }
+}

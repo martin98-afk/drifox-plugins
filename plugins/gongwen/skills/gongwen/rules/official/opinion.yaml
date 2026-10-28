@@ -1,0 +1,33 @@
+# (c) 2026 Jose AI (https://www.linhut.cn)
+# https://github.com/linhut/gongwen-skill
+# Licensed under the MIT License. See the LICENSE file for details.
+
+template_name: 意见
+document_type: opinion
+
+check_rules:
+  - id: CHK-O001
+    name: 意见措施检查
+    severity: P1
+    field: content.suggestions
+    expected: 意见措施具体
+    message: 意见应提出具体可行的措施和建议
+    category: content
+
+  - id: CHK-O002
+    name: 意见适用范围检查
+    severity: P2
+    field: content.scope
+    expected: 明确适用范围
+    message: 意见应明确适用范围和执行要求
+    category: content
+
+  - id: CHK-O003
+    name: 意见标题格式检查
+    severity: P2
+    field: title.pattern
+    expected: 包含"意见"字样
+    message: 意见标题应包含"关于……的意见"格式
+    category: format
+
+fix_rules: []

@@ -1,0 +1,992 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# 公文文档格式化 Skill —— 中文公文全流程处理专家
+#
+# (c) 2026 Jose AI (https://www.linhut.cn)
+# https://github.com/linhut/gongwen-skill
+# Licensed under the MIT License. See the LICENSE file for details.
+#
+# 本文件为独立发行版的入口，任何人克隆仓库后即可运行，
+# 无需原桌面端项目、无需数据库、无需后端服务。
+
+from gongwen.cli.helpers import (
+    detect_doc_type as _detect_doc_type,
+    build_output_name as _build_output_name,
+    parse_config_overrides as _parse_config_overrides,
+    load_rules_with_overrides as _load_rules_with_overrides,
+)
+__version__ = "2.15.0"
+# 版本号应与 gongwen/__init__.py 保持一致，每次发版同步更新
+"""
+中文公文全流程处理专家 —— 基于 GB/T 9704《党政机关公文格式》国家标准。
+
+支持格式检查与修复、内容润色（红色标注对比版）、模板生成、Markdown 转公文、
+版头版记页码注入等完整能力。打包为可被 AI Agent 直接调用的 Skill，
+完全自包含，克隆即用。
+
+子命令：
+  list-types                   列出所有支持的公文类型
+  template  <type> -o out.docx 生成指定类型的标准公文模板
+  parse     <in.docx>          解析文档为结构化 JSON（DocumentModel）
+  check     <in.docx>          按规则检查格式问题（只读，不改文件）
+  optimize  <in.docx> -o out   检查 + 自动修复 + 生成合规文档（支持 --layout 版式注入）
+  generate  <model.json> -o    从 DocumentModel JSON 生成 .docx
+  md2docx   <input.md> -o      将 Markdown 文本转为格式化的公文 .docx
+  header    <in.docx>          注入版头：发文机关标志 + 发文字号 + 签发人 + 红色反线
+  footer    <in.docx>          注入版记：抄送 + 印发机关 + 印发日期 + 分隔线
+  pagenum   <in.docx>          注入页码：Word PAGE 域动态页码（居中 / 单右双左）
+  rule-export <type>           导出某类型的合并规则为 YAML 用于二次定制
+  rule-list                    列出三层规则（official / custom / user）
+  rule-import <key> -f <file>  导入/保存自定义规则 YAML
+  wizard    [--answers json]     向导式交互：A/B/C/D/E 路径引导 + 一键执行（--dry-run 只打印命令）
+  font      [list|check|install] 公文标准字体管理（方正小标宋简体/仿宋_GB2312/楷体_GB2312）
+
+示例：
+  python -m gongwen list-types
+  python -m gongwen template notice -o 通知模板.docx
+  python -m gongwen check input.docx -t notice --json
+  python -m gongwen optimize input.docx -o output.docx -t report
+  cat input.md | python -m gongwen md2docx - -o 公文.docx    # 管道输入
+  python -m gongwen header in.docx --org-name ×××办公厅 --doc-number "×××办发〔2026〕1号"
+  python -m gongwen footer in.docx --cc 各省×× --printer ×××办公厅 --print-date 2026年7月23日
+  python -m gongwen pagenum in.docx --alignment right
+"""
+import json  # noqa: E402
+import logging  # noqa: E402
+import sys  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+# Re-export migrated functions for backward compatibility (tests access via gongwen._legacy)
+from gongwen.cli.helpers import (  # noqa: E402, F401
+    verify_output_fresh, safe_backup_input, safe_write_output,
+    parse_version as _parse_version,
+)
+from gongwen.cli.style_helpers import _validate_changes_schema, _extract_content_rules  # noqa: E402, F401
+from gongwen.cli.font_cmds import _is_font_installed, _get_fonts_dir  # noqa: E402, F401
+
+_logger = logging.getLogger(__name__)
+
+# ARCH-03 修复：通过 _bootstrap 统一管理 engine/ 路径和编码设置
+# 消除各入口点重复的 sys.path.insert hack
+import gongwen._bootstrap  # noqa: F401, E402  # 触发编码设置和路径引导
+
+# 阶梯2：从 cli.helpers 导入提取的辅助函数（逐步消除单文件膨胀）
+
+# 阶梯2：font 子命令迁移到 gongwen/cli/font_cmds.py
+
+# 阶梯2：check-update 子命令迁移到 gongwen/cli/update_cmds.py
+
+# 阶梯2：样式/内容辅助函数迁移到 gongwen/cli/style_helpers.py
+
+# 阶梯2：review/fix/handoff 命令迁移到 gongwen/cli/review_cmds.py
+
+# 阶梯2：misc 命令迁移到 gongwen/cli/misc_cmds.py
+
+# 阶梯2：optimize-content 命令迁移到 gongwen/cli/content_cmds.py
+
+# ---------------------------------------------------------------------------
+#  以下辅助函数已迁移到 gongwen/cli/helpers.py（阶梯2 拆分）
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+#  子命令实现
+# ---------------------------------------------------------------------------
+
+
+def cmd_list_types(args):
+    """列出所有支持的公文类型。"""
+    from engine.core.rules.loader import list_available_types
+    types = list_available_types()
+    if args.json:
+        print(json.dumps(types, ensure_ascii=False, indent=2))
+    else:
+        for t in types:
+            print(t)
+
+
+def cmd_template(args):
+    """生成标准公文模板。"""
+    from datetime import date as _dt
+    from engine.core.document.generator import generate_docx
+    from engine.template_builder import create_template_document
+
+    doc_type = args.type
+    rules = _load_rules_with_overrides(doc_type, getattr(args, "config_overrides", ""))
+    model = create_template_document(doc_type, rules)
+
+    if args.output:
+        out = Path(args.output)
+    else:
+        today = _dt.today().strftime("%Y-%m-%d")
+        out = Path(f"修订版+{doc_type}-模板+{today}+v1.docx")
+    generate_docx(model, out)
+    print(f"模板已生成: {out} (类型: {doc_type})")
+
+
+def cmd_parse(args):
+    """解析文档为结构化 JSON。"""
+    from engine.core.document.parser import parse_docx
+
+    model = parse_docx(args.input)
+    data = model.model_dump()
+    text = json.dumps(data, ensure_ascii=False, indent=2)
+    if args.output:
+        Path(args.output).write_text(text, encoding="utf-8")
+    if getattr(args, "json", False):
+        # --json：强制完整 JSON 到 stdout（即使指定了 -o），Agent 可统一解析
+        print(text)
+    elif args.output:
+        parts = [f"{len(model.paragraphs)} 段落", f"{len(model.tables)} 表格"]
+        if model.textboxes:
+            parts.append(f"{len(model.textboxes)} 文本框")
+        if model.revisions.has_revisions:
+            parts.append(f"修订 {model.revisions.insert_count}+/{model.revisions.delete_count}-")
+        print(f"已解析: {args.output} ({', '.join(parts)})")
+    else:
+        print(text)
+
+
+def cmd_check(args):
+    """检查文档格式（只读）。"""
+    from engine.core.document.parser import parse_docx
+    from engine.core.rules.engine import RuleEngine
+
+    engine = RuleEngine()
+    overrides = _parse_config_overrides(getattr(args, "config_overrides", ""))
+    if overrides:
+        engine.set_config_overrides(overrides)
+    model = parse_docx(args.input)
+    issues = engine.check(model, args.doc_type)
+
+    if args.severity:
+        issues = [i for i in issues if i.severity == args.severity]
+
+    # V2.14：未知公文类型显式警告（拼错类型不再静默回退 common）
+    _warn_unknown_doc_type(args.doc_type)
+
+    if args.json:
+        results = [{
+            "severity": i.severity, "rule_id": i.rule_id, "name": i.name,
+            "check_type": i.check_type, "location": i.location,
+            "original": i.original_text, "suggested": i.suggested_fix,
+            "reason": i.reason,
+        } for i in issues]
+        print(json.dumps(results, ensure_ascii=False, indent=2))
+    else:
+        p0 = sum(1 for i in issues if i.severity == "P0")
+        p1 = sum(1 for i in issues if i.severity == "P1")
+        p2 = sum(1 for i in issues if i.severity == "P2")
+        print(f"检查完成: {len(issues)} 个问题 (P0:{p0}, P1:{p1}, P2:{p2})")
+        for i in issues:
+            print(f"  [{i.severity}] {i.rule_id}: {i.name} @ {i.location}")
+            print(f"       实际: {i.original_text}  → 期望: {i.suggested_fix}")
+        # V2.14：读取可见性提示——文本框/修订不静默忽略
+        _print_read_visibility_hints(model)
+
+
+def _print_read_visibility_hints(model):
+    """V2.14：解析层读取可见性提示。
+
+    文本框（红头/发文字号）与修订（w:ins/w:del）是公文流转的高频信息载体，
+    此前在解析层静默丢失；现在解析可见，这里向用户显式告知降级/注意事项。
+    """
+    if model.textboxes:
+        empty = [tb for tb in model.textboxes if not (tb.text or '').strip()]
+        if empty:
+            print(f"  [提示] 检测到 {len(empty)} 个空文本框（红头/发文字号可能缺失）")
+    if model.revisions.has_revisions:
+        authors = '、'.join(model.revisions.authors) or '未知'
+        print(f"  [提示] 文档含修订 {model.revisions.insert_count} 处新增 / "
+              f"{model.revisions.delete_count} 处删除（作者: {authors}）；"
+              f"检查基于当前可见内容，建议先接受/拒绝修订后再处理")
+
+
+def _warn_unknown_doc_type(doc_type):
+    """V2.14：未知公文类型显式警告（此前静默回退 common 规则，拼错类型难发现）。"""
+    if not doc_type:
+        return None
+    from engine.core.rules.loader import list_available_types
+    known = list_available_types()
+    if doc_type not in known:
+        print(f"  ⚠️ 警告: 未知公文类型「{doc_type}」，已回退使用通用规则"
+              f"（python -m gongwen list-types 查看 {len(known)} 类）")
+        return doc_type
+    return None
+
+
+def cmd_optimize(args):
+    """检查 + 修复 + 生成（格式优化，不改内容）。
+
+    默认预览模式：检测类型 → 检查问题 → 列出摘要 → 提示下一步。
+    加 --apply 才真正执行修复并生成文件。
+    --verify：执行后自动 check 输出文件，存在 P0 时退出码非 0（单命令闭环）。
+    --json：输出结构化结果（Agent 可机器解析）。
+    """
+    from engine.core.document.parser import parse_docx
+    from engine.core.document.generator import generate_docx
+    from engine.core.rules.engine import RuleEngine
+
+    is_json = bool(getattr(args, "json", False))
+    engine = RuleEngine()
+    # 应用 DSH 配置覆盖到规则引擎
+    overrides = _parse_config_overrides(getattr(args, "config_overrides", ""))
+    if overrides:
+        engine.set_config_overrides(overrides)
+    input_path = Path(args.input)
+    out = Path(args.output) if args.output else input_path.parent / _build_output_name(input_path, "A")
+
+    # 确定文档类型（共享辅助函数，优先 -t 参数，其次文件名推断）
+    doc_type, type_source = _detect_doc_type(input_path, args.doc_type)
+
+    # V2.14：未知公文类型显式警告（拼错类型不再静默回退 common）
+    _warn_unknown_doc_type(doc_type)
+
+    # 解析文档并检查
+    model = parse_docx(str(input_path))
+    issues = engine.check(model, doc_type)
+
+    p0 = [i for i in issues if i.severity == "P0"]
+    p1 = [i for i in issues if i.severity == "P1"]
+    p2 = [i for i in issues if i.severity == "P2"]
+
+    # 版式配置预读（失败不阻断主流程）
+    layout_parts: list = []
+    if getattr(args, "layout", None):
+        try:
+            lc = json.loads(Path(args.layout).read_text(encoding="utf-8"))
+            layout_parts = [k for k in ("header", "footer", "page_number") if k in lc]
+        except Exception as e:
+            print(f"  ⚠️ 版式配置读取失败（{e}），跳过版式注入", file=sys.stderr)
+
+    result = {
+        "command": "optimize",
+        "input": str(input_path),
+        "output": str(out),
+        "doc_type": doc_type,
+        "type_source": type_source,
+        "issues": len(issues),
+        "p0": len(p0), "p1": len(p1), "p2": len(p2),
+        "applied": bool(getattr(args, "apply", False)),
+        "layout": layout_parts or None,
+        "fixed": 0, "cleaned": 0, "bolded": 0, "blank_lines": 0,
+        "ai_declaration_removed": bool(getattr(args, "remove_ai_declaration", False)),
+        "verified": None, "verify_issues": None,
+        "verify_executed": False, "verify_passed": False,
+        "verify_p0": None, "verify_p1": None, "verify_p2": None,
+        "verify_error": None,
+        # V2.14：读取可见性（文本框/修订）——供 Agent 感知解析降级
+        "textboxes": len(model.textboxes),
+        "revisions": ({
+            "has": True,
+            "insert": model.revisions.insert_count,
+            "delete": model.revisions.delete_count,
+            "authors": model.revisions.authors,
+        } if model.revisions.has_revisions else None),
+    }
+
+    # === 预览信息（--json 时不打印人类文本）===
+    if not is_json:
+        print(f"📄 文件: {input_path.name}")
+        print(f"🔍 类型: {doc_type}（{type_source}）")
+        print(f"📊 问题: 共 {len(issues)} 项（P0:{len(p0)}, P1:{len(p1)}, P2:{len(p2)}）")
+        if issues:
+            print("  P0 示例（必须修复）:")
+            for i in p0[:3]:
+                print(f"    - {i.name} @ {i.location}")
+            if p1:
+                print("  P1 示例（建议修复）:")
+                for i in p1[:3]:
+                    print(f"    - {i.name} @ {i.location}")
+        if layout_parts:
+            print(f"🎨 版式注入: {', '.join(layout_parts)}")
+        # V2.14：读取可见性提示（文本框/修订不静默忽略）
+        _print_read_visibility_hints(model)
+
+    if not args.apply:
+        if not is_json:
+            print()
+            print("─── 预览模式 ───")
+            print("以上是本次将要修复的内容预览。")
+            print("加 --apply 执行修复，或指定 -t 切换公文类型。")
+            print("示例:")
+            print(f"  python -m gongwen optimize {args.input} -t notice --apply")
+            print(f"  python -m gongwen optimize {args.input} -o 成品.docx --apply --layout 版式.json")
+        else:
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+
+    # === 执行模式 ===
+    selected = args.selected_rules.split(",") if args.selected_rules else None
+    _, fixed = engine.check_and_fix(model, doc_type, selected)
+    # 清理路径 B 遗留的修改说明段落和删除线标记（确保干净成品）
+    from engine.core.document.modifier import clean_path_b_markers, bold_first_sentence_of_body
+    cleaned = clean_path_b_markers(fixed)
+    # B-03（方案八）：optimize 增加首句加粗能力——修复后补齐缺失的首句加粗，
+    # 与 fix-common 行为对齐（speech 文种跳过：整段加粗为朗读件规范）
+    n_bold = 0
+    if doc_type not in ('speech', 'host_speech'):
+        n_bold = bold_first_sentence_of_body(fixed)
+    # 改动9：按 blank_line_rules 配置主动插入必要空行（省筹委会规范：标题前后/落款前/附件后）
+    try:
+        from engine.core.document.modifier import _insert_blank_lines
+        from engine.core.rules.manager import load_rules_merged as _lrm
+        n_blank = _insert_blank_lines(fixed, _lrm(doc_type))
+    except Exception:
+        n_blank = 0
+    generate_docx(fixed, str(out), no_ai_declaration=getattr(args, "remove_ai_declaration", False))
+
+    result["fixed"] = len(issues)
+    result["cleaned"] = cleaned
+    result["bolded"] = n_bold
+    result["blank_lines"] = n_blank
+
+    if not is_json:
+        print(f"✅ 优化完成: {out}")
+        print(f"  修复 {len(issues)} 项 (P0:{len(p0)}, P1:{len(p1)}, P2:{len(p2)})")
+        if cleaned:
+            print(f"  清理 {cleaned} 处路径B标记")
+        if n_bold:
+            print(f"  首句加粗 {n_bold} 处")
+        if n_blank:
+            print(f"  补齐空行 {n_blank} 处")
+        if getattr(args, "remove_ai_declaration", False):
+            print("  AI声明段: 已移除（--remove-ai-declaration）")
+
+    if getattr(args, "layout", None):
+        layout = json.loads(Path(args.layout).read_text(encoding="utf-8"))
+        from engine.inject import inject_header, inject_footer, inject_page_number
+        if layout.get("header"):
+            inject_header(str(out), layout["header"])
+            if not is_json:
+                print("  版头已注入")
+        if layout.get("footer"):
+            inject_footer(str(out), layout["footer"])
+            if not is_json:
+                print("  版记已注入")
+        if layout.get("page_number"):
+            inject_page_number(str(out), layout["page_number"])
+            if not is_json:
+                print("  页码已注入")
+
+    # === 验证闭环（--verify，路径 A 单命令）===
+    if getattr(args, "verify", False) and out.exists():
+        result["verify_executed"] = True
+        try:
+            v_model = parse_docx(str(out))
+            v_issues = engine.check(v_model, doc_type)
+            v_p0 = sum(1 for i in v_issues if i.severity == "P0")
+            v_p1 = sum(1 for i in v_issues if i.severity == "P1")
+            v_p2 = sum(1 for i in v_issues if i.severity == "P2")
+            result["verified"] = True
+            result["verify_passed"] = (v_p0 == 0)
+            result["verify_issues"] = len(v_issues)
+            result["verify_p0"] = v_p0
+            result["verify_p1"] = v_p1
+            result["verify_p2"] = v_p2
+            if not is_json:
+                print(f"✅ 验证: {len(v_issues)} 项（P0:{v_p0}, P1:{v_p1}, P2:{v_p2}）")
+                if v_p0:
+                    print("  ⚠️ 仍存在 P0 必须修复项，请检查输出文档")
+        except Exception as e:
+            result["verified"] = False
+            result["verify_error"] = str(e)
+            if not is_json:
+                print(f"  ⚠️ 验证失败（{e}）", file=sys.stderr)
+
+    if is_json:
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+
+    # 验证闭环失败（存在 P0）→ 退出码非 0，供 Agent 判断交付质量
+    if result.get("verified") and (result.get("verify_p0") or 0) > 0:
+        return 1
+    return 0
+
+
+def cmd_generate(args):
+    """从 DocumentModel JSON 生成 .docx。"""
+    from engine.core.document.models import DocumentModel
+    from engine.core.document.generator import generate_docx
+
+    data = json.loads(Path(args.input).read_text(encoding="utf-8"))
+    model = DocumentModel(**data)
+    if args.output:
+        out = Path(args.output)
+    else:
+        stem = Path(args.input).stem.replace(".model", "").replace("_model", "")
+        out = Path(f"修订版+{stem}+生成.docx")
+    generate_docx(model, out)
+    print(f"文档已生成: {out}")
+
+
+def cmd_md2docx(args):
+    """
+    将 Markdown 文本转为格式化的公文 .docx 文件。
+
+    输入可以是文件路径，也可以是 '-'（标准输入，支持管道）。
+    支持 Front Matter 元数据（--- 包裹的 YAML 块）：
+    - recipients: 主送机关（字符串或数组）
+    - signer: 落款单位
+    - date: 成文日期
+    - attachments: 附件列表（字符串数组）
+    - doc_type: 公文类型（默认 notice）
+    """
+    from datetime import date as _dt
+    # 既定方案：md2docx 改用 python-docx 直接按 GB/T 9704 生成初稿，
+    # 不再走 DocumentModel → generate_docx 管线（规避技能版本不一致导入错误，
+    # 并保证初稿正文即三号仿宋 16pt，而非回退 11pt）
+    from gongwen.md2docx_render import render_model_to_docx as _render_docx
+    from engine.core.document.models import (
+        DocumentModel, DocumentMetadata, PageSetup,
+        Paragraph, ParagraphFormat, Run, RunFormat,
+    )
+    from engine.core.document.modifier import convert_markdown
+
+    # 解析参数
+    doc_type = args.doc_type or "notice"
+
+    # 加载规则（含 DSH 配置覆盖）
+    rules = _load_rules_with_overrides(doc_type, getattr(args, "config_overrides", ""))
+
+    # 读取输入（FIX-C001：utf-8-sig 自动剥离 BOM——BOM 字符使 Markdown # 号标题正则失配，
+    # BOM 和 # 被原样写入 docx；无 BOM 时 utf-8-sig 与 utf-8 完全一致）
+    text: str
+    source_desc: str
+    input_src = args.input
+    if input_src == "-":
+        raw = sys.stdin.buffer.read()
+        text = raw.decode("utf-8-sig")
+        source_desc = "stdin"
+    else:
+        text = Path(input_src).read_text(encoding="utf-8-sig")
+        source_desc = input_src
+
+    # 解析 Front Matter
+    recipients = args.recipients or []
+    signer = args.signer or ""
+    doc_date = args.date or ""
+    attachments = args.attachments or []
+
+    lines = text.split("\n")
+    if lines and lines[0].strip() == "---":
+        # 尝试提取 YAML front matter
+        end_idx = None
+        front_matter = {}
+        for i in range(1, len(lines)):
+            if lines[i].strip() == "---":
+                end_idx = i
+                break
+            if ":" in lines[i]:
+                key, _, val = lines[i].partition(":")
+                k = key.strip()
+                v = val.strip().strip('"').strip("'")
+                if v:
+                    front_matter[k] = v
+        if end_idx:
+            lines = lines[end_idx + 1:]
+            text = "\n".join(lines)
+            doc_type = front_matter.get("doc_type", doc_type)
+            recipients = front_matter.get("recipients", recipients)
+            signer = front_matter.get("signer", signer)
+            doc_date = front_matter.get("date", doc_date)
+            attachments = front_matter.get("attachments", attachments)
+
+    # 加载规则获取页边距等
+    margins = rules.get("page_setup", {}).get("margins", {})
+
+    # 使用统一的解析工具（跨模块#3 修复：消除重复 _parse_margin/_parse_cm 实现）
+    from utils.parse import parse_mm
+
+    # 构建 DocumentModel（改动1/10：页边距与页眉页脚距离取自 _common.yaml page_setup 配置）
+    page_setup_cfg = rules.get("page_setup", {})
+    hdr_dist = page_setup_cfg.get("header_distance", "1.5cm")
+    ftr_dist = page_setup_cfg.get("footer_distance", "2.3cm")
+
+    model = DocumentModel(
+        metadata=DocumentMetadata(),
+        page_setup=PageSetup(
+            paper_width_mm=210, paper_height_mm=297,
+            margin_top_mm=parse_mm(margins.get("top", "2.8cm")) or 28.0,
+            margin_bottom_mm=parse_mm(margins.get("bottom", "2.8cm")) or 28.0,
+            margin_left_mm=parse_mm(margins.get("left", "2.7cm")) or 27.0,
+            margin_right_mm=parse_mm(margins.get("right", "2.7cm")) or 27.0,
+            header_distance_cm=(parse_mm(hdr_dist) or 15.0) / 10,
+            footer_distance_cm=(parse_mm(ftr_dist) or 23.0) / 10,
+        ),
+    )
+
+    # 主送机关（V2.3 修复：不再 append 在头部，延迟到标题确定后插入——
+    # 原先主送机关排在标题之前，且与正文内联主送机关重复）
+    rcp = recipients
+    if isinstance(rcp, str) and rcp:
+        # "各单位,各部门" → ["各单位", "各部门"]
+        parts = [p.strip() for p in rcp.replace("，", ",").split(",") if p.strip()]
+        rcp = parts
+    rcp_text = ""
+    if isinstance(rcp, list) and rcp:
+        rcp_text = "、".join(rcp) + "："
+
+    # 正文行：每行一个段落
+    para_offset = len(model.paragraphs)
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        model.paragraphs.append(Paragraph(
+            index=para_offset + i, text=stripped, role="body",
+            runs=[Run(index=0, text=stripped, format=RunFormat())],
+            format=ParagraphFormat(alignment="justify", line_spacing_pt=33),
+        ))
+
+    # 执行 Markdown 转换（#标题 → 标题样式，**加粗** → bold，|表格| → Word 表格）
+    changes = convert_markdown(model)
+
+    # 若 Markdown 未用 # 标记标题，自动将首个正文段落设为标题
+    has_title = any(getattr(p, 'is_heading', False) and p.heading_level == 0 for p in model.paragraphs)
+    if not has_title:
+        for para in model.paragraphs:
+            if para.text.strip() and getattr(para, 'role', None) == 'body':
+                para.role = 'title'
+                para.is_heading = True
+                para.heading_level = 0
+                # 设置物理格式，确保 round-trip 后能被解析器正确识别
+                para.format.alignment = 'center'
+                for r in para.runs:
+                    r.format.font_name = '方正小标宋简体'
+                    r.format.font_size_pt = 22.0
+                break
+
+    # 主送机关：插入到标题之后（V2.3 修复——原先 append 在头部，主送机关会排在标题
+    # 之前，且与正文内联主送机关重复，导致 parser 误判标题/optimize 标题带首行缩进）
+    _SALUTATION_EXCLUDE_WORDS = (
+        '按照', '根据', '遵照', '依据', '为了', '为贯彻', '为落实', '为认真',
+        '为深入', '为切实', '为全面', '经', '据', '奉', '针对', '基于', '鉴于',
+        '综上', '为此', '对此', '结合', '围绕', '因此', '故', '由此可见', '从上述',
+    )
+    if rcp_text:
+        _title_idx = next((i for i, _p in enumerate(model.paragraphs)
+                           if getattr(_p, 'is_heading', False) and _p.heading_level == 0), None)
+        if _title_idx is not None:
+            # 标题后已有内联主送机关（role=recipient 或以冒号结尾的短文本且非导语）→ 去重
+            _existing_idx = None
+            for _j in range(_title_idx + 1, min(_title_idx + 5, len(model.paragraphs))):
+                _q = model.paragraphs[_j]
+                _qt = (_q.text or "").strip()
+                if not _qt:
+                    continue
+                _looks_sal = (_q.role == "recipient") or (
+                    _q.role in (None, "body")
+                    and len(_qt) <= 50
+                    and _qt.endswith(("：", ":"))
+                    and not _qt.startswith(_SALUTATION_EXCLUDE_WORDS)
+                )
+                if _looks_sal:
+                    _existing_idx = _j
+                break  # 标题后第一个非空段若不像称呼段，不再继续找
+            if _existing_idx is not None:
+                _ep = model.paragraphs[_existing_idx]
+                _ep.text = rcp_text
+                _ep.role = "recipient"
+                if _ep.runs:
+                    _ep.runs[0].text = rcp_text
+                    _ep.runs[0].format.font_name = "仿宋_GB2312"
+                    _ep.runs[0].format.font_size_pt = 16.0
+                if _ep.format is None:
+                    _ep.format = ParagraphFormat()
+                _ep.format.first_line_indent_pt = 0
+            else:
+                # 标题后没有称呼段 → 在标题后插入（平移后续表格锚点）
+                _pos = _title_idx + 1
+                for _t in model.tables:
+                    if getattr(_t, 'insert_after_index', -1) >= _pos:
+                        _t.insert_after_index += 1
+                model.paragraphs.insert(_pos, Paragraph(
+                    index=_pos, text=rcp_text, role="recipient",
+                    runs=[Run(index=0, text=rcp_text, format=RunFormat(font_name="仿宋_GB2312", font_size_pt=16.0))],
+                    format=ParagraphFormat(alignment="justify", first_line_indent_pt=0, line_spacing_pt=33),
+                ))
+
+    # 领句加粗（路径 C 生成公文时，Markdown 中的"一是/二是/第一/第二"等领句自动加粗）
+    _BOLD_LEADIN = {
+        # P2-18 修复：一是/二是 领句段是"编号列举正文"，字体保持仿宋_GB2312（正文字体），
+        # 仅领句加粗；不再使用楷体（楷体是二级标题字体，正文领句用楷体会触发
+        # parser 楷体标题判定 / CHK-C004 正文字体误报）
+        '一是': '仿宋_GB2312', '二是': '仿宋_GB2312', '三是': '仿宋_GB2312',
+        '四是': '仿宋_GB2312', '五是': '仿宋_GB2312',
+        '第一，': '仿宋_GB2312', '第二，': '仿宋_GB2312', '第三，': '仿宋_GB2312',
+        '一要': '仿宋_GB2312', '二要': '仿宋_GB2312', '三要': '仿宋_GB2312',
+    }
+    for para in model.paragraphs:
+        txt = para.text.strip()
+        matched = next((p for p in _BOLD_LEADIN if txt.startswith(p)), None)
+        if not matched or not para.runs:
+            continue
+        pi = txt.find('。')
+        if pi == -1:
+            continue
+        lead_in, remaining = txt[:pi + 1], txt[pi + 1:]
+        if not remaining:
+            continue
+        para.runs[0].text = lead_in
+        para.runs[0].format.bold = True
+        para.runs[0].format.font_name = _BOLD_LEADIN[matched]
+        para.runs[0].format.font_size_pt = 16.0
+        # 领句加粗的余下部分沿用领句字体（一律仿宋_GB2312 正文字体），
+        # 使整段字体统一且保持正文字体，符合 CHK-C004 正文字体要求
+        para.runs.append(Run(
+            index=len(para.runs), text=remaining,
+            format=RunFormat(font_name=_BOLD_LEADIN[matched], font_size_pt=16.0),
+        ))
+
+    # 落款与附件说明：插入到正文之后、附件分页/附件标题（# 附件：）之前，
+    # 而非 append 到文档末尾——否则"落款后附表"时表格会被插到落款之前（定位缺陷修复）
+    insert_pos = len(model.paragraphs)  # 默认：文档末尾
+    for _i, _p in enumerate(model.paragraphs):
+        _t = (_p.text or "").strip()
+        # 优先锚定附件分页段（---），其次附件标题（# 附件：），落款插在其之前
+        if (getattr(_p, "page_break", False)
+                or (getattr(_p, "is_heading", False) and _t.startswith("附件"))):
+            insert_pos = _i
+            break
+
+    # 正文内联落款识别（V2.3 新增）：正文区末尾若直接写了署名行+日期行
+    # （"XX单位" + "YYYY年M月D日"），自动标记为 signature/date 角色并按 GB/T 9704
+    # 落款样式渲染（此前被当作普通正文 JUSTIFY+首行缩进，与 parser 识别结果不一致）。
+    # 扫描范围限定在 insert_pos（附件分页/标题）之前；--signer/--date 已提供时原位覆盖。
+    import re as _re
+    _DATE_ONLY_RE = _re.compile(r'^\s*\d{4}年\d{1,2}月\d{1,2}日\s*$')
+    _inline_sig_found = False
+    _inline_sig_idxs: list = []
+    _inline_date_idx = None
+    _body_end = insert_pos if insert_pos is not None else len(model.paragraphs)
+    _nonempty_idxs = [i for i in range(_body_end)
+                      if (model.paragraphs[i].text or "").strip()]
+    if _nonempty_idxs:
+        _li = _nonempty_idxs[-1]
+        if _DATE_ONLY_RE.match(model.paragraphs[_li].text or ""):
+            _inline_date_idx = _li
+            # 从日期往前收集署名行：非标题、非称呼、非附件说明、非日期、
+            # 不以句末标点结尾、≤60 字（支持多行署名，最多 3 行）
+            for _k in range(len(_nonempty_idxs) - 2, max(len(_nonempty_idxs) - 5, -1), -1):
+                _i2 = _nonempty_idxs[_k]
+                _p2 = model.paragraphs[_i2]
+                _t2 = (_p2.text or "").strip()
+                if (getattr(_p2, "is_heading", False)
+                        or _p2.role in ("recipient", "salutation")
+                        or _t2.startswith(("附件：", "附："))
+                        or _DATE_ONLY_RE.match(_t2)
+                        or len(_t2) > 60
+                        or _t2.endswith(("。", "！", "？", "；"))):
+                    break
+                _inline_sig_idxs.append(_i2)
+            _inline_sig_idxs.reverse()
+    if _inline_sig_idxs and _inline_date_idx is not None:
+        # 首行署名必须是非空文本（防止把正文倒数第二段误当署名）
+        _t0 = (model.paragraphs[_inline_sig_idxs[0]].text or "").strip()
+        if _t0:
+            _inline_sig_found = True
+    if _inline_sig_found:
+        # 署名段前补足 2 个空行（GB/T 9704 落款区 P10）
+        _first_sig = _inline_sig_idxs[0]
+        _blanks = 0
+        _j = _first_sig - 1
+        while _j >= 0 and not (model.paragraphs[_j].text or "").strip():
+            _blanks += 1
+            _j -= 1
+        _need = max(0, 2 - _blanks)
+        if _need:
+            for _t_ in model.tables:
+                if getattr(_t_, 'insert_after_index', -1) >= _first_sig:
+                    _t_.insert_after_index += _need
+            for _n in range(_need):
+                model.paragraphs.insert(_first_sig, Paragraph(
+                    index=0, text="", role="body", runs=[],
+                    format=ParagraphFormat(line_spacing_pt=33)))
+            _inline_sig_idxs = [i + _need for i in _inline_sig_idxs]
+            if _inline_date_idx is not None:
+                _inline_date_idx += _need
+            insert_pos += _need  # 附件标题整体后移
+        # --signer/--date 覆盖（去重：不重复插入）
+        if signer:
+            _sp = model.paragraphs[_inline_sig_idxs[0]]
+            _sp.text = signer
+            _sp.runs = [Run(index=0, text=signer, format=RunFormat(font_name="仿宋_GB2312", font_size_pt=18.0))]
+            if _sp.format is None:
+                _sp.format = ParagraphFormat()
+            _sp.format.alignment = "center"
+            _sp.format.first_line_indent_pt = 0
+            for _i2 in _inline_sig_idxs[1:]:
+                model.paragraphs[_i2].text = ""
+                model.paragraphs[_i2].runs = []
+        if doc_date and _inline_date_idx is not None:
+            _dp = model.paragraphs[_inline_date_idx]
+            _dp.text = doc_date
+            _dp.runs = [Run(index=0, text=doc_date, format=RunFormat(font_name="仿宋_GB2312", font_size_pt=16.0))]
+            if _dp.format is None:
+                _dp.format = ParagraphFormat()
+            _dp.format.alignment = "right"
+            _dp.format.first_line_indent_pt = 0
+        # 其余署名/日期段应用样式（渲染按 role 取样式；未覆盖文本的保留原文）
+        for _i2 in _inline_sig_idxs:
+            _p2 = model.paragraphs[_i2]
+            if not (_p2.text or "").strip():
+                continue
+            _p2.role = "signature"
+            if _p2.format is None:
+                _p2.format = ParagraphFormat()
+            _p2.format.alignment = "center"
+            _p2.format.first_line_indent_pt = 0
+            if not _p2.runs:
+                _p2.runs = [Run(index=0, text=_p2.text, format=RunFormat(font_name="仿宋_GB2312", font_size_pt=18.0))]
+            for _r in _p2.runs:
+                _r.format.font_name = "仿宋_GB2312"
+                _r.format.font_size_pt = 18.0
+        if _inline_date_idx is not None:
+            _dp2 = model.paragraphs[_inline_date_idx]
+            _dp2.role = "date"
+            if _dp2.format is None:
+                _dp2.format = ParagraphFormat()
+            _dp2.format.alignment = "right"
+            _dp2.format.first_line_indent_pt = 0
+            if not _dp2.runs:
+                _dp2.runs = [Run(index=0, text=_dp2.text, format=RunFormat(font_name="仿宋_GB2312", font_size_pt=16.0))]
+            for _r in _dp2.runs:
+                _r.format.font_name = "仿宋_GB2312"
+                _r.format.font_size_pt = 16.0
+
+    # 组装待插入段落：附件说明 → 落款（署名前 2 空行）
+    new_paras: list = []
+
+    # 附件说明（--attachments；编号已带"1."则不再重复加）
+    atts = attachments
+    if isinstance(atts, str) and atts:
+        atts = [atts]
+    if isinstance(atts, list) and atts:
+        _parts = []
+        for _i, _a in enumerate(atts):
+            _s = str(_a).strip()
+            if _s and _s[0].isdigit() and _s[1:2] in (".", "、"):
+                _parts.append(_s)
+            else:
+                _parts.append(f"{_i + 1}.{_s}")
+        att_text = "附件：" + "、".join(_parts)
+        # 去重（FIX）：若正文已含附件说明（"附件：/附："开头、非标题段），
+        # 则原位替换其文本，避免与 --attachments 重复生成两条附件说明
+        _existing_att = None
+        for _ep in model.paragraphs:
+            _et = (_ep.text or "").strip()
+            if (not getattr(_ep, "is_heading", False)
+                    and (_et.startswith("附件：") or _et.startswith("附："))):
+                _existing_att = _ep
+                break
+        if _existing_att is not None:
+            _existing_att.text = att_text
+            _existing_att.role = "attachment"
+            _existing_att.runs = [Run(index=0, text=att_text,
+                                      format=RunFormat(font_name="仿宋_GB2312", font_size_pt=16.0))]
+            if _existing_att.format is None:
+                _existing_att.format = ParagraphFormat()
+            _existing_att.format.alignment = "justify"
+            _existing_att.format.line_spacing_pt = 33
+        else:
+            new_paras.append(Paragraph(
+                index=0, text=att_text, role="attachment",
+                runs=[Run(index=0, text=att_text, format=RunFormat(font_name="仿宋_GB2312", font_size_pt=16.0))],
+                format=ParagraphFormat(alignment="justify", line_spacing_pt=33),
+            ))
+
+    # 落款与日期（P10: 署名前增加2个空行；P4: 署名段居中 18pt）
+    # V2.3：正文内联落款已识别（_inline_sig_found）时不再重复插入——
+    # 空行与署名/日期样式已由识别块处理；--signer/--date 文本也已原位覆盖
+    if not _inline_sig_found:
+        if signer or doc_date:
+            for _ in range(2):
+                new_paras.append(Paragraph(
+                    index=0, text="", role="body",
+                    runs=[],
+                    format=ParagraphFormat(line_spacing_pt=33),
+                ))
+        if signer:
+            new_paras.append(Paragraph(
+                index=0, text=signer, role="signature",
+                runs=[Run(index=0, text=signer, format=RunFormat(font_name="仿宋_GB2312", font_size_pt=18.0))],
+                format=ParagraphFormat(alignment="center", line_spacing_pt=33),
+            ))
+        if doc_date:
+            new_paras.append(Paragraph(
+                index=0, text=doc_date, role="date",
+                runs=[Run(index=0, text=doc_date, format=RunFormat(font_name="仿宋_GB2312", font_size_pt=16.0))],
+                format=ParagraphFormat(alignment="right", line_spacing_pt=33),
+            ))
+
+    if new_paras:
+        # 插入点之后的表格锚点整体后移（保持"表格跟在锚点段落之后"不变）
+        _shift = len(new_paras)
+        for _t in model.tables:
+            if _t.insert_after_index >= insert_pos:
+                _t.insert_after_index += _shift
+        # 插入段落并统一重排索引
+        model.paragraphs[insert_pos:insert_pos] = new_paras
+        for _i, _p in enumerate(model.paragraphs):
+            _p.index = _i
+
+    # 生成 docx（P1: --no-ai-declaration 跳过 AI 声明段）
+    # AI 生成内容通病修复：去除句前空格 + 统一文字颜色为黑色（md2docx 不走规则引擎，手动调用）
+    from engine.core.document.modifier import remove_extra_spaces, unify_text_color
+    remove_extra_spaces(model)
+    unify_text_color(model)
+    if args.output:
+        out = Path(args.output)
+    else:
+        today = _dt.today().strftime("%Y-%m-%d")
+        out = Path(f"修订版+{doc_type}-草稿+{today}+v1.docx")
+    # 既定方案：直接按 GB/T 9704 渲染初稿（python-docx 直写，不走通用管线）
+    _render_docx(model, str(out), rules=rules,
+                 no_ai_declaration=getattr(args, "no_ai_declaration", False))
+
+    # FIX-B002：md2docx 补充页码注入（默认从 rules 读取，回退到省筹委会规范）
+    try:
+        # 页码默认样式取自 rules（FIX-C025 修复规则的值），若 rules 未定义则用硬编码回退
+        _pn = {
+            "font": "宋体",
+            "size": 14,
+            "alignment": "right",  # 翻页模式（单右双左），GB/T 9704
+            "format": "- {PAGE} -",
+        }
+        for fr in (rules or {}).get("fix_rules", []):
+            if fr.get("action") == "set_page_number" and isinstance(fr.get("value"), dict):
+                _pv = fr["value"]
+                _pn["font"] = _pv.get("font", _pn["font"])
+                _pn["size"] = int(str(_pv.get("size", _pn["size"])).replace("pt", ""))
+                _pn["alignment"] = _pv.get("alignment", _pn["alignment"])
+                _pn["format"] = _pv.get("format", _pn["format"])
+                break
+        from engine.inject import inject_page_number
+        inject_page_number(str(out), {"enabled": True, **_pn})
+    except Exception as e:
+        print(f"  ⚠️ 页码注入失败（{e}），跳过", file=sys.stderr)
+
+    if getattr(args, "json", False):
+        # --json：结构化摘要（Agent 可直接解析）
+        print(json.dumps({
+            "command": "md2docx",
+            "output": str(out),
+            "doc_type": doc_type,
+            "paragraphs": len(model.paragraphs),
+            "markdown_changes": changes,
+            "source": source_desc if source_desc != "stdin" else "stdin",
+        }, ensure_ascii=False))
+    else:
+        print(f"公文已生成: {out}")
+        print(f"  类型: {doc_type}, 段落: {len(model.paragraphs)}, Markdown 转换: {changes} 处")
+        if source_desc != "stdin" and args.input != "-":
+            print(f"  来源: {source_desc}")
+
+
+def cmd_header(args):
+    """注入版头：发文机关标志 + 发文字号 + 签发人 + 红色反线。"""
+    import shutil
+    from engine.inject import inject_header
+
+    out = Path(args.output) if args.output else Path(args.input)
+    if out != Path(args.input):
+        shutil.copy2(args.input, out)
+
+    config = {
+        "org_name": args.org_name or "",
+        "doc_number": args.doc_number or "",
+        "signer": args.signer or "",
+    }
+    if not config["org_name"]:
+        print("错误：--org-name（发文机关标志）为必填项", file=sys.stderr)
+        sys.exit(1)
+    inject_header(str(out), config)
+    print(f"版头已注入: {out}")
+
+
+def cmd_footer(args):
+    """注入版记：抄送 + 印发机关 + 印发日期 + 分隔线。"""
+    import shutil
+    from engine.inject import inject_footer
+
+    out = Path(args.output) if args.output else Path(args.input)
+    if out != Path(args.input):
+        shutil.copy2(args.input, out)
+
+    config = {
+        "cc": args.cc or "",
+        "printer": args.printer or "",
+        "print_date": args.print_date or "",
+    }
+    if not any(config.values()):
+        print("错误：--cc / --printer / --print-date 至少提供一项", file=sys.stderr)
+        sys.exit(1)
+    inject_footer(str(out), config)
+    print(f"版记已注入: {out}")
+
+
+def cmd_pagenum(args):
+    """注入页码：Word PAGE 域动态页码。"""
+    import shutil
+    from engine.inject import inject_page_number
+
+    out = Path(args.output) if args.output else Path(args.input)
+    if out != Path(args.input):
+        shutil.copy2(args.input, out)
+
+    config = {
+        "enabled": True,
+        "font": args.font,
+        "size": args.size,
+        "alignment": args.alignment,
+        "format": args.format,
+    }
+    inject_page_number(str(out), config)
+    print(f"页码已注入: {out} (格式: {args.format}, 对齐: {args.alignment})")
+
+
+def _echo_progress(args, step: int, total: int, label: str, detail: str = "") -> None:
+    """问题四：分步进度回显（--quiet 时抑制中间步骤，仅保留最终输出）。"""
+    if getattr(args, 'quiet', False):
+        return
+    mark = "✅" if detail else "…"
+    line = f"  [{step}/{total}] {label} ………………… {mark}"
+    if detail:
+        line += f" {detail}"
+    print(line)
+
+
+# E2 修复：风格提示词 → 偏差方向映射（轻量模式匹配，不调 LLM）
+_STYLE_DEVIATION_HINTS = {
+    "庄重": "关注口语化/网络用语/夸张修饰，建议替换为正式表述",
+    "严谨": "关注模糊量词/主观判断/缺乏依据的断言，建议补充数据或限定条件",
+    "简洁": "关注冗余修饰/重复表达/长句嵌套，建议精简删减",
+    "有力": "关注被动句/模糊动词/弱化语气，建议改用主动语态和明确动词",
+    "朴实": "关注套话/空话/口号式表述，建议用具体事实替代",
+    "自然": "关注生硬书面语/过度格式化表述，建议改为流畅叙述",
+}
+
+
+# 改进 D：合法风格集合（style-prompts.md 6 套 + SKILL.md 风格词典兼容别名）
+# _VALID_STYLES 已迁移到 gongwen/cli/style_helpers.py
+
+
+# 官方镜像仓库（GitHub 为 check-update 判定渠道，GitCode/AtomGit 作国内镜像）
+# PyPI JSON API（无需 git，pip 用户首选渠道）
+# ---------------------------------------------------------------------------
+#  字体管理（install/list/check）
+# ---------------------------------------------------------------------------
+
+# 公文标准字体清单：字体名 → TTF 文件名
+# GitHub 字体下载源（document-ai-assistant 仓库 TTF/ 目录）
+FONTS_DOWNLOAD_BASE = "https://raw.githubusercontent.com/linhut/document-ai-assistant/master/TTF"
+
+
+def main():
+    """CLI 主入口（已迁移至 gongwen.cli.app.main，保留兼容转发）。"""
+    from gongwen.cli.app import main as _main
+    return _main()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,33 @@
+# (c) 2026 Jose AI (https://www.linhut.cn)
+# https://github.com/linhut/gongwen-skill
+# Licensed under the MIT License. See the LICENSE file for details.
+
+template_name: 报告
+document_type: report
+
+check_rules:
+  - id: CHK-RPT001
+    name: 报告结语检查
+    severity: P2
+    field: ending.check
+    expected: 包含规范结语
+    message: 报告应以"特此报告"等规范结语结尾
+    category: content
+
+  - id: CHK-RPT002
+    name: 报告事项检查
+    severity: P1
+    field: content.report_items
+    expected: 报告内容完整
+    message: 报告应包含工作情况、存在问题、下步打算
+    category: content
+
+  - id: CHK-RPT003
+    name: 报告标题格式检查
+    severity: P2
+    field: title.pattern
+    expected: 包含"报告"字样
+    message: 报告标题应包含"关于……的报告"格式
+    category: format
+
+fix_rules: []

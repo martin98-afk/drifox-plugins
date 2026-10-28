@@ -1,0 +1,29 @@
+{
+    "name": "gongwen",
+    "description": "中文公文全流程处理 — 按 GB/T 9704 国家标准做格式检查与自动修复、Word 原生修订式内容优化、模板生成与样式学习、Markdown 转公文，覆盖 25 类公文。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "1.0.0",
+    "author": {
+        "name": "Jose AI",
+        "url": "https://github.com/linhut/gongwen-skill"
+    },
+    "license": "MIT",
+    "type": "user",
+    "min_host_version": "0.5.0",
+    "keywords": [
+        "gongwen",
+        "docx",
+        "公文",
+        "word",
+        "gb/t 9704",
+        "format-check"
+    ],
+    "homepage": "https://github.com/linhut/gongwen-skill",
+    "components": {
+        "skills": true,
+        "tools": true
+    }
+}
