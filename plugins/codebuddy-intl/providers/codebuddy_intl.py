@@ -6,8 +6,9 @@ balanced-model / primary-model），网关按账号档位与任务动态分配�
 （gpt-6-luna / claude 系），用户不接触具体模型 ID，也不踩 11102 门控。
 
 伪装 CodeBuddy VSCode 插件（craft 形态）接入国际版网关：身份标识
-（X-Domain / X-Product / X-Agent-Intent / X-IDE-* 系 / User-Agent）经
-capabilities["extra_headers"] 注入每个 LLM 请求，主程序
+（X-Domain / X-Product / X-Agent-Intent / X-IDE-* 系 / User-Agent）与渠道校验
+三会话头（X-Conversation-ID / -Request-ID / -Message-ID，缺任一报 11128）
+经 capabilities["extra_headers"] 注入每个 LLM 请求，主程序
 （chat_worker._provider_extra_headers）通用消费，无需感知具体服务商。
 
 多账号模型：一条服务商配置 = 一个号（对齐国内版 CodeBuddy / OpenAI Codex 先例）。
@@ -28,6 +29,7 @@ import json
 import os
 import threading
 import time
+import uuid
 from pathlib import Path
 
 from app.plugins.registries.provider_registry import ProviderDef
@@ -139,6 +141,29 @@ def _make_identity_header(key: str):
 
 # 伪装身份头（来源：opencode/pi 扩展实测 2026-09/10；craft 形态）。
 # Authorization 与租户三头为可调用值：chat_worker 每次请求传入 llm_config。
+#
+# 会话三头（2026-10-28 真机复现 + 拆解）：2026-10-15 起 /v2 对话路由加了
+# 渠道校验，缺 X-Conversation-ID / -Request-ID / -Message-ID 任一即
+# 400 code 11128 "request illegal"；只查存在性（值随意、可重复），与 UA 无关。
+# 另一道同码闸门：首条消息非 system 报 "first message is not system prompt"。
+def _stable_uuid(seed: str) -> str:
+    """由 refresh_token 派生稳定 UUID 形态标识（账号级会话 ID 兜底）。"""
+    digest = hashlib.sha1(seed.encode("utf-8")).hexdigest()[:32]
+    return f"{digest[:8]}-{digest[8:12]}-{digest[12:16]}-{digest[16:20]}-{digest[20:32]}"
+
+
+def _conversation_id_header(llm_config: dict) -> str:
+    """X-Conversation-ID 兜底值：账号稳定 UUID（宿主会话 ID 存在时被
+    capabilities["session_header"] 覆盖为真实会话 ID）。"""
+    refresh_token = str((llm_config or {}).get("API_KEY", "") or "").strip()
+    return _stable_uuid(refresh_token) if refresh_token else str(uuid.uuid4())
+
+
+def _per_request_id_header(llm_config: dict) -> str:
+    """X-Conversation-Request-ID / -Message-ID：每次请求现生成（官方语义）。"""
+    return str(uuid.uuid4())
+
+
 _EXTRA_HEADERS = {
     "X-Domain": "www.codebuddy.ai",
     "X-Product": "SaaS",
@@ -154,6 +179,10 @@ _EXTRA_HEADERS = {
     "X-Tenant-Id": _make_identity_header("X-Tenant-Id"),
     "X-Enterprise-Id": _make_identity_header("X-Enterprise-Id"),
     "X-User-Id": _make_identity_header("X-User-Id"),
+    # 渠道校验三头（缺任一 → 11128）
+    "X-Conversation-ID": _conversation_id_header,
+    "X-Conversation-Request-ID": _per_request_id_header,
+    "X-Conversation-Message-ID": _per_request_id_header,
 }
 
 # 路由槽位（动态路由：用户只选槽位，网关动态分配实际模型）。
@@ -460,6 +489,9 @@ def register(registry):
             family="codebuddy_intl",
             capabilities={
                 "extra_headers": _EXTRA_HEADERS,
+                # 会话头：主程序按当前会话 ID 覆盖 extra_headers 里的账号级兜底值
+                # （resolve_extra_headers 后赋值，同键覆盖）；会话 ID 为空时保留兜底
+                "session_header": "X-Conversation-ID",
                 "login_hook": _auto_login,
                 "models_hook": _fetch_models,
                 # ── 族级能力（2026-10-13 真机校准）─────────────────────
