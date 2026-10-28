@@ -45,8 +45,7 @@ PLUGIN_NAME = "chinese-chess"
 
 DEFAULT_RED_CONTROL = "manual"
 
-# 字段行宽度（模型串「Provider:model」较长，显式放宽防截断）
-_FIELD_MIN_WIDTH = 320
+# 标签列宽度（与主程序 PluginConfigCard._FieldRow 一致，全卡字段名对齐）
 _LABEL_MIN_WIDTH = 120
 
 
@@ -176,6 +175,7 @@ def _load_models_by_tree(provider_key: str) -> List[str]:
 
 
 def _field_row(label_text: str, control, parent=None):
+    """字段行：左侧定宽 label，右侧控件撑满剩余宽度（模型串较长也不被裁）。"""
     from PyQt5.QtCore import Qt
     from PyQt5.QtWidgets import QHBoxLayout, QWidget
 
@@ -186,8 +186,7 @@ def _field_row(label_text: str, control, parent=None):
     label = BodyLabel(label_text, row)
     label.setMinimumWidth(_LABEL_MIN_WIDTH)
     layout.addWidget(label, 0, Qt.AlignLeft | Qt.AlignVCenter)
-    control.setMinimumWidth(_FIELD_MIN_WIDTH)
-    layout.addWidget(control, 1, Qt.AlignRight)
+    layout.addWidget(control, 1)
     return row
 
 

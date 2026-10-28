@@ -91,7 +91,19 @@ feat|fix|docs|chore|refactor|test: scope - summary
 
 ---
 
-## 6. 强制同步规则
+## 6. 设置卡（设置页 UI）
+
+插件往设置页注册的配置卡必须遵循 [`docs/settings-card.md`](docs/settings-card.md)，核心口径：
+
+- 能用 `config_schema`（E1 自动卡）就不要自绘
+- 自绘卡 `priority > 0` 会覆盖自动卡，`config_schema` 里的 `link` / `action` 入口必须自己补回
+- 表单行统一「label 最小宽 120 + 控件 stretch 撑满」，禁止「控件固定窄宽 + 右对齐」
+- 重置按钮右对齐定宽，不撑满整行；字段不适用时整行置灰，不要隐藏
+- `EditableComboBox` 选中后文本是 item label，真值取 `currentData()`；回显后 `setCursorPosition(0)`
+
+---
+
+## 7. 强制同步规则
 
 **任何功能/命令/配置/目录/工作流变化必须同步更新相关文档**
 
