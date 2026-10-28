@@ -5,7 +5,7 @@
         "light": "icon.png",
         "dark": "icon_dark.png"
     },
-    "version": "1.6.0",
+    "version": "1.7.0",
     "type": "user",
     "platforms": [
         "windows",

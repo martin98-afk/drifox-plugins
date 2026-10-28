@@ -386,4 +386,27 @@ def register_ui(registry) -> None:
         # 锚定截图按钮右侧；未装 quick-screenshot 时自动降级工具栏末尾
         position="after:quick-screenshot",
     )
+    _register_config_card(registry)
     logger.info("[voice-input] 输入框按钮已注册（麦克风听写）")
+
+
+def _register_config_card(registry) -> None:
+    """注册自绘设置卡，覆盖 E1 自动卡（priority 1 > 0）。
+
+    E1 自动卡放不进「测试连接」按钮：听写配置全是外部服务凭据，
+    不验证只能等真说话时才发现 Key 无效。自绘卡同时把 config_schema 里
+    两条 link 字段（获取 Key）以行尾外链形式补回。
+    注册失败（旧版宿主无该扩展点）时静默降级回 E1 自动卡，不影响听写。
+    """
+    try:
+        from .config_card import _VoiceInputConfigCard
+
+        registry.register_settings_card(
+            PLUGIN_NAME,
+            f"{PLUGIN_NAME}-config",
+            "语音听写配置",
+            _VoiceInputConfigCard,
+            priority=1,
+        )
+    except Exception as e:  # noqa: BLE001 — 降级到 E1 自动卡，不阻断按钮注册
+        logger.warning(f"[voice-input] 自绘配置卡注册失败，降级 E1 自动卡: {e}")
