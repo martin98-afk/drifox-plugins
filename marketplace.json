@@ -770,7 +770,7 @@
         {
             "name": "chinese-chess",
             "description": "中国象棋 — 与大模型对弈的浮动卡片游戏",
-            "version": "0.4.1",
+            "version": "0.4.2",
             "author": "马丁",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -2964,7 +2964,7 @@
         {
             "name": "git-panel",
             "description": "Git 控制面板 — 文件变更、暂存/取消暂存、提交、Stash、分支管理、提交历史、Diff 预览、AI 生成提交描述",
-            "version": "2.3.1",
+            "version": "2.3.2",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -5017,7 +5017,7 @@
         {
             "name": "prompt-enhancer",
             "description": "输入框按钮：一键用 LLM 优化当前输入框的提示词，增强指令可在系统配置中多行编辑。优化中按钮圆环转圈动画，复用主程序模型配置，「提示词增强模型」选择可持久化（关闭再打开保留），闭包实现（不修改主程序）。",
-            "version": "0.5.1",
+            "version": "0.5.2",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -5590,7 +5590,7 @@
         {
             "name": "ssh-toolkit",
             "description": "SSH 远程工具包：连接管理（AI 工具 + 系统设置页）、命令执行、文件传输(SFTP)、端口转发、目录浏览，基于 paramiko 实现，AI 自动调用。",
-            "version": "0.4.1",
+            "version": "0.4.2",
             "author": "马丁",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -6327,7 +6327,7 @@
         {
             "name": "vision-proxy",
             "description": "图片代理 — 当前模型不支持视觉时，把图片转发给配置的多模态模型，取回文字描述交给当前模型继续推理",
-            "version": "0.2.1",
+            "version": "0.2.2",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -6397,7 +6397,7 @@
         {
             "name": "voice-input",
             "description": "输入框工具栏语音听写按钮：点击开始录音，再次点击结束并把识别文字插入输入框光标处。纯云端识别：硅基流动（免费模型，默认）与 MiniMax 双引擎可配，云端失败自动互为备用",
-            "version": "0.6.0",
+            "version": "0.6.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -6450,7 +6450,7 @@
         {
             "name": "voice-reply",
             "description": "消息卡片页脚「朗读」按钮：点击播报本条 AI 回复。双引擎：本地系统语音（Windows SAPI5 / macOS say，免费零配置，默认）+ OpenAI 兼容在线 TTS API（默认预填硅基流动 CosyVoice2，可指向任意兼容服务）",
-            "version": "1.7.0",
+            "version": "1.7.1",
             "author": "DriFox",
             "license": "GPL-3.0-or-later",
             "categories": [
