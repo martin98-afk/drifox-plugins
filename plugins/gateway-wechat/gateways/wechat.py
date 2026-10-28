@@ -3,7 +3,7 @@
 微信机器人平台适配器（iLink 官方接口）
 
 通过微信 iLink 官方 Bot 接口通信（纯 HTTP 长轮询，非个人号协议）：
-    - 登录: wechat_login 工具扫码（get_bot_qrcode → get_qrcode_status 长轮询）→ bot_token
+    - 登录: 设置卡「扫码登录」（get_bot_qrcode → get_qrcode_status 长轮询）→ bot_token
     - 收消息: POST /ilink/bot/getupdates（40s 长轮询，get_updates_buf 游标）
     - 回复: POST /ilink/bot/sendmessage（需对方 context_token，TTL 24h）
 
@@ -213,7 +213,7 @@ class WechatAdapter(BasePlatformAdapter):
             return False
 
         if not self._bot_token:
-            self._last_error = "缺少 bot_token：请在设置卡点「扫码登录」（或让 AI 调 wechat_login 工具）获取"
+            self._last_error = "缺少 bot_token：请在设置卡点「扫码登录」获取"
             logger.warning(f"[Wechat] {self._last_error}")
             return False
 
@@ -618,7 +618,7 @@ def register(registry) -> None:
             build_config_values=_build_config_values,
             validate_config=lambda cfg: (
                 bool(cfg.secret),
-                "缺少 bot_token：请使用 wechat_login 工具扫码登录（或手动粘贴）",
+                "缺少 bot_token：请在设置卡点「扫码登录」（或手动粘贴）",
             ),
             ui_order=10,
         )
