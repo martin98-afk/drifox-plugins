@@ -3,7 +3,7 @@
 evolution_scaffold — 自进化工具 1：按需求生成 DriFox 插件骨架。
 
 写入目标默认 user 根（~/.drifox/plugins/<name>/），保存即热重载。
-支持 DriFox 全部 **17 类组件**（对齐主程序 kernel.KNOWN_COMPONENTS）：
+支持 DriFox 全部 **22 类组件**（对齐主程序 kernel.KNOWN_COMPONENTS）：
 tools / commands / agents / skills / hooks / mcp / lsp / themes /
 ui / providers / team_templates /
 model_adapters / loop_policies / storages / serializers / gateways / engines。
@@ -23,8 +23,9 @@ from app.tools.result import ToolResult
 
 VALID_COMPONENTS = (
     "tools", "commands", "agents", "skills", "hooks", "mcp", "lsp", "themes",
-    "ui", "providers", "team_templates",
-    "model_adapters", "loop_policies", "storages", "serializers", "gateways", "engines",
+    "ui", "providers", "team_templates", "hook_policies",
+    "model_adapters", "loop_policies", "storages", "serializers", "gateways",
+    "transports", "stream_sinks", "context_tiers", "budget_resolvers", "engines",
 )
 
 _NAME_RE = re.compile(r"^[a-z][a-z0-9-]{1,63}$")
@@ -345,6 +346,36 @@ def register(registry):
     registry.register({cls_name}())
 '''
 
+# hook_policies 增强模板：协议与其它 runtime 组件不同（类属性 id/scope + should_trigger）
+_HOOK_POLICY_PY = '''# -*- coding: utf-8 -*-
+"""hook_policies 组件骨架 — 逐事件决定 hook 是否参与。
+
+{kind_note}
+
+协议：app.plugins.contracts.hook_policy
+  类属性 id（策略标识，引擎侧引用它）、scope（"main" 主域 / "worker" worker 域）
+  方法 should_trigger(event: HookEvent) -> HookDecision
+启用：引擎创建会话时传 hook_policy_id="{plugin}"，或全局 set_active。
+"""
+
+
+class {cls_name}:
+    """TODO: 按业务写事件白名单/条件判定，不要无条件全量放行"""
+
+    id = "{plugin}"
+    scope = "main"
+
+    def should_trigger(self, event):
+        from app.plugins.contracts.hook_policy import HookDecision
+        # TODO: 按事件类型判定。下面是全放行占位，务必改成你要的白名单
+        return HookDecision.TRIGGER
+
+
+def register(registry):
+    """注册入口 — source 由 loader 强制注入"""
+    registry.register({cls_name}())
+'''
+
 # storages 增强模板：预置已沉淀的正确实践（详见 self-evolver references/storage_engine.md）
 # 1) __init__ 末尾立即 _ensure_init() → is_initialized=True（history_manager 靠它探测）
 # 2) register() 末尾自激活（StorageRegistry 默认 sqlite，不自动按 enabled 切）
@@ -421,19 +452,25 @@ def register(registry):
 _KIND_NOTES = {
     "model_adapters": ("model_adapters", "模型适配器：统一不同厂商 API 差异（参考 system/model_adapters/openai_family.py）"),
     "loop_policies": ("loop_policies", "循环策略：决定 agent loop 继续/停止（参考 system/loop_policies/default.py，协议在 app.plugins.contracts.loop_policy）"),
+    "hook_policies": ("hook_policies", "hook 触发策略：逐事件决定 hook 是否参与（类需 id/scope/should_trigger，协议在 app.plugins.contracts.hook_policy，参考 cron-tasks/hook_policies/cron_selective.py）"),
     "storages": ("storages", "存储引擎：会话/数据持久化（参考 system/storages/sqlite.py）"),
     "serializers": ("serializers", "序列化器：消息格式转换（参考 system/serializers/openai.py）"),
     "gateways": ("gateways", "网关：外部消息平台接入（参考 gateway-feishu/gateways/feishu.py，协议在 app.plugins.contracts.gateway_platform）"),
     "engines": ("engines", "对话引擎：可替换的对话处理核心（参考 system/ 下 engines 实现）"),
+    "transports": ("transports", "协议传输层：create_stream/classify_error（协议在 app.plugins.contracts.protocol_transport）"),
+    "stream_sinks": ("stream_sinks", "流式输出落点：消费 StreamEvent 并按 chunk 落盘/转发（协议在 app.plugins.contracts.stream_sink）"),
+    "context_tiers": ("context_tiers", "系统上下文分层：should_apply/apply 返回 TierOutcome（协议在 app.plugins.contracts.context_policy）"),
+    "budget_resolvers": ("budget_resolvers", "上下文预算解析器：resolve(llm_config, system_content) → BudgetResult（与 context_tiers 配套）"),
 }
 
 
 def _manifest(name: str, description: str, comps: list, author: str = "self-evolver") -> str:
-    # components 覆盖 kernel.KNOWN_COMPONENTS 全集 17 类（缺省 false）
+    # components 覆盖 kernel.KNOWN_COMPONENTS 全集 22 类（缺省 false）
     all_comps = [
         "tools", "commands", "agents", "skills", "hooks", "mcp", "lsp", "themes",
-        "ui", "providers", "team_templates",
-        "model_adapters", "loop_policies", "storages", "serializers", "gateways", "engines",
+        "ui", "providers", "team_templates", "hook_policies",
+        "model_adapters", "loop_policies", "storages", "serializers", "gateways",
+        "transports", "stream_sinks", "context_tiers", "budget_resolvers", "engines",
     ]
     components = {c: (c in comps) for c in all_comps}
     manifest = {
@@ -443,7 +480,14 @@ def _manifest(name: str, description: str, comps: list, author: str = "self-evol
         "author": {"name": author},
         "license": "GPL-3.0-or-later",
         "type": "user",
-        "drifox": {"min_version": "0.5.0"},
+        # 宿主版本门禁：version_gate.check_host_version 读这个字段，不满足则整插件拒载。
+        # 全仓 193 个插件一律用它；旧的 drifox.min_version 已无插件使用。
+        "min_host_version": "0.6.10",
+        # 宿主 HOST_PLUGIN_API_VERSION 当前为 2。声明 2 而未写 capabilities 视为空清单，
+        # 拿不到任何受保护能力（ui.notify / engine.session 等）。空清单对新插件是安全默认，
+        # 需要宿主能力时按插件实例补：grep -h '"capabilities"' plugins/*/.drifox-plugin/plugin.json
+        "api_version": 2,
+        "capabilities": [],
         "keywords": [name.split("-")[0], "evolved"],
         "components": components,
     }
@@ -552,7 +596,8 @@ def _write_components(base: Path, name: str, description: str, comps: list) -> l
         )
         written.append(f"team_templates/{name}.yaml")
 
-    for kind in ("model_adapters", "loop_policies", "storages", "serializers", "gateways", "engines"):
+    for kind in ("model_adapters", "loop_policies", "hook_policies", "storages", "serializers",
+                 "gateways", "transports", "stream_sinks", "context_tiers", "budget_resolvers", "engines"):
         if kind in comps:
             sys_dir, note = _KIND_NOTES[kind]
             d = base / kind
@@ -562,6 +607,9 @@ def _write_components(base: Path, name: str, description: str, comps: list) -> l
             if kind == "storages":
                 # storages 用增强模板：预置 is_initialized 初始化 + register 自激活
                 content = _STORAGE_PY.format(plugin=name, cls_name=cls)
+            elif kind == "hook_policies":
+                # hook_policies 协议是 id/scope/should_trigger，与通用 runtime 模板不同
+                content = _HOOK_POLICY_PY.format(kind_note=note, plugin=name, cls_name=cls)
             else:
                 content = _RUNTIME_PY.format(
                     kind=kind, kind_note=note, sys_dir=sys_dir, plugin=name, cls_name=cls,
@@ -646,7 +694,11 @@ def _impl(tool_ctx, **kwargs):
             f"\n\n下一步：\n"
             f"1. 填充各 TODO 实现（read/edit 直接改，热重载自动生效）\n"
             f"2. 用 evolution_validate plugin_name={name} 校验\n"
-            f"3. 用 evolution_journal 记录本次进化{backup_note}"
+            f"3. 需要用户填 Key/开关/路径时，在 plugin.json 加 config_schema（E1 自动卡，"
+            f"不要自绘设置卡）；只有 config_schema 表达不了的交互才写 ui/ 自绘卡\n"
+            f"4. 需要宿主受保护能力（ui.notify / engine.session 等）时，往 capabilities 补声明；"
+            f"空清单=不申请任何能力，拿不到就报错，别猜能力名——照现有插件抄\n"
+            f"5. 用 evolution_journal 记录本次进化{backup_note}"
         )
         return ToolResult(True, content=content)
     except Exception as e:  # noqa: BLE001
@@ -680,9 +732,10 @@ _SCHEMA = {
                         "enum": list(VALID_COMPONENTS),
                     },
                     "description": (
-                        "要启用的组件列表，默认 ['tools']。支持全部 17 类："
+                        "要启用的组件列表，默认 ['tools']。支持全部 22 类："
                         "tools/commands/agents/skills/hooks/mcp/lsp/themes/ui/providers/"
-                        "team_templates/model_adapters/loop_policies/storages/serializers/gateways/engines"
+                        "team_templates/model_adapters/loop_policies/hook_policies/storages/"
+                        "serializers/gateways/transports/stream_sinks/context_tiers/budget_resolvers/engines"
                     ),
                 },
                 "force": {

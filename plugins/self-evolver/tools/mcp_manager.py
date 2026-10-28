@@ -107,6 +107,39 @@ def _list_servers(plugin_name: str) -> str:
     return "\n".join(lines)
 
 
+_AUTH_SCHEMES = ("bearer", "token", "basic", "bot", "apikey")
+
+
+def _looks_like_secret(value: str) -> bool:
+    """粗略判断一个值像不像凭据。
+
+    先剥掉认证 scheme 前缀（`Bearer xxx` 是最常见写法，带空格不能直接排除），
+    再按长度、典型前缀与字符熵判断；`${env.VAR}` 占位一律不算。
+    """
+    v = (value or "").strip()
+    if not v or "${env." in v:
+        return False
+    parts = v.split(None, 1)
+    if len(parts) == 2 and parts[0].lower() in _AUTH_SCHEMES:
+        v = parts[1].strip()
+    if len(v) < 20 or " " in v:
+        return False
+    if v.startswith(("sk-", "ghp_", "gho_", "github_pat_", "xoxb-", "xoxp-", "AKIA", "eyJ")):
+        return True
+    alnum = sum(c.isalnum() for c in v)
+    return alnum / len(v) > 0.85
+
+
+def _plaintext_secrets(server: dict) -> list:
+    """列出被明文写进 .mcp.json 的凭据位置（字段.键名）。"""
+    hits = []
+    for field in ("env", "headers"):
+        for k, v in (server.get(field) or {}).items():
+            if isinstance(v, str) and _looks_like_secret(v):
+                hits.append(f"{field}.{k}")
+    return hits
+
+
 def _add_server(plugin_name: str, server_name: str, kwargs: dict):
     base = _find_plugin(plugin_name)
     if base is None:
@@ -137,6 +170,27 @@ def _add_server(plugin_name: str, server_name: str, kwargs: dict):
             "headers": kwargs.get("headers") or {},
         })
 
+    # credential 声明（推荐）：只声明要什么 Key 与注入方式，用户在设置页填，
+    # Key 存 <app_data>/plugin_data/<插件>/config.json，不进 git。
+    credential = kwargs.get("credential")
+    if credential:
+        if isinstance(credential, str):
+            try:
+                credential = json.loads(credential)
+            except json.JSONDecodeError as e:
+                return None, f"credential 不是合法 JSON：{e}"
+        if not isinstance(credential, dict):
+            return None, (
+                'credential 需要是对象，如 {"label":"Token",'
+                '"inject":{"type":"header","name":"Authorization","scheme":"Bearer"}}'
+            )
+        inject = credential.get("inject")
+        if not isinstance(inject, dict) or inject.get("type") not in ("header", "query", "url"):
+            return None, "credential.inject.type 必须是 header / query / url 之一（见 docs/mcp.md）"
+        if inject["type"] in ("header", "query") and not inject.get("name"):
+            return None, "credential.inject.type 为 header/query 时必须给 name"
+        server["credential"] = credential
+
     f, cfg = _load_mcp_file(base)
     cfg["mcpServers"][server_name] = server
     f.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -153,8 +207,23 @@ def _add_server(plugin_name: str, server_name: str, kwargs: dict):
         except (json.JSONDecodeError, OSError):
             pass
 
-    return f"已添加 MCP 服务器「{server_name}」到插件 {plugin_name} 的 {f.name}\n" \
-           f"端点：{command or url}\n配置已写入；DriFox 会自动启动连接，如未生效再重启。", None
+    msg = f"已添加 MCP 服务器「{server_name}」到插件 {plugin_name} 的 {f.name}\n" \
+          f"端点：{command or url}\n配置已写入；DriFox 会自动启动连接，如未生效再重启。"
+    secrets = _plaintext_secrets(server)
+    if secrets:
+        msg += (
+            "\n\n⚠️ 检测到明文凭据已写入 .mcp.json：" + "、".join(secrets) + "\n"
+            "docs/mcp.md 要求「密钥不要写进 .mcp.json 提交到 git」。两种正确做法：\n"
+            "  1. credential 声明（推荐）：只声明要什么 Key 与注入方式，用户在设置页填，"
+            "Key 存 plugin_data/<插件>/config.json 不进 git：\n"
+            '     evolution_mcp operation=add ... credential={"label":"Token",'
+            '"inject":{"type":"header","name":"Authorization","scheme":"Bearer"}}\n'
+            "  2. ${env.VAR} 占位（CI/脚本场景）：把值改成 ${env.YOUR_VAR}，连接时读进程环境变量。\n"
+            "请改用其一，避免凭据随仓库泄露。"
+        )
+    if credential:
+        msg += "\n\ncredential 已声明：设置 → MCP 连接器会为它渲染输入框，用户填完即生效。"
+    return msg, None
 
 
 def _remove_server(plugin_name: str, server_name: str):
@@ -233,6 +302,8 @@ _SCHEMA = {
             "自进化：管理 MCP 服务器配置（读写插件 .mcp.json）。"
             "operation=list 列出配置；add/remove/enable/disable 增删启停。"
             "stdio 型用 command+args，远程型用 url+headers。"
+            "凭据优先用 credential 声明（用户在设置页填，Key 不进 git），"
+            "CI 场景用 ${env.VAR} 占位；明文写 env/headers 会被检测并告警。"
             "可自动补齐 manifest 的 components.mcp 标记。配置变更后 DriFox 自动监听重连；如未生效再重启。"
         ),
         "parameters": {
@@ -262,7 +333,7 @@ _SCHEMA = {
                 },
                 "env": {
                     "type": "object",
-                    "description": "stdio 型环境变量（API key 等）",
+                    "description": "stdio 型环境变量。切勿写明文密钥，用 ${env.VAR} 占位或改用 credential",
                 },
                 "url": {
                     "type": "string",
@@ -270,7 +341,17 @@ _SCHEMA = {
                 },
                 "headers": {
                     "type": "object",
-                    "description": "远程型请求头（认证等）",
+                    "description": "远程型请求头。切勿写明文密钥，用 ${env.VAR} 占位或改用 credential",
+                },
+                "credential": {
+                    "type": "object",
+                    "description": (
+                        "凭据声明（推荐）。只写要什么 Key 与注入方式，DriFox 在设置页渲染输入框，"
+                        "Key 存 plugin_data/<插件>/config.json 不进 git。"
+                        '示例：{"label":"Token","placeholder":"GitHub PAT",'
+                        '"getUrl":"https://github.com/settings/tokens",'
+                        '"inject":{"type":"header","name":"Authorization","scheme":"Bearer"}}'
+                    ),
                 },
             },
             "required": ["operation"],
