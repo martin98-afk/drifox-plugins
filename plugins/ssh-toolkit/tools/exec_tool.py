@@ -5,6 +5,8 @@ import sys
 import time
 from pathlib import Path
 
+from loguru import logger
+
 # PluginToolLoader 用 importlib 加载本模块，注入 tools/ 目录到 sys.path 以便绝对导入
 _TOOLS_DIR = str(Path(__file__).resolve().parent)
 if _TOOLS_DIR not in sys.path:
@@ -12,7 +14,10 @@ if _TOOLS_DIR not in sys.path:
 
 from app.tools.result import ToolResult  # noqa: E402
 
-import _store as store, _args as args, _auth as auth, _pool as pool  # noqa: E402
+import _store as store  # noqa: E402
+import _args as args  # noqa: E402
+import _auth as auth  # noqa: E402
+import _pool as pool  # noqa: E402
 
 # 单流输出上限：`timeout` 只约束单次 recv，不是总时长。远端 `yes` / `cat
 # /dev/urandom` 会持续灌数据，无上限的 read() 会把宿主进程直接 OOM。
@@ -82,8 +87,35 @@ def _connect_impl(tool_ctx, **kwargs):
         client = auth.connect(conn)
     except Exception as e:
         return ToolResult(False, error=f"连接失败：{e}")
-    handle = pool.put_connection(name, client)
-    body = f"已连接 {name or conn.get('host')}，handle={handle}"
+
+    # 连过一次就落库（用户口径：不再要求先 ssh_add_connection）：
+    # 直连参数按默认命名存入，已有同名连接则刷新最后连接时间与次数。
+    saved_note = ""
+    saved_name = name or ""
+    try:
+        record = {
+            "host": conn.get("host"),
+            "user": conn.get("user"),
+            "port": args.to_int(conn.get("port"), 22),
+            "auth_type": conn.get("auth_type") or "publickey",
+            "key_path": conn.get("key_path") or "~/.ssh/id_rsa",
+            "password": conn.get("password") or "",
+            "key_passphrase": conn.get("key_passphrase") or "",
+            "host_key_policy": conn.get("host_key_policy") or "tofu",
+            "timeout": args.to_int(conn.get("timeout"), 10),
+            "note": conn.get("note") or "",
+        }
+        if name:
+            record["name"] = name
+        saved_name, created = store.upsert_connection(record)
+        saved_note = f"\n[已{'记录' if created else '更新'}连接] {saved_name}（设置 → SSH 远程连接 可查看/删除）"
+    except Exception as e:  # noqa: BLE001 — 落库失败不影响本次连接
+        logger.warning(f"[ssh-toolkit] 连接配置落库失败: {e}")
+        saved_note = f"\n[连接配置未保存] {e}"
+
+    # handle 用落库后的名字：直连（未命名）也能拿到可读可复用的 handle
+    handle = pool.put_connection(saved_name or name, client)
+    body = f"已连接 {saved_name or name or conn.get('host')}，handle={handle}" + saved_note
     # 首次连接：回显主机密钥指纹，让人有机会核对（TOFU 的可见面）
     new_keys = getattr(client, "_drifox_new_host_keys", None) or []
     if new_keys:
@@ -135,9 +167,9 @@ def register(registry):
         "ssh_connect",
         {"type": "function", "function": {
             "name": "ssh_connect",
-            "description": "建立 SSH 连接并加入连接池，返回 handle（供 ssh_exec 等复用）",
+            "description": "建立 SSH 连接并加入连接池，返回 handle（供 ssh_exec 等复用）。连接成功会自动保存到本地，无需预先保存配置",
             "parameters": {"type": "object", "properties": {
-                "name": {"type": "string", "description": "已保存连接名；或运行时 host/user 直接连"},
+                "name": {"type": "string", "description": "已保存连接名；不传名字时用 host/user 直连，成功后按 user@host 自动命名保存"},
                 "host": {"type": "string", "description": "主机（运行时直连时用）"},
                 "port": {"type": "integer", "description": "端口"},
                 "user": {"type": "string", "description": "用户名"},

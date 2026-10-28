@@ -17,12 +17,6 @@ from pathlib import Path
 
 from loguru import logger
 
-# tools/ 目录注入 sys.path：与 conn_mgmt.py 使用同一套顶层模块名（_store/_pool），
-# 工具已加载时命中 sys.modules 同一实例，POOL 才是同一个，断连才有效。
-_TOOLS_DIR = str(Path(__file__).resolve().parent.parent / "tools")
-if _TOOLS_DIR not in sys.path:
-    sys.path.insert(0, _TOOLS_DIR)
-
 try:  # qfluentwidgets 由 DriFox 运行时提供
     from qfluentwidgets import ExpandSettingCard
 except Exception:  # noqa: BLE001
@@ -40,6 +34,12 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+# tools/ 目录注入 sys.path：与 conn_mgmt.py 使用同一套顶层模块名（_store/_pool），
+# 工具已加载时命中 sys.modules 同一实例，POOL 才是同一个，断连才有效。
+_TOOLS_DIR = str(Path(__file__).resolve().parent.parent / "tools")
+if _TOOLS_DIR not in sys.path:
+    sys.path.insert(0, _TOOLS_DIR)
 
 try:
     import _pool  # noqa: E402  tools 连接池（删除联动断连）
@@ -135,6 +135,41 @@ class _ElidedLabel(QLabel):
             super().setText(self._full)
             return
         super().setText(self.fontMetrics().elidedText(self._full, Qt.ElideMiddle, w))
+
+
+def _hint_label(text, color="gray"):
+    """空态/错误态提示：一行灰字或红字，自动换行，不弹窗。"""
+    lb = QLabel(text)
+    lb.setFont(_ui_font(10))
+    lb.setWordWrap(True)
+    lb.setStyleSheet(f"color: {color};")
+    return lb
+
+
+def _humanize_since(iso):
+    """ISO 时间戳 → 「刚刚 / 3 分钟前 / 2 小时前 / 昨天 / 5 天前 / 2026-01-02」。"""
+    import datetime
+
+    if not iso:
+        return "未知"
+    try:
+        ts = datetime.datetime.fromisoformat(str(iso))
+    except ValueError:
+        return str(iso)
+    secs = int((datetime.datetime.now() - ts).total_seconds())
+    if secs < 0:
+        return ts.strftime("%Y-%m-%d %H:%M")
+    if secs < 60:
+        return "刚刚"
+    if secs < 3600:
+        return f"{secs // 60} 分钟前"
+    if secs < 86400:
+        return f"{secs // 3600} 小时前"
+    if secs < 86400 * 2:
+        return "昨天"
+    if secs < 86400 * 30:
+        return f"{secs // 86400} 天前"
+    return ts.strftime("%Y-%m-%d")
 
 
 # ── 可达性探测（展开设置卡时对未保持连接的条目后台 TCP 探测） ────────
@@ -247,7 +282,13 @@ class _ConnectionsCard(_CARD_BASE):
 
         self._list_layout = QVBoxLayout()
         self._list_layout.setContentsMargins(0, 0, 0, 0)
-        self._list_layout.setSpacing(4)
+        self._list_layout.setSpacing(6)
+
+        # 顶部摘要：总数 + 活跃数（展开时刷新）
+        self._summary = QLabel("")
+        self._summary.setFont(_ui_font(10))
+        self._summary.setStyleSheet("color: gray;")
+        self.viewLayout.addWidget(self._summary)
         self.viewLayout.addLayout(self._list_layout)
 
         self._reload()
@@ -255,27 +296,38 @@ class _ConnectionsCard(_CARD_BASE):
     # ── 数据渲染 ──
 
     def _reload(self):
-        """清空重建列表。展开时调用，保证 AI 增删后打开设置即是最新。"""
+        """清空重建列表。展开时调用，保证 AI 增删/新连接后打开设置即是最新。"""
         while self._list_layout.count():
             item = self._list_layout.takeAt(0)
             w = item.widget()
             if w is not None:
+                # 必须立即 setParent(None)：deleteLater 要等事件循环，期间旧行
+                # 仍挂在父级上照常绘制，与新行叠成重影（展开时 _reload 会再跑一次）
+                w.setParent(None)
                 w.deleteLater()
         self._dots.clear()  # 旧行 dot 随 deleteLater 销毁，引用一并清理
 
         conns, error = _load_conns()
         if error:
-            hint = QLabel(error)
-            hint.setFont(_ui_font(11))
-            hint.setStyleSheet("color: #e5484d;")
+            self._summary.setText("")
+            hint = _hint_label(error, "#e5484d")
             self._list_layout.addWidget(hint)
             return
         if not conns:
-            hint = QLabel("（暂无已保存连接 — 让 AI 用 ssh_add_connection 添加）")
-            hint.setFont(_ui_font(11))
-            hint.setStyleSheet("color: gray;")
+            self._summary.setText("")
+            hint = _hint_label(
+                "还没有保存的连接。直接对 AI 说「连到 root@1.2.3.4」，连上后会自动出现在这里。",
+                "gray",
+            )
             self._list_layout.addWidget(hint)
             return
+
+        active = sum(1 for c in conns if _pool_active(c.get("name") or ""))
+        summary = f"共 {len(conns)} 个连接"
+        if active:
+            summary += f" · {active} 个活跃中"
+        self._summary.setText(summary)
+
         for c in conns:
             self._list_layout.addWidget(self._build_row(c))
         self._refresh_status(conns)
@@ -341,38 +393,67 @@ class _ConnectionsCard(_CARD_BASE):
             host=c.get("host") or "?",
             port=c.get("port", 22),
         )
+        last = _humanize_since(c.get("last_connected"))
+        count = int(c.get("connect_count") or 0)
+        note = (c.get("note") or "").strip()
 
         w = QWidget()
+        w.setObjectName("sshConnRow")
+        w.setAttribute(Qt.WA_StyledBackground, True)
+        w.setStyleSheet(
+            "#sshConnRow { background: rgba(128,128,128,0.07); border-radius: 6px; }"
+            "#sshConnRow:hover { background: rgba(128,128,128,0.13); }"
+        )
         lay = QHBoxLayout(w)
-        lay.setContentsMargins(12, 6, 12, 6)
+        lay.setContentsMargins(12, 8, 10, 8)
         lay.setSpacing(10)
 
         # 状态指示灯（CSS 圆点，矢量绘制不发虚不裁切）
         dot = _StatusDot(10, color=_DOT_IDLE)
         dot.setToolTip("未连接")
         self._dots[c.get("name") or ""] = dot
-        lay.addWidget(dot)
+        lay.addWidget(dot, 0, Qt.AlignTop)
 
+        # 三行信息：名称 + 最后连接 / 地址 + 认证 / 次数 + 备注
+        text_col = QVBoxLayout()
+        text_col.setContentsMargins(0, 0, 0, 0)
+        text_col.setSpacing(2)
+
+        title_row = QHBoxLayout()
+        title_row.setContentsMargins(0, 0, 0, 0)
+        title_row.setSpacing(8)
         name_label = QLabel(name)
         name_label.setFont(_ui_font(11, bold=True))
         name_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        lay.addWidget(name_label)
+        title_row.addWidget(name_label, 0)
+        title_row.addStretch(1)
+        last_label = QLabel(f"最后连接 {last}")
+        last_label.setFont(_ui_font(9))
+        last_label.setStyleSheet("color: gray;")
+        title_row.addWidget(last_label, 0)
+        text_col.addLayout(title_row)
 
-        addr_label = _ElidedLabel(addr)
-        addr_label.setFont(_ui_font(11))
-        addr_label.setStyleSheet("color: gray;")
-        addr_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        lay.addWidget(addr_label, 0)
+        meta = QLabel(f"{addr} · {self._describe(c)}")
+        meta.setFont(_ui_font(10))
+        meta.setStyleSheet("color: gray;")
+        meta.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        text_col.addWidget(meta)
 
-        note = (c.get("note") or "").strip()
-        summary = self._describe(c) + (f" · {note}" if note else "")
-        note_label = _ElidedLabel(summary)
-        note_label.setFont(_ui_font(11))
-        note_label.setStyleSheet("color: gray;")
-        lay.addWidget(note_label, 1)
+        extras = []
+        if count:
+            extras.append(f"已连 {count} 次")
+        if note:
+            extras.append(f"备注：{note}")
+        if extras:
+            extra_label = _ElidedLabel(" · ".join(extras))
+            extra_label.setFont(_ui_font(10))
+            extra_label.setStyleSheet("color: gray;")
+            text_col.addWidget(extra_label)
+
+        lay.addLayout(text_col, 1)
 
         btn = QPushButton("删除")
-        btn.setFont(_ui_font(11))
+        btn.setFont(_ui_font(10))
         btn.setFixedHeight(26)
         btn.setCursor(Qt.PointingHandCursor)
         btn.setStyleSheet(
@@ -383,7 +464,14 @@ class _ConnectionsCard(_CARD_BASE):
             " background: rgba(229,72,77,0.08); }"
         )
         btn.clicked.connect(lambda _=False, n=c.get("name"): self._on_remove(n))
-        lay.addWidget(btn, 0, Qt.AlignRight)
+        lay.addWidget(btn, 0, Qt.AlignVCenter)
+
+        tips = [f"{name}  {addr}", f"认证：{self._describe(c)}", f"最后连接：{last}"]
+        if count:
+            tips.append(f"累计连接 {count} 次")
+        if note:
+            tips.append(f"备注：{note}")
+        w.setToolTip("\n".join(tips))
         return w
 
     # ── 删除（联动断开活跃连接） ──
@@ -421,22 +509,38 @@ class _ConnectionsCard(_CARD_BASE):
     # ── 展开几何（qfluentwidgets ExpandSettingCard 占位坑，同 git-panel 处理） ──
 
     def _measure_content_height(self):
-        """内容区应有高度：手工累加，不依赖 viewLayout.sizeHint 汇总。
+        """内容区应有高度：递归手工累加，不依赖 viewLayout.sizeHint 汇总。
 
         展开时列表刚重建，新行 widget 尚未 show，QBoxLayout 汇总会跳过它们
-        （viewLayout.sizeHint 只剩 margins 16px），据此锁高会把内容压成一条缝。
-        行 widget 自身的 sizeHint 与 show 状态无关，累加可得精确高度。
+        （viewLayout.sizeHint 会漏算），据此锁高会把内容压扁、文字互相重叠。
+        行 widget 自身的 sizeHint 与 show 状态无关，递归累加可得精确高度；
+        顶部摘要行与嵌套的 _list_layout 都要算进去。
         """
-        m = self.viewLayout.contentsMargins()
-        h = m.top() + m.bottom()
-        n = self._list_layout.count()
-        for i in range(n):
-            item = self._list_layout.itemAt(i)
+
+        def measure(item):
             w = item.widget()
-            h += w.sizeHint().height() if w is not None else item.sizeHint().height()
+            if w is not None:
+                return w.sizeHint().height()
+            lay = item.layout()
+            if lay is None:
+                return 0
+            m = lay.contentsMargins()
+            n = lay.count()
+            h = m.top() + m.bottom()
+            for i in range(n):
+                h += measure(lay.itemAt(i))
+            if n > 1:
+                h += lay.spacing() * (n - 1)
+            return h
+
+        m = self.viewLayout.contentsMargins()
+        n = self.viewLayout.count()
+        total = m.top() + m.bottom()
+        for i in range(n):
+            total += measure(self.viewLayout.itemAt(i))
         if n > 1:
-            h += self._list_layout.spacing() * (n - 1)
-        return h
+            total += self.viewLayout.spacing() * (n - 1)
+        return total
 
     def _adjustViewSize(self):
         """spaceWidget 占位归零 + 按手工测量高度直切展开/折叠。

@@ -122,22 +122,24 @@ ssh-toolkit/
 
 统一：`set_missing_host_key_policy(AutoAddPolicy())`（首次连接免手动确认）；`timeout=conn.timeout`。
 
-## 8. 工具清单（10 个）
+## 8. 工具清单（9 个）
 
 统一：`group="SSH 远程"`；`icon="ssh"`；`source` 由 loader 注入。
 
+> 没有 `ssh_add_connection`：保存是 `ssh_connect` 成功的副作用（`_store.upsert_connection`），
+> 无名直连按 `user@host`（非 22 端口带端口）命名，同名重复连接只刷新最后连接时间与次数。
+
 | # | 工具名 | 参数 | 返回 | danger |
 |---|--------|------|------|--------|
-| 1 | `ssh_add_connection` | name, host, port=22, user, auth_type, key_path?, password?, key_passphrase?, timeout=10, note? | 保存成功提示 | safe |
-| 2 | `ssh_list_connections` | （无） | 连接列表（密码掩码 `****`） | safe |
-| 3 | `ssh_remove_connection` | name | 删除提示 | safe |
-| 4 | `ssh_connect` | name（或运行时 host/user/auth_* 覆盖） | handle 字符串 | dangerous |
-| 5 | `ssh_exec` | handle/name, command, timeout?, cwd?, env? | stdout+stderr+exit_code | dangerous |
-| 6 | `ssh_upload` | handle/name, local_path, remote_path | 传输结果 | dangerous |
-| 7 | `ssh_download` | handle/name, remote_path, local_path | 传输结果 | dangerous |
-| 8 | `ssh_list_dir` | handle/name, remote_path, recursive? | 文件列表(权限/大小/mtime) | safe |
-| 9 | `ssh_forward` | handle/name, type(local/remote), bind_addr, bind_port, remote_addr, remote_port | forward id | dangerous |
-| 10 | `ssh_disconnect` | handle/name（或 forward_id） | 关闭提示 | safe |
+| 1 | `ssh_list_connections` | （无） | 连接列表（密码掩码 `****`，含最后连接时间） | safe |
+| 2 | `ssh_remove_connection` | name | 删除提示 | safe |
+| 3 | `ssh_connect` | name（或运行时 host/user/auth_* 覆盖；成功后自动落库） | handle 字符串 | dangerous |
+| 4 | `ssh_exec` | handle/name, command, timeout?, cwd?, env? | stdout+stderr+exit_code | dangerous |
+| 5 | `ssh_upload` | handle/name, local_path, remote_path | 传输结果 | dangerous |
+| 6 | `ssh_download` | handle/name, remote_path, local_path | 传输结果 | dangerous |
+| 7 | `ssh_list_dir` | handle/name, remote_path, recursive? | 文件列表(权限/大小/mtime) | safe |
+| 8 | `ssh_forward` | handle/name, type(local/remote), bind_addr, bind_port, remote_addr, remote_port | forward id | dangerous |
+| 9 | `ssh_disconnect` | handle/name（或 forward_id） | 关闭提示 | safe |
 
 ### impl 行为要点
 
@@ -147,7 +149,7 @@ ssh-toolkit/
 - **ssh_upload/download**：`client.open_sftp().put/get`。路径做归一化与越界检查（remote_path 不以 `/` 开头时相对 home）。
 - **ssh_list_dir**：`sftp.listdir_attr(remote_path)` + `sftp.stat`，输出表格式列表。
 - **ssh_forward**：`Transport.open_channel`（`direct-tcpip` 本地转发 / `forwarded-tcpip` 远程转发），在后台线程双向拷贝字节流；forward id 记录到 `_FORWARDS` 供 `ssh_disconnect` 关闭。
-- **ssh_connect**：先查池，同名已活跃则复用并返回原 handle；否则建立新连接入池。
+- **ssh_connect**：先查池，同名已活跃则复用并返回原 handle；否则建立新连接入池。无论复用还是新建，成功后都 `upsert_connection` 落库（记录 `last_connected` 与 `connect_count`）；落库失败只提示，不影响连接本身。
 
 ## 9. 依赖与导入
 
@@ -166,8 +168,8 @@ ssh-toolkit/
 2. `cp -r ssh-toolkit /tmp/dfp/plugins/ && cd /tmp/dfp && python tools/validate_plugins.py` 全 OK。
 3. `python tools/generate_marketplace.py` 正常更新。
 4. 手动冒烟（本地或测试机）：
-   - `ssh_add_connection` → `ssh_list_connections` 确认掩码
-   - `ssh_connect` → `ssh_exec("uname -a")` 返回正确
+   - `ssh_list_connections` 确认掩码（首次为空态）
+   - `ssh_connect`（直连 root@主机）→ 自动出现在 `ssh_list_connections` → `ssh_exec("uname -a")` 返回正确
    - `ssh_upload` / `ssh_download` 往返一致
    - `ssh_list_dir("/tmp")` 返回列表
    - `ssh_forward` 建隧道 + `ssh_disconnect` 关闭

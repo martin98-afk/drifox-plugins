@@ -51,3 +51,32 @@ def test_chmod_600(tmp_store):
     else:
         # Windows 不支持 Unix 权限位，仅确认文件已落盘
         assert os.path.exists(str(tmp_store))
+
+
+def test_upsert_creates_with_metadata(tmp_store):
+    name, created = S.upsert_connection({"host": "1.1.1.1", "user": "root", "port": 22})
+    assert created is True
+    assert name == "root@1.1.1.1"  # 未命名时按 user@host 生成
+    c = S.get_connection(name)
+    assert c["connect_count"] == 1
+    assert c["last_connected"]
+
+
+def test_upsert_default_name_keeps_port(tmp_store):
+    name, _ = S.upsert_connection({"host": "1.1.1.1", "user": "root", "port": 22022})
+    assert name == "root@1.1.1.1:22022"
+
+
+def test_upsert_existing_bumps_count_and_keeps_password(tmp_store):
+    S.upsert_connection({"host": "1.1.1.1", "user": "root", "password": "secret"})
+    # 二次连接只传 host/user（没带密码）：不能把已存密码洗成空
+    name, created = S.upsert_connection({"host": "1.1.1.1", "user": "root"})
+    assert created is False
+    c = S.get_connection("root@1.1.1.1")
+    assert c["password"] == "secret"
+    assert c["connect_count"] == 2
+
+
+def test_upsert_requires_host_and_user(tmp_store):
+    with pytest.raises(ValueError):
+        S.upsert_connection({"host": "1.1.1.1"})
