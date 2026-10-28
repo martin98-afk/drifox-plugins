@@ -31,7 +31,7 @@ import threading
 from typing import Any, Dict, List, Optional, Tuple
 
 from loguru import logger
-from PyQt5.QtCore import QObject, QRectF, QRunnable, QThreadPool, QTimer, Qt, pyqtSignal
+from PyQt5.QtCore import QObject, QRectF, QRunnable, QThreadPool, QTimer, Qt, pyqtProperty, pyqtSignal
 from PyQt5.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
 from PyQt5.QtWidgets import QApplication, QHBoxLayout, QLabel, QPlainTextEdit, QWidget
 
@@ -288,6 +288,45 @@ def _register_config_card(registry: "UIPluginRegistry") -> None:
 
 _ConfigCardBase = ExpandSettingCard if ExpandSettingCard is not None else object  # type: ignore
 
+
+class _CardHeightDriver(QObject):
+    """把动画值写成卡片 fixedHeight（QPropertyAnimation 不能直接驱动 setFixedHeight）。"""
+
+    def __init__(self, card):
+        super().__init__(card)
+        self._card = card
+        self._value = 0
+
+    def _get_value(self) -> int:
+        return self._value
+
+    def _set_value(self, value) -> None:
+        self._value = int(value)
+        try:
+            self._card.setFixedHeight(self._value)
+        except RuntimeError:  # 卡片已销毁（设置面板关闭）
+            pass
+
+    value = pyqtProperty(int, _get_value, _set_value)
+
+
+def _animate_card_height(card, target: int, duration: int = 180) -> None:
+    """展开/折叠高度动画：逐帧写 fixedHeight，避免高度瞬移。"""
+    from PyQt5.QtCore import QEasingCurve, QPropertyAnimation
+
+    ani = getattr(card, "_expand_height_ani", None)
+    if ani is None:
+        driver = _CardHeightDriver(card)
+        ani = QPropertyAnimation(driver, b"value", card)
+        ani.setDuration(duration)
+        ani.setEasingCurve(QEasingCurve.OutCubic)
+        card._expand_height_driver = driver
+        card._expand_height_ani = ani
+    ani.stop()
+    ani.setStartValue(int(card.height()))
+    ani.setEndValue(max(0, int(target)))
+    ani.start()
+
 # 标签列宽度与重置按钮宽度（与主程序 PluginConfigCard._FieldRow 一致，全卡对齐）
 _LABEL_MIN_WIDTH = 120
 _RESET_BTN_WIDTH = 140
@@ -477,32 +516,27 @@ class _EnhanceConfigCard(_ConfigCardBase):
 
         self._echo()
 
-    def _adjustViewSize(self):
-        """空白占位归零：qfluentwidgets 的 setExpand 会先调 _adjustViewSize 把
-        spaceWidget 重设为内容等高，导致展开高度 = 内容 + 等高空白。
-        与覆写的 setExpand 配套：spaceWidget 恒 0，高度直接在标题卡与
-        标题卡+内容之间切换（原版折叠动画依赖 spaceWidget 滚动余量，
-        强制归零后折叠动画失去参考高度，卡片收不回去）。"""
-        h = self.viewLayout.sizeHint().height()
+    def _target_height(self, is_expand: bool) -> int:
+        """目标高度：空白占位归零后，header + 内容。"""
         try:
             self.spaceWidget.setFixedHeight(0)
         except Exception:  # noqa: BLE001
             pass
-        if self.isExpand:
-            self.setFixedHeight(self.card.height() + h)
-        else:
-            self.setFixedHeight(self.card.height())
+        return self.card.height() + (self.viewLayout.sizeHint().height() if is_expand else 0)
+
+    def _adjustViewSize(self):
+        """内容尺寸变化后直接定格（不动画，供基类/回显后调用）。"""
+        self.setFixedHeight(self._target_height(self.isExpand))
 
     def setExpand(self, isExpand: bool):
-        """覆写：不用原版滚动动画（依赖 spaceWidget 占位，已归零），
-        直接按展开态切换卡片高度，保证可展开也可折叠。"""
+        """覆写：不用基类的 spaceWidget 滚动动画（占位已归零），改走高度动画。"""
         if self.isExpand == isExpand:
             return
         self.isExpand = isExpand
         self.setProperty("isExpand", isExpand)
         self.setStyle(QApplication.style())
         self.card.expandButton.setExpand(isExpand)
-        self._adjustViewSize()
+        _animate_card_height(self, self._target_height(isExpand))
 
     def _echo(self) -> None:
         """回显当前生效值（默认兜底可见）；阻断信号循环。"""

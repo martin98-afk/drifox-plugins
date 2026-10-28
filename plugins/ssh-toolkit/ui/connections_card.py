@@ -22,7 +22,7 @@ try:  # qfluentwidgets 由 DriFox 运行时提供
 except Exception:  # noqa: BLE001
     ExpandSettingCard = None  # type: ignore
 
-from PyQt5.QtCore import QObject, QRunnable, Qt, QThreadPool, pyqtSignal
+from PyQt5.QtCore import QObject, QRunnable, Qt, QThreadPool, pyqtProperty, pyqtSignal
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QApplication,
@@ -84,6 +84,45 @@ def _ui_font(size=11, bold=False):
     f.setPointSize(size)
     f.setBold(bold)
     return f
+
+
+class _CardHeightDriver(QObject):
+    """把动画值写成卡片 fixedHeight（QPropertyAnimation 不能直接驱动 setFixedHeight）。"""
+
+    def __init__(self, card):
+        super().__init__(card)
+        self._card = card
+        self._value = 0
+
+    def _get_value(self) -> int:
+        return self._value
+
+    def _set_value(self, value) -> None:
+        self._value = int(value)
+        try:
+            self._card.setFixedHeight(self._value)
+        except RuntimeError:  # 卡片已销毁（设置面板关闭）
+            pass
+
+    value = pyqtProperty(int, _get_value, _set_value)
+
+
+def _animate_card_height(card, target: int, duration: int = 180) -> None:
+    """展开/折叠高度动画：逐帧写 fixedHeight，避免高度瞬移。"""
+    from PyQt5.QtCore import QEasingCurve, QPropertyAnimation
+
+    ani = getattr(card, "_expand_height_ani", None)
+    if ani is None:
+        driver = _CardHeightDriver(card)
+        ani = QPropertyAnimation(driver, b"value", card)
+        ani.setDuration(duration)
+        ani.setEasingCurve(QEasingCurve.OutCubic)
+        card._expand_height_driver = driver
+        card._expand_height_ani = ani
+    ani.stop()
+    ani.setStartValue(int(card.height()))
+    ani.setEndValue(max(0, int(target)))
+    ani.start()
 
 
 class _StatusDot(QLabel):
@@ -542,21 +581,20 @@ class _ConnectionsCard(_CARD_BASE):
         return total
 
     def _adjustViewSize(self):
-        """spaceWidget 占位归零 + 按手工测量高度直切展开/折叠。
-
-        原版 _adjustViewSize 把 spaceWidget 设为内容等高，展开高度 = 内容 + 等高空白，
-        且折叠动画依赖占位高度导致收不回去；归零后牺牲折叠动画换取正确几何。"""
+        """内容尺寸变化后直接定格（不动画）：删行/重建后用。"""
         try:
             self.spaceWidget.setFixedHeight(0)
         except Exception:  # noqa: BLE001
             pass
-        if self.isExpand:
-            self.setFixedHeight(self.card.height() + self._measure_content_height())
-        else:
-            self.setFixedHeight(self.card.height())
+        h = self._measure_content_height() if self.isExpand else 0
+        self.setFixedHeight(self.card.height() + h)
 
     def setExpand(self, isExpand: bool):
-        """覆写：不用原版滚动动画；展开前先重载数据（AI 改动后即为最新）。"""
+        """覆写：展开前先重载数据（AI 改动后即为最新），高度走动画。
+
+        列表是动态重建的，目标高度必须用 _measure_content_height 实测
+        （viewLayout.sizeHint 会跳过尚未 show 的新行）。
+        """
         if isExpand:
             self._reload()
         if self.isExpand == isExpand:
@@ -565,7 +603,12 @@ class _ConnectionsCard(_CARD_BASE):
         self.setProperty("isExpand", isExpand)
         self.setStyle(QApplication.style())
         self.card.expandButton.setExpand(isExpand)
-        self._adjustViewSize()
+        try:
+            self.spaceWidget.setFixedHeight(0)
+        except Exception:  # noqa: BLE001
+            pass
+        target = self.card.height() + (self._measure_content_height() if isExpand else 0)
+        _animate_card_height(self, target)
 
 
 def register_connections_card(registry):
