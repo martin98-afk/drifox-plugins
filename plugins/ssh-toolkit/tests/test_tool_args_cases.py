@@ -71,22 +71,50 @@ def test_exec_string_timeout(exec_mod):
     assert r.success is True, r.error
 
 
-def test_add_connection_none_port_timeout(conn_mgmt_mod, monkeypatch):
+def test_connect_autosaves_normalized_args(exec_mod, monkeypatch):
+    """连接成功即落库：port/timeout 传 None 时归一成默认值再写盘。"""
     saved = {}
-    monkeypatch.setattr(conn_mgmt_mod.store, "add_connection", lambda conn: saved.update(conn))
-    r = conn_mgmt_mod._add_impl(None, name="n1", host="h", user="u", port=None, timeout=None)
+    monkeypatch.setattr(exec_mod.store, "get_connection", lambda name: None)
+    monkeypatch.setattr(
+        exec_mod.store, "upsert_connection", lambda conn: (saved.update(conn) or ("n1", True))
+    )
+    monkeypatch.setattr(exec_mod.auth, "connect", lambda conn: object())
+    monkeypatch.setattr(exec_mod.pool, "put_connection", lambda name, client: f"{name}:h")
+    r = exec_mod._connect_impl(None, name="n1", host="h", user="u", port=None, timeout=None)
     assert r.success is True, r.error
     assert saved["port"] == 22
     assert saved["timeout"] == 10
+    assert "已记录连接" in r.content
 
 
-def test_add_connection_string_port_timeout(conn_mgmt_mod, monkeypatch):
+def test_connect_autosaves_string_port(exec_mod, monkeypatch):
+    """模型有时把 integer 参数序列化成字符串，落库前必须归一。"""
     saved = {}
-    monkeypatch.setattr(conn_mgmt_mod.store, "add_connection", lambda conn: saved.update(conn))
-    r = conn_mgmt_mod._add_impl(None, name="n2", host="h", user="u", port="22022", timeout="30")
+    monkeypatch.setattr(exec_mod.store, "get_connection", lambda name: None)
+    monkeypatch.setattr(
+        exec_mod.store, "upsert_connection", lambda conn: (saved.update(conn) or ("n2", True))
+    )
+    monkeypatch.setattr(exec_mod.auth, "connect", lambda conn: object())
+    monkeypatch.setattr(exec_mod.pool, "put_connection", lambda name, client: f"{name}:h")
+    r = exec_mod._connect_impl(None, name="n2", host="h", user="u", port="22022", timeout="30")
     assert r.success is True, r.error
     assert saved["port"] == 22022
     assert saved["timeout"] == 30
+
+
+def test_connect_still_works_when_save_fails(exec_mod, monkeypatch):
+    """落库失败不能连坐连接本身：仍返回成功，只提示未保存。"""
+    monkeypatch.setattr(exec_mod.store, "get_connection", lambda name: None)
+
+    def boom(conn):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(exec_mod.store, "upsert_connection", boom)
+    monkeypatch.setattr(exec_mod.auth, "connect", lambda conn: object())
+    monkeypatch.setattr(exec_mod.pool, "put_connection", lambda name, client: "h:h")
+    r = exec_mod._connect_impl(None, host="h", user="u")
+    assert r.success is True, r.error
+    assert "连接配置未保存" in r.content
 
 
 def test_forward_none_ports(forward_mod, monkeypatch):

@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """ssh-toolkit UI 组件入口 — 系统设置页「SSH 远程连接」管理卡
 
-AI 通过 ssh_add_connection 保存的连接，与本卡共享同一份配置
-（~/.drifox/cache/ssh/connections.json），因此设置页始终反映 AI 的最新操作。
+AI 每次 ssh_connect 成功都会自动落库（无名直连按 user@host 命名），与本卡共享
+同一份配置（~/.drifox/cache/ssh/connections.json），设置页始终反映最新连接。
 
-职责边界（v0.2.0 起）：
-- 设置页只做**审查与删除**，新增/编辑继续交给 AI 工具完成。
+职责边界：
+- 设置页只做**审查与删除**，新增由「连一次即保存」自动完成，不再有手动建档工具。
 - 删除时同步断开该连接名下的活跃连接与端口转发，避免旧配置复活。
 """
 

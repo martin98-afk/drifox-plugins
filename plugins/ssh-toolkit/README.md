@@ -3,16 +3,25 @@
 SSH 远程工具包插件（AI 工具 + 系统设置页连接管理）。基于 paramiko，提供连接管理、命令执行、SFTP 文件传输、目录浏览、端口转发。
 
 ## 工具
-- `ssh_add_connection` 保存命名连接
-- `ssh_list_connections` 列出连接（密码掩码）
-- `ssh_remove_connection` 删除连接
-- `ssh_connect` 建立连接入池，返回 handle
+- `ssh_connect` 建立连接入池，返回 handle；**连一次就自动保存**（无名直连按 `user@host` 命名，同名只刷新最后连接时间与次数）
 - `ssh_exec` 执行命令（stdout/stderr/exit code）
+- `ssh_list_connections` 列出已保存连接（密码掩码，含最后连接时间）
+- `ssh_remove_connection` 删除连接
 - `ssh_upload` SFTP 上传
 - `ssh_download` SFTP 下载
 - `ssh_list_dir` 远程目录浏览
 - `ssh_forward` 端口转发（后台）
 - `ssh_disconnect` 关闭连接/转发
+
+> 没有单独的「保存连接」工具：保存是 `ssh_connect` 成功的副作用，不再要求先建档再连接。
+
+## 设置页（设置 → SSH 远程连接）
+
+展开即刷新，每条连接显示：状态点（绿=池内活跃 / 红=TCP 不可达 / 灰=未保持）、
+名称、`user@host:port`、认证方式与密钥路径、最后连接时间、累计连接次数、备注；
+行尾「删除」会二次确认，并同时断开该名字下的活跃连接与端口转发。
+
+空态提示「直接对 AI 说『连到 root@1.2.3.4』，连上后会自动出现在这里」。
 
 ## 安全边界
 
