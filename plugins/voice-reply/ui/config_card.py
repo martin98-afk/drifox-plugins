@@ -36,7 +36,7 @@ from .voice_presets import (
 
 _UI_AVAILABLE = False
 try:  # 宿主可能未装 qfluentwidgets（理论上必然有），缺失时降级不注册卡
-    from PyQt5.QtCore import Qt
+    from PyQt5.QtCore import Qt, QThread, pyqtSignal
     from PyQt5.QtWidgets import QHBoxLayout, QWidget
     from qfluentwidgets import (
         BodyLabel,
@@ -56,6 +56,9 @@ except Exception:  # noqa: BLE001 — 导入失败时 _ConfigCardBase 退化为�
 
 # 标签列宽度（与主程序 PluginConfigCard._FieldRow 的 120 一致，视觉对齐）
 _LABEL_MIN_WIDTH = 120
+# 底部动作按钮宽度（定宽，不撑满整行）
+_TEST_BTN_WIDTH = 110
+_RESET_BTN_WIDTH = 120
 # 自定义服务商项的标识（userData 为空串）
 _CUSTOM_PROVIDER = ""
 
@@ -86,6 +89,35 @@ if _UI_AVAILABLE:
             layout.setSpacing(8)
             layout.addWidget(control, 1)
             layout.addWidget(tail, 0, Qt.AlignRight | Qt.AlignVCenter)
+
+    class _TtsProbeWorker(QThread):
+        """连通性探测：用当前配置真实合成一句短文本（真埋请求，能确认 key/端点/模型/音色）。
+
+        只用合成不播放：拿到 RIFF 字节即算可用，不骚扰扬声器。
+        """
+
+        done = pyqtSignal(bool, str)
+
+        def __init__(self, url: str, model: str, voice: str, key: str, parent=None):
+            super().__init__(parent)
+            self._url = url
+            self._model = model
+            self._voice = voice
+            self._key = key
+
+        def run(self) -> None:
+            import time
+
+            from .tts_engine import synthesize_wav
+
+            started = time.monotonic()
+            try:
+                data = synthesize_wav(self._url, self._model, self._voice, self._key, "测试")
+            except Exception as e:  # noqa: BLE001 — 失败原因一律人话展示
+                self.done.emit(False, str(e))
+                return
+            elapsed = int((time.monotonic() - started) * 1000)
+            self.done.emit(True, f"可用 · {elapsed} ms · {len(data) / 1024:.0f} KB")
 
     class _VoiceConfigCard(ExpandSettingCard):
         """语音播报配置卡：引擎 + 服务商 + 端点 + 模型 + 音色 + API Key。
@@ -161,17 +193,24 @@ if _UI_AVAILABLE:
             for row in self._api_rows:
                 self.viewLayout.addWidget(row)
 
-            # ── 恢复默认（右对齐定宽，不撑满整行） ──
-            reset_row = QWidget(self.view)
-            reset_layout = QHBoxLayout(reset_row)
-            reset_layout.setContentsMargins(0, 4, 0, 4)
-            self._reset_btn = PushButton("恢复默认", reset_row)
-            self._reset_btn.setFixedWidth(_LABEL_MIN_WIDTH + 20)
+            # ── 底部：测试连接（左） + 结果（中） + 恢复默认（右） ──
+            action_row = QWidget(self.view)
+            action_layout = QHBoxLayout(action_row)
+            action_layout.setContentsMargins(0, 4, 0, 4)
+            action_layout.setSpacing(12)
+            self._test_btn = PushButton("测试连接", action_row)
+            self._test_btn.setFixedWidth(_TEST_BTN_WIDTH)
+            self._test_btn.clicked.connect(self._on_test)
+            self._test_result = BodyLabel("", action_row)
+            self._reset_btn = PushButton("恢复默认", action_row)
+            self._reset_btn.setFixedWidth(_RESET_BTN_WIDTH)
             self._reset_btn.clicked.connect(self._on_reset)
-            reset_layout.addStretch(1)
-            reset_layout.addWidget(self._reset_btn)
-            self.viewLayout.addWidget(reset_row)
+            action_layout.addWidget(self._test_btn)
+            action_layout.addWidget(self._test_result, 1)
+            action_layout.addWidget(self._reset_btn)
+            self.viewLayout.addWidget(action_row)
 
+            self._probe = None
             self._echo()
 
         # ── 回显 ────────────────────────────────────────────
@@ -295,6 +334,7 @@ if _UI_AVAILABLE:
             online = str(self._engine_combo.currentData() or "local") == "api"
             for row in self._api_rows:
                 row.setEnabled(online)
+            self._test_btn.setEnabled(online)
 
         # ── 事件 ────────────────────────────────────────────
 
@@ -365,6 +405,44 @@ if _UI_AVAILABLE:
 
         def _on_key_finished(self) -> None:
             self._save("api_key", self._key_edit.text().strip())
+
+        # ── 连通性测试 ────────────────────────────────────
+
+        def _current_voice(self) -> str:
+            """当前音色值（模型名:音色名），手填与下拉两种情形都补齐模型前缀。"""
+            data = self._voice_combo.currentData()
+            if data:
+                return f"{self._current_model()}:{data}"
+            _model, name = split_voice(self._voice_combo.text().strip())
+            return f"{self._current_model()}:{name or DEFAULT_VOICE_NAME}"
+
+        def _on_test(self) -> None:
+            """测试连接：用卡里当前值（不是已存值）真发一次合成请求。"""
+            key = self._key_edit.text().strip()
+            if not key:
+                self._show_probe(False, "未填写 API Key")
+                return
+            url = self._url_edit.text().strip() or DEFAULT_API_URL
+            self._test_btn.setEnabled(False)
+            self._test_btn.setText("测试中…")
+            self._test_result.setText("")
+            self._probe = _TtsProbeWorker(
+                url, self._current_model(), self._current_voice(), key, self
+            )
+            self._probe.done.connect(self._on_probe_done)
+            self._probe.start()
+
+        def _on_probe_done(self, ok: bool, message: str) -> None:
+            self._test_btn.setEnabled(True)
+            self._test_btn.setText("测试连接")
+            self._show_probe(ok, message)
+
+        def _show_probe(self, ok: bool, message: str) -> None:
+            """结果行：卡片内一行短结论 + tooltip 全文，不弹窗不遮界面。"""
+            short = message if len(message) <= 44 else message[:44] + "…"
+            self._test_result.setText(("✓ " if ok else "✗ ") + short)
+            self._test_result.setToolTip(message)
+            self._test_result.setStyleSheet("color: #3ea76a;" if ok else "color: #e5484d;")
 
         def _on_reset(self) -> None:
             from app.plugins.managers.plugin_config_store import PluginConfigStore

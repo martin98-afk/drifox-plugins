@@ -101,6 +101,91 @@ def transcribe_wav(url: str, model: str, api_key: str, wav_path: str) -> str:
     return text
 
 
+def make_probe_wav() -> str:
+    """生成 1 秒 440Hz 正弦 WAV（16kHz / 单声道 / 16bit），供连通性测试使用。
+
+    用音调而不是静音：部分平台对纯静音直接判「无效音频」返回 4xx，
+    会把「配置正确」误报成失败。调用方负责删除返回的临时文件。
+    """
+    import math
+    import os
+    import struct
+    import tempfile
+    import wave
+
+    rate = 16000
+    frames = bytearray()
+    for i in range(rate):
+        frames += struct.pack("<h", int(8000 * math.sin(2 * math.pi * 440 * i / rate)))
+    fd, path = tempfile.mkstemp(suffix=".wav", prefix="drifox_asr_probe_")
+    os.close(fd)
+    with wave.open(path, "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(rate)
+        wf.writeframes(bytes(frames))
+    return path
+
+
+def probe_asr(url: str, model: str, api_key: str, wav_path: str) -> str:
+    """连通性探测：只校验服务可达与凭据有效，不要求识别出文字。
+
+    与 transcribe_wav 的差异：识别文本为空**不算失败**（测试音频是音调，
+    服务端识别为空属正常）。返回一句人话结论；不可用时抛 RuntimeError。
+    """
+    key = (api_key or "").strip()
+    if not key:
+        raise ValueError("API Key 为空")
+
+    body = _build_multipart(
+        fields={"model": model},
+        file_bytes=Path(wav_path).read_bytes(),
+    )
+    request = Request(
+        url,
+        data=body,
+        headers={
+            "Authorization": f"Bearer {key}",
+            "Content-Type": f"multipart/form-data; boundary={_boundary}",
+        },
+        method="POST",
+    )
+    try:
+        with urlopen(request, timeout=_TIMEOUT_SEC) as resp:
+            raw = resp.read()
+    except HTTPError as e:
+        if e.code in (401, 403):
+            raise RuntimeError("API Key 无效或无权限（HTTP %s）" % e.code) from e
+        if e.code == 404:
+            raise RuntimeError(f"端点或模型不存在（HTTP 404，模型 {model}）") from e
+        if e.code == 429:
+            raise RuntimeError("请求被限流（HTTP 429），稍后重试") from e
+        detail = ""
+        try:
+            detail = e.read().decode("utf-8", "ignore")[:150]
+        except Exception:  # noqa: BLE001 — 读响应体失败不影响主错误
+            pass
+        logger.warning(f"[voice-input] 探测 HTTP {e.code}: {detail}")
+        raise RuntimeError(f"服务返回 HTTP {e.code}") from e
+    except URLError as e:
+        reason = str(getattr(e, "reason", e))
+        raise RuntimeError(f"网络错误：{reason}") from e
+
+    try:
+        payload = json.loads(raw.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        raise RuntimeError("服务返回了无法解析的内容") from e
+
+    base = payload.get("base_resp") or {}
+    if isinstance(base, dict) and base.get("status_code") not in (None, 0):
+        raise RuntimeError(f"服务返回错误：{base.get('status_msg') or base.get('status_code')}")
+    err = payload.get("error")
+    if err:
+        msg = err.get("message") if isinstance(err, dict) else str(err)
+        raise RuntimeError(f"服务返回错误：{msg or err}")
+    return "可用（HTTP 200）"
+
+
 def _build_multipart(fields: dict[str, str], file_bytes: bytes) -> bytes:
     """构造 multipart/form-data 请求体（音频固定文件名 audio.wav）。"""
     lines: list[bytes] = []
