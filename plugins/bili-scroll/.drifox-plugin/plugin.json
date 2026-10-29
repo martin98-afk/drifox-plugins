@@ -1,0 +1,128 @@
+{
+    "name": "bili-scroll",
+    "description": "每天替你刷一轮 B站：按关键词或推荐流搜视频、逐条读字幕判断、挑出值得的写成日报，特别值得的经你授权后自动评论 @你。扫码登录、峰谷时段自动跑、判重防打扰。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "0.1.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "repository": "https://github.com/c1overzz/dsh-bili-scroll",
+    "license": "MIT",
+    "type": "user",
+    "min_host_version": "0.5.0",
+    "api_version": 2,
+    "capabilities": [
+        "engine.session",
+        "model.metadata",
+        "ui.card.show",
+        "ui.card.hide",
+        "ui.notify",
+        "ui.events",
+        "theme.read",
+        "storage.data_dir",
+        "window.host"
+    ],
+    "keywords": [
+        "bilibili",
+        "b站",
+        "日报",
+        "字幕",
+        "mcp",
+        "定时任务"
+    ],
+    "config_schema": {
+        "fields": [
+            {
+                "key": "keywords",
+                "label": "关注关键词",
+                "type": "string",
+                "default": "",
+                "description": "一行一个；留空则用账号首页推荐流"
+            },
+            {
+                "key": "daily_quota",
+                "label": "每天最多挑几条",
+                "type": "number",
+                "default": 5,
+                "description": "0 表示只手动跑"
+            },
+            {
+                "key": "peak_noon",
+                "label": "午间窗口自动跑（12:00-14:00）",
+                "type": "bool",
+                "default": false
+            },
+            {
+                "key": "peak_night",
+                "label": "夜间窗口自动跑（18:00-次日09:00）",
+                "type": "bool",
+                "default": false
+            },
+            {
+                "key": "report_mode",
+                "label": "日报详细程度",
+                "type": "select",
+                "default": "full",
+                "options": [
+                    {"value": "full", "label": "完整（标题/UP/为什么值得）"},
+                    {"value": "thin", "label": "薄版（每条一两行）"},
+                    {"value": "none", "label": "不写日报"}
+                ]
+            },
+            {
+                "key": "auto_comment",
+                "label": "自动评论并 @ 我",
+                "type": "bool",
+                "default": false,
+                "description": "拿你的账号发言，默认关；开启需填 UID"
+            },
+            {
+                "key": "comment_quota",
+                "label": "每轮最多评论条数",
+                "type": "number",
+                "default": 1,
+                "description": "上限 20"
+            },
+            {
+                "key": "delivery",
+                "label": "投递方式",
+                "type": "select",
+                "default": "comment",
+                "options": [
+                    {"value": "comment", "label": "只发公开评论（默认）"},
+                    {"value": "dm_only", "label": "只发私信（不在别人视频下留言）"},
+                    {"value": "both", "label": "评论 + 私信"}
+                ]
+            },
+            {
+                "key": "reply_comments",
+                "label": "回复别人对我评论的回复",
+                "type": "bool",
+                "default": false
+            },
+            {
+                "key": "my_uid",
+                "label": "我的 B站 UID",
+                "type": "string",
+                "default": "",
+                "description": "自动评论 @ 与私信投递的目标"
+            },
+            {
+                "key": "persona",
+                "label": "它按什么说话（人设提示词）",
+                "type": "string",
+                "default": "",
+                "description": "留空按中性口吻"
+            }
+        ]
+    },
+    "components": {
+        "tools": true,
+        "commands": true,
+        "skills": true,
+        "ui": true
+    }
+}

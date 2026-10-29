@@ -518,6 +518,43 @@
             }
         },
         {
+            "name": "bili-scroll",
+            "description": "每天替你刷一轮 B站：按关键词或推荐流搜视频、逐条读字幕判断、挑出值得的写成日报，特别值得的经你授权后自动评论 @你。扫码登录、峰谷时段自动跑、判重防打扰。",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui",
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/bili-scroll",
+                "ref": "main"
+            },
+            "components": {
+                "tools": true,
+                "commands": true,
+                "skills": true,
+                "ui": true
+            },
+            "keywords": [
+                "bilibili",
+                "b站",
+                "日报",
+                "字幕",
+                "mcp",
+                "定时任务"
+            ],
+            "min_host_version": "0.5.0",
+            "api_version": 2,
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "bili-summary",
             "description": "B 站视频总结 — 通过弹幕、评论、官方 AI 总结与抽帧识别，概括一个视频到底讲了什么。",
             "version": "1.0.0",
