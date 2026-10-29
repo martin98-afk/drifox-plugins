@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+### ✨ jimeng v1.1.0：登录全程自动化（傻瓜式）
+- **login 一条龙**：调 `action=login` 即自动调起系统默认浏览器进入授权页（`webbrowser.open`，跨平台），并原地阻塞等待授权完成（CLI `--poll=120`），成功直接返回登录结果；验证码已随链接自动带上，用户只需登录+点同意
+- **超时续接**：120s 未完成返回 pending，再调 `login` / `checklogin` 继续阻塞等待（`checklogin` 默认 poll 30→120）；仅无桌面会话导致浏览器调不起时才降级为手动打开链接
+- **工具 schema 写明触发场景**：画图/海报/插画/视频/动画/放大图片及即梦、Dreamina、文生图、图生视频、seedance 等关键词
+- **SKILL.md 瘦身**：删除登录操作说明（工具层全自动），仅保留一行兜底；「常见错误」表同步
+- **验证**：pytest 48 例全过（3.13）；实测真实授权链路（浏览器拉起 → 登录 → 点同意 → 阻塞返回成功）
+### ✨ code-animation-styles：新增插件图标
+- **来源**：即梦 text2image（2k，1:1），提示词为「深蓝→紫罗兰渐变圆角方形 + 白色代码括号与动画运动轨迹三球」，选规整构图裁切
+- **处理**：System.Drawing 裁中央方形 → 256×256 高质量缩放 → 圆角透明（半径 22.6%），light/dark 同图
+- **manifest**：补 `icon` 字段（light/dark）
 ### ✨ 新增 code-animation-styles v0.1.0：341 种代码动画风格提示词库（纯技能形态）
 - **内容**：十大系列 341 种风格提示词（AG 代码样片 26 / M 动态风格 40 / K 卡通画风 38 / Z 中国风 15 / H 现成版式 12 / L Lemo-Opuscar 59 / V mg-styles-15 15 / X code-video 31 / R 照参考学来的 7 / O 奥斯卡 98 部 98），193 种带静帧 jpg；附离线挑选页 `风格挑选.html`（自包含，双击即用）
 - **形态**：纯技能插件（仅 `skills` 组件）。`SKILL.md` 只留路由面（触发/第一动作/渐进加载/边界硬停止），工作流契约（每步输入/输出/转移条件/失败路线）下沉 `references/workflow.md`，提示词详略分寸与公共函数内联规则在 `references/prompt-craft.md`，触发评测（正反例 + 2 真实任务 + 1 UI 动效边界任务）在 `evals/trigger-eval.json`

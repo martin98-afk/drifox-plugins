@@ -21,6 +21,7 @@ import os
 import re
 import subprocess
 import sys
+import webbrowser
 from html import escape
 from pathlib import Path
 
@@ -215,8 +216,8 @@ def _cli_failure(text: str) -> "str | None":
     """把 CLI 的已知失败信号翻成人能看懂的引导语；无信号返回 None。"""
     if _LOGIN_HINT in text:
         return (
-            "未登录即梦账号。请先调用 jimeng action=login 获取授权链接，"
-            "完成授权后再调用 action=checklogin。"
+            "未登录即梦账号。请先调用 jimeng action=login：会自动打开浏览器并阻塞等待授权完成，"
+            "超时未完成则再调一次 login 或 checklogin 继续等。"
         )
     if _COMPLIANCE_HINT in text:
         return (
@@ -901,7 +902,11 @@ def _session_impl(tool_ctx, kw) -> ToolResult:
 
 
 def _login_impl(tool_ctx) -> ToolResult:
-    """headless 两段式第一段：拿授权材料并退出，不阻塞等人工。"""
+    """傻瓜式登录：自动开浏览器进入授权页，并原地阻塞等待授权完成（120s）。
+
+    超时未完成返 pending，由调用方续调 checklogin 继续阻塞等待；
+    无桌面会话导致浏览器调不起时，降级为两段式（返回链接让用户手动打开）。
+    """
     cmd_path, err_result = _require_cli()
     if err_result:
         return err_result
@@ -951,8 +956,35 @@ def _login_impl(tool_ctx) -> ToolResult:
     except OSError:
         pass
 
+    # 傻瓜式：直接替用户调起系统默认浏览器，不让用户手动复制链接
+    opened = False
+    if uri:
+        try:
+            opened = webbrowser.open(uri, new=1)
+        except Exception:
+            opened = False
+
+    if opened:
+        # 一条龙：浏览器已打开，原地阻塞等授权完成（CLI --poll 轮询，120s）；
+        # 成功直接返回登录结果，超时返 pending 由调用方续调 checklogin 继续等。
+        check = _checklogin_impl(tool_ctx, {"poll": "120"})
+        if check.data and check.data.get("status") == "success":
+            return check
+        if check.data and check.data.get("status") == "pending":
+            return ToolResult(
+                True,
+                content=(
+                    "已自动打开浏览器进入授权页，你只需登录即梦账号并点击同意授权"
+                    "（验证码已随链接自动带上，仅页面要求手动输入时才需要）。\n"
+                    "本调用已阻塞等待 120 秒仍未检测到授权完成；"
+                    "再调一次 action=checklogin 会继续阻塞等待（可重复，用户操作期间无需打扰）。\n"
+                    "若浏览器没弹出，手动打开：\n  " + uri
+                ),
+                data={"status": "pending", "device_code": device_code, "browser_opened": True},
+            )
+        return check
     lines = [
-        "请在浏览器打开下面的地址完成即梦授权：",
+        "未能自动调起浏览器，请手动打开下面的地址完成即梦授权：",
         "",
         f"  授权链接：{uri or '(见原始输出)'}",
         f"  验证码  ：{user_code or '(见原始输出)'}",
@@ -961,7 +993,7 @@ def _login_impl(tool_ctx) -> ToolResult:
     ]
     if not uri or not user_code:
         lines += ["", "原始输出：", text.strip()[:800]]
-    return ToolResult(True, content="\n".join(lines), data={"device_code": device_code})
+    return ToolResult(True, content="\n".join(lines), data={"device_code": device_code, "browser_opened": False})
 
 
 def _checklogin_impl(tool_ctx, kw) -> ToolResult:
@@ -980,7 +1012,9 @@ def _checklogin_impl(tool_ctx, kw) -> ToolResult:
         return ToolResult(False, error="没有待完成的登录。请先调用 jimeng action=login")
 
     poll = kw.get("poll")
-    poll_s = str(int(poll)) if poll is not None and str(poll).strip() != "" else "30"
+    # 默认长阻塞 120s：授权页已自动打开，用户登录+点同意一般 30-60s 内完成；
+    # CLI 的 --poll 本身就是阻塞轮询，成功即刻返回，到期才返 pending 由调用方续接。
+    poll_s = str(int(poll)) if poll is not None and str(poll).strip() != "" else "120"
     result, run_err = _run(
         [cmd_path, "login", "checklogin", f"--device_code={device_code}", f"--poll={poll_s}"],
         _workdir(tool_ctx),
@@ -1079,13 +1113,16 @@ _SCHEMA = {
     "function": {
         "name": "jimeng",
         "description": (
-            "即梦（Dreamina）生图/生视频，封装官方 dreamina CLI。消耗账号额度。\n"
+            "即梦（Dreamina）生图/生视频，封装官方 dreamina CLI。消耗账号额度。"
+            "当用户要画图/出图/生成图片/海报/插画/头像、生成视频/动画短片/口播视频、图片高清放大、"
+            "图生视频、首尾帧或多图故事视频，或提到即梦、Dreamina、jimeng、文生图、图生视频、seedance 时使用。\n"
             "生成（提交即返回 submit_id，异步）："
             "text2image / image2image / upscale / text2video / image2video / "
             "frames2video / multiframe2video / multimodal2video。\n"
             "任务：query（按 submit_id 查状态并下载成品）/ list_tasks。\n"
             "账号：credit / session（create,list,search,rename,delete）。\n"
-            "登录：login（返回授权链接与验证码，不阻塞）/ checklogin / logout。\n"
+            "登录：遇未登录报错时直接调 login——自动打开浏览器并阻塞等待授权完成（120s，用户只需登录+点同意）；"
+            "超时未完成再调 login/checklogin 继续等。logout 登出。\n"
             "元信息：version。\n"
             "必填速查：图类要 prompt+resolution（upscale 只需 image+resolution）；"
             "视频类要 resolution（480p/720p/1080p/4k，按模型不同）；"
@@ -1218,7 +1255,7 @@ _SCHEMA = {
                     "type": "integer",
                     "description": (
                         "提交后等待秒数（0=不等待，立即返回 submit_id）。默认不等待；"
-                        "checklogin 时表示轮询等待秒数，默认 30"
+                        "checklogin 时表示阻塞等待授权完成的秒数（到期未完成返 pending，可续调），默认 120"
                     ),
                 },
             },

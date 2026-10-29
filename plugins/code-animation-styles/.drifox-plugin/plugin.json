@@ -1,6 +1,10 @@
 {
   "name": "code-animation-styles",
   "description": "代码动画风格提示词库：341 种风格（代码样片、动态风格、卡通画风、中国风、版式、奥斯卡 98 部等十大类，193 种带静帧），附离线挑选页与 AI 检索工具，Opus / DeepSeek 通用，用于把内容做成代码动画。",
+  "icon": {
+    "light": "icon.png",
+    "dark": "icon_dark.png"
+  },
   "version": "0.1.0",
   "author": {
     "name": "马丁"
