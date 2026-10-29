@@ -829,7 +829,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "theme",
                 "dark",
@@ -1113,7 +1113,7 @@
             "components": {
                 "providers": true
             },
-            "downloads": 18,
+            "downloads": 19,
             "keywords": [
                 "CodeBuddy",
                 "国际版",
@@ -2931,7 +2931,7 @@
                 "gateways": true,
                 "ui": true
             },
-            "downloads": 11,
+            "downloads": 12,
             "min_host_version": "0.6.10",
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
@@ -3015,7 +3015,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 88,
+            "downloads": 89,
             "keywords": [
                 "git",
                 "source-control",
@@ -3640,7 +3640,7 @@
                 "skills": true,
                 "tools": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "image-generation",
                 "video-generation",
@@ -5134,7 +5134,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 73,
+            "downloads": 74,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -5346,7 +5346,7 @@
                 "tools": true,
                 "skills": true
             },
-            "downloads": 26,
+            "downloads": 27,
             "keywords": [
                 "self-evolve",
                 "plugin",
@@ -6628,7 +6628,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 35,
+            "downloads": 36,
             "keywords": [
                 "voice",
                 "dictation",
@@ -6681,7 +6681,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 13,
+            "downloads": 14,
             "keywords": [
                 "voice",
                 "tts",
