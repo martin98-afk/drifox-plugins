@@ -444,9 +444,14 @@ class GitRepo:
     # ── 日志 ──
 
     def log(self, n: int = 30, graph: bool = False, skip: int = 0) -> List[dict]:
-        """提交历史，含每 commit 文件统计（--numstat）；skip 用于「加载更多」翻页"""
+        """提交历史，含每 commit 文件统计（--numstat）；skip 用于「加载更多」翻页
+
+        --topo-order 必须：提交图的 lanes 算法假定「父提交在子提交之后出现」。
+        git log --all 默认是反向时间序，rebase/cherry-pick 或跨分支时间交错时
+        会出现子提交早于父提交，lanes 记账直接错乱。
+        """
         fmt = "--format=%h%x1f%an%x1f%ai%x1f%s%x1f%D%x1f%p"
-        args = ["log", f"-n{n}", fmt, "--numstat", "--all"]
+        args = ["log", f"-n{n}", fmt, "--numstat", "--topo-order", "--all"]
         if graph:
             args.insert(1, "--graph")
         if skip > 0:

@@ -1409,53 +1409,80 @@ def _make_ref_badge(text: str, kind: str, parent) -> QLabel:
 def _compute_lanes(commits: list, branch_name: str = "") -> int:
     """GitGraph 式并行分支列计算，就地附加 _lane/_color/_lane_in/_lane_out/_head/_unpushed。
 
-    git log 拓扑序保证 parent 在 child 之后出现；分叉插新列，
-    同 hash 多列保留最先（曲线以斜线衔接近似）。
-    未推送判定：当前分支的 origin/<branch> 指针之前的提交（多分支年轻提交可能误标，低概率）。
+    槽位模型（关键）：lanes 是**持久槽位**数组，槽位 j 代表一条分支轨道，
+    只在没有后续提交认领时才释放为空洞（None）。绝不做「按 hash 去重后压缩
+    索引」——那会让同一条分支在相邻两行落到不同 x 坐标，绘制层的分叉/汇合
+    判定（靠比较 in/out 的 x 集合）随之把直线误判成分叉。
+
+    处理顺序（拓扑序：父提交必在子提交之后出现）：
+    1. 本行提交认领已有槽位（hash 匹配），否则新开槽位并分配颜色
+    2. 快照 _lane_in（进线）
+    3. mainline（parents[0]）继承本槽位；merge 的其余 parent 各占一个空槽或新槽
+    4. 快照 _lane_out（出线）
+
+    未推送判定：从所有 remote 指针出发沿 parents 传播「已推送」标记，
+    而非按 index 截断（旧逻辑在无 origin/<branch> 指针时把全部提交标为未推送）。
+
     返回最大并行列数（下限 2）。
     """
-    lanes: list = []  # [{hash, color}]
     max_lanes = 2
-    remote_ref = f"origin/{branch_name}" if branch_name else ""
-    unpushed_from = None  # 第一个已推送 commit 的 index
+
+    # ── 未推送判定：remote 指针 → 沿 parents 传播 ──
+    pushed: set = set()
+    hash_to_parents = {c["hash"]: (c.get("parents") or []) for c in commits}
+    queue = []
+    for c in commits:
+        for text, kind in _parse_refs(c.get("refs", "")):
+            if kind == "remote":
+                queue.append(c["hash"])
+    while queue:
+        h = queue.pop()
+        if h in pushed:
+            continue
+        pushed.add(h)
+        queue.extend(hash_to_parents.get(h, []))
+
+    lanes: list = []  # [{"hash": str|None, "color": str}]
+
+    def _alloc_slot(hash_: str, color: str) -> int:
+        """优先复用空洞，其次追加新槽"""
+        for j, ln in enumerate(lanes):
+            if ln["hash"] is None:
+                lanes[j] = {"hash": hash_, "color": color}
+                return j
+        lanes.append({"hash": hash_, "color": color})
+        return len(lanes) - 1
+
     for i, c in enumerate(commits):
-        if unpushed_from is None and remote_ref:
-            refs = {t for t, _ in _parse_refs(c.get("refs", ""))}
-            if remote_ref in refs:
-                unpushed_from = i
-    if unpushed_from is None:
-        unpushed_from = len(commits)  # 无远程指针 → 全部视为未推送
-    for i, c in enumerate(commits):
-        c["_unpushed"] = i < unpushed_from
+        c["_unpushed"] = c["hash"] not in pushed
         hash_ = c["hash"]
-        c["_lane_in"] = [(j, ln["color"]) for j, ln in enumerate(lanes)]
+
+        # 1. 认领槽位
         idx = next((j for j, ln in enumerate(lanes) if ln["hash"] == hash_), None)
         if idx is None:
-            color = _LANE_COLORS[len(lanes) % len(_LANE_COLORS)]
-            lanes.append({"hash": hash_, "color": color})
-            idx = len(lanes) - 1
-        else:
-            color = lanes[idx]["color"]
+            idx = _alloc_slot(hash_, _LANE_COLORS[len(lanes) % len(_LANE_COLORS)])
+        color = lanes[idx]["color"]
         c["_lane"] = idx
         c["_color"] = color
         c["_head"] = i == 0
+
+        # 2. 进线快照
+        c["_lane_in"] = [(j, ln["color"]) for j, ln in enumerate(lanes)
+                         if ln["hash"] is not None]
+
+        # 3. 出边记账：mainline 继承本槽，merge 的其余 parent 各占一槽
         parents = c.get("parents") or []
-        if parents:
-            lanes[idx] = {"hash": parents[0], "color": color}
-            for pr in parents[1:]:
-                if all(ln["hash"] != pr for ln in lanes):
-                    lanes.append({"hash": pr,
-                                  "color": _LANE_COLORS[len(lanes) % len(_LANE_COLORS)]})
-        else:
-            lanes.pop(idx)
-        seen, dedup = set(), []
-        for ln in lanes:
-            if ln["hash"] not in seen:
-                seen.add(ln["hash"])
-                dedup.append(ln)
-        lanes = dedup
-        c["_lane_out"] = [(j, ln["color"]) for j, ln in enumerate(lanes)]
-        max_lanes = max(max_lanes, len(c["_lane_in"]), len(lanes), idx + 1)
+        lanes[idx] = {"hash": parents[0] if parents else None, "color": color}
+        for pr in parents[1:]:
+            if any(ln["hash"] == pr for ln in lanes):
+                continue  # 已被别的槽位记账，不重复占槽
+            _alloc_slot(pr, _LANE_COLORS[len(lanes) % len(_LANE_COLORS)])
+
+        # 4. 出线快照
+        c["_lane_out"] = [(j, ln["color"]) for j, ln in enumerate(lanes)
+                          if ln["hash"] is not None]
+        max_lanes = max(max_lanes, len(c["_lane_in"]), len(c["_lane_out"]), idx + 1)
+
     return max_lanes
 
 
