@@ -2383,20 +2383,10 @@ class GitPanelCard(QWidget):
         tcs = self._cached_tcs
         border_c = self._cached_border
 
-        # 卡片背景
-        colors = _fallback_colors()
-        bg = colors.get("card_bg", "rgba(33,33,38,240)")
-        if isinstance(bg, str):
-            bg_rgba = bg
-        else:
-            bg_rgba = f"rgba({bg.red()}, {bg.green()}, {bg.blue()}, {bg.alpha()})"
-        self._content_widget.setStyleSheet(f"""
-            QWidget#cardContent {{
-                background: {bg_rgba};
-                border: 1px solid {border_c};
-                border-radius: 12px;
-            }}
-        """)
+        # 卡片背景：交给宿主 CardContainer 绘制（dock 停靠区自带 CARD_BG + BORDER
+        # + 8px 圆角面板，且随主题 refresh_style 自动刷新）。此处再画一层就是
+        # 双层边框嵌套，且 fallback 硬编码色不跟主题走。
+        self._content_widget.setStyleSheet("QWidget#cardContent { background: transparent; border: none; }")
 
         # 分隔线
         self._separator.setStyleSheet(
@@ -2515,17 +2505,22 @@ class GitPanelCard(QWidget):
 
     def _setup_ui(self):
         self.setMinimumHeight(0)
-        self.setAttribute(Qt.WA_StyledBackground, True)
+        # 面板表面由宿主 CardContainer 绘制（dock 停靠区自带背景/边框/圆角，
+        # 随主题 refresh_style 刷新）；本卡片只做透明承托，避免双层边框嵌套。
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setStyleSheet("GitPanelCard { background: transparent; border: none; }")
 
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
         root.setSpacing(0)
 
-        # 卡片背景容器
+        # 卡片背景容器（透明：表面交给宿主容器）
         self._content_widget = QWidget(self)
         self._content_widget.setObjectName("cardContent")
+        self._content_widget.setStyleSheet("QWidget#cardContent { background: transparent; border: none; }")
         content = QVBoxLayout(self._content_widget)
-        content.setContentsMargins(16, 12, 16, 12)
+        # 与宿主容器 padding（bottom 容器 8/6/8/6）对齐，剥离自绘面板后不再叠加
+        content.setContentsMargins(8, 6, 8, 6)
         content.setSpacing(0)
 
         # InfoBar 悬浮层（不占布局空间）：InfoBar 由 InfoBarManager 按
