@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" role="img" aria-label="chrome classics themes">
+  <rect x="5" y="10" width="54" height="44" rx="10" fill="#0A0A0A" stroke="#3A3A3A" stroke-width="2"/>
+  <path d="M13 44 L25 22 L34 44 Z" fill="#3FA894"/>
+  <path d="M30 44 L42 26 L54 44 Z" fill="#9B7FD4" opacity="0.92"/>
+  <circle cx="46" cy="19" r="5" fill="#E8B86D"/>
+  <rect x="13" y="47" width="38" height="3" rx="1.5" fill="#5A5A5A"/>
+</svg>

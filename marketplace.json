@@ -812,6 +812,37 @@
             "api_version": 2
         },
         {
+            "name": "chrome-classics",
+            "description": "Chrome 主题商店经典移植 — Slinky 中性灰 / AMOLED 纯黑 / Shaded Purple 紫雾 / Forest Sunset 森林日落，四套含背景图的 DriFox 主题。",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "theme"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/chrome-classics",
+                "ref": "main"
+            },
+            "components": {
+                "themes": true
+            },
+            "keywords": [
+                "theme",
+                "dark",
+                "chrome",
+                "amoled",
+                "主题"
+            ],
+            "min_host_version": "0.5.0",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "claude-api",
             "description": "Claude API 最佳实践 — SDK 用法、prompt caching、streaming、tool use、batch API、prompt 工程、token 优化。",
             "version": "1.0.0",
@@ -5481,6 +5512,39 @@
                 "师弟"
             ],
             "min_host_version": "0.5.0",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
+            "name": "showcase",
+            "description": "成果展示 — 让模型把要交付的文件或图片推到消息卡片成果栏，图片带缩略图预览，其他条目可双击打开、拖拽导出",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/showcase",
+                "ref": "main"
+            },
+            "components": {
+                "tools": true
+            },
+            "keywords": [
+                "artifacts",
+                "showcase",
+                "成果",
+                "成果栏",
+                "交付",
+                "文件展示"
+            ],
+            "min_host_version": "0.6.10",
+            "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
