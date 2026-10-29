@@ -1,0 +1,167 @@
+# ─────────────────────────────────────────────
+# 森林日落 · Forest Sunset
+# 移植自 Chrome Web Store 主题 "Forest environment"（100K / ★4.4）
+# 壁纸为 1920×1080 插画：星空青蓝天 → 橙金日落 → 深蓝河谷
+# 主色取天空青 #3C9AAC，暖色取日落金 #F0A44C，底色走河谷深蓝 #0B1A26
+# scene 保留完整插画（可辨认山脊与树影），sidebar 用居中竖裁 + 轻模糊
+# ─────────────────────────────────────────────
+name: 森林日落
+id: forest-sunset
+mode: dark
+window:
+  gradient_start: rgba(8, 21, 34, 255)
+  gradient_end: rgba(4, 12, 22, 255)
+backgrounds:
+  window:
+    color: rgba(7, 18, 30, 240)
+    enabled: true
+  sidebar:
+    image: sidebar.jpg
+    opacity: 0.72
+    color: rgba(8, 20, 32, 230)
+    enabled: true
+  scene:
+    image: scene.jpg
+    opacity: 0.48
+    blur: 2
+    dim: rgba(6, 16, 28, 0.62)
+    enabled: true
+colors:
+  # ── 基础 ──
+  accent: '#3C9AAC'
+  accent_warm: '#F0A44C'
+  border: '#254254'
+  border_accent: '#4FA8B8'
+  text_primary: '#EAF4F6'
+  text_secondary: rgba(234, 244, 246, 0.72)
+  text_muted: '#8AA4B0'
+  card_bg: rgba(11, 29, 44, 232)
+  card_bg_solid: rgba(11, 29, 44, 250)
+  content_bg: '#0B1A26'
+  hover_bg: rgba(60, 154, 172, 0.14)
+  hover_bg_strong: rgba(60, 154, 172, 0.21)
+  selected_bg: rgba(60, 154, 172, 0.32)
+  capsule_bg: rgba(12, 30, 45, 195)
+  capsule_border: rgba(45, 78, 98, 210)
+
+  # ── 全局 UI 基底 ──
+  toolbar_bg: rgba(255, 255, 255, 0.05)
+  divider_color: rgba(255, 255, 255, 0.07)
+  scrollbar_handle_bg: rgba(234, 244, 246, 0.20)
+  scrollbar_handle_hover_bg: rgba(234, 244, 246, 0.32)
+  card_placeholder_text: '#7E96A4'
+
+  # ── 卡片级语义 ──
+  button_text_on_accent: '#06141C'
+  status_info: '#6FC4D6'
+  status_danger_bg: rgba(230, 96, 84, 0.80)
+  status_danger_bg_dark: '#D4756A'
+  status_archive_bg: rgba(79, 168, 184, 0.80)
+  success_dark: '#7FC4A0'
+  card_bg_dim: rgba(255, 255, 255, 0.04)
+  archived_card_bg: rgba(240, 164, 76, 0.08)
+  archived_card_border: rgba(240, 164, 76, 0.22)
+
+  # ── 语法高亮 ──
+  syntax_step: '#6FD4C0'
+  syntax_tool: '#E8C878'
+  syntax_success: '#7FC4A0'
+  syntax_error: '#E87868'
+  syntax_result: '#E0B088'
+
+  # ── 标签 ──
+  tag_accent: '#3C9AAC'
+  tag_accent_text: '#8FD8E4'
+  tag_purple: '#A898D8'
+  tag_purple_text: '#C4B8EC'
+  tag_orange: '#F0A44C'
+  tag_orange_text: '#F8C488'
+  tag_green: '#6FC49C'
+  tag_green_text: '#94DCBC'
+
+  # ── 用户 / 助手卡 ──
+  user_card_bg: rgba(16, 44, 62, 155)
+  user_card_accent: '#6FC4D6'
+  user_card_text: '#EAF4F6'
+  user_card_muted: '#9CB4C0'
+  assistant_card_bg: rgba(40, 28, 16, 155)
+  assistant_card_accent: '#F0A44C'
+  assistant_card_text: '#F6EEE2'
+  assistant_card_muted: '#B8A68C'
+
+  # ── 智能体按钮 ──
+  agent_btn_text: '#8AA4B0'
+  agent_btn_text_active: '#F0A44C'
+  agent_btn_bg_active: rgba(240, 164, 76, 0.16)
+  agent_btn_separator: rgba(45, 78, 98, 155)
+
+  # ── 输入框 ──
+  input_bg_start: rgba(10, 26, 40, 175)
+  input_bg_end: rgba(15, 37, 52, 175)
+  input_focus_bg_start: rgba(13, 33, 48, 238)
+  input_focus_bg_end: rgba(20, 46, 62, 238)
+  input_text: '#EAF4F6'
+  input_focus_text: '#FFFFFF'
+  input_border: '#254254'
+  input_focus_border: '#5FBCB8'
+  input_placeholder: rgba(234, 244, 246, 0.40)
+
+  # ── 输入卡发光强度（breath 档：聚焦亮 + 失焦呼吸微光） ──
+  input_glow_primary_alpha: 0
+  input_glow_primary_blur: 0
+  input_glow_ambient_alpha: 66
+  input_glow_ambient_blur: 30
+  input_glow_unfocused_ambient_alpha: 38
+  input_glow_unfocused_ambient_blur: 30
+
+  # ── 全局光晕 ──
+  glow_primary_alpha: 145
+  glow_primary_blur: 28
+  glow_ambient_alpha: 80
+  glow_ambient_blur: 36
+
+  # ── 底部工具栏条 ──
+  toolbar_strip_bg: rgba(13, 33, 46, 175)
+  toolbar_strip_border: '#1E3A4C'
+
+  # ── 实时交互卡 ──
+  realtime_border: '#3C7A8C'
+  realtime_accent: '#3C9AAC'
+  realtime_accent_warm: '#F0A44C'
+  realtime_success: '#7FC4A0'
+  realtime_error: '#E87868'
+  realtime_bg: rgba(8, 22, 34, 244)
+  realtime_text: '#EAF4F6'
+  realtime_text_secondary: rgba(234, 244, 246, 0.70)
+  realtime_tag_bg: rgba(60, 154, 172, 0.14)
+  realtime_tag_border: rgba(60, 154, 172, 0.30)
+
+  # ── 系统卡 ──
+  system_border: '#254254'
+  system_accent: '#4FA8B8'
+
+  # ── 发送按钮 ──
+  send_btn_start: '#3C9AAC'
+  send_btn_end: '#F0A44C'
+  send_btn_hover_start: '#5FBCB8'
+  send_btn_hover_end: '#F8BC70'
+  send_btn_radius: 12
+
+  # ── 时间线 ──
+  timeline_node: '#3A5A6A'
+  timeline_node_hover: '#6FC4D6'
+  timeline_node_visible: '#7FC4A0'
+  timeline_node_selected: '#F0A44C'
+  timeline_line: '#1E3A4C'
+  timeline_line_progress: '#3C9AAC'
+
+  # ── 上下文圆环 ──
+  ring_normal: '#6FC4D6'
+  ring_warning: '#E8C878'
+  ring_danger: '#E87868'
+  ring_compacted: '#A898D8'
+
+  # ── 分支标签 ──
+  branch_label_bg: rgba(60, 154, 172, 0.14)
+  branch_label_border: rgba(60, 154, 172, 0.30)
+  window_bg: rgba(60, 154, 172, 0.04)

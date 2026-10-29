@@ -1,0 +1,25 @@
+{
+    "name": "chrome-classics",
+    "description": "Chrome 主题商店经典移植 — Slinky 中性灰 / AMOLED 纯黑 / Shaded Purple 紫雾 / Forest Sunset 森林日落，四套含背景图的 DriFox 主题。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "1.0.0",
+    "type": "user",
+    "license": "MIT",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "keywords": [
+        "theme",
+        "dark",
+        "chrome",
+        "amoled",
+        "主题"
+    ],
+    "components": {
+        "themes": true
+    },
+    "min_host_version": "0.5.0"
+}

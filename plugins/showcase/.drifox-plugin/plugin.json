@@ -1,0 +1,27 @@
+{
+    "name": "showcase",
+    "description": "成果展示 — 让模型把要交付的文件或图片推到消息卡片成果栏，图片带缩略图预览，其他条目可双击打开、拖拽导出",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "1.0.0",
+    "type": "user",
+    "license": "MIT",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "homepage": "https://github.com/martin98-afk/drifox-plugins",
+    "keywords": [
+        "artifacts",
+        "showcase",
+        "成果",
+        "成果栏",
+        "交付",
+        "文件展示"
+    ],
+    "components": {
+        "tools": true
+    },
+    "min_host_version": "0.6.10"
+}

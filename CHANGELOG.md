@@ -1,6 +1,20 @@
 # Changelog
 
 ## Unreleased
+### ✨ 新增 chrome-classics v1.0.0：Chrome 热门主题移植（四套主题，两套带壁纸）
+- **来源**：Chrome Web Store 主题分类榜单（`chromewebstore.google.com/category/themes`）+ 主题详情页安装量。经 CRX 下载（`clients2.google.com/service/update2/crx`）剥离头部解 zip，读 `manifest.json` 的 `theme.colors` 原色值与 NTP 壁纸
+- **四套主题**：`slinky-grey` 斯林基·中性灰（上游 Slinky Elegant，900K/★4.5，零彩色只靠灰阶）、`amoled-black` 真黑·AMOLED（Into The Black Hole，600K/★4.6，`#000` 底靠 4~9% 白叠加建层次）、`shaded-purple` 紫雾（Shaded Purple，100K/★4.7，含原壁纸）、`forest-sunset` 森林日落（Forest environment，100K/★4.4，1920×1080 插画）
+- **背景图**：`shaded-purple` / `forest-sunset` 从上游 NTP 壁纸生成 `scene.jpg`（长边 1600，JPEG Q88）与 `sidebar.jpg`（居中竖裁 1:4 → 480×1920，森林加高斯模糊 0.6）。两套纯色上游无壁纸，只用纯色层
+- **关键坑（已规避）**：`design_tokens._COLOR_ALIASES` 把 `accent`/`text_primary`/`selected_bg`/`hover_bg` 当作别名**来源**，故 yaml 里写 `text_accent`/`text_secondary_hover`/`tab_active_bg`/`tab_hover_bg` 全部静默失效（白名单里有名但不会被读）；`input_glow_preset` 在 `refresh()` 第 4 步会覆盖同名单个发光 token，写 preset + 自定义值等于自定义值无效。本插件因此不写 preset，直接写六个 `input_glow_*` 强度值
+- **验证**：`validate_plugins.py` OK；yaml 解析 + 颜色格式 + 图片存在性 + int token 未加引号全过（105 token/套，零死 token）；PySide6 离屏渲染四张预览图确认卡片/描边/输入框层次可分辨；`generate_marketplace.py` 已收录（218 插件）
+
+### ✨ 新增 showcase v1.0.0：成果展示工具（模型主动把文件/图片推成果栏）
+- **形态**：纯 `tools` 插件，零 UI 组件。宿主侧 `ToolResult.artifacts` 即自动挂消息卡片成果栏（`app/widgets/inline_artifact_panel.py` 五类 kind 分控件渲染），无需声明 `ui.artifacts.show`
+- **工具**：`showcase(paths, caption?)` — `paths` 支持混合文件与目录（目录递归只收图片/视频/网页/文本这些可预览扩展名，避免把代码仓库推上成果栏）；单文件时 `caption` 落到条目上；单次上限 50 项（对齐 `normalize_artifact_items` 落库上限），超出提示剩余数量
+- **与 workbuddy `present_files` 的差异**：后者只把清单渲染进正文并写自有 `_state` 面板，不走宿主成果栏；本插件直接产出 `artifacts` 条目，图片有缩略图、条目可单击预览/双击打开/拖拽导出
+- **降级**：老宿主无 `artifacts` 字段时 `TypeError` 兜底，退化为正文列出路径，不失败
+- **验证**：`plugins/showcase/tests/test_showcase_tool.py` 10 组用例（单图带说明/目录递归去二进制/绝对路径/缺失/空参/上限截断/预览摘要闭包/schema/register 契约）全过；`test_showcase_load.py` 经宿主 `PluginToolLoader.load_plugin_tools` 真实加载，注册为 `plugin:showcase`、danger=safe、schema 进入工具列表；`validate_plugins.py` OK；`generate_marketplace.py` 已收录
+
 ### ✨ jimeng v1.2.0：成品与登录暂存改落 `plugin_data`，不再写插件安装目录
 - **改动**：`tools/jimeng.py` 的路径根由 `<app_data>/plugins/jimeng` 改为 `<app_data>/plugin_data/jimeng`（函数 `_plugin_dir` 更名 `_data_dir`），成品默认落 `plugin_data/jimeng/generated/`，登录暂存落 `plugin_data/jimeng/pending_login.json`
 - **原因**：插件安装目录随升级/重装被覆盖，可能只读；成品属于用户数据，按项目约定应放 `plugin_data/<name>/`
