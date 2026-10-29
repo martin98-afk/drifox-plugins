@@ -596,7 +596,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 73,
+            "downloads": 74,
             "keywords": [
                 "browser",
                 "web",
@@ -1049,7 +1049,7 @@
             "components": {
                 "providers": true
             },
-            "downloads": 17,
+            "downloads": 18,
             "keywords": [
                 "CodeBuddy",
                 "国际版",
@@ -1287,6 +1287,7 @@
             "components": {
                 "mcp": true
             },
+            "downloads": 1,
             "keywords": [
                 "mcp",
                 "connector",
@@ -2568,7 +2569,7 @@
                 "commands": true,
                 "skills": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "frontend",
                 "a11y",
@@ -3713,7 +3714,7 @@
                 "hooks": true,
                 "skills": true
             },
-            "downloads": 9,
+            "downloads": 10,
             "keywords": [
                 "prompt",
                 "optimizer",
@@ -5103,7 +5104,7 @@
                 "skills": true,
                 "hooks": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "python",
                 "typing",
@@ -5281,7 +5282,7 @@
                 "tools": true,
                 "skills": true
             },
-            "downloads": 23,
+            "downloads": 26,
             "keywords": [
                 "self-evolve",
                 "plugin",
@@ -6530,7 +6531,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 34,
+            "downloads": 35,
             "keywords": [
                 "voice",
                 "dictation",
@@ -6621,7 +6622,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "react",
                 "tailwind",
@@ -6850,7 +6851,7 @@
                 "ui": true,
                 "skills": true
             },
-            "downloads": 9,
+            "downloads": 10,
             "keywords": [
                 "workbuddy",
                 "问答模式",
