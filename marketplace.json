@@ -964,6 +964,34 @@
             }
         },
         {
+            "name": "code-animation-styles",
+            "description": "代码动画风格提示词库：341 种风格（代码样片、动态风格、卡通画风、中国风、版式、奥斯卡 98 部等十大类，193 种带静帧），附离线挑选页与 AI 检索工具，Opus / DeepSeek 通用，用于把内容做成代码动画。",
+            "version": "0.1.0",
+            "author": "马丁",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/code-animation-styles",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "animation",
+                "动画",
+                "风格",
+                "prompt",
+                "canvas",
+                "视频"
+            ],
+            "min_host_version": "0.5.0"
+        },
+        {
             "name": "code-reviewer",
             "description": "自动化代码审查 — 基于 checklist 的 PR 审查、代码质量评分、审查报告生成，提升代码质量保障效率。",
             "version": "1.0.0",

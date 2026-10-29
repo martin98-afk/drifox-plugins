@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+### ✨ 新增 code-animation-styles v0.1.0：341 种代码动画风格提示词库（纯技能形态）
+- **内容**：十大系列 341 种风格提示词（AG 代码样片 26 / M 动态风格 40 / K 卡通画风 38 / Z 中国风 15 / H 现成版式 12 / L Lemo-Opuscar 59 / V mg-styles-15 15 / X code-video 31 / R 照参考学来的 7 / O 奥斯卡 98 部 98），193 种带静帧 jpg；附离线挑选页 `风格挑选.html`（自包含，双击即用）
+- **形态**：纯技能插件（仅 `skills` 组件）。`SKILL.md` 只留路由面（触发/第一动作/渐进加载/边界硬停止），工作流契约（每步输入/输出/转移条件/失败路线）下沉 `references/workflow.md`，提示词详略分寸与公共函数内联规则在 `references/prompt-craft.md`，触发评测（正反例 + 2 真实任务 + 1 UI 动效边界任务）在 `evals/trigger-eval.json`
+- **数据资产自包含于技能目录**：`skills/code-animation/styles/`，AI 检索入口为 `styles/INDEX.md` 全量索引（341 条：编号/名称/适合/关键词/静帧标记）；M 系列 8 个风格上游文件名即无名称（如 `M14_.md`），INDEX 按编号收录
+- **来源与许可**：内容源自社区开源整理（含 Lemo-Opuscar / mg-styles-15 / code-video 三个 MIT 项目），来源说明与第三方 LICENSE 原样保留在 `styles/许可与来源.md`、`styles/第三方许可/`；原作者约定「免费使用、禁止包装成课程/付费 skills 出售」已在 README 完整保留，本插件免费分发
+- **数据处理**：从夸克网盘分享包（74.6 MB）提取，剔除 `示例/` 下三个演示 mp4（约 60 MB，AI 用不到），插件体积 14 MB
+- **验证**：`validate_plugins.py`（Python 3.10）216 插件通过，本插件 OK；`generate_marketplace.py` 重新生成 marketplace.json（216 条）
+
 ### 🗑️ 移除 designkit 插件（服务端封锁第三方 MCP 客户端，实测不可用）
 - **症状**：插件启用后连接报 `401 Unauthorized`，端点 `https://designkitmcp.designkit.com/mcp/workbuddy` 返回 `WWW-Authenticate: Bearer resource_metadata=...`
 - **实测结论**：`/.well-known/oauth-authorization-server` 声明了 `registration_endpoint`，但 `POST /oauth/register` 对任意 client metadata 一律 `400 invalid_client_metadata`（试穿 12 种 body 组合 + 6 种 UA 伪装）。对照 `POST https://mcp.canva.com/register` 同参数返回 `201` 签发 client_id，排除客户端实现问题。`token_endpoint_auth_methods_supported` 仅 `["none"]`、无 `client_credentials`，token 只能由服务端白名单里的 client 走浏览器授权码流程签发
