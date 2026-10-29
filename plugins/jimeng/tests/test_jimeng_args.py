@@ -335,7 +335,7 @@ def _success_json(path):
 
 def test_query_parses_result_json_paths(jm, tmp_path, monkeypatch):
     """CLI 实际结构 result_json.images[].path 必须被解析（v1.4.21 实测）。"""
-    out_dir = tmp_path / "plugins" / "jimeng" / "generated"
+    out_dir = tmp_path / "plugin_data" / "jimeng" / "generated"
     out_dir.mkdir(parents=True)
     img = out_dir / "a.png"
 
@@ -353,9 +353,9 @@ def test_query_parses_result_json_paths(jm, tmp_path, monkeypatch):
 
 def test_query_relative_path_name_fallback(jm, tmp_path, monkeypatch):
     """CLI 回显自身默认相对路径时按文件名兜底命中。"""
-    out_dir = tmp_path / "plugins" / "jimeng" / "generated"
+    out_dir = tmp_path / "plugin_data" / "jimeng" / "generated"
     out_dir.mkdir(parents=True)
-    echo = ".drifox\\plugins\\jimeng\\generated\\b.png"
+    echo = ".drifox\\plugin_data\\jimeng\\generated\\b.png"
 
     def fake_run(cmd, cwd, timeout=180):
         (out_dir / "b.png").write_bytes(b"x")
@@ -371,8 +371,8 @@ def test_query_relative_path_name_fallback(jm, tmp_path, monkeypatch):
 
 def test_query_deep_scan_catches_nested(jm, tmp_path, monkeypatch):
     """JSON 无路径键、文件落在嵌套子目录时递归差异法兜底。"""
-    out_dir = tmp_path / "plugins" / "jimeng" / "generated"
-    nested = out_dir / ".drifox" / "plugins" / "jimeng" / "generated"
+    out_dir = tmp_path / "plugin_data" / "jimeng" / "generated"
+    nested = out_dir / ".drifox" / "plugin_data" / "jimeng" / "generated"
 
     def fake_run(cmd, cwd, timeout=180):
         nested.mkdir(parents=True, exist_ok=True)
@@ -391,9 +391,9 @@ def test_plugin_dir_resolves_relative_app_data(jm, tmp_path, monkeypatch):
     """相对 app_data_dir 必须 resolve 成绝对路径，防下载目录漂移。"""
     monkeypatch.chdir(tmp_path)
     ctx = {"workdir": str(tmp_path), "env": {"app_data_dir": ".drifox"}}
-    d = jm._plugin_dir(ctx)
+    d = jm._data_dir(ctx)
     assert d.is_absolute()
-    assert d == (tmp_path / ".drifox" / "plugins" / "jimeng").resolve()
+    assert d == (tmp_path / ".drifox" / "plugin_data" / "jimeng").resolve()
 
 
 # ── checklogin 退出码语义（2026-10-24 实测翻车点回归） ─────────────

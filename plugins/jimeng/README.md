@@ -35,7 +35,7 @@ curl.exe -L "https://lf3-static.bytednsdoc.com/obj/eden-cn/psj_hupthlyk/ljhwZthl
 
 `action=login` 走 headless 两段式，不阻塞等人工：
 
-1. 返回授权链接与验证码，`device_code` 本地暂存到 `<app_data>/plugins/jimeng/pending_login.json`
+1. 返回授权链接与验证码，`device_code` 本地暂存到 `<app_data>/plugin_data/jimeng/pending_login.json`
 2. 用户在浏览器完成授权
 3. `action=checklogin` 收尾
 
@@ -66,7 +66,7 @@ curl.exe -L "https://lf3-static.bytednsdoc.com/obj/eden-cn/psj_hupthlyk/ljhwZthl
 
 ## 成品
 
-`query` 成功且下载到文件后：文件落盘到 `<app_data>/plugins/jimeng/generated/`，同时在 `ToolResult.artifacts` 回传结构化条目，由主程序成果栏按类型渲染（图片缩略图 / 视频占位 / 文件卡片）。
+`query` 成功且下载到文件后：文件落盘到 `<app_data>/plugin_data/jimeng/generated/`，同时在 `ToolResult.artifacts` 回传结构化条目，由主程序成果栏按类型渲染（图片缩略图 / 视频占位 / 文件卡片）。
 
 宿主未升级（不认识 `artifacts` 字段）时自动降级：路径仍写在 `content` 文本里，功能不失败。
 
