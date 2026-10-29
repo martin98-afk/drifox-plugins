@@ -829,6 +829,7 @@
             "components": {
                 "themes": true
             },
+            "downloads": 1,
             "keywords": [
                 "theme",
                 "dark",
@@ -3639,7 +3640,7 @@
                 "skills": true,
                 "tools": true
             },
-            "downloads": 3,
+            "downloads": 5,
             "keywords": [
                 "image-generation",
                 "video-generation",
