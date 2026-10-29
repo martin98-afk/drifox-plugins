@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+### ✨ jimeng v1.2.0：成品与登录暂存改落 `plugin_data`，不再写插件安装目录
+- **改动**：`tools/jimeng.py` 的路径根由 `<app_data>/plugins/jimeng` 改为 `<app_data>/plugin_data/jimeng`（函数 `_plugin_dir` 更名 `_data_dir`），成品默认落 `plugin_data/jimeng/generated/`，登录暂存落 `plugin_data/jimeng/pending_login.json`
+- **原因**：插件安装目录随升级/重装被覆盖，可能只读；成品属于用户数据，按项目约定应放 `plugin_data/<name>/`
+- **同步**：`_workdir()` 回退目录、`download_dir` 参数 schema 描述、README 两处路径说明
+- **验证**：pytest 48 例全过；`validate_plugins.py` OK；`generate_marketplace.py --check` 一致（jimeng 1.2.0）
 ### ✨ jimeng v1.1.0：登录全程自动化（傻瓜式）
 - **login 一条龙**：调 `action=login` 即自动调起系统默认浏览器进入授权页（`webbrowser.open`，跨平台），并原地阻塞等待授权完成（CLI `--poll=120`），成功直接返回登录结果；验证码已随链接自动带上，用户只需登录+点同意
 - **超时续接**：120s 未完成返回 pending，再调 `login` / `checklogin` 继续阻塞等待（`checklogin` 默认 poll 30→120）；仅无桌面会话导致浏览器调不起时才降级为手动打开链接

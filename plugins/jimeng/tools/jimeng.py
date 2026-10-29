@@ -230,32 +230,37 @@ def _cli_failure(text: str) -> "str | None":
 # ── 路径 ──────────────────────────────────────────────────────────
 
 
-def _plugin_dir(tool_ctx) -> Path:
+def _data_dir(tool_ctx) -> Path:
+    """插件数据根：``<app_data>/plugin_data/jimeng``。
+
+    成品与登录暂存都写这里，不落插件安装目录（安装目录可能只读，且随插件
+    升级/重装被覆盖）。
+    """
     app_data = (tool_ctx or {}).get("env", {}).get("app_data_dir")
     # app_data_dir 可能是相对路径（MCP 宿主进程 cwd 不定），必须 resolve，
     # 否则默认下载目录漂移到宿主 cwd 下，用户找不到成品。
     base = Path(app_data).resolve() if app_data else Path.home() / ".drifox"
-    out = base / "plugins" / "jimeng"
+    out = base / "plugin_data" / "jimeng"
     out.mkdir(parents=True, exist_ok=True)
     return out
 
 
 def _output_dir(tool_ctx) -> Path:
-    out = _plugin_dir(tool_ctx) / "generated"
+    out = _data_dir(tool_ctx) / "generated"
     out.mkdir(parents=True, exist_ok=True)
     return out
 
 
 def _pending_path(tool_ctx) -> Path:
-    return _plugin_dir(tool_ctx) / "pending_login.json"
+    return _data_dir(tool_ctx) / "pending_login.json"
 
 
 def _workdir(tool_ctx) -> str:
-    """子进程 cwd：工作目录优先，回退插件目录（保证相对路径可解析）。"""
+    """子进程 cwd：工作目录优先，回退插件数据目录（保证相对路径可解析）。"""
     wd = (tool_ctx or {}).get("workdir")
     if wd and Path(wd).is_dir():
         return str(wd)
-    return str(_plugin_dir(tool_ctx))
+    return str(_data_dir(tool_ctx))
 
 
 def _kind_of(path: Path):
@@ -1232,7 +1237,10 @@ _SCHEMA = {
                 },
                 "download_dir": {
                     "type": "string",
-                    "description": "成品下载目录（仅 query），留空用插件默认目录",
+                    "description": (
+                        "成品下载目录（仅 query），留空用 "
+                        "<app_data>/plugin_data/jimeng/generated"
+                    ),
                 },
                 "gen_status": {
                     "type": "string",
