@@ -539,6 +539,7 @@
                 "skills": true,
                 "ui": true
             },
+            "downloads": 1,
             "keywords": [
                 "bilibili",
                 "b站",
@@ -1707,7 +1708,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "dsh",
                 "deepseek-harness",
@@ -3052,7 +3053,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 89,
+            "downloads": 91,
             "keywords": [
                 "git",
                 "source-control",
@@ -5573,6 +5574,7 @@
             "components": {
                 "tools": true
             },
+            "downloads": 1,
             "keywords": [
                 "artifacts",
                 "showcase",
