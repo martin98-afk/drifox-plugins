@@ -1,7 +1,12 @@
 # Changelog
 
 ## Unreleased
-
+### 🗑️ 移除 designkit 插件（服务端封锁第三方 MCP 客户端，实测不可用）
+- **症状**：插件启用后连接报 `401 Unauthorized`，端点 `https://designkitmcp.designkit.com/mcp/workbuddy` 返回 `WWW-Authenticate: Bearer resource_metadata=...`
+- **实测结论**：`/.well-known/oauth-authorization-server` 声明了 `registration_endpoint`，但 `POST /oauth/register` 对任意 client metadata 一律 `400 invalid_client_metadata`（试穿 12 种 body 组合 + 6 种 UA 伪装）。对照 `POST https://mcp.canva.com/register` 同参数返回 `201` 签发 client_id，排除客户端实现问题。`token_endpoint_auth_methods_supported` 仅 `["none"]`、无 `client_credentials`，token 只能由服务端白名单里的 client 走浏览器授权码流程签发
+- **另一条链路**：WorkBuddy 自己的 designkit 连接器不走该 MCP 端点，走 `npm install -g meitu-designkit-cli` + designkit 自有 gateway（`~/.workbuddy/connectors-marketplace/connectors/designkit-buddy-cli/cli.json`），两条独立的授权链
+- **移除内容**：删除 `plugins/designkit/`（manifest / `.mcp.json` / README / icon / 内置 3 个 skill 文件）；`downloads_cache.json` 剔同名条目；`marketplace.json` 重新生成（212 → 211）
+- **验证**：`validate_plugins.py` 211 插件全过；`generate_marketplace.py --check` 一致
 ### 🔧 voice-input v0.6.2：修 macOS 结束录音必闪退——autorelease pool 跨事件持有触发 badPop
 
 - **症状**：macOS 上点麦克风能正常开始录音（浮窗计时正常），点结束的瞬间整个 Drifox 闪退，Python 日志无任何异常栈
