@@ -38,7 +38,7 @@
             {
                 "key": "keywords",
                 "label": "关注关键词",
-                "type": "string",
+                "type": "text",
                 "default": "",
                 "description": "一行一个；留空则用账号首页推荐流"
             },
@@ -106,14 +106,14 @@
             {
                 "key": "my_uid",
                 "label": "我的 B站 UID",
-                "type": "string",
+                "type": "text",
                 "default": "",
                 "description": "自动评论 @ 与私信投递的目标"
             },
             {
                 "key": "persona",
                 "label": "它按什么说话（人设提示词）",
-                "type": "string",
+                "type": "textarea",
                 "default": "",
                 "description": "留空按中性口吻"
             }

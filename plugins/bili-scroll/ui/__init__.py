@@ -6,6 +6,11 @@ from pathlib import Path
 
 from loguru import logger
 
+# 插件根注入 sys.path（宿主 UI 加载器不注根，biliscroll_core 靠它可 import）
+_PLUGIN_ROOT = str(Path(__file__).resolve().parent.parent)
+if _PLUGIN_ROOT not in sys.path:
+    sys.path.insert(0, _PLUGIN_ROOT)
+
 
 def register_ui(registry):
     """注册 UI 组件。
@@ -44,7 +49,8 @@ def register_ui(registry):
     logger.info("[bili-scroll] UI components registered")
 
 
-def unload_ui():
+def unload_ui(*_args):
+    """宿主回调带插件名实参，签名须容忍（2026-10-30 实测 0 参签名会 TypeError）。"""
     try:
         from .controller import release_scheduler
 

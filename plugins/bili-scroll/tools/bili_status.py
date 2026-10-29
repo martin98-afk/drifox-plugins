@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import json
 
+# 宿主 tools 加载器不注插件根，先自注入再 import 本插件包
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from app.tools.result import ToolResult
 
 

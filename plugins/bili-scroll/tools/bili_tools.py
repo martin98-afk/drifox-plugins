@@ -16,7 +16,13 @@ import json
 import os
 import sys
 from pathlib import Path
+
 from app.tools.result import ToolResult
+
+# 宿主 tools 加载器不注插件根，先自注入再 import 本插件包
+_PLUGIN_ROOT_DIR = str(Path(__file__).resolve().parent.parent)
+if _PLUGIN_ROOT_DIR not in sys.path:
+    sys.path.insert(0, _PLUGIN_ROOT_DIR)
 
 from biliscroll_core.paths import PLUGIN_ROOT
 from biliscroll_core.schema_registry import TOOL_SCHEMAS
@@ -32,6 +38,91 @@ _DANGEROUS = {"bili_reply", "bili_send_message"}
 
 _CRED_DEFAULT = PLUGIN_ROOT / "data" / "bili_credential.json"
 _DUTY = PLUGIN_ROOT / "data" / "duty"
+
+# ── PIL 仲裁（ssh-toolkit _prefer_vendored_crypto 同款）──
+# 打包版宿主的 FrozenImporter 会虚拟出一个残缺 PIL（_internal 无 _imaging.pyd），
+# 且 meta_path 优先于 deps/ 的 sys.path 注入 ⇒ 必须用钩子把 PIL 指到 deps 版。
+import importlib.machinery
+import importlib.util
+
+_PIL_SELFTEST_OK = False
+
+
+def _vendored_pil_dir() -> Path | None:
+    here = Path(__file__).resolve().parent.parent
+    plat = "win32" if os.name == "nt" else sys.platform
+    for sub in (plat, ""):
+        d = here / "deps" / sub / "PIL"
+        if (d / "__init__.py").is_file():
+            return d
+    return None
+
+
+class _VendoredPilFinder:
+    """meta_path 钩子：PIL* 一律指向插件 deps 目录，其余放行。"""
+
+    def __init__(self, pkg_dir: str):
+        hook = importlib.machinery.FileFinder.path_hook(
+            (importlib.machinery.ExtensionFileLoader, importlib.machinery.EXTENSION_SUFFIXES),
+            (importlib.machinery.SourceFileLoader, importlib.machinery.SOURCE_SUFFIXES),
+            (importlib.machinery.SourcelessFileLoader, importlib.machinery.BYTECODE_SUFFIXES),
+        )
+        self._finder = hook(pkg_dir)
+
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname == "PIL" or fullname.startswith("PIL."):
+            return self._finder.find_spec(fullname, target)
+        return None
+
+
+def _pil_modules():
+    return [k for k in sys.modules if k == "PIL" or k.startswith("PIL.")]
+
+
+def _pil_selftest():
+    from PIL import _imaging  # noqa: F401  残缺副本正是缺这个
+
+
+def _prefer_vendored_pil():
+    """宿主 PIL 缺 _imaging 时换成 deps 版（幂等，失败回滚宿主原状）。"""
+    global _PIL_SELFTEST_OK
+    if _PIL_SELFTEST_OK:
+        return
+    pkg_dir = _vendored_pil_dir()
+    if not pkg_dir:
+        return
+    try:
+        _pil_selftest()
+        _PIL_SELFTEST_OK = True  # 宿主副本完好，不动
+        return
+    except Exception:
+        pass
+    saved = {k: sys.modules[k] for k in _pil_modules()}
+    finder = _VendoredPilFinder(str(pkg_dir.parent))
+    for k in saved:
+        del sys.modules[k]
+    sys.meta_path.insert(0, finder)
+    try:
+        importlib.import_module("PIL")
+        mod = sys.modules.get("PIL")
+        new_file = os.path.normcase(os.path.abspath(str(getattr(mod, "__file__", "") or "")))
+        if not new_file.startswith(os.path.normcase(str(pkg_dir.parent))):
+            raise RuntimeError(f"vendored PIL 未生效：{new_file}")
+        _pil_selftest()
+        _PIL_SELFTEST_OK = True  # 钩子常驻：后续 PIL.* 子模块 import 仍需绕开 FrozenImporter
+        logger.info("[bili-scroll] 已仲裁 PIL → 插件 deps 版（宿主副本缺 _imaging）")
+    except Exception as e:  # noqa: BLE001 - 任何失败都回滚到宿主现状
+        logger.warning(f"[bili-scroll] vendored PIL 仲裁失败，回滚宿主原状: {e}")
+        try:
+            sys.meta_path.remove(finder)
+        except ValueError:
+            pass
+        for k in _pil_modules():
+            sys.modules.pop(k, None)
+        sys.modules.update(saved)
+
+
+_prefer_vendored_pil()
 
 
 def _cred_path() -> Path:
