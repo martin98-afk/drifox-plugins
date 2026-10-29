@@ -989,7 +989,11 @@
                 "canvas",
                 "视频"
             ],
-            "min_host_version": "0.5.0"
+            "min_host_version": "0.5.0",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon_dark.png"
+            }
         },
         {
             "name": "code-reviewer",
@@ -3588,7 +3592,7 @@
         {
             "name": "jimeng",
             "description": "即梦（Dreamina）生图/生视频 — 封装官方 dreamina CLI，8 个生成命令 + 会话/额度/登录管理，成品落盘并回传成果栏",
-            "version": "1.0.1",
+            "version": "1.1.0",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [

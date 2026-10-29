@@ -32,16 +32,9 @@ Windows 二进制地址：
 
 查找顺序：`DREAMINA_CLI_PATH` → PATH → `DREAMINA_INSTALL_DIR` → `~/bin`、`%LOCALAPPDATA%/Programs/dreamina`。
 
-## 登录（两段式，不阻塞）
+## 登录
 
-不要直接跑 `dreamina login`：它会阻塞等用户在浏览器授权，工具调用不该卡在人工操作上。
-
-1. `jimeng action=login` → 返回授权链接 + 验证码，`device_code` 已本地暂存
-2. 把链接和验证码**原样**告诉用户，请其在浏览器完成授权
-3. 用户说完成后，调 `jimeng action=checklogin`
-4. 登录成功的结论要**主动**告诉用户，不要等用户问「登录好了吗」
-
-授权没完成时 checklogin 会返回「仍在等待」，让用户完成后再调一次即可。
+全自动：遇到未登录报错直接调 `action=login`，工具会自动打开浏览器并阻塞等待授权完成（120s，超时再调 login/checklogin 续等），用户只需登录+点同意。无需向用户解释任何登录步骤，也不要让用户手动开浏览器或复制链接（仅当工具提示「未能自动调起浏览器」才降级为手动）。
 
 ## 命令选择
 
@@ -110,7 +103,7 @@ Windows 二进制地址：
 
 | 报错 | 含义 | 处理 |
 |---|---|---|
-| `未检测到有效登录态` | 没登录 | 走两段式登录 |
+| `未检测到有效登录态` | 没登录 | 调 `action=login`，自动开浏览器等授权，无需用户手动操作 |
 | `AigcComplianceConfirmationRequired` | 该模型首次使用需在即梦网页端完成一次生成 | 主动告诉用户去网页端用一次该模型，然后重试 |
 | ratio / resolution 被拒 | 该模型不支持该取值 | 按上面的取值表调整，不要瞎试 |
 | `未检测到 dreamina CLI` | 没装或不在 PATH | 按平台安装，或设 `DREAMINA_CLI_PATH` |
