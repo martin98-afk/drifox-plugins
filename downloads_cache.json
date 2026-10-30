@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1793323612.396794,
+  "fetched_at": 1793345112.118099,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -96,7 +96,7 @@
     "gateway-wechat": 12,
     "gateway-wecom": 2,
     "git-dashboard": 20,
-    "git-panel": 91,
+    "git-panel": 92,
     "git-status": 3,
     "git-workflow": 3,
     "gitee": 0,
