@@ -3053,7 +3053,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 92,
+            "downloads": 93,
             "keywords": [
                 "git",
                 "source-control",
@@ -5384,7 +5384,7 @@
                 "tools": true,
                 "skills": true
             },
-            "downloads": 27,
+            "downloads": 28,
             "keywords": [
                 "self-evolve",
                 "plugin",

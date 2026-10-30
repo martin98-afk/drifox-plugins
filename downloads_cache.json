@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1793370252.6980634,
+  "fetched_at": 1793388769.6456614,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -96,7 +96,7 @@
     "gateway-wechat": 12,
     "gateway-wecom": 2,
     "git-dashboard": 20,
-    "git-panel": 92,
+    "git-panel": 93,
     "git-status": 3,
     "git-workflow": 3,
     "gitee": 0,
@@ -168,7 +168,7 @@
     "rdr2": 7,
     "react-pro": 2,
     "security-guidance": 2,
-    "self-evolver": 27,
+    "self-evolver": 28,
     "semgrep": 0,
     "sentry": 0,
     "seo-audit": 1,
