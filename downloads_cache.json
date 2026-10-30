@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1793345112.118099,
+  "fetched_at": 1793370252.6980634,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -25,10 +25,10 @@
     "calendar": 27,
     "canva": 1,
     "canvas-design": 1,
-    "catppuccin-themes": 1,
+    "catppuccin-themes": 2,
     "caveman": 6,
     "chinese-chess": 10,
-    "chrome-classics": 2,
+    "chrome-classics": 3,
     "claude-api": 2,
     "clickup": 0,
     "cloudflare-bindings": 0,
