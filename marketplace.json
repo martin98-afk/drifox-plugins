@@ -539,7 +539,7 @@
                 "skills": true,
                 "ui": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "bilibili",
                 "b站",
@@ -867,7 +867,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "theme",
                 "dark",
@@ -3053,7 +3053,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 93,
+            "downloads": 94,
             "keywords": [
                 "git",
                 "source-control",
@@ -5639,6 +5639,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "skillhub",
                 "publish",
@@ -5813,7 +5814,7 @@
                 "tools": true,
                 "ui": true
             },
-            "downloads": 23,
+            "downloads": 24,
             "platforms": [
                 "windows",
                 "linux",
