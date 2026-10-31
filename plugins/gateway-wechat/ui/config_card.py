@@ -385,12 +385,22 @@ if _UI_AVAILABLE:
 
         def _on_login_success(self) -> None:
             self._echo()
+            msg_title, msg_body = "微信登录成功", "token 已保存"
+            try:
+                from app.plugins.sdk import caps_for
+
+                fn = caps_for("ui.notify", plugin=PLUGIN_NAME, surface="ui")
+                if callable(fn):
+                    fn(msg_title, msg_body, duration=3000)
+                    return
+            except Exception as e:  # noqa: BLE001 — 能力池不可用走旧自绘
+                logger.debug(f"[gateway-wechat] ui.notify 不可用: {e}")
             try:
                 from qfluentwidgets import InfoBar, InfoBarPosition
 
                 InfoBar.success(
-                    "微信登录成功",
-                    "token 已保存",
+                    msg_title,
+                    msg_body,
                     parent=self.window(),
                     position=InfoBarPosition.TOP,
                     duration=3000,

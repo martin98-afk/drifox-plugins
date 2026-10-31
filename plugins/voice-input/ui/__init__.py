@@ -55,7 +55,16 @@ def _icons_dir():
 
 
 def _notify(main_widget, kind: str, title: str, msg: str) -> None:
-    """提示统一走 InfoBar（QToolTip 在 DriFox 内不可靠），失败静默降级。"""
+    """提示优先走宿主 ui.notify 能力（parent=当前标签页窗口），旧宿主回退自绘。"""
+    try:
+        from app.plugins.sdk import caps_for
+
+        fn = caps_for("ui.notify", plugin=PLUGIN_NAME, surface="ui")
+        if callable(fn):
+            fn(title, msg, kind=kind, duration=3000)
+            return
+    except Exception as e:  # noqa: BLE001 — 能力池不可用不阻塞提示
+        logger.debug(f"[voice-input] ui.notify 不可用: {e}")
     try:
         from qfluentwidgets import InfoBar, InfoBarPosition
 
@@ -64,7 +73,7 @@ def _notify(main_widget, kind: str, title: str, msg: str) -> None:
             "warning": InfoBar.warning,
             "error": InfoBar.error,
             "info": InfoBar.info,
-        }[kind]
+        }.get(kind, InfoBar.info)
         factory(
             title,
             msg,

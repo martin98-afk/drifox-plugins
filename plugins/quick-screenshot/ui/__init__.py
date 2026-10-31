@@ -49,27 +49,42 @@ def _close_active_overlay() -> None:
             pass  # C++ 对象已被 Qt 销毁
         _active_overlay = None
 
-
-def _notify_copy_done(main_widget, pixmap) -> None:
-    """复制成功提示：优先主程序 InfoBar（QToolTip 在 DriFox 内不可靠），兜底 QToolTip。"""
+def _notify_copy_done(context: Dict[str, Any], pixmap) -> None:
+    """复制成功提示：优先宿主 ui.notify 能力（parent 解析当前标签页窗口，
+    多标签下不会弹到非激活标签页）；旧宿主无能力时回退 InfoBar/QToolTip。"""
+    title = "选区截图"
     msg = f"截图已复制到剪贴板 {pixmap.width()}×{pixmap.height()}"
+    ctx = context or {}
+    try:
+        notify = ctx.get("services", {}).get("notify")
+        if notify is None:
+            from app.plugins.sdk import caps_for
+
+            notify = caps_for("ui.notify", plugin=PLUGIN_NAME, surface="ui")
+        if notify is not None:
+            notify(title, msg)
+            return
+    except Exception as e:  # noqa: BLE001 — 能力池不可用不阻塞提示，走兜底
+        logger.debug(f"[quick-screenshot] ui.notify 不可用: {e}")
     try:
         from qfluentwidgets import InfoBar, InfoBarPosition
 
-        InfoBar.success(
-            "选区截图",
-            msg,
-            parent=main_widget,
-            position=InfoBarPosition.BOTTOM,
-            duration=2500,
-        )
+        main_widget = ctx.get("main_widget")
+        if main_widget is not None:
+            InfoBar.success(
+                title,
+                msg,
+                parent=main_widget,
+                position=InfoBarPosition.BOTTOM,
+                duration=2500,
+            )
+            return
     except Exception as e:  # noqa: BLE001 — InfoBar 失败不影响剪贴板结果
         logger.warning(f"[quick-screenshot] InfoBar 提示失败，降级 QToolTip: {e}")
-        from PyQt5.QtGui import QCursor
-        from PyQt5.QtWidgets import QToolTip
+    from PyQt5.QtGui import QCursor
+    from PyQt5.QtWidgets import QToolTip
 
-        QToolTip.showText(QCursor.pos(), msg)
-
+    QToolTip.showText(QCursor.pos(), msg)
 
 def _restore_window(window) -> None:
     """恢复主窗显示并尝试抢回前台（退出中窗口已销毁则静默）。"""
@@ -116,7 +131,7 @@ def _on_screenshot_clicked(context: Dict[str, Any]) -> None:
                 f"[quick-screenshot] 剪贴板写入: {pixmap.width()}x{pixmap.height()} "
                 f"读回 isNull={back.isNull()} size={back.width()}x{back.height()}"
             )
-            _notify_copy_done(main_widget, pixmap)
+            _notify_copy_done(context, pixmap)
 
         overlay.captured.connect(_on_captured)
         overlay.cancelled.connect(lambda: logger.debug("[quick-screenshot] 选区已取消"))
@@ -176,7 +191,7 @@ def _start_hidden_capture(context: Dict[str, Any], window) -> None:
                 f"[quick-screenshot] 剪贴板写入: {pixmap.width()}x{pixmap.height()} "
                 f"读回 isNull={back.isNull()} size={back.width()}x{back.height()}"
             )
-            _notify_copy_done(context.get("main_widget"), pixmap)
+            _notify_copy_done(context, pixmap)
 
         overlay.captured.connect(_on_captured)
         overlay.cancelled.connect(lambda: _restore_window(window))

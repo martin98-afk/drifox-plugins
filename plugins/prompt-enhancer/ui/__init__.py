@@ -893,14 +893,24 @@ def _on_error(main_widget, err, window_id):
 
 
 def _show_progress(main_widget, window_id, text):
-    """常驻 InfoBar 提示（duration=0 不自动关闭），完成/失败时由 _close_progress 关闭。"""
+    """常驻 InfoBar 提示（duration=0 不自动关闭），完成/失败时由 _close_progress 关闭。
+
+    需持有 bar 引用控制生命周期，无法走 ui.notify；parent 直连当前标签页
+    窗口（TabManagerWindow），避免多标签下弹到非激活页。
+    """
     try:
         from qfluentwidgets import InfoBar, InfoBarPosition
 
+        try:
+            from app.widgets.tab_manager_window import TabManagerWindow
+
+            parent = TabManagerWindow.get_instance() or main_widget
+        except Exception:  # noqa: BLE001 — 旧宿主无多标签窗口时回退
+            parent = main_widget
         bar = InfoBar.info(
             "提示词增强",
             text,
-            parent=main_widget,
+            parent=parent,
             duration=0,
             isClosable=False,
             position=InfoBarPosition.BOTTOM,
@@ -920,10 +930,18 @@ def _close_progress(window_id):
 
 
 def _notify(main_widget, title, content, kind="info"):
+    """通知优先走宿主 ui.notify 能力（parent=当前标签页窗口），旧宿主回退自绘。"""
+    fn = _caps("ui.notify")
+    if callable(fn):
+        try:
+            fn(title, content, kind=kind)
+            return
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"[PromptEnhancer] ui.notify 失败: {e}")
     try:
         from qfluentwidgets import InfoBar, InfoBarPosition
 
-        fn = getattr(InfoBar, kind, InfoBar.info)
-        fn(title, content, parent=main_widget, position=InfoBarPosition.BOTTOM)
+        fallback = getattr(InfoBar, kind, InfoBar.info)
+        fallback(title, content, parent=main_widget, position=InfoBarPosition.BOTTOM)
     except Exception as e:  # noqa: BLE001
         logger.warning(f"[PromptEnhancer] InfoBar 失败: {e}")
