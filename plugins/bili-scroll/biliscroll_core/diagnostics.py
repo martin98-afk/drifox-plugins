@@ -52,17 +52,38 @@ def _check_deps() -> str:
 
 
 def _check_tools_registered() -> str:
+    """B站工具注册状态：MCP 形态下查 MCPClientManager 里 bili server 的工具数。"""
     try:
-        from biliscroll_core.schema_registry import TOOL_SCHEMAS
+        from app.plugins.capabilities.resolve import pool_for
 
-        n = len(TOOL_SCHEMAS)
-        return f"已注册 {n} 个" if n else "未注册（插件工具加载异常）"
+        # MCP 工具不进 ToolRegistry；mcp.call 能力直接给 MCPClientManager（_TOOL surface）
+        pool = pool_for(plugin="bili-scroll", surface="tool") or {}
+        mgr = pool.get("mcp.call")
+        if callable(mgr):
+            mgr = mgr()
+        schemas = (mgr.get_tool_schemas_by_server() if mgr else {}).get("bili", [])
+        if schemas:
+            return f"MCP 已注入 {len(schemas)} 个 B站工具"
+        return "未注入（MCP 未连接，检查 .mcp.json / 控制端点）"
     except Exception as e:
         return f"查询失败：{type(e).__name__}: {e}"
 
 
 def _check_credential(root: Optional[Path]) -> str:
-    cred = Path(PLUGIN_ROOT) / "data" / "bili_credential.json"
-    if root and cred.is_file():
-        return "已存在（登录过）"
+    # 实际落盘位置：plugin_data/bili-scroll/（patch ⑦，root 即该目录），旧插件 data/ 仅作回退
+    import json as _json
+
+    candidates = [
+        root / "bili_credential.json" if root else None,
+        Path(PLUGIN_ROOT) / "data" / "bili_credential.json",
+    ]
+    for cred in candidates:
+        if cred and cred.is_file():
+            try:
+                data = _json.loads(cred.read_text(encoding="utf-8"))
+            except Exception:
+                return "存在但读不出（损坏，重新扫码登录即可恢复）"
+            if data.get("sessdata") and data.get("bili_jct"):
+                return "已存在（登录过）"
+            return "存在但为空壳（改版假成功遗留，重新扫码登录即可）"
     return "不存在（未登录，对话里喊 bili_login 扫码）"

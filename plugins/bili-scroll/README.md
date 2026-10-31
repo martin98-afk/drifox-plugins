@@ -7,29 +7,32 @@
 
 ## 快速开始
 
-1. **扫码登录**：对话里喊「扫码登录B站」→ `bili_login` 出二维码 → 手机确认选「记住我 / 长期」（依赖全部随插件自带，无需安装）
+1. **扫码登录**：对话里喊「扫码登录B站」→ `mcp__bili__bili_login` 出二维码，**桌面直接弹窗显示** → 手机确认选「记住我 / 长期」（登录成功弹窗自动收起；依赖全部随插件自带，无需安装）
 2. **跑一轮**：`/bili-scroll run`，或对话里喊 `bili_duty_run`，或打开值班卡点「▶ 跑一轮」
 3. **设置**：设置 → 插件 → bili-scroll 配置卡（关键词 / 峰谷窗口 / 每日配额 / 日报档位 / 自动评论 / 投递方式）
 
 ## 它是怎么跑的
 
 - **值班轮** = 独立引擎会话（`create_engine_session`）+ 值班章程（`skills/bili-scroll-duty/SKILL.md`，298 行纪律：防提示注入 / 成本红线 / 判重机制）+ 工具白名单
-- **B站能力** = vendor 的 bilibili-mcp 工具函数在宿主进程内直接注册为 DriFox tools（deps/ 经宿主 deps_loader 注入；不建 venv、无安装步骤）
+- **B站能力 = MCP**（`mcp__bili__*`，26 个工具）：两段式（browser 插件同款）——`mcp/server.py` stdio 壳只做转发（bridge.json 自引导解释器），真正执行在宿主进程内控制端点（`ui/control_server.py` → `biliscroll_core/bili_impl.py`，deps / stdlib 与 PIL 仲裁 / 凭证 env 全在宿主侧，MCP 子进程零重依赖）
 - **峰谷定时** = QTimer 5 分钟 tick，午间 12-14 / 夜间 18-09 窗口内每天一轮，每日配额封顶；先记账再跑，重入不会连发
 - **判重** = `seen.tsv` 一行一条；同一视频不评第二次；rpid 回填供复核
-- **数据落盘** = `<app_data>/plugin_data/bili-scroll/`（日报、判重表、归档、调度状态），升级重装不丢；扫码凭证在插件目录 data/ 下（重装即弃，重扫即可）
+- **数据落盘** = `<app_data>/plugin_data/bili-scroll/`（日报、判重表、归档、调度状态），升级重装不丢；扫码凭证同目录（`bili_credential.json`）
 
 ## 目录
 
 ```
 plugins/bili-scroll/
 ├── .drifox-plugin/plugin.json   # api_version 2，capabilities 显式清单
+├── .mcp.json                    # MCP server 声明（mcp__bili__* 前缀）
+├── mcp/server.py                # stdio 转发壳 + bridge.json 自引导
 ├── deps/ + deps/win32/          # 自带依赖（deps_loader 规范，宿主已有的包不遮蔽）
-├── vendor/bilibili-mcp/         # 上游 server（工具函数宿主进程内直用；patch ⑦ 凭证路径）
+├── deps/_pystdlib_xml/          # 宿主打包缺失的标准库副本（xml/optparse），meta_path 仲裁注入
+├── vendor/bilibili-mcp/         # 上游 server（工具函数宿主进程内直用；patch ⑦⑨⑩）
 ├── skills/bili-scroll-duty/     # 值班章程（值班轮的 system prompt）
-├── tools/                       # bili_tools（26 个 B站工具）/ 窄口五件套 / bili_duty_run / bili_status
-├── biliscroll_core/             # paths / store / round_runner / scheduler / diagnostics / schema_registry
-└── ui/                          # 浮动卡（/bili-scroll 打开）+ 峰谷调度器常驻
+├── tools/                       # 值班窄口五件套 / bili_duty_run / bili_status（DriFox tools）
+├── biliscroll_core/             # paths / store / round_runner / scheduler / diagnostics / bili_impl / pil_arbiter
+└── ui/                          # 浮动卡（/bili-scroll 打开）+ 峰谷调度器 + 控制端点 + 二维码弹窗
 ```
 
 ## 红线

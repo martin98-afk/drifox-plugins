@@ -4,8 +4,8 @@
 
 放 biliscroll_core/ 而非 tools/ 顶层：PluginToolLoader 对 tools/ 非下划线文件
 过 ASTGuard，回滚路径的 sys.modules.update(saved)（动态键）会被整文件拒载；
-ssh-toolkit 同款仲裁同理藏在 _auth.py（_ 前缀不被扫）。调用方：tools/bili_tools.py
-在 import vendor mcp_server 之前调 prefer_vendored_pil()。
+ssh-toolkit 同款仲裁同理藏在 _auth.py（_ 前缀不被扫）。调用方：biliscroll_core/
+bili_impl.py 在 import vendor mcp_server 之前调仲裁。
 """
 from __future__ import annotations
 
