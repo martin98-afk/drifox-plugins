@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+### 🔧 ssh-toolkit v0.4.3：`ssh_exec` 的 schema 说明写入 tmux 长期会话指引
+- **问题**：插件执行链路固定 `client.exec_command()` + 同步轮询到进程退出，超时即关通道，长任务（编译、训练、服务）随通道一起死。此前 README 里没有任何 tmux 说明，AI 读不到 `registry.register` 之外的文档，实际会直接 `ssh_exec("make")` 然后超时失败
+- **修复**：`tools/exec_tool.py` 的 `ssh_exec` schema description 直接写入判据与四条命令——`has-session || new-session -d`、`send-keys ... Enter`、`capture-pane -pt S -S -300`、`list-panes -F '#{pane_dead}'`，并附 `cmd; echo __RC=$?` 取退出码写法；同时写明两条硬约束（禁 `tmux attach`，它永不返回；`exec_command` 走非 login shell，PATH 不全时用 `bash -lc` 包一层）
+- **为何放 schema**：工具说明是 AI 唯一能读到的位置；README 面向人类，对模型不可见
+- **文档**：README 新增「tmux 长期会话」一节，含同一套命令、退出码取法与本插件场景下四个限制（禁 attach / PATH 不全 / 无 cwd env 参数 / 会话名靠约定），供人查阅
+- **无行为变更**：仅说明文本与文档，不改执行链路；`python -m py_compile` 通过
+
 ### ✨ 新增 chrome-classics v1.0.0：Chrome 热门主题移植（四套主题，两套带壁纸）
 - **来源**：Chrome Web Store 主题分类榜单（`chromewebstore.google.com/category/themes`）+ 主题详情页安装量。经 CRX 下载（`clients2.google.com/service/update2/crx`）剥离头部解 zip，读 `manifest.json` 的 `theme.colors` 原色值与 NTP 壁纸
 - **四套主题**：`slinky-grey` 斯林基·中性灰（上游 Slinky Elegant，900K/★4.5，零彩色只靠灰阶）、`amoled-black` 真黑·AMOLED（Into The Black Hole，600K/★4.6，`#000` 底靠 4~9% 白叠加建层次）、`shaded-purple` 紫雾（Shaded Purple，100K/★4.7，含原壁纸）、`forest-sunset` 森林日落（Forest environment，100K/★4.4，1920×1080 插画）

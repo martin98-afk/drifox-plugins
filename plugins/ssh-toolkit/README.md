@@ -15,6 +15,39 @@ SSH 远程工具包插件（AI 工具 + 系统设置页连接管理）。基于 
 
 > 没有单独的「保存连接」工具：保存是 `ssh_connect` 成功的副作用，不再要求先建档再连接。
 
+## tmux 长期会话
+
+参数服务器上跑长任务，直接 `ssh_exec("make")` 不行：`_read_streams` 会同步轮询到进程退出，
+超时后关通道，任务随 SSH channel 一起死。tmux 解决这个问题靠的是解耦：tmux server 是远端
+独立 daemon，跟 SSH 通道无关，通道断了 server 照样跑，下次连上去接着看。
+
+插件无需任何改造，四条命令覆盖全套（下面用 `work` 作会话名）：
+
+```bash
+# 建或复用会话（-d 分离启动，不 attach）
+tmux has-session -t work 2>/dev/null || tmux new-session -d -s work -c /srv/app
+
+# 投喂命令（注意 Enter 要单独作为一个参数）
+tmux send-keys -t work 'make -j8' Enter
+
+# 抓输出（-p 打到 stdout，-S -300 回看最近 300 行）
+tmux capture-pane -pt work -S -300
+
+# 看存活与当前前台命令
+tmux list-panes -t work -F '#{pane_pid} #{pane_current_command} #{pane_dead}'
+```
+
+拿退出码：`tmux send-keys -t work 'make -j8; echo __RC=$?' Enter`，再从 `capture-pane`
+里 grep `__RC=`。
+
+四个必须知道的限制：
+
+- **不能 `tmux attach`**：会一直不返回，`ssh_exec` 吃满 `timeout` 后关通道。只用 `-d` 分离模式。
+- **PATH 可能不全**：`exec_command` 走非 login shell，`/usr/local/bin` 或 brew 装的 tmux 可能
+  找不到。包一层 `bash -lc '...'`，或写容器内绝对路径。
+- **没有 cwd/env 参数**：目录用 `new-session -c` 指定，环境变量在命令里自己 `export`。
+- **插件不记会话名**：哪个连接对应哪个 tmux 会话靠命名约定，自己定规则（如「连接名-用途」）。
+
 ## 设置页（设置 → SSH 远程连接）
 
 展开即刷新，每条连接显示：状态点（绿=池内活跃 / 红=TCP 不可达 / 灰=未保持）、

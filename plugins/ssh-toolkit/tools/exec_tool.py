@@ -214,7 +214,16 @@ def register(registry):
         "ssh_exec",
         {"type": "function", "function": {
             "name": "ssh_exec",
-            "description": "在已连接主机上执行命令，返回 stdout/stderr/exit code",
+            "description": (
+                "在已连接主机上执行命令，返回 stdout/stderr/exit code。"
+                "阻塞到进程退出，超时即强制关通道，长任务会随通道一起死。"
+                "跑长任务/后台任务用 tmux 分离会话（禁 tmux attach，永不返回）："
+                "建/复用 tmux has-session -t S 2>/dev/null || tmux new-session -d -s S -c DIR；"
+                "投喂 tmux send-keys -t S 'cmd; echo __RC=$?' Enter；"
+                "取输出 tmux capture-pane -pt S -S -300 后找 __RC=；"
+                "探活 tmux list-panes -t S -F '#{pane_dead}'。"
+                "exec_command 走非 login shell，PATH 不全时用 bash -lc 包一层。"
+            ),
             "parameters": {"type": "object", "properties": {
                 "handle": {"type": "string", "description": "ssh_connect 返回的 handle，或连接名"},
                 "name": {"type": "string", "description": "连接名（无 handle 时用）"},
