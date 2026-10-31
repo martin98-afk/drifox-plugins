@@ -33,3 +33,17 @@
   ABI 匹配（py -3 版本不可控）——若未来要支持重依赖 MCP 插件，可提 ${DRIFOX_PYTHON}
   占位符；本次以宿主进程内 tools 通道绕开
 """
+## 补丁追加（2026-10-31 修复 B站工具族加载失败）
+- patch ⑧ stdlib 副本仲裁：打包宿主只收集主程序用到的标准库（实测缺 xml.dom、
+  optparse），且 PyiFrozenLoader 挂 meta_path 优先于 sys.path；biliscroll_core/
+  pil_arbiter.py 统一仲裁（探测→del 残缺条目→meta_path 钩子→重新 import），副本
+  藏 deps/_pystdlib_xml/（放 deps 根会被 deps_loader 按 stdlib 顶层名防劫持检查
+  拒注入整个 deps 目录，win32 平台目录同理）
+- deps 补 PyJWT 2.15.1（bilibili_api 传递依赖，打包 deps 时漏）
+- tools/bili_duty_run|data|status 补缺失 import（sys/Path，症状 NameError: sys）
+- round_runner 的 threading/pool_for import 位置修正（模块级使用不得依赖函数内 import）
+- 教训：tools/ 顶层非下划线文件过宿主 ASTGuard，sys.modules.update(动态键) 一律
+  整文件拒载；仲裁类 sys.modules 操作代码须放 biliscroll_core/（ssh-toolkit 同款
+  仲裁藏在 _auth.py，靠 _ 前缀不被扫描）
+- biliscroll_core.* 为共享顶层名模块，热重载滞留旧版；pil_arbiter 无跨轮状态，
+  bili_tools 调用侧 importlib.reload 自愈
