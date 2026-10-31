@@ -23,7 +23,8 @@
         "ui.events",
         "theme.read",
         "storage.data_dir",
-        "window.host"
+        "window.host",
+        "tool.read"
     ],
     "keywords": [
         "bilibili",
@@ -123,6 +124,7 @@
         "tools": true,
         "commands": true,
         "skills": true,
-        "ui": true
+        "ui": true,
+        "mcp": true
     }
 }

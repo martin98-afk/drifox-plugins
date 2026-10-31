@@ -204,12 +204,18 @@ def load_credential() -> Credential:
         return None
     if not isinstance(data, dict):
         return None
-    return Credential(
+    cred = Credential(
         sessdata=data.get("sessdata", ""),
         bili_jct=data.get("bili_jct", ""),
         buvid3=data.get("buvid3") or "",
         dedeuserid=data.get("dedeuserid", ""),
     )
+    # patch ⑩：空壳凭证（sessdata/bili_jct 全空，2026-08 扫码改版假成功遗留）
+    # 视为未登录——Credential() 恒 truthy，不判空会让 bili_login 永远「已登录」
+    if not (cred.sessdata and cred.bili_jct):
+        print("[bili-mcp] 凭证文件存在但 sessdata/bili_jct 为空，视为未登录", file=sys.stderr)
+        return None
+    return cred
 
 
 # ========== 登录会话（进程级缓存） ==========

@@ -46,6 +46,23 @@ def register_ui(registry):
     from .controller import ensure_scheduler
 
     ensure_scheduler()
+
+    # MCP 控制端点常驻（重依赖 import 放后台线程，别卡 UI 装载；
+    # MCP 壳有 _wait_bridge 轮询兜底时序）
+    try:
+        import threading as _threading
+
+        from .control_server import start_control_server
+
+        _threading.Thread(
+            target=start_control_server,
+            args=(_PLUGIN_ROOT,),
+            daemon=True,
+            name="bili-control-boot",
+        ).start()
+    except Exception:
+        logger.exception("[bili-scroll] MCP 控制端点启动失败（不影响其余功能）")
+
     logger.info("[bili-scroll] UI components registered")
 
 
@@ -55,6 +72,14 @@ def unload_ui(*_args):
         from .controller import release_scheduler
 
         release_scheduler()
+    except Exception:
+        pass
+    try:
+        # 旧模块上下文读模块属性（browser 同款）：热重载时相对导入会撞
+        # register_ui 的 sys.modules 清理时序
+        mod = sys.modules.get("ui_plugin_bili_scroll.control_server")
+        if mod is not None:
+            mod.stop_control_server()
     except Exception:
         pass
     logger.info("[bili-scroll] UI components unloaded")

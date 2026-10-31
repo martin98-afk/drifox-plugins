@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """值班轮驱动：组装章程 + 设置 + 工具集，经引擎会话跑一轮。
 
-工具执行说明：turn(tools=...) 只决定模型「看得见」哪些工具；实际调用由
-worker 的 ToolExecutor 路由到 tools/bili_tools.py 注册的 impl（vendor
-server 的工具函数在宿主进程内直接执行）。
+工具执行说明：turn(tools=...) 只决定模型「看得见」哪些工具；B站能力经
+MCP 工具（mcp__bili__*）调用，ToolExecutor 路由到宿主 MCP 桥（stdio 壳
+→ HTTP → biliscroll_core/bili_impl.py 宿主进程内执行）。
 """
 from __future__ import annotations
 
@@ -22,14 +22,18 @@ PLUGIN_NAME = "bili-scroll"
 SKILL_PATH = PLUGIN_ROOT / "skills" / "bili-scroll-duty" / "SKILL.md"
 ROUND_TIMEOUT_SECONDS = 20 * 60
 
-# 值班轮可见的 B站工具名（tools/bili_tools.py 注册的子集；写类需配置开启）
+# 值班轮可见的 B站工具名（MCP 形态：mcp__bili__<上游工具名>；写类需配置开启）
+MCP_PREFIX = "mcp__bili__"
 BASE_TOOLS = [
-    "bili_recommend", "bili_search", "bili_subtitle", "bili_video_info",
-    "bili_comments", "bili_danmaku", "bili_cover", "bili_frames",
-    "bili_user_info",
+    MCP_PREFIX + n
+    for n in (
+        "bili_recommend", "bili_search", "bili_subtitle", "bili_video_info",
+        "bili_comments", "bili_danmaku", "bili_cover", "bili_frames",
+        "bili_user_info",
+    )
 ]
-COMMENT_TOOLS = ["bili_reply"]            # auto_comment 开才给
-REPLY_TOOLS = ["bili_received_replies"]   # reply_comments 开才给
+COMMENT_TOOLS = [MCP_PREFIX + "bili_reply"]            # auto_comment 开才给
+REPLY_TOOLS = [MCP_PREFIX + "bili_received_replies"]   # reply_comments 开才给
 
 # 本地窄口工具 schema（与 tools/bili_duty_data.py 的注册保持一致）
 LOCAL_TOOL_SCHEMAS: List[Dict[str, Any]] = [
@@ -85,25 +89,42 @@ def load_settings() -> Dict[str, Any]:
 
 
 def _collect_tool_schemas(settings: Dict[str, Any]) -> List[Dict[str, Any]]:
-    """从 schema_registry 取值班轮可见的 schema（bili_tools 注册时填充）。"""
-    from biliscroll_core.schema_registry import TOOL_SCHEMAS
-
+    """从宿主工具池取值班轮可见的 MCP 工具 schema（mcp__bili__ 前缀，tool.read）。"""
     allowed = set(BASE_TOOLS)
     if settings.get("auto_comment"):
         allowed |= set(COMMENT_TOOLS)
     if settings.get("reply_comments"):
         allowed |= set(REPLY_TOOLS)
 
+    by_name: Dict[str, Dict[str, Any]] = {}
+    try:
+        from app.plugins.capabilities.resolve import pool_for
+
+        # MCP 工具不进 ToolRegistry；mcp.call 能力直接给 MCPClientManager（_TOOL surface）
+        pool = pool_for(plugin=PLUGIN_NAME, surface="tool") or {}
+        mgr = pool.get("mcp.call")
+        if callable(mgr):
+            mgr = mgr()
+        by_server = mgr.get_tool_schemas_by_server() if mgr else {}
+        for schema in by_server.get("bili", []):
+            fn = (schema or {}).get("function") or {}
+            if fn.get("name"):
+                by_name[fn["name"]] = schema
+    except Exception as e:
+        logger.warning(f"[bili-scroll] 取 MCP 工具 schema 失败: {e}")
+
     out: List[Dict[str, Any]] = []
     missing: List[str] = []
     for name in sorted(allowed):
-        schema = TOOL_SCHEMAS.get(name)
+        schema = by_name.get(name)
         if schema is None:
             missing.append(name)
             continue
         out.append(schema)
     if missing:
-        logger.warning(f"[bili-scroll] 值班轮缺工具 schema（未注册）：{', '.join(missing)}")
+        logger.warning(
+            f"[bili-scroll] 值班轮缺 MCP 工具 schema：{', '.join(missing)}（MCP 未连接或控制端点未就绪）"
+        )
     return out
 
 

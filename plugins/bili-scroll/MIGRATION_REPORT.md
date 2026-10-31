@@ -47,3 +47,26 @@
   仲裁藏在 _auth.py，靠 _ 前缀不被扫描）
 - biliscroll_core.* 为共享顶层名模块，热重载滞留旧版；pil_arbiter 无跨轮状态，
   bili_tools 调用侧 importlib.reload 自愈
+
+## MCP 化 + 登录链修复（2026-10-31 下午，第二批次）
+- 形态切换：26 个 B站工具从 DriFox tools 撤下，改 MCP（.mcp.json server key=bili，
+  工具名 mcp__bili__<上游名>）。两段式（browser 插件同款）：mcp/server.py stdio 壳
+  只转发（lowlevel Server 动态 list_tools/call_tool，bridge.json 自引导解释器），
+  执行在宿主控制端点 ui/control_server.py → biliscroll_core/bili_impl.py。
+  值班窄口五件套 + bili_duty_run + bili_status 仍是 DriFox tools
+- patch ⑨：B站 2026-08 扫码改版（data.url 变 crossDomain?ticket 票据链接，cookie
+  走 Set-Cookie）；上游 login_v2.check_state 只解析 query string → 空凭证假成功。
+  bili_impl monkey-patch check_state：DONE 时带浏览器 UA 跟随票据链接从 cookie jar
+  提取；提取不全抛错（诚实失败优于假成功；qrcode_key 成功即失效不可重 poll）
+- patch ⑩：load_credential 对 sessdata/bili_jct 全空的空壳凭证返回 None
+  （Credential() 恒 truthy，否则 bili_login 永远误判已登录）
+- 扫码体验：出码经 ui_bridge._dispatch(wait=False) 主线程弹 Qt 窗口直显二维码，
+  done/timeout 自动收窗
+- 值班轮 schema 来源改 mcp.call 能力（MCP 工具不进 ToolRegistry）：
+  MCPClientManager.get_tool_schemas_by_server()["bili"]；manifest 声明 tool.read
+  （注意 catalog 无 schemas 项，pool 键必须是能力 ID tool.read/mcp.call）
+- 滞留矩阵（biliscroll_core.* 共享顶层名，热重载不清）：pil_arbiter / mcp_server /
+  bili_impl / diagnostics 分别在调用侧 importlib.reload 自愈；patch 守卫标记打在
+  类上会遮蔽 reload 后的新补丁（幂等守卫禁用于会再演进的 patch）
+- 控制端点必须放 ui/ 包（ui 热重载强制重编）；biliscroll_core.control_server 会被
+  滞留旧版卡死路由更新

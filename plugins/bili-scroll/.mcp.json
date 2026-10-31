@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "bili": {
+      "type": "stdio",
+      "command": "py",
+      "args": [
+        "-3",
+        "${CLAUDE_PLUGIN_ROOT}/mcp/server.py"
+      ],
+      "env": {},
+      "enabled": true
+    }
+  }
+}
