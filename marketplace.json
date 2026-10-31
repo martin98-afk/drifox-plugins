@@ -1134,6 +1134,37 @@
             }
         },
         {
+            "name": "code-video-showcase",
+            "description": "纯代码卡点视频制作技能：HTML/Canvas/SVG/Three.js 逐帧渲染画面 + numpy/scipy 合成 120BPM 配乐 + FFmpeg 合成 30-90 秒多风格展示短片，含 8 套主题配色、11 种风格配方、大字卡系统与质检模板，零视频/图像/音乐生成模型。做卡点/风格展示/程序化视频时使用。",
+            "version": "1.1.0",
+            "author": "Moessif",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/code-video-showcase",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "keywords": [
+                "video",
+                "ffmpeg",
+                "canvas",
+                "threejs",
+                "playwright",
+                "beat-synced",
+                "卡点视频",
+                "视频制作",
+                "逐帧渲染"
+            ],
+            "min_host_version": "0.5.0"
+        },
+        {
             "name": "codebuddy-intl",
             "description": "腾讯 CodeBuddy 国际版服务商（OAuth 登录制）— 浏览器授权登录，以订阅额度直连 www.codebuddy.ai 网关（craft 路由槽位 + 全表真实模型 ID 同选，槽位由网关按账号档位分配实际模型），无需 API Key",
             "version": "0.5.2",
