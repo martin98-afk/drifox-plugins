@@ -3000,7 +3000,7 @@
                 "gateways": true,
                 "ui": true
             },
-            "downloads": 12,
+            "downloads": 13,
             "min_host_version": "0.6.12",
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
@@ -5203,7 +5203,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 74,
+            "downloads": 75,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -5283,7 +5283,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 38,
+            "downloads": 39,
             "keywords": [
                 "screenshot",
                 "clipboard",
@@ -6700,7 +6700,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 36,
+            "downloads": 37,
             "keywords": [
                 "voice",
                 "dictation",
@@ -6753,7 +6753,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 14,
+            "downloads": 15,
             "keywords": [
                 "voice",
                 "tts",
