@@ -539,7 +539,7 @@
                 "skills": true,
                 "ui": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "bilibili",
                 "b站",
@@ -5814,7 +5814,7 @@
                 "tools": true,
                 "ui": true
             },
-            "downloads": 24,
+            "downloads": 25,
             "platforms": [
                 "windows",
                 "linux",
@@ -6549,6 +6549,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "video",
                 "short-video",
