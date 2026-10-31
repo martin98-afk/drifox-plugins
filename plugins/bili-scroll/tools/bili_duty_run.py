@@ -6,7 +6,9 @@
 """
 from __future__ import annotations
 
+import sys
 import threading
+from pathlib import Path
 from typing import Any, Dict
 
 # 宿主 tools 加载器不注插件根，先自注入再 import 本插件包

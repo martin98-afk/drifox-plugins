@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import datetime as _dt
 import json
+import threading
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -150,9 +151,6 @@ def run_duty_round() -> Dict[str, Any]:
     模块级互斥：工具入口（bili_duty_run）与 UI 按钮（卡片）共用本函数，
     同一时刻只允许一轮；拿不到锁返回 status=busy。
     """
-    import threading
-
-    from app.plugins.capabilities.resolve import pool_for
 
     if not _ROUND_LOCK.acquire(blocking=False):
         return {"status": "busy", "error": "已有一轮值班在跑", "text": ""}
@@ -166,6 +164,8 @@ _ROUND_LOCK = threading.Lock()
 
 
 def _run_duty_round_locked() -> Dict[str, Any]:
+    from app.plugins.capabilities.resolve import pool_for
+
     settings = load_settings()
     store = DutyStore()
 
