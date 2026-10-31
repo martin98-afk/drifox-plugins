@@ -5813,7 +5813,7 @@
                 "tools": true,
                 "ui": true
             },
-            "downloads": 22,
+            "downloads": 23,
             "platforms": [
                 "windows",
                 "linux",
@@ -6922,7 +6922,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 40,
+            "downloads": 41,
             "keywords": [
                 "powershell",
                 "windows",

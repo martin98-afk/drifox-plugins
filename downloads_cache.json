@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1793402596.59134,
+  "fetched_at": 1793414093.648374,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -182,7 +182,7 @@
     "snake": 6,
     "solitaire": 1,
     "square": 0,
-    "ssh-toolkit": 22,
+    "ssh-toolkit": 23,
     "stripe": 0,
     "supabase": 0,
     "superclaude": 2,
@@ -214,7 +214,7 @@
     "webapp-testing": 2,
     "webdav-backup": 21,
     "webflow": 0,
-    "win-powershell": 40,
+    "win-powershell": 41,
     "wix": 0,
     "workbuddy": 10,
     "workflow": 3,
