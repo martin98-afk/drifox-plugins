@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1793521510.261874,
+  "fetched_at": 1793546509.2749925,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -101,7 +101,7 @@
     "git-status": 3,
     "git-workflow": 3,
     "gitee": 0,
-    "github": 2,
+    "github": 3,
     "gitlab": 0,
     "gongwen": 0,
     "gpt-image-2": 6,
