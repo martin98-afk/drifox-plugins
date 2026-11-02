@@ -50,6 +50,35 @@ def test_sessions_db_blocked(workdir):
     assert ok is False
 
 
+def test_drifox_workspaces_exempt_from_block_dirs(tmp_path):
+    """~/.drifox 整棵在黑名单，但 workspaces 子树豁免（用户项目工作区）。"""
+    fake_home = tmp_path / "home"
+    drifox = fake_home / ".drifox"
+    workspaces = drifox / "workspaces" / "proj"
+    workspaces.mkdir(parents=True)
+    conn = drifox / "connections.json"
+    conn.write_text("{}", encoding="utf-8")
+    ok_file = workspaces / "data.txt"
+    ok_file.write_text("d", encoding="utf-8")
+
+    orig_dirs = G._BLOCK_DIRS
+    orig_exempt = G._EXEMPT_SUBTREES
+    try:
+        G._BLOCK_DIRS = (str(drifox),)
+        G._EXEMPT_SUBTREES = (str(drifox / "workspaces"),)
+        # 豁免子树内：放行
+        assert G.check_local_read(str(ok_file), {"workdir": str(workspaces)})[0] is True
+        assert G.check_local_write(str(ok_file), {"workdir": str(workspaces)})[0] is True
+        # 豁免子树外（.drifox 根下凭据落盘）：仍拒
+        ok, reason = G.check_local_read(str(conn), {"workdir": str(workspaces)})
+        assert ok is False and "受保护目录" in reason
+        # 豁免子树内凭据文件名黑名单仍生效
+        ok, reason = G.check_local_read(str(workspaces / ".env"), {"workdir": str(workspaces)})
+        assert ok is False and "凭据类文件" in reason
+    finally:
+        G._BLOCK_DIRS = orig_dirs
+        G._EXEMPT_SUBTREES = orig_exempt
+
 def test_startup_dir_blocked_for_write(tmp_path):
     fake_appdata = tmp_path / "appdata" / "roaming"
     startup = fake_appdata / "microsoft" / "windows" / "start menu" / "programs" / "startup"

@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+### 🔧 ssh-toolkit v0.4.4：本地路径黑名单豁免 `~/.drifox/workspaces`（项目工作区误伤）
+- **问题**：`~/.drifox` 整棵在硬黑名单，DriFox 项目工作区 `~/.drifox/workspaces/<proj>` 恰在其下，ssh_upload/ssh_download 对工作区文件一律拒绝，`allow_paths` 显式放行也救不回（硬黑名单优先于边界判定）
+- **修复**：`tools/_guard.py` 新增 `_EXEMPT_SUBTREES` 豁免子树，仅放行 `~/.drifox/workspaces`；`_dir_blocked` 命中豁免子树即跳过目录黑名单。`.drifox` 根下其余位置（connections.json 等凭据落盘）仍拒绝；凭据文件名黑名单（.env / *.pem / sessions.db…）与 workdir/allow_paths 边界在豁免子树内仍生效
+- **测试**：`tests/test_guard.py` 新增 `test_drifox_workspaces_exempt_from_block_dirs`（豁免子树内放行 / 子树外 connections.json 仍拒 / 子树内 .env 仍拒）；ssh-toolkit 全量 70 passed, 1 skipped
+
 ### 🔧 ssh-toolkit v0.4.3：`ssh_exec` 的 schema 说明写入 tmux 长期会话指引
 - **问题**：插件执行链路固定 `client.exec_command()` + 同步轮询到进程退出，超时即关通道，长任务（编译、训练、服务）随通道一起死。此前 README 里没有任何 tmux 说明，AI 读不到 `registry.register` 之外的文档，实际会直接 `ssh_exec("make")` 然后超时失败
 - **修复**：`tools/exec_tool.py` 的 `ssh_exec` schema description 直接写入判据与四条命令——`has-session || new-session -d`、`send-keys ... Enter`、`capture-pane -pt S -S -300`、`list-panes -F '#{pane_dead}'`，并附 `cmd; echo __RC=$?` 取退出码写法；同时写明两条硬约束（禁 `tmux attach`，它永不返回；`exec_command` 走非 login shell，PATH 不全时用 `bash -lc` 包一层）

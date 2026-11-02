@@ -8,7 +8,7 @@ ssh_upload 可以把 ~/.ssh/id_rsa、.env、sessions.db 传到任意远端，ssh
 可以把远端内容落到启动目录。此模块补上这层边界，全部在插件内完成。
 
 三层规则（任一命中即拒）：
-1. 硬黑名单目录/文件名：凭据、浏览器 profile、应用数据。
+1. 硬黑名单目录/文件名：凭据、浏览器 profile、应用数据（豁免子树除外，见 _EXEMPT_SUBTREES）。
 2. workdir 边界：local_path 必须落在 tool_ctx["workdir"] 内（或 allow_paths 显式补充）。
 3. realpath 解析后再判，符号链接不能绕过。
 """
@@ -31,6 +31,12 @@ _BLOCK_DIRS = (
     "~/appdata/local/google/chrome/user data",
     "~/library/application support/google/chrome",
     "~/library/keychains",
+)
+
+# 硬黑名单豁免子树：这些位置是用户项目工作区，被父目录黑名单整棵拦截属于误伤。
+# 豁免子树整体放行；凭据文件名黑名单与 workdir/allow_paths 边界仍然生效。
+_EXEMPT_SUBTREES = (
+    "~/.drifox/workspaces",
 )
 
 # 文件名模式（小写比较，支持 * 通配）
@@ -84,6 +90,9 @@ def _name_blocked(name):
 
 
 def _dir_blocked(norm_path):
+    for item in _EXEMPT_SUBTREES:
+        if _under(norm_path, _norm(item)):
+            return None
     for item in _BLOCK_DIRS:
         if _under(norm_path, _norm(item)):
             return item

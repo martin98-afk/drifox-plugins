@@ -85,6 +85,7 @@ paramiko 因此被绑到宿主副本上。实测该副本 AES-CTR 不可用，�
 - 本地路径必须落在当前工作目录内；可用 `allow_paths` 显式追加允许的根目录。
 - 硬黑名单不受 `allow_paths` 影响：`~/.ssh`、`~/.gnupg`、`~/.aws`、`~/.kube`、`~/.drifox`、
   浏览器 profile、`id_rsa` / `*.pem` / `.env` / `sessions.db` 等凭据文件一律拒绝。
+  豁免子树 `~/.drifox/workspaces`（DriFox 项目工作区）除外；凭据文件名黑名单在其中仍生效。
 - 下载落点额外禁止自启动/登录项目录（Startup、`.config/autostart`）。
 - 路径先 realpath 解析，符号链接无法绕过。
 
