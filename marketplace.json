@@ -1492,7 +1492,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 18,
+            "downloads": 19,
             "keywords": [
                 "desktop",
                 "automation",
@@ -2160,7 +2160,7 @@
             "components": {
                 "agents": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "agents",
                 "experts",
@@ -2402,6 +2402,7 @@
             "components": {
                 "agents": true
             },
+            "downloads": 1,
             "keywords": [
                 "agents",
                 "experts",
@@ -3002,7 +3003,7 @@
                 "gateways": true,
                 "ui": true
             },
-            "downloads": 14,
+            "downloads": 15,
             "min_host_version": "0.6.12",
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
@@ -5206,7 +5207,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 77,
+            "downloads": 79,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -5286,7 +5287,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 41,
+            "downloads": 43,
             "keywords": [
                 "screenshot",
                 "clipboard",
@@ -5848,7 +5849,7 @@
                 "tools": true,
                 "ui": true
             },
-            "downloads": 29,
+            "downloads": 31,
             "platforms": [
                 "windows",
                 "linux",
@@ -6703,7 +6704,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 38,
+            "downloads": 39,
             "keywords": [
                 "voice",
                 "dictation",
