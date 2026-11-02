@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1793587148.4212983,
+  "fetched_at": 1793614750.813077,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -26,7 +26,7 @@
     "canva": 1,
     "canvas-design": 1,
     "catppuccin-themes": 2,
-    "caveman": 6,
+    "caveman": 7,
     "chinese-chess": 10,
     "chrome-classics": 4,
     "claude-api": 2,
@@ -183,7 +183,7 @@
     "snake": 6,
     "solitaire": 1,
     "square": 0,
-    "ssh-toolkit": 25,
+    "ssh-toolkit": 29,
     "stripe": 0,
     "supabase": 0,
     "superclaude": 2,

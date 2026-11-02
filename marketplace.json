@@ -794,7 +794,7 @@
                 "skills": true,
                 "agents": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "productivity",
                 "communication",
@@ -5848,7 +5848,7 @@
                 "tools": true,
                 "ui": true
             },
-            "downloads": 25,
+            "downloads": 29,
             "platforms": [
                 "windows",
                 "linux",
