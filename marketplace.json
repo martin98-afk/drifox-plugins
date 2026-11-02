@@ -524,6 +524,7 @@
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
+                "mcp",
                 "ui",
                 "tool"
             ],
@@ -537,7 +538,8 @@
                 "tools": true,
                 "commands": true,
                 "skills": true,
-                "ui": true
+                "ui": true,
+                "mcp": true
             },
             "downloads": 3,
             "keywords": [
