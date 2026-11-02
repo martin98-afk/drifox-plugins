@@ -3002,7 +3002,7 @@
                 "gateways": true,
                 "ui": true
             },
-            "downloads": 13,
+            "downloads": 14,
             "min_host_version": "0.6.12",
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
@@ -3239,6 +3239,7 @@
             "components": {
                 "mcp": true
             },
+            "downloads": 1,
             "keywords": [
                 "mcp",
                 "connector",
@@ -5205,7 +5206,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 75,
+            "downloads": 77,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -5285,7 +5286,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 39,
+            "downloads": 41,
             "keywords": [
                 "screenshot",
                 "clipboard",
@@ -6702,7 +6703,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 37,
+            "downloads": 38,
             "keywords": [
                 "voice",
                 "dictation",
