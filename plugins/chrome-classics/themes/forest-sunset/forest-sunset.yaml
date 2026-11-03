@@ -29,6 +29,7 @@ backgrounds:
 colors:
   # ── 基础 ──
   accent: '#3C9AAC'
+  search_highlight: '#3C9AAC'
   accent_warm: '#F0A44C'
   border: '#254254'
   border_accent: '#4FA8B8'

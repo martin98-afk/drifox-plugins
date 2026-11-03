@@ -17,6 +17,7 @@ background:
 colors:
   # ── 1. 基础色 ────────────────────────────────────
   accent: '#5B7E8E'
+  search_highlight: '#5B7E8E'
   accent_warm: '#C49A5C'
   border: '#B6C2CC'
   border_accent: '#7EA8B8'
