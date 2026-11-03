@@ -1578,12 +1578,14 @@ class _CommitFileRow(QWidget):
                 f"<span style='color:#50e3c2'>+{f['add']}</span> "
                 f"<span style='color:#f14c4c'>−{f['del']}</span>"
             )
-        stat_lb.setStyleSheet("background: transparent;")
+        stat_lb.setStyleSheet(f"background: transparent; {font_part}")
         ly.addWidget(stat_lb)
 
         # 文件路径（可省略 label：超长中间省略，tooltip 完整路径）
         path_lb = _ElidedLabel(f["path"], self)
-        path_lb.setStyleSheet("background: transparent;")
+        path_lb.setStyleSheet(
+            f"background: transparent; color: {_text_color()}; {font_part}"
+        )
         path_lb.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         ly.addWidget(path_lb, 1)
 
