@@ -1,7 +1,7 @@
 # Changelog
 
 ## Unreleased
-### ✨ docx-designer v0.2.4：docx 文档设计模式（预览 + 拾取 + 标注）
+### ✨ docx-designer v0.2.5：docx 文档设计模式（预览 + 拾取 + 标注）
 - **预览**：python-docx XML 流解析 → 自生成 HTML（QWebEngineView 分页视图，sectPr 页面尺寸/边距 + JS 装箱分页 + 页眉页脚随页重复）；样式链继承（basedOn）、多级编号（numbering.xml 状态机，中文数字/字母/罗马）、段落属性（对齐/缩进/段距/行距）、run 字号颜色字体、表格 vMerge/gridSpan 与 tblGrid 列宽、内嵌图片、OMML 公式 HTML/CSS 模拟
 - **拾取**：「拾取」态点击元素 → 锚点（body 块索引）+ 类型/样式 + 全文文本 + 区域截图回填输入框（QWebChannel），连续拾取连续追加
 - **标注**：「标注」态点击元素写注释（角标编号 + 悬浮 tooltip），标注按文档路径持久化（重开恢复），悬浮可改；「≡ → 发送标注」把全部注释一次性回填供模型逐条修改
@@ -12,6 +12,7 @@
 - **分页/域修复**：`pageBreakBefore w:val="0"` 不再误判分页（目录不再每项一页、正文不再错位）；域类型按指令首词精确匹配（PAGEREF 目录页码不再被替换成当前页）；页脚文本框内 PAGE 域正确转 `{{page}}`
 - **页眉页脚拾取/标注**：页眉页脚容器挂 `data-anchor="header"/"footer"`，同锚点多页同步角标；回填与发送文本标 [页眉]/[页脚]
 - **重新加载**：≡ 菜单新增「重新加载文档」，外部编辑后刷新预览并保留拾取计数与标注
+- **确认弹窗**：清空标注改用宿主统一 `ConfirmDialog`（MaskDialogBase 遮罩风格），不再用 QMessageBox
 - **依赖**：python-docx + lxml（deps/ 预置 cp314 win32）；测试 35 条（解析/渲染/标注格式/页眉页脚/拦截判定）
 ### ✨ browser v1.6.0：拦截本地 PDF 打开进内置浏览器
 - **拦截**：本地 .pdf（磁盘路径 / file://）默认进内置浏览器（WebEngine PdfViewerEnabled 内嵌渲染），配置键 \`intercept_pdf\`（默认开，拦截设置面板可关）
