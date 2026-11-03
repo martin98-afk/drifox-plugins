@@ -284,7 +284,11 @@ def _redirect_os_startfile(filepath):
     """
     if _try_intercept(filepath):
         return None  # 已拦截：吞掉 os.startfile 调用
-    return _orig_os_startfile(filepath)
+    if _orig_os_startfile is not None:
+        return _orig_os_startfile(filepath)
+    # 原始入口丢失（热重载接管链断裂）：系统级兜底，别让调用方炸
+    _shell_open(str(filepath))
+    return None
 
 
 def _recover_orig(prev: Any, attr_key: str, global_key: str) -> Any:
@@ -331,8 +335,9 @@ def install_redirect() -> bool:
     # 1) patch webbrowser.open（首次安装 or 接管旧模块代理）
     prev_open = webbrowser.open
     if prev_open is not _redirect_webbrowser_open:
-        if getattr(prev_open, "_drifox_redirect", False):
-            _orig_webbrowser_open = _recover_orig(prev_open, "_drifox_orig_open", "_orig_webbrowser_open")
+        if _is_redirect_proxy(prev_open):
+            candidate = _recover_orig(prev_open, "_drifox_orig_open", "_orig_webbrowser_open")
+            _orig_webbrowser_open = _strip_proxy_chain(candidate or prev_open, "_drifox_orig_open")
             logger.info("[browser-redirect] 接管热重载遗留的 webbrowser.open 代理")
         elif _orig_webbrowser_open is None:
             _orig_webbrowser_open = prev_open
@@ -344,10 +349,13 @@ def install_redirect() -> bool:
     if _qtgui is not None:
         prev_qds = _qtgui.QDesktopServices
         if prev_qds is not _RedirectDesktopServices:
-            if getattr(prev_qds, "_drifox_redirect", False):
+            if _is_redirect_proxy(prev_qds):
                 # prev_qds.openUrl：staticmethod 类属性访问 → 底层函数（__globals__ 即旧模块命名空间）
-                _orig_qdesktop_openurl = _recover_orig(
+                candidate = _recover_orig(
                     prev_qds.openUrl, "_drifox_orig_openurl", "_orig_qdesktop_openurl"
+                )
+                _orig_qdesktop_openurl = _strip_proxy_chain(
+                    candidate or prev_qds.openUrl, "_drifox_orig_openurl"
                 )
                 logger.info("[browser-redirect] 接管热重载遗留的 QDesktopServices 代理")
             elif _orig_qdesktop_openurl is None:
@@ -359,8 +367,9 @@ def install_redirect() -> bool:
     if hasattr(os, "startfile"):
         prev_sf = os.startfile
         if prev_sf is not _redirect_os_startfile:
-            if getattr(prev_sf, "_drifox_redirect", False):
-                _orig_os_startfile = _recover_orig(prev_sf, "_drifox_orig_startfile", "_orig_os_startfile")
+            if _is_redirect_proxy(prev_sf):
+                candidate = _recover_orig(prev_sf, "_drifox_orig_startfile", "_orig_os_startfile")
+                _orig_os_startfile = _strip_proxy_chain(candidate or prev_sf, "_drifox_orig_startfile")
                 logger.info("[browser-redirect] 接管热重载遗留的 os.startfile 代理")
             elif _orig_os_startfile is None:
                 _orig_os_startfile = prev_sf
@@ -563,66 +572,67 @@ def install_bash_redirect() -> bool:
     return True
 
 
-def _unwrap_startfile(startfile: Any) -> Any:
-    """逐层剥掉本插件的 startfile 代理，返回真正的系统入口
+# ── 代理链解析 / 系统级打开 ───────────────────────
 
-    ⚠️ 只取一层 ``_drifox_orig_startfile`` 不够：热重载接管若曾把旧代理
-    当成「原始函数」存下来（旧版代理无 ``_drifox_redirect`` 标记），
-    orig 本身仍是代理，调用后会重新走拦截 → 按钮点了又弹内置浏览器。
-    剥到没有代理标记或链断为止；剥不干净返回 None，由调用方走系统级兜底。
-    """
-    cur = startfile
+# 本插件各代理函数的 __name__。旧版代理可能没有 _drifox_redirect 标记，
+# 只看标记会把代理当成原生入口返回（2026-11-03 实证：resolved 仍是代理）。
+_PROXY_FUNC_NAMES = frozenset(
+    {"_redirect_os_startfile", "_redirect_webbrowser_open", "_redirect_execute_bash"}
+)
+
+def _is_redirect_proxy(fn: Any) -> bool:
+    """判定是否本插件的拦截代理（标记优先，函数名 / 类身份兜底）"""
+    if fn is None:
+        return False
+    if getattr(fn, "_drifox_redirect", False):
+        return True
+    if getattr(fn, "__name__", "") in _PROXY_FUNC_NAMES:
+        return True
+    return fn is _RedirectDesktopServices
+
+def _strip_proxy_chain(fn: Any, attr: str) -> Any:
+    """沿 attr 逐层剥掉拦截代理，返回真正的系统入口（剥不干净返回 None）"""
+    cur = fn
     for _ in range(8):
-        if cur is None:
-            return None
-        if not getattr(cur, "_drifox_redirect", False):
+        if cur is None or not _is_redirect_proxy(cur):
             return cur
-        cur = getattr(cur, "_drifox_orig_startfile", None)
+        cur = getattr(cur, attr, None)
     return None
 
-def open_url_external(url: str) -> bool:
-    """绕过全部拦截补丁，强制用系统默认浏览器/程序打开 URL
-
-    供浏览器卡片「在外部浏览器打开」按钮使用 —— 修复回环 bug：
-    该按钮原来直接 os.startfile(url)，而 os.startfile 已被本模块 patch，
-    http URL 会被再次拦截回内置浏览器（按钮点了等于没点）。
-    通过代理函数属性取回原始 os.startfile（热重载后依然可取），
-    并逐层剥掉可能残留的旧代理；仍剥不干净时用 ShellExecuteW 兜底
-    （不经 Python 层任何 patch，必然落到系统默认浏览器）。
-    """
-    if not url:
-        return False
-    if hasattr(os, "startfile"):
-        orig = _unwrap_startfile(os.startfile)
-        if orig is None:
-            orig = _unwrap_startfile(_orig_os_startfile)
-        logger.info(
-            f"[browser-external] url={url[:80]} "
-            f"os.startfile={os.startfile!r} resolved={orig!r} stash={_orig_os_startfile!r}"
-        )
-        if orig is not None:
-            try:
-                orig(url)  # type: ignore[operator]
-                return True
-            except Exception:
-                logger.exception(f"[browser-external] 原始入口调用失败，改走 ShellExecuteW: {url[:80]}")
-        if sys.platform == "win32":
-            try:
-                import ctypes
-
-                rc = ctypes.windll.shell32.ShellExecuteW(None, "open", url, None, None, 1)
-                if rc > 32:
-                    return True
-                logger.warning(f"[browser-external] ShellExecuteW 失败 rc={rc}: {url[:80]}")
-            except Exception:
-                logger.exception(f"[browser-external] ShellExecuteW 异常: {url[:80]}")
-        return False
+def _shell_open(url: str) -> bool:
+    """系统级打开：不经过 webbrowser / QDesktopServices / os.startfile 任何 patch"""
     try:
+        if sys.platform == "win32":
+            import ctypes
+
+            rc = ctypes.windll.shell32.ShellExecuteW(None, "open", url, None, None, 1)
+            if rc > 32:
+                return True
+            logger.warning(f"[browser-external] ShellExecuteW 失败 rc={rc}: {url[:80]}")
+            return False
         import subprocess
 
         opener = "open" if sys.platform == "darwin" else "xdg-open"
         subprocess.Popen([opener, url])
         return True
     except Exception:
-        logger.exception(f"[browser-external] 系统打开器失败: {url[:80]}")
+        logger.exception(f"[browser-external] 系统级打开失败: {url[:80]}")
         return False
+
+def open_url_external(url: str) -> bool:
+    """强制用系统默认浏览器/程序打开 URL（绕开全部拦截补丁）
+
+    供浏览器卡片「在外部浏览器打开」按钮使用。原实现经
+    ``getattr(os.startfile, "_drifox_orig_startfile")`` 取回原始入口，
+    但热重载接管会把「无标记的旧代理」当成原始入口存下，取回后仍是代理
+    （2026-11-03 日志：resolved 仍是 _redirect_os_startfile），调用即重新
+    走拦截 → 内置浏览器新标签。
+
+    改为直接走系统级 ShellExecuteW / open / xdg-open：不依赖代理链是否干净，
+    也不受 os.startfile 已被 patch 的影响。
+    """
+    if not url:
+        return False
+    ok = _shell_open(url)
+    logger.info(f"[browser-external] system-open ok={ok} url={url[:80]}")
+    return ok
