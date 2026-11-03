@@ -6,8 +6,6 @@ Run: python -m pytest plugins/docx-designer/tests/test_renderer.py -v
 import sys
 from pathlib import Path
 
-import pytest
-
 PLUGIN = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PLUGIN))
 
