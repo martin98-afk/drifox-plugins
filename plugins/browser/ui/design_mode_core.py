@@ -29,6 +29,9 @@ _NOISE_VALUES = frozenset({"none", "normal", "0px", "0"})
 # 属性 -> 初始值集合。命中即丢弃，因为这些值等于没写。
 _DEFAULTS = {
     "position": {"static"},
+    "z-index": {"auto"},
+    "overflow": {"visible"},
+    "background-size": {"auto"},
     "box-sizing": {"content-box"},
     "width": {"auto"},
     "height": {"auto"},
@@ -62,6 +65,7 @@ def clamp_rect(x, y, w, h, vw, vh, pad=40):
 def filter_styles(raw):
     """按白名单过滤计算样式，剔除初始值、不生效属性与重复简写。返回 [(key, value)]。"""
     display = (raw.get("display") or "").strip().lower()
+    position = (raw.get("position") or "").strip().lower()
     is_flex = "flex" in display
     is_grid = "grid" in display
     overflow = (raw.get("overflow") or "").strip().lower()
@@ -73,6 +77,9 @@ def filter_styles(raw):
             continue
         v = value.strip().lower()
         if v in _NOISE_VALUES:
+            continue
+        # 未定位的元素上 top/right/bottom/left 不生效
+        if key in ("top", "right", "bottom", "left") and position in ("", "static"):
             continue
         # 零边框：0px none <color> 整元素组都是废话
         if key.startswith("border-") and v.startswith("0px none"):
