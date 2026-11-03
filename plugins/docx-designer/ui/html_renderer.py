@@ -150,8 +150,9 @@ _PAGINATE_JS = (
     " newPage();"
     " for (var i = 0; i < kids.length; i++){"
     "  var el = kids[i];"
+    "  if (el.getAttribute('data-before') === '1' && curBody.children.length > 0) newPage();"
     "  curBody.appendChild(el);"
-    "  if (el.getAttribute('data-break') === '1' && i < kids.length - 1 && curBody.children.length > 1){"
+    "  if (el.getAttribute('data-after') === '1' && i < kids.length - 1 && curBody.children.length > 1){"
     "   newPage(); }"
     "  else if (curBody.scrollHeight > pageH && curBody.children.length > 1){"
     "   curBody.removeChild(el); newPage(); curBody.appendChild(el); } }"
@@ -343,7 +344,11 @@ def _render_block(b):
     kind = b["kind"]
     if kind == "table":
         return _render_table(b)
-    brk = ' data-break="1"' if b.get("page_break") else ""
+    brk = ""
+    if b.get("page_break_before"):
+        brk += ' data-before="1"'
+    if b.get("page_break"):
+        brk += ' data-after="1"'
     if kind == "image":
         style = _fmt_style(b.get("fmt"))
         st_attr = f' style="{escape(style, quote=True)}"' if style else ""
