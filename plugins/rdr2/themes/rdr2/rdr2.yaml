@@ -15,6 +15,7 @@ background:
 colors:
   # ── 1. 基础色（血红色主导） ──
   accent: "#A12832"
+  search_highlight: "#A12832"
   accent_warm: "#D4883A"
   border: "#3A1E1C"
   border_accent: "#C04A52"

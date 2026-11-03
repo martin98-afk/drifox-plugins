@@ -15,6 +15,7 @@ background:
 colors:
   # ── 1. 基础色（火焰橙红 + 命运紫双色组合，区别于 rdr2 的荒漠橙金） ──
   accent: "#E04A2C"           # 火焰纹章标志橙红
+  search_highlight: "#E04A2C"
   accent_warm: "#9B7FE0"      # 命运女神·芙托娜紫（与 rdr2 的荒漠暖金完全区分）
   border: "#2E1E3A"           # 紫黑（命运之黑，非 rdr2 的暖褐）
   border_accent: "#C5A0E0"    # 命运紫亮化版
