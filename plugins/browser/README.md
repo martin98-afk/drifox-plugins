@@ -23,6 +23,7 @@
 | `Esc` | 停止加载 |
 | `F12` / `Ctrl+Shift+I` | DevTools |
 | `Ctrl+Shift+N` | 隐身窗口 |
+| `Ctrl+Shift+C` | 进入/退出 Design Mode（选取页面元素） |
 | `Ctrl+H` / `Ctrl+D` | 历史 / 收藏 |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | 切换标签 |
 | `Ctrl+1..8` | 跳转标签 |
@@ -40,6 +41,7 @@
 - **历史记录 / 收藏夹 / 下载管理**：三者均为卡片内悬浮面板（同款弹窗格式，互斥显示，菜单按钮下方定位），历史支持搜索与清空，下载进度实时显示
 - **外部链接拦截**：主程序 http/https 外链、`os.startfile`、Shell `start` 命令、本地 HTML 文件默认重定向到内置浏览器；浏览器菜单 → 「拦截设置」提供总开关 + 「拦截打开网页」/「拦截打开本地 HTML」两个分类开关，保存即生效（含热重载场景）；设置卡片深浅主题自适应配色
 - **DevTools**：F12 打开独立开发者工具窗口
+- **Design Mode**：工具栏 `⌖` 或 `Ctrl+Shift+C` 进入拾取模式，鼠标悬停高亮元素，点击把它的 HTML、计算样式和元素截图追加到对话输入框；可连续点多个，`Esc` 退出。右键菜单也有「选取此元素」。截图存在 `~/.drifox/plugins/browser/data/picks/`
 - **隐身模式**：OTR Profile，关闭即焚，与正常浏览完全隔离
 
 ## 性能设计
