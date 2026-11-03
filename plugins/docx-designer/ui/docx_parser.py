@@ -116,57 +116,6 @@ def _local(el):
     except ValueError:
         return ""
 
-def _walk_field_text(el, out, fields):
-    """按文档顺序收集文本；PAGE/NUMPAGES 域输出 {{page}}/{{pages}} 占位。"""
-    tag = _local(el)
-    if tag == "fldSimple":
-        instr = (el.get(f"{{{W}}}instr") or "").upper()
-        if "NUMPAGES" in instr:
-            out.append("{{pages}}")
-            return
-        if "PAGE" in instr:
-            out.append("{{page}}")
-            return
-        for c in el:
-            _walk_field_text(c, out, fields)
-        return
-    if tag == "fldChar":
-        kind = el.get(f"{{{W}}}fldCharType")
-        if kind == "begin":
-            fields.append({"instr": "", "result": False, "emitted": False})
-        elif kind == "separate" and fields:
-            fields[-1]["result"] = True
-        elif kind == "end" and fields:
-            fields.pop()
-        return
-    if tag == "instrText":
-        if fields:
-            fields[-1]["instr"] += el.text or ""
-        return
-    if tag == "t":
-        if fields:
-            cur = fields[-1]
-            if not cur["result"]:
-                return
-            if not cur["emitted"]:
-                cur["emitted"] = True
-                instr = cur["instr"].upper()
-                if "NUMPAGES" in instr:
-                    out.append("{{pages}}")
-                    return
-                if "PAGE" in instr:
-                    out.append("{{page}}")
-                    return
-        out.append(el.text or "")
-        return
-    for c in el:
-        _walk_field_text(c, out, fields)
-
-def _para_text_with_fields(p):
-    out = []
-    _walk_field_text(p, out, [])
-    return "".join(out)
-
 def _hf_paragraph(p, part, styles_map, doc_font, doc_size, default_style_id=""):
     """页眉/页脚段落 → ({kind:p, fmt, runs}, 纯文本)。"""
     pPr = p.find(f"{{{W}}}pPr")
@@ -653,7 +602,9 @@ def _parse_paragraph(p, doc, index, style_names, styles_map, numbering, counter,
     pmerged = _merge_para_fmt(sp, direct_p, doc_font, doc_size)
     # 段落标记 rPr 只影响标记本身（行高），不向 run 继承
     runs, text = _parse_runs(p, doc.part, sr)
-    page_break = pPr is not None and pPr.find(f"{{{W}}}pageBreakBefore") is not None
+    pb = pPr.find(f"{{{W}}}pageBreakBefore") if pPr is not None else None
+    page_break_before = pb is not None and (pb.get(f"{{{W}}}val") or "true") not in ("0", "false", "none")
+    page_break = False
     for br in p.iter(f"{{{W}}}br"):
         if (br.get(f"{{{W}}}type") or "") == "page":
             page_break = True
@@ -698,6 +649,7 @@ def _parse_paragraph(p, doc, index, style_names, styles_map, numbering, counter,
         "list_label": list_label,
         "fmt": fmt,
         "page_break": page_break,
+        "page_break_before": page_break_before,
     }
     if kind == "image":
         block["image"] = next(r["image"] for r in runs if "image" in r)
@@ -705,9 +657,13 @@ def _parse_paragraph(p, doc, index, style_names, styles_map, numbering, counter,
 
 
 def _parse_runs(p, part, base_r=None):
-    """段落 → (runs, 纯文本)。part 用于解析图片关系；base_r 为继承字符属性。"""
+    """段落 → (runs, 纯文本)。part 用于解析图片关系；base_r 为继承字符属性。
+
+    支持文本框内容（w:txbxContent）与 PAGE/NUMPAGES 域（结果文本转 {{page}}/{{pages}}）。
+    """
     runs = []
     texts = []
+    fields = []
 
     def add_text(t, rpr):
         if not t:
@@ -726,6 +682,28 @@ def _parse_runs(p, part, base_r=None):
                 item[key] = v
         runs.append(item)
         texts.append(t)
+
+    def field_mark(el):
+        kind = el.get(f"{{{W}}}fldCharType")
+        if kind == "begin":
+            fields.append({"instr": "", "result": False, "emitted": False})
+        elif kind == "separate" and fields:
+            fields[-1]["result"] = True
+        elif kind == "end" and fields:
+            fields.pop()
+
+    def emit_text(t, rpr):
+        if fields and fields[-1]["result"] and not fields[-1]["emitted"]:
+            fields[-1]["emitted"] = True
+            tokens = fields[-1]["instr"].strip().upper().split()
+            first = tokens[0] if tokens else ""
+            if first == "NUMPAGES":
+                add_text("{{pages}}", rpr)
+                return
+            if first == "PAGE":
+                add_text("{{page}}", rpr)
+                return
+        add_text(t, rpr)
 
     def walk(elem):
         for node in elem:
@@ -753,6 +731,7 @@ def _parse_runs(p, part, base_r=None):
                             except (TypeError, ValueError):
                                 pass
                         runs.append(item)
+                txbx = node.find(f".//{{{W}}}txbxContent")
                 for sub in node:
                     try:
                         sq = etree.QName(sub)
@@ -761,12 +740,27 @@ def _parse_runs(p, part, base_r=None):
                     if sq.namespace != W:
                         continue
                     if sq.localname == "t":
-                        add_text(sub.text or "", rpr)
+                        emit_text(sub.text or "", rpr)
                     elif sq.localname == "br":
                         add_text("\n", None)
                     elif sq.localname == "tab":
                         add_text("\t", None)
-            elif q.localname in ("hyperlink", "smartTag", "fldSimple"):
+                    elif sq.localname == "fldChar":
+                        field_mark(sub)
+                    elif sq.localname == "instrText" and fields:
+                        fields[-1]["instr"] += sub.text or ""
+                if txbx is not None:
+                    walk(txbx)
+            elif q.localname == "fldSimple":
+                fields.append({
+                    "instr": node.get(f"{{{W}}}instr") or "",
+                    "result": True,
+                    "emitted": False,
+                })
+                walk(node)
+                if fields:
+                    fields.pop()
+            elif q.localname in ("hyperlink", "smartTag", "p", "txbxContent"):
                 walk(node)
             elif q.localname == "sdt":
                 content = node.find(f"{{{W}}}sdtContent")
@@ -775,7 +769,6 @@ def _parse_runs(p, part, base_r=None):
 
     walk(p)
     return runs, "".join(texts)
-
 
 def _run_flags(rpr):
     if rpr is None:
