@@ -20,9 +20,14 @@ W = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 M = "http://schemas.openxmlformats.org/officeDocument/2006/math"
 A = "http://schemas.openxmlformats.org/drawingml/2006/main"
 R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+V = "urn:schemas-microsoft-com:vml"
+WP = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
 
 _HEADING_NAME_RE = re.compile(r"^(?:Heading|标题)\s*(\d+)$", re.I)
 _HEADING_ID_RE = re.compile(r"^Heading\s*(\d+)$", re.I)
+
+# 样式合并哨兵：显式清除继承值（如空 <w:ind/> 重置首行缩进）
+_CLEAR = object()
 
 
 def docx_default_font(doc):
@@ -53,6 +58,7 @@ def parse_document(path):
     doc = Document(str(path))
     style_names = _style_name_map(doc)
     styles_map = _parse_styles(doc)
+    default_pid = _default_paragraph_style(doc)
     numbering = _parse_numbering(doc)
     counter = _NumberingCounter()
     blocks = []
@@ -66,7 +72,7 @@ def parse_document(path):
         if local == "p":
             blocks.append(
                 _parse_paragraph(child, doc, len(blocks), style_names, styles_map,
-                                 numbering, counter, doc_font, doc_size)
+                                 numbering, counter, doc_font, doc_size, default_pid)
             )
         elif local == "tbl":
             blocks.append(_parse_table(child, doc, len(blocks), style_names))
@@ -104,51 +110,167 @@ def docx_page_setup(path):
     return setup
 
 
-def _hdr_ftr_text(part):
-    """页眉/页脚 part → {text: 段落文本行, images: [data_uri]}。"""
-    out = {"text": [], "images": []}
+def _local(el):
     try:
-        root = getattr(part, "element", None)
-        if root is None:
-            return out
-        for p in root.iter(f"{{{W}}}p"):
-            line = "".join(t.text or "" for t in p.iter(f"{{{W}}}t"))
-            if line.strip():
-                out["text"].append(line.strip())
-        for blip in root.iter(f"{{{A}}}blip"):
-            rid = blip.get(f"{{{R}}}embed")
-            try:
-                tp = part.rels[rid].target_part
-                uri = f"data:{tp.content_type or 'image/png'};base64," + base64.b64encode(tp.blob).decode("ascii")
-                out["images"].append(uri)
-            except Exception:
-                continue
-    except Exception:
-        pass
-    return out
+        return etree.QName(el).localname
+    except ValueError:
+        return ""
 
+def _walk_field_text(el, out, fields):
+    """按文档顺序收集文本；PAGE/NUMPAGES 域输出 {{page}}/{{pages}} 占位。"""
+    tag = _local(el)
+    if tag == "fldSimple":
+        instr = (el.get(f"{{{W}}}instr") or "").upper()
+        if "NUMPAGES" in instr:
+            out.append("{{pages}}")
+            return
+        if "PAGE" in instr:
+            out.append("{{page}}")
+            return
+        for c in el:
+            _walk_field_text(c, out, fields)
+        return
+    if tag == "fldChar":
+        kind = el.get(f"{{{W}}}fldCharType")
+        if kind == "begin":
+            fields.append({"instr": "", "result": False, "emitted": False})
+        elif kind == "separate" and fields:
+            fields[-1]["result"] = True
+        elif kind == "end" and fields:
+            fields.pop()
+        return
+    if tag == "instrText":
+        if fields:
+            fields[-1]["instr"] += el.text or ""
+        return
+    if tag == "t":
+        if fields:
+            cur = fields[-1]
+            if not cur["result"]:
+                return
+            if not cur["emitted"]:
+                cur["emitted"] = True
+                instr = cur["instr"].upper()
+                if "NUMPAGES" in instr:
+                    out.append("{{pages}}")
+                    return
+                if "PAGE" in instr:
+                    out.append("{{page}}")
+                    return
+        out.append(el.text or "")
+        return
+    for c in el:
+        _walk_field_text(c, out, fields)
+
+def _para_text_with_fields(p):
+    out = []
+    _walk_field_text(p, out, [])
+    return "".join(out)
+
+def _hf_paragraph(p, part, styles_map, doc_font, doc_size, default_style_id=""):
+    """页眉/页脚段落 → ({kind:p, fmt, runs}, 纯文本)。"""
+    pPr = p.find(f"{{{W}}}pPr")
+    style_id = ""
+    if pPr is not None:
+        ps = pPr.find(f"{{{W}}}pStyle")
+        if ps is not None:
+            style_id = ps.get(f"{{{W}}}val") or ""
+    if not style_id:
+        style_id = default_style_id
+    sp, sr = _resolve_style_chain(style_id, styles_map)
+    fmt = _merge_para_fmt(sp, _para_props(pPr), doc_font, doc_size)
+    fmt = {k: v for k, v in fmt.items() if v is not None and v is not _CLEAR}
+    runs, text = _parse_runs(p, part, sr)
+    return {"kind": "p", "fmt": fmt, "runs": runs}, text
+
+def _hf_table(tbl, part):
+    """页眉/页脚表格 → {kind:tbl, rows, col_widths, borders, cell_pad_pt}。"""
+    rows, col_widths = _table_rows(tbl, part)
+    borders, cell_pad = {}, 5.4
+    tblPr = tbl.find(f"{{{W}}}tblPr")
+    if tblPr is not None:
+        bd = tblPr.find(f"{{{W}}}tblBorders")
+        if bd is not None:
+            borders = _parse_borders(bd)
+        mar = tblPr.find(f"{{{W}}}tblCellMar")
+        if mar is not None:
+            left = mar.find(f"{{{W}}}left")
+            if left is not None:
+                pt = _twips_to_pt(left.get(f"{{{W}}}w"))
+                if pt is not None:
+                    cell_pad = pt
+    return {"kind": "tbl", "rows": rows, "col_widths": col_widths,
+            "borders": borders, "cell_pad_pt": cell_pad}
+
+def _hf_blocks(part, styles_map, doc_font, doc_size, default_style_id=""):
+    """header/footer part → (blocks, text_lines, images)。"""
+    blocks, lines, images = [], [], []
+    root = getattr(part, "element", None)
+    if root is None:
+        return blocks, lines, images
+    for child in root.iterchildren():
+        local = _local(child)
+        if local == "p":
+            b, text = _hf_paragraph(child, part, styles_map, doc_font, doc_size, default_style_id)
+            if text.strip():
+                lines.append(text.strip())
+            if b["runs"] or text.strip():
+                blocks.append(b)
+                images.extend(r["image"] for r in b["runs"] if "image" in r)
+        elif local == "tbl":
+            b = _hf_table(child, part)
+            if b["rows"]:
+                blocks.append(b)
+                for row in b["rows"]:
+                    line = " ".join(c["text"] for c in row if c.get("text")).strip()
+                    if line:
+                        lines.append(line)
+                    for c in row:
+                        images.extend(r["image"] for r in c.get("runs") or [] if "image" in r)
+    return blocks, lines, images
 
 def docx_header_footer(path):
-    """第一节 sectPr 的 header/footerReference → {header, footer}（各自独立取首个）。"""
-    out = {"header": {"text": [], "images": []}, "footer": {"text": [], "images": []}}
+    """全文档 sectPr 顺序扫描 → {header, footer}（各自独立取首个有内容的）。
+
+    多节文档的页眉页脚常定义在段落 pPr 里的 sectPr（第一节）而非 body 末尾，
+    因此遍历所有 sectPr，default 类型优先。返回结构化 blocks 供渲染层还原
+    表格/图片布局，text/images 供检索与兼容。
+    """
+    def _empty():
+        return {"blocks": [], "text": [], "images": []}
+
+    out = {"header": _empty(), "footer": _empty()}
     try:
         doc = Document(str(path))
-        sect = doc.element.body.find(f"{{{W}}}sectPr")
-        if sect is None:
+        styles_map = _parse_styles(doc)
+        default_pid = _default_paragraph_style(doc)
+        doc_font, doc_size = _doc_defaults(doc)
+        sects = list(doc.element.body.iter(f"{{{W}}}sectPr"))
+        if not sects:
             return out
         for kind, ref_tag in (("header", "headerReference"), ("footer", "footerReference")):
-            for ref in sect.findall(f"{{{W}}}{ref_tag}"):
-                rid = ref.get(f"{{{R}}}id")
-                if not rid:
-                    continue
-                data = _hdr_ftr_text(doc.part.rels[rid].target_part)
-                if data["text"] or data["images"]:
-                    out[kind] = data
+            found = False
+            for sect in sects:
+                refs = sect.findall(f"{{{W}}}{ref_tag}")
+                refs.sort(key=lambda r: 0 if r.get(f"{{{W}}}type") in (None, "default") else 1)
+                for ref in refs:
+                    rid = ref.get(f"{{{R}}}id")
+                    if not rid:
+                        continue
+                    try:
+                        part = doc.part.rels[rid].target_part
+                        blocks, lines, images = _hf_blocks(part, styles_map, doc_font, doc_size, default_pid)
+                    except Exception:
+                        continue
+                    if blocks:
+                        out[kind] = {"blocks": blocks, "text": lines, "images": images}
+                        found = True
+                        break
+                if found:
                     break
     except Exception:
         pass
     return out
-
 
 def _style_name_map(doc):
     """styleId → 显示名（如 "Heading 1" / "标题 1"）。"""
@@ -210,7 +332,7 @@ def _twips_to_pt(val):
 
 
 def _para_props(ppr):
-    """w:pPr → 属性 dict（值为 pt 或原始字符串，None 表示未设）。"""
+    """w:pPr → 属性 dict（值为 pt 或原始字符串，_CLEAR 表示显式清除）。"""
     if ppr is None:
         return {}
     out = {}
@@ -222,14 +344,15 @@ def _para_props(ppr):
     ind = ppr.find(f"{{{W}}}ind")
     if ind is not None:
         flc = ind.get(f"{{{W}}}firstLineChars")
-        first = ind.get(f"{{{W}}}firstLine")
+        first = ind.get(f"{{{W}}}firstLine") or ind.get(f"{{{W}}}hanging")
         left = ind.get(f"{{{W}}}left") or ind.get(f"{{{W}}}start")
-        if flc:  # 首行缩进按字：以 10.5pt/字近似（渲染端字号覆盖时以 em 补正更准）
+        if flc:  # 首行缩进按字：以 10.5pt/字近似（渲染端以 em 补正更准）
             out["first_line_chars"] = round(int(flc) / 100.0, 2)
         elif first:
             pt = _twips_to_pt(first)
             if pt is not None:
                 out["first_line_pt"] = pt
+        # 空 <w:ind/> 不覆盖继承值（Word 语义：无属性 = 未设置）
         if left:
             pt = _twips_to_pt(left)
             if pt is not None:
@@ -246,10 +369,36 @@ def _para_props(ppr):
                 out["line"] = round(int(line) / 240.0, 2)
             except ValueError:
                 pass
+    pdr = ppr.find(f"{{{W}}}pBdr")
+    if pdr is not None:
+        borders = _parse_borders(pdr)
+        if borders:
+            out["borders"] = borders
     numpr = ppr.find(f"{{{W}}}numPr")
     if numpr is not None:
         out["numId"] = _attr(numpr, "numId")
         out["ilvl"] = _attr(numpr, "ilvl") or "0"
+    return out
+
+def _parse_borders(el):
+    """w:pBdr / w:tblBorders / w:tcBorders → {side: css}；none/nil 忽略。"""
+    sides = {"top": "top", "bottom": "bottom", "left": "left", "right": "right",
+             "start": "left", "end": "right", "insideH": "insideH", "insideV": "insideV"}
+    out = {}
+    for tag, side in sides.items():
+        e = el.find(f"{{{W}}}{tag}")
+        if e is None:
+            continue
+        val = (e.get(f"{{{W}}}val") or "").lower()
+        if val in ("", "none", "nil", "0"):
+            continue
+        try:
+            sz_pt = max(0.5, int(e.get(f"{{{W}}}sz") or 4) / 8.0)
+        except ValueError:
+            sz_pt = 0.5
+        color = e.get(f"{{{W}}}color") or "auto"
+        color = "#000000" if color == "auto" else f"#{color}"
+        out[side] = f"{sz_pt:g}pt solid {color}"
     return out
 
 
@@ -258,7 +407,7 @@ def _run_props(rpr):
     if rpr is None:
         return {}
     out = _run_flags(rpr)
-    sz = _attr(rpr, "sz")
+    sz = _attr(rpr, "sz") or _attr(rpr, "szCs")
     if sz:
         try:
             out["size_pt"] = int(sz) / 2.0
@@ -298,24 +447,38 @@ def _parse_styles(doc):
     return out
 
 
+def _default_paragraph_style(doc):
+    """styles.xml 里 w:default="1" 的段落样式 id（无 pStyle 的段落继承它）。"""
+    try:
+        for st in doc.styles.element.findall(f"{{{W}}}style"):
+            if st.get(f"{{{W}}}type") == "paragraph" and st.get(f"{{{W}}}default") == "1":
+                return st.get(f"{{{W}}}styleId") or ""
+    except Exception:
+        pass
+    return ""
+
 def _resolve_style_chain(style_id, styles_map, max_depth=10):
-    """basedOn 链上溯合并（基类先，子类覆盖）。返回 (段落属性, 字符属性)。"""
+    """basedOn 链上溯合并（基类先、子类覆盖）。返回 (段落属性, 字符属性)。"""
     merged_p, merged_r = {}, {}
+    chain = []
     sid, depth = style_id, 0
     seen = set()
     while sid and sid in styles_map and sid not in seen and depth < max_depth:
         seen.add(sid)
-        entry = styles_map[sid]
-        for k, v in reversed(list(entry["p"].items())):
-            if v is not None:
-                merged_p[k] = v
-        for k, v in reversed(list(entry["r"].items())):
-            if v is not None:
-                merged_r[k] = v
-        sid = entry["basedOn"]
+        chain.append(styles_map[sid])
+        sid = styles_map[sid]["basedOn"]
         depth += 1
-    # reversed(list(...)) 使子类覆盖基类：逐条 update 即可，
-    # 但按链序正向 update 已保证覆盖；上面的 reversed 是多余保险，语义等价
+    for entry in reversed(chain):  # 基类先写入，子类后覆盖
+        for k, v in entry["p"].items():
+            if v is _CLEAR:
+                merged_p.pop(k, None)
+            elif v is not None:
+                merged_p[k] = v
+        for k, v in entry["r"].items():
+            if v is _CLEAR:
+                merged_r.pop(k, None)
+            elif v is not None:
+                merged_r[k] = v
     return merged_p, merged_r
 
 
@@ -461,22 +624,45 @@ def _to_chinese(n):
 
 
 
-def _parse_paragraph(p, doc, index, style_names, styles_map, numbering, counter, doc_font, doc_size):
+def _merge_para_fmt(sp, direct_p, doc_font, doc_size):
+    """样式链属性 + 段落直接属性合并（_CLEAR 删除继承值，直接格式优先）。"""
+    merged = dict(sp)
+    for k, v in direct_p.items():
+        if v is _CLEAR:
+            merged.pop(k, None)
+        elif v is not None:
+            merged[k] = v
+    merged.setdefault("font", doc_font)
+    merged.setdefault("size_pt", doc_size)
+    return merged
+
+def _parse_paragraph(p, doc, index, style_names, styles_map, numbering, counter, doc_font, doc_size, default_style_id=""):
     pPr = p.find(f"{{{W}}}pPr")
     style_id = ""
     if pPr is not None:
         ps = pPr.find(f"{{{W}}}pStyle")
         if ps is not None:
             style_id = ps.get(f"{{{W}}}val") or ""
+    if not style_id:
+        style_id = default_style_id
     style_name = style_names.get(style_id, style_id)
     level = _heading_level(p, style_id, style_name)
     # 样式链合并：docDefaults < 样式链 < 段落直接格式
     sp, sr = _resolve_style_chain(style_id, styles_map)
     direct_p = _para_props(pPr)
-    pmerged = dict(sp)
-    pmerged.update({k: v for k, v in direct_p.items() if v is not None})
-    pmerged.setdefault("font", doc_font)
-    pmerged.setdefault("size_pt", doc_size)
+    pmerged = _merge_para_fmt(sp, direct_p, doc_font, doc_size)
+    # 段落标记 rPr 只影响标记本身（行高），不向 run 继承
+    runs, text = _parse_runs(p, doc.part, sr)
+    page_break = pPr is not None and pPr.find(f"{{{W}}}pageBreakBefore") is not None
+    for br in p.iter(f"{{{W}}}br"):
+        if (br.get(f"{{{W}}}type") or "") == "page":
+            page_break = True
+    if pPr is not None:
+        sect = pPr.find(f"{{{W}}}sectPr")
+        if sect is not None:
+            stype = sect.find(f"{{{W}}}type")
+            if stype is None or (stype.get(f"{{{W}}}val") or "nextPage") != "continuous":
+                page_break = True
     # 编号
     list_label = None
     num_id = pmerged.get("numId")
@@ -491,7 +677,6 @@ def _parse_paragraph(p, doc, index, style_names, styles_map, numbering, counter,
             pmerged["first_line_pt"] = lvl_info["first_pt"]
         if lvl_info.get("left_pt") and "left_pt" not in pmerged:
             pmerged["left_pt"] = lvl_info["left_pt"]
-    runs, text = _parse_runs(p, doc, sr)
     has_image = any("image" in r for r in runs)
     if has_image and not text.strip():
         kind = "image"
@@ -499,7 +684,8 @@ def _parse_paragraph(p, doc, index, style_names, styles_map, numbering, counter,
         kind = "heading"
     else:
         kind = "paragraph"
-    fmt = {k: v for k, v in pmerged.items() if k not in ("numId", "ilvl") and v is not None}
+    fmt = {k: v for k, v in pmerged.items()
+           if k not in ("numId", "ilvl") and v is not None and v is not _CLEAR}
     block = {
         "kind": kind,
         "index": index,
@@ -511,14 +697,15 @@ def _parse_paragraph(p, doc, index, style_names, styles_map, numbering, counter,
         "is_list": bool(is_list and not list_label),
         "list_label": list_label,
         "fmt": fmt,
+        "page_break": page_break,
     }
     if kind == "image":
         block["image"] = next(r["image"] for r in runs if "image" in r)
     return block
 
 
-def _parse_runs(p, doc, base_r=None):
-    """段落 → (runs, 纯文本)。base_r 为样式链字符属性（run 直接格式覆盖之）。"""
+def _parse_runs(p, part, base_r=None):
+    """段落 → (runs, 纯文本)。part 用于解析图片关系；base_r 为继承字符属性。"""
     runs = []
     texts = []
 
@@ -556,9 +743,16 @@ def _parse_runs(p, doc, base_r=None):
                 rpr = node.find(f"{{{W}}}rPr")
                 blip = node.find(f".//{{{A}}}blip")
                 if blip is not None:
-                    data_uri = _image_data_uri(doc, blip.get(f"{{{R}}}embed"))
+                    data_uri = _image_data_uri(part, blip.get(f"{{{R}}}embed"))
                     if data_uri:
-                        runs.append({"image": data_uri})
+                        item = {"image": data_uri}
+                        ext = node.find(f".//{{{WP}}}extent")
+                        if ext is not None:
+                            try:
+                                item["width_pt"] = round(int(ext.get("cx")) / 12700.0, 1)
+                            except (TypeError, ValueError):
+                                pass
+                        runs.append(item)
                 for sub in node:
                     try:
                         sq = etree.QName(sub)
@@ -572,7 +766,7 @@ def _parse_runs(p, doc, base_r=None):
                         add_text("\n", None)
                     elif sq.localname == "tab":
                         add_text("\t", None)
-            elif q.localname in ("hyperlink", "smartTag"):
+            elif q.localname in ("hyperlink", "smartTag", "fldSimple"):
                 walk(node)
             elif q.localname == "sdt":
                 content = node.find(f"{{{W}}}sdtContent")
@@ -596,16 +790,18 @@ def _run_flags(rpr):
 
     u = rpr.find(f"{{{W}}}u")
     underline = u is not None and (u.get(f"{{{W}}}val") or "single") not in ("none", "0", "false")
-    return {"bold": _on("b"), "italic": _on("i"), "underline": underline}
+    return {"bold": _on("b") or _on("bCs"),
+            "italic": _on("i") or _on("iCs"),
+            "underline": underline}
 
 
-def _image_data_uri(doc, rid):
+def _image_data_uri(part, rid):
     if not rid:
         return None
     try:
-        part = doc.part.rels[rid].target_part
-        blob = part.blob
-        ct = part.content_type or "image/png"
+        tp = part.rels[rid].target_part
+        blob = tp.blob
+        ct = tp.content_type or "image/png"
         return f"data:{ct};base64,{base64.b64encode(blob).decode('ascii')}"
     except Exception:
         return None
@@ -615,7 +811,8 @@ def _omml_plain_text(omath):
     return "".join(t.text or "" for t in omath.iter(f"{{{M}}}t"))
 
 
-def _parse_table(tbl, doc, index, style_names):
+def _table_rows(tbl, part, index=0):
+    """表格 → (final_rows, col_widths)；处理 gridSpan / vMerge。"""
     raw_rows = []
     for r_i, tr in enumerate(tbl.findall(f"{{{W}}}tr")):
         row_cells = []
@@ -634,7 +831,7 @@ def _parse_table(tbl, doc, index, style_names):
                 vm = tcPr.find(f"{{{W}}}vMerge")
                 if vm is not None:
                     vmerge = vm.get(f"{{{W}}}val") or "continue"
-            runs, text = _cell_content(tc, doc)
+            runs, text = _cell_content(tc, part)
             row_cells.append(
                 {
                     "text": text,
@@ -677,7 +874,6 @@ def _parse_table(tbl, doc, index, style_names):
             kept.append(cell)
         final_rows.append(kept)
 
-    # 网格列宽（dxa/twips）供渲染端生成 colgroup
     col_widths = []
     grid = tbl.find(f"{{{W}}}tblGrid")
     if grid is not None:
@@ -686,27 +882,29 @@ def _parse_table(tbl, doc, index, style_names):
                 col_widths.append(int(gc.get(f"{{{W}}}w") or 0))
             except ValueError:
                 col_widths.append(0)
+    return final_rows, col_widths
 
+def _parse_table(tbl, doc, index, style_names):
+    rows, col_widths = _table_rows(tbl, doc.part, index)
     return {
         "kind": "table",
         "index": index,
         "anchor": str(index),
         "style": "",
         "level": 0,
-        "text": _table_plain_text(final_rows),
+        "text": _table_plain_text(rows),
         "runs": [],
-        "rows": final_rows,
+        "rows": rows,
         "is_list": False,
         "col_widths": col_widths,
     }
 
-
-def _cell_content(tc, doc):
+def _cell_content(tc, part):
     """单元格 → (首段 runs, 各段落文本 join)。"""
     texts = []
     first_runs = None
     for p in tc.findall(f"{{{W}}}p"):
-        runs, text = _parse_runs(p, doc)
+        runs, text = _parse_runs(p, part)
         if first_runs is None and runs:
             first_runs = runs
         if text.strip():

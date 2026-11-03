@@ -29,6 +29,10 @@ class DocxBridge(QObject):
     def annotate_updated(self, anchor, comment):
         self._window.on_annotation_updated(anchor, comment)
 
+    @pyqtSlot(str)
+    def annotate_deleted(self, anchor):
+        self._window.on_annotation_deleted(anchor)
+
     @pyqtSlot()
     def escape(self):
         self._window.set_pick_mode(False)

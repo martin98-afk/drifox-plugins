@@ -49,11 +49,11 @@ _CSS = (
     ".sheet { position: relative; background: #ffffff; color: #1a1a1a; "
     "margin: 14px auto; box-shadow: 0 2px 14px rgba(0,0,0,0.4); "
     "font-size: var(--doc-fs); line-height: 1.65; overflow: hidden; } "
-    ".sheet-head { position: absolute; text-align: center; "
-    "color: #444; font-size: 0.78em; line-height: 1.3; overflow: hidden; } "
+    ".sheet-head { position: absolute; text-align: left; "
+    "color: #444; line-height: 1.3; overflow: hidden; } "
     ".sheet-head img { max-height: 36pt; max-width: 80%%; } "
-    ".sheet-foot { position: absolute; text-align: center; "
-    "color: #555; font-size: 0.78em; line-height: 1.3; overflow: hidden; } "
+    ".sheet-foot { position: absolute; text-align: left; "
+    "color: #555; line-height: 1.3; overflow: hidden; } "
     ".pageno { position: absolute; text-align: center; "
     "color: #777; font-size: 0.72em; } "
     ".sheet-body { height: 100%%; overflow: hidden; } "
@@ -65,6 +65,7 @@ _CSS = (
     "#note-box button { border: 1px solid #d9d9d9; background: #fff; border-radius: 4px; "
     "padding: 2px 10px; margin-left: 6px; cursor: pointer; } "
     "#note-box button.primary { background: #e6a23c; color: #fff; border-color: #e6a23c; } "
+    "#note-box button.danger { background: #d9534f; color: #fff; border-color: #d9534f; display: none; } "
     ".mr { font-family: 'Cambria Math', 'Cambria', serif; font-style: italic; } "
     ".mrb { font-weight: bold; } "
     ".frac { display: inline-block; vertical-align: middle; text-align: center; margin: 0 2px; } "
@@ -111,23 +112,20 @@ _PAGINATE_JS = (
     "function _mkSheet(pg, idx){"
     " var s = document.createElement('section'); s.className = 'sheet';"
     " s.style.width = pg.w_pt + 'pt'; s.style.height = pg.h_pt + 'pt';"
-    " var m = pg.mar;"
+    " var m = pg.mar || {};"
     " s.style.paddingTop = m.top + 'pt'; s.style.paddingBottom = m.bottom + 'pt';"
     " s.style.paddingLeft = m.left + 'pt'; s.style.paddingRight = m.right + 'pt';"
     " var head = document.createElement('div'); head.className = 'sheet-head';"
     " head.style.top = (m.header * 0.5) + 'pt'; head.style.left = m.left + 'pt'; head.style.right = m.right + 'pt';"
-    " if (pg.header){"
-    "  (pg.header.images || []).forEach(function(src){"
-    "   var im = document.createElement('img'); im.src = src; head.appendChild(im); });"
-    "  if (pg.header.text && pg.header.text.length){"
-    "   var ht = document.createElement('div'); ht.textContent = pg.header.text.join(' / '); head.appendChild(ht); } }"
+    " function fill(s2){ return String(s2).replace(/\\{\\{page\\}\\}/g, idx + 1); }"
+    " if (pg.header && pg.header.html) head.innerHTML = fill(pg.header.html);"
     " var foot = document.createElement('div'); foot.className = 'sheet-foot';"
     " foot.style.bottom = (m.footer * 0.5) + 'pt'; foot.style.left = m.left + 'pt'; foot.style.right = m.right + 'pt';"
-    " if (pg.footer && pg.footer.text && pg.footer.text.length){"
-    "  var ft = document.createElement('div'); ft.textContent = pg.footer.text.join(' / '); foot.appendChild(ft); }"
+    " if (pg.footer && pg.footer.html) foot.innerHTML = fill(pg.footer.html);"
     " var pn = document.createElement('div'); pn.className = 'pageno';"
     " pn.style.bottom = '6pt'; pn.style.left = m.left + 'pt'; pn.style.right = m.right + 'pt';"
     " pn.textContent = '- ' + (idx + 1) + ' -';"
+    " if (pg.footer && pg.footer.html && pg.footer.html.indexOf('{{page}}') >= 0) pn.style.display = 'none';"
     " var body = document.createElement('div'); body.className = 'sheet-body';"
     " s.appendChild(head); s.appendChild(foot); s.appendChild(pn); s.appendChild(body);"
     " return s; }"
@@ -141,7 +139,7 @@ _PAGINATE_JS = (
     "  bodies.forEach(function(bd){ while (bd.firstChild) kids.push(bd.removeChild(bd.firstChild)); });"
     "  pagesEl.removeChild(sheet); }"
     " while (flow.firstChild) kids.push(flow.removeChild(flow.firstChild));"
-    " var pg = window.__page;"
+    " var pg = Object.assign({}, window.__page || {}, window.__hdrftr || {});"
     " var probe = _mkSheet(pg, 0); pagesEl.appendChild(probe);"
     " var pbody = probe.querySelector('.sheet-body');"
     " var pageH = pbody.clientHeight || 700;"
@@ -153,16 +151,31 @@ _PAGINATE_JS = (
     " for (var i = 0; i < kids.length; i++){"
     "  var el = kids[i];"
     "  curBody.appendChild(el);"
-    "  if (curBody.scrollHeight > pageH && curBody.children.length > 1){"
+    "  if (el.getAttribute('data-break') === '1' && i < kids.length - 1 && curBody.children.length > 1){"
+    "   newPage(); }"
+    "  else if (curBody.scrollHeight > pageH && curBody.children.length > 1){"
     "   curBody.removeChild(el); newPage(); curBody.appendChild(el); } }"
     " var all = pagesEl.querySelectorAll('.pageno');"
-    " all.forEach(function(pn, i){ pn.textContent = '- ' + (i + 1) + ' -'; }); }"
+    " all.forEach(function(pn, i){ pn.textContent = '- ' + (i + 1) + ' -'; });"
+    " var total = pagesEl.querySelectorAll('.sheet').length;"
+    " pagesEl.querySelectorAll('.shtext').forEach(function(h){"
+    "  if (h.textContent.indexOf('{{pages}}') >= 0)"
+    "   h.textContent = h.textContent.replace(/\\{\\{pages\\}\\}/g, total); }); }"
     "window.addEventListener('load', paginate);"
 )
 
 _ANNOTATE_JS = (
     "window.__annotations = window.__restored || [];"
     "window.__noteOpen = false;"
+    "window.__markOf = function(el){"
+    " for (var i = 0; i < el.children.length; i++)"
+    "  if (el.children[i].classList && el.children[i].classList.contains('amark')) return el.children[i];"
+    " return null; };"
+    "window.__removeMark = function(el){ var m = window.__markOf(el); if (m) el.removeChild(m); };"
+    "window.__renumber = function(){"
+    " window.__annotations.forEach(function(a, i){ a.seq = i + 1;"
+    "  var el = document.querySelector('[data-anchor=\"' + a.anchor + '\"]');"
+    "  if (!el) return; var m = window.__markOf(el); if (m) m.textContent = a.seq; }); };"
     "window.__openNote = function(el){"
     " var box = document.getElementById('note-box');"
     " window.__noteTarget = el;"
@@ -175,6 +188,7 @@ _ANNOTATE_JS = (
     " var ta0 = box.querySelector('textarea');"
     " ta0.value = existing ? existing.comment : '';"
     " box.querySelector('.nbtns .primary').textContent = existing ? '更新注释' : '保存注释';"
+    " box.querySelector('.nbtns .danger').style.display = existing ? 'inline-block' : 'none';"
     " var r0 = el.getBoundingClientRect();"
     " box.style.left = Math.min(r0.left, window.innerWidth - 300) + 'px';"
     " box.style.top = (r0.bottom + window.scrollY + 4) + 'px';"
@@ -196,9 +210,11 @@ _ANNOTATE_JS = (
     "  var a = null;"
     "  for (var i = 0; i < window.__annotations.length; i++)"
     "   if (window.__annotations[i].anchor === editing) a = window.__annotations[i];"
-    "  if (a) { a.comment = comment; el.title = comment;"
+    "  if (a) { a.comment = comment;"
+    "   var te = document.querySelector('[data-anchor=\"' + editing + '\"]');"
+    "   if (te) te.title = comment;"
     "   if (window.__bridge && window.__bridge.annotate_updated)"
-    "    window.__bridge.annotate_updated(anchor, comment); }"
+    "    window.__bridge.annotate_updated(editing, comment); }"
     "  return; }"
     " if (!comment) return;"
     " var seq = window.__annotations.length + 1;"
@@ -210,8 +226,26 @@ _ANNOTATE_JS = (
     " el.insertBefore(mark, el.firstChild);"
     " if (window.__bridge && window.__bridge.annotate_added)"
     "  window.__bridge.annotate_added(anchor, comment, seq, snippet, r.left, r.top, r.width, r.height); };"
+    "window.__deleteNote = function(){"
+    " var box = document.getElementById('note-box');"
+    " var anchor = box.getAttribute('data-editing') || '';"
+    " box.style.display = 'none'; box.removeAttribute('data-editing');"
+    " window.__noteOpen = false; window.__noteTarget = null;"
+    " if (anchor) window.__removeAnnotation(anchor); };"
+    "window.__removeAnnotation = function(anchor){"
+    " window.__annotations = window.__annotations.filter(function(a){ return a.anchor !== anchor; });"
+    " var el = document.querySelector('[data-anchor=\"' + anchor + '\"]');"
+    " if (el) { el.classList.remove('annotated'); el.removeAttribute('title'); window.__removeMark(el); }"
+    " window.__renumber();"
+    " if (window.__bridge && window.__bridge.annotate_deleted)"
+    "  window.__bridge.annotate_deleted(anchor); };"
+    "window.__clearAnnotations = function(){"
+    " document.querySelectorAll('[data-anchor].annotated').forEach(function(el){"
+    "  el.classList.remove('annotated'); el.removeAttribute('title'); window.__removeMark(el); });"
+    " window.__annotations = []; };"
     "window.__restoreAnnotations = function(){"
-    " (window.__restored || []).forEach(function(a){"
+    " (window.__restored || []).forEach(function(a, i){"
+    "  a.seq = i + 1;"
     "  var sel = '[data-anchor=\"' + a.anchor + '\"]';"
     "  var el = document.querySelector(sel);"
     "  if (!el) return;"
@@ -237,7 +271,11 @@ def render_html(blocks, *, outer="#1d2533", accent="#66c6ff", doc_font=None,
     page_font = f"'{safe_font}', " if safe_font else ""
     css_vars = {"accent": accent, "outer": outer, "tint": tint, "page_font": page_font}
     setup_json = json.dumps(page_setup or {}, ensure_ascii=False)
-    hdr_json = json.dumps(hdr_ftr or {}, ensure_ascii=False)
+    hf_html = {}
+    for kind in ("header", "footer"):
+        v = (hdr_ftr or {}).get(kind) or {}
+        hf_html[kind] = {"html": _render_hf(v.get("blocks"))}
+    hdr_json = json.dumps(hf_html, ensure_ascii=False)
     restored_json = json.dumps(restored or [], ensure_ascii=False)
     return (
         '<!DOCTYPE html><html><head><meta charset="utf-8">'
@@ -252,7 +290,8 @@ def render_html(blocks, *, outer="#1d2533", accent="#66c6ff", doc_font=None,
         "<div id=\"pages\"></div>"
         '<div id=\"note-box\" style=\"display:none\">'
         '<textarea placeholder="输入对选中元素的注释…"></textarea>'
-        '<div class="nbtns"><button onclick="window.__closeNote(false)">取消</button>'
+        '<div class="nbtns"><button class="danger" onclick="window.__deleteNote()">删除</button>'
+        '<button onclick="window.__closeNote(false)">取消</button>'
         '<button class="primary" onclick="window.__closeNote(true)">保存注释</button></div></div>'
         f"<script>{_PAGINATE_JS}</script>"
         f"<script>{_ANNOTATE_JS}</script>"
@@ -267,7 +306,12 @@ def _fmt_style(f):
     parts = []
     if f.get("align"):
         parts.append(f"text-align:{f['align']}")
-    if f.get("first_line_pt"):
+    if f.get("first_line_chars"):
+        try:
+            parts.append(f"text-indent:{float(f['first_line_chars']):g}em")
+        except (TypeError, ValueError):
+            pass
+    elif f.get("first_line_pt"):
         parts.append(f"text-indent:{f['first_line_pt']}pt")
     if f.get("left_pt"):
         parts.append(f"margin-left:{f['left_pt']}pt")
@@ -288,6 +332,9 @@ def _fmt_style(f):
             parts.append(f"font-family:'{fname}'")
     if f.get("color"):
         parts.append(f"color:{f['color']}")
+    for side, css in (f.get("borders") or {}).items():
+        if side in ("top", "bottom", "left", "right"):
+            parts.append(f"border-{side}:{css}")
     return (";".join(parts) + ";") if parts else ""
 
 
@@ -296,10 +343,11 @@ def _render_block(b):
     kind = b["kind"]
     if kind == "table":
         return _render_table(b)
+    brk = ' data-break="1"' if b.get("page_break") else ""
     if kind == "image":
         style = _fmt_style(b.get("fmt"))
         st_attr = f' style="{escape(style, quote=True)}"' if style else ""
-        return f'<figure data-anchor="{a}"{st_attr}><img src="{b["image"]}" alt=""></figure>'
+        return f'<figure data-anchor="{a}"{st_attr}{brk}><img src="{b["image"]}" alt=""></figure>'
     tag = _HEADING_TAGS.get(b.get("level") or 0, "h4") if kind == "heading" else "p"
     style = _fmt_style(b.get("fmt"))
     inner = _render_runs(b.get("runs"))
@@ -308,14 +356,16 @@ def _render_block(b):
     elif b.get("is_list"):
         inner = '<span class="lnum">&#8226;</span>' + inner
     st_attr = f' style="{escape(style, quote=True)}"' if style else ""
-    return f'<{tag} class="doc-p" data-anchor="{a}"{st_attr}>{inner}</{tag}>'
+    return f'<{tag} class="doc-p" data-anchor="{a}"{st_attr}{brk}>{inner}</{tag}>'
 
 
 def _render_runs(runs):
     out = []
     for r in runs or []:
         if "image" in r:
-            out.append(f'<img src="{r["image"]}" style="vertical-align:middle;">')
+            w = r.get("width_pt")
+            st = f"vertical-align:middle;width:{w}pt" if w else "vertical-align:middle"
+            out.append(f'<img src="{r["image"]}" style="{st}">')
         elif "math" in r:
             out.append(_render_math(r["math"]))
         else:
@@ -361,6 +411,50 @@ def _render_table(b):
     parts.append("</table>")
     return "".join(parts)
 
+
+def _render_hf(blocks):
+    """页眉/页脚结构化块 → HTML 片段（表格还原边框/列宽/合并）。"""
+    out = []
+    for b in blocks or []:
+        if b.get("kind") == "tbl":
+            out.append(_render_hf_table(b))
+            continue
+        style = _fmt_style(b.get("fmt"))
+        st = f' style="{escape(style, quote=True)}"' if style else ""
+        out.append(f"<p{st}>{_render_runs(b.get('runs'))}</p>")
+    return "".join(out)
+
+def _render_hf_table(b):
+    widths = b.get("col_widths") or []
+    total = sum(w for w in widths if w > 0)
+    borders = b.get("borders") or {}
+    css = []
+    for side, key in (("top", "top"), ("bottom", "bottom"), ("left", "left"),
+                      ("right", "right"), ("insideH", "bottom"), ("insideV", "right")):
+        if side in borders:
+            css.append(f"border-{key}:{borders[side]}")
+    pad = b.get("cell_pad_pt") or 5.4
+    td_style = f"padding:1pt {pad:g}pt;vertical-align:top;" + ";".join(css)
+    parts = ['<table style="border-collapse:collapse;width:100%;table-layout:fixed;margin:0">']
+    if total > 0:
+        cols = "".join(
+            f'<col style="width:{round(w * 100.0 / total, 1)}%">' if w > 0 else "<col>" for w in widths
+        )
+        parts.append(f"<colgroup>{cols}</colgroup>")
+    for row in b.get("rows") or []:
+        parts.append("<tr>")
+        for cell in row:
+            attrs = []
+            if cell.get("colspan", 1) > 1:
+                attrs.append(f'colspan="{cell["colspan"]}"')
+            if cell.get("rowspan", 1) > 1:
+                attrs.append(f'rowspan="{cell["rowspan"]}"')
+            a = (" " + " ".join(attrs)) if attrs else ""
+            inner = _render_runs(cell.get("runs")) or escape(cell.get("text", ""))
+            parts.append(f'<td{a} style="{escape(td_style, quote=True)}">{inner}</td>')
+        parts.append("</tr>")
+    parts.append("</table>")
+    return "".join(parts)
 
 def _render_math(xml_str):
     try:
