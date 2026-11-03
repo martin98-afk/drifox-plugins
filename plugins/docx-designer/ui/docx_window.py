@@ -11,11 +11,13 @@ import json
 from pathlib import Path
 
 from PyQt5.QtCore import QUrl
+from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
     QMenu,
+    QMessageBox,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -97,7 +99,9 @@ class DocxWindowCard(QWidget):
         self._btn_annotate.clicked.connect(self.toggle_annotate)
         self._btn_more = QPushButton("≡")
         more_menu = QMenu(self._btn_more)
+        self._more_menu = more_menu
         more_menu.addAction("发送标注", self._send_annotations)
+        more_menu.addAction("清空标注", self._clear_annotations)
         more_menu.addAction("用系统程序打开", self._open_external)
         more_menu.addSeparator()
         more_menu.addAction("增大字号", lambda: self._zoom(1))
@@ -136,11 +140,13 @@ class DocxWindowCard(QWidget):
             f"QPushButton:hover {{ background: {c['hover']}; }}"
             f"QPushButton:checked {{ border-color: {accent_hex}; }}"
             f"QPushButton::menu-indicator {{ image: none; width: 0px; }}"
-            f"QMenu {{ background: {c['surface']}; color: {c['text']}; border: 1px solid {c['border']}; }}"
-            f"QMenu::item {{ padding: 6px 24px; }}"
+            f"QMenu {{ background: {c['surface']}; color: {c['text']}; border: 1px solid {c['border']};"
+            f" font-family: '{c['ff']}'; font-size: {c['fs']}px; }}"
+            f"QMenu::item {{ padding: 6px 24px; font-family: '{c['ff']}'; font-size: {c['fs']}px; }}"
             f"QMenu::item:selected {{ background: {c['hover']}; }}"
         )
         self._outer_bg = c["raised"]
+        self._more_menu.setFont(QFont(c["ff"], c["fs"]))
 
     # ── 打开文档 ──
 
@@ -239,6 +245,33 @@ class DocxWindowCard(QWidget):
                 a["comment"] = comment
         self._save_annotations()
         self._set_status(f"标注 [{anchor}] 已更新")
+
+    def on_annotation_deleted(self, anchor):
+        before = len(self._annotations)
+        self._annotations = [a for a in self._annotations if a.get("anchor") != anchor]
+        if len(self._annotations) == before:
+            return
+        for i, a in enumerate(self._annotations, 1):
+            a["seq"] = i
+        self._save_annotations()
+        self._set_status(f"已删除标注，剩余 {len(self._annotations)} 条")
+
+    def _clear_annotations(self):
+        if not self._annotations:
+            self._set_status("当前没有标注")
+            return
+        ans = QMessageBox.question(
+            self, "清空标注", f"确定删除全部 {len(self._annotations)} 条标注？",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
+        )
+        if ans != QMessageBox.Yes:
+            return
+        self._annotations = []
+        self._save_annotations()
+        self._view.page().runJavaScript(
+            "window.__clearAnnotations && window.__clearAnnotations();"
+        )
+        self._set_status("已清空全部标注")
 
     def _open_external(self):
         """用系统默认程序打开当前文档（绕过拦截）"""
