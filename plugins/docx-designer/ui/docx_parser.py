@@ -824,11 +824,17 @@ def _table_rows(tbl, part, index=0):
                 vm = tcPr.find(f"{{{W}}}vMerge")
                 if vm is not None:
                     vmerge = vm.get(f"{{{W}}}val") or "continue"
-            runs, text = _cell_content(tc, part)
+            para_runs, text = _cell_content(tc, part)
+            flat_runs = []
+            for pr in para_runs:
+                if flat_runs:
+                    flat_runs.append({"text": "\n"})
+                flat_runs.extend(pr)
             row_cells.append(
                 {
                     "text": text,
-                    "runs": runs,
+                    "runs": flat_runs,
+                    "para_runs": para_runs,
                     "colspan": colspan,
                     "rowspan": 1,
                     "col": col,
@@ -893,21 +899,20 @@ def _parse_table(tbl, doc, index, style_names):
     }
 
 def _cell_content(tc, part):
-    """单元格 → (全部段落 runs，段落间以 {"text":"\\n"} 分隔， 各段落文本 join)。
+    """单元格 → (各段落 runs 列表, 各段落文本 join)。
 
     多段单元格此前只回传首段 runs，渲染层随之丢掉其余段落（简历类文档
-    正文几乎全在大表格单元格里）；改为全段落拼接，空段保留空行占位。
+    正文几乎全在大表格单元格里）；改为逐段落收集，空段保留空位，
+    供渲染层逐段落出 <p> 与分页时行内拆分。
     """
     texts = []
-    runs = []
+    para_runs = []
     for p in tc.findall(f"{{{W}}}p"):
-        p_runs, text = _parse_runs(p, part)
-        if runs:
-            runs.append({"text": "\n"})
-        runs.extend(p_runs)
+        runs, text = _parse_runs(p, part)
+        para_runs.append(runs)
         if text.strip():
             texts.append(text)
-    return runs, "\n".join(texts)
+    return para_runs, "\n".join(texts)
 
 
 def _table_plain_text(rows):

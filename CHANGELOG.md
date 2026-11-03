@@ -2,8 +2,10 @@
 
 ## Unreleased
 ### 🔧 docx-designer v0.3.1：大表格分页丢内容 + 拖拽失效修复
-- **多段单元格整段丢失**：单元格解析此前只回传首段 runs，渲染层随之丢掉其余段落（简历类文档正文几乎全在大表格单元格里）；改为全段落 runs 拼接（段落间插 `\n` 分隔渲染成 `<br>`），空段保留空行占位；页眉页脚表格同链路受益
-- **超页大表格被裁剪**：JS 装箱分页的溢出处理只在页内已有多个元素时才把元素挪到新页，单元素超页高时直接留下被 `overflow:hidden` 裁剪（29 行简历大表第 20 行后全部不可见）；新增 `_splitTable`：表格单独超页时按行装箱拆到后续页，断点回退到整行网格起点（colspan 和 ≥ 总列数才断，避免切碎 rowspan），单行超页时硬断兜底
+- **pptx 大文件预览空白**：`setHtml` 超 ~2MB 静默不渲染（光大售前 PPT 渲染出 39MB HTML，表现为状态栏「已打开」但内容不刷新）；>1.5MB 自动改走本地文件加载（`plugin_data/docx-designer/preview_a/b.html` 轮换防缓存），qwebchannel.js 用 QFile 读 qrc 资源内联进页面，file:// 加载下拾取/标注桥照常可用；另图片按 blob 哈希去重（同一 logo 多页/多层复用只嵌一份）
+- **pptx 版式/母版背景丢失**：此前只渲染 slide 自身形状（模板背景图/装饰件在版式的非占位符形状里，MindSpore 封面山景图整张丢失）；现在版式与母版非占位符形状垫底渲染（`showMasterSp="0"` 时跳过母版层），背景填充链 slide→layout→master 逐级取（支持图片填充）；版式/母版锚点 `:L`/`:M` 前缀区分
+- **多段单元格整段丢失**：单元格解析此前只回传首段 runs，渲染层随之丢掉其余段落（简历类文档正文几乎全在大表格单元格里）；改为逐段落收集：块级 `<p class=cp>` 渲染 + 平铺 runs（`\n` 分隔）兜底页眉页脚；页眉页脚表格同链路受益
+- **超页大表格被裁剪**：JS 装箱分页的溢出处理只在页内已有多个元素时才把元素挪到新页，单元素超页高时直接留下被 `overflow:hidden` 裁剪（29 行简历大表第 20 行后全部不可见）；新增 `_splitTable`：表格溢出时**在当前页就地按行装箱拆页**（以页面 body 实测高度为界，页 1 剩余空间被表格首行填满，同 Word 行为），断点回退到整行网格起点（colspan 和 ≥ 总列数才断，避免切碎 rowspan），单行超页时按段落拆行续排（单元格逐段落渲染为块级 `<p class=cp>`，续行重复原单元格结构、尾段搬入下页），无法再拆才硬断兜底；无头 Chrome 实测各页 body scrollHeight=clientHeight 零溢出
 - **拖拽打开失效**：预览区被 QWebEngineView 铺满，拖拽事件第一接收者是 WebEngine 内部 delegate（focusProxy），落在窗口的 dragEnterEvent/dropEvent 永远收不到；按宿主 card_viewers 同款模式在 delegate 上幂等装 eventFilter（loadFinished/showEvent 补装，防 delegate 重建），拦截 URL 拖拽转 `dropEvent`（同时阻止 Chromium 用拖入文件导航覆盖预览），非 .docx/.pptx 拖入给状态栏提示
 - **验证**：真实 3 页简历经无头 Chrome 跑分页 → 29 行拆进 5 页、全量文本探针命中；测试 39→42 条（多段单元格 runs/`<br>` 渲染/分页 JS 拆表分支）
 

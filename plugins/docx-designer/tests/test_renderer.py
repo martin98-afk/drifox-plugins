@@ -121,6 +121,27 @@ def test_cell_paragraph_break_renders_br():
     assert "<br>" in html
     assert "<strong>二</strong>" in html
 
+def test_cell_para_runs_render_cp():
+    """para_runs 单元格必须逐段出块级 <p class=cp>（供分页 JS 行内拆分）。"""
+    t = {
+        "kind": "table", "index": 1, "anchor": "1", "style": "", "level": 0,
+        "text": "", "runs": [], "is_list": False,
+        "rows": [[
+            {"text": "一\n二", "runs": [
+                {"text": "一", "bold": False, "italic": False, "underline": False},
+                {"text": "\n"},
+                {"text": "二", "bold": False, "italic": False, "underline": False},
+            ], "para_runs": [
+                [{"text": "一", "bold": False, "italic": False, "underline": False}],
+                [],
+                [{"text": "二", "bold": False, "italic": False, "underline": False}],
+            ], "colspan": 1, "rowspan": 1, "col": 0, "anchor": "1:r0c0"},
+        ]],
+    }
+    html = render_html([t])
+    assert '<p class="cp">' in html
+    assert ">一<" in html and ">二<" in html
+
 def test_paginate_js_splits_tall_tables():
     """分页 JS 必须把超页大表按行拆到后续页（回归：单元素超页被裁剪丢内容）。"""
     html = render_html([_para(0, "x")])

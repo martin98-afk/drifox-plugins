@@ -10,7 +10,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from PyQt5.QtCore import QEvent, QUrl
+from PyQt5.QtCore import QFile, QEvent, QUrl
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QFileDialog,
@@ -236,11 +236,58 @@ class DocxWindowCard(QWidget):
             hdr_ftr=docx_header_footer(str(p)),
             restored=restored,
         )
-        self._view.setHtml(html, QUrl("http://docx-designer.local/"))
+        self._load_html(html)
         self._name_label.setText(p.name)
         note = f"，恢复 {len(restored)} 条历史标注" if restored else ""
         self._set_status(f"已打开 {p.name}（{len(blocks)} 个块）{note}；「标注」读文档写注释，「发送标注」统一交给模型")
         return True
+
+    def _preview_file(self):
+        """大 HTML 落盘文件（两个名字轮换，避免同 URL 缓存）。"""
+        try:
+            from app.plugins.sdk import caps_for
+
+            root = Path(str(caps_for("storage.data_dir", plugin="docx-designer", surface="ui")))
+        except Exception:
+            root = Path.home() / ".drifox"
+        d = root / "plugin_data" / "docx-designer"
+        d.mkdir(parents=True, exist_ok=True)
+        self._pv_flip = not getattr(self, "_pv_flip", False)
+        return d / ("preview_a.html" if self._pv_flip else "preview_b.html")
+
+    def _inline_qwebchannel(self, html):
+        """qwebchannel.js 内联（QFile 读 qrc 资源）：file:// 加载路径下拾取/标注桥照常可用。"""
+        tag = '<script src="qrc:///qtwebchannel/qwebchannel.js"></script>'
+        if tag not in html:
+            return html
+        try:
+            f = QFile(":/qtwebchannel/qwebchannel.js")
+            if not f.open(QFile.ReadOnly):
+                return html
+            data = bytes(f.readAll()).decode("utf-8", "replace")
+            f.close()
+            return html.replace(tag, f"<script>{data}</script>", 1)
+        except Exception:
+            return html
+
+    def _load_html(self, html):
+        """>1.5MB 走本地文件加载：setHtml 超 ~2MB 静默不渲染（售前 PPT 39MB HTML
+        表现为状态栏「已打开」但内容不刷新）。"""
+        payload = self._inline_qwebchannel(html)
+        try:
+            size = len(payload.encode("utf-8"))
+        except Exception:
+            size = len(payload)
+        if size <= 1_500_000:
+            self._view.setHtml(payload, QUrl("http://docx-designer.local/"))
+            return
+        f = self._preview_file()
+        try:
+            f.write_text(payload, encoding="utf-8")
+        except Exception:
+            self._view.setHtml(payload, QUrl("http://docx-designer.local/"))
+            return
+        self._view.load(QUrl.fromLocalFile(str(f)))
 
     def _open_pptx(self, p):
         """pptx：固定画布绝对定位渲染，拾取/标注复用同一套桥。"""
@@ -269,7 +316,7 @@ class DocxWindowCard(QWidget):
         html = render_pptx_html(
             model, outer=self._outer_bg, accent=self._accent_hex, restored=restored
         )
-        self._view.setHtml(html, QUrl("http://docx-designer.local/"))
+        self._load_html(html)
         self._name_label.setText(p.name)
         note = f"，恢复 {len(restored)} 条历史标注" if restored else ""
         self._set_status(

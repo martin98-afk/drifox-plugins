@@ -48,12 +48,14 @@ def render_pptx_html(model, *, outer="#1d2533", accent="#66c6ff", restored=None)
     slides = "".join(_render_slide(s, w, h) for s in model.get("slides") or [])
     css_vars = {"accent": accent, "outer": outer}
     restored_json = json.dumps(restored or [], ensure_ascii=False)
+    assets_json = json.dumps(model.get("assets") or {})
     return (
         '<!DOCTYPE html><html><head><meta charset="utf-8">'
         f"<style>{_CSS % css_vars}</style>"
         '<script src="qrc:///qtwebchannel/qwebchannel.js"></script>'
         f"<script>{_BOOT_JS}</script>"
         f"<script>window.__restored = {restored_json};</script>"
+        f"<script>window.__assets = {assets_json};</script>"
         "</head><body>"
         f'<div class="deck" id="deck">{slides}</div>'
         '<div id="note-box" style="display:none">'
@@ -61,18 +63,31 @@ def render_pptx_html(model, *, outer="#1d2533", accent="#66c6ff", restored=None)
         '<div class="nbtns"><button class="danger" onclick="window.__deleteNote()">删除</button>'
         '<button onclick="window.__closeNote(false)">取消</button>'
         '<button class="primary" onclick="window.__closeNote(true)">保存注释</button></div></div>'
+        f"<script>{_ASSETS_JS}</script>"
         f"<script>{_ANNOTATE_JS}</script>"
         f"<script>{_PICK_JS}</script></body></html>"
     )
+
+_ASSETS_JS = (
+    "(function(){var A=window.__assets||{};"
+    "document.querySelectorAll('img[data-asset]').forEach(function(im){"
+    " var d=A[im.getAttribute('data-asset')]; if(d) im.src=d; });"
+    "document.querySelectorAll('[data-bg-asset]').forEach(function(el){"
+    " var d=A[el.getAttribute('data-bg-asset')]; if(d) el.style.backgroundImage='url(\"'+d+'\")'; });"
+    "})();"
+)
 
 
 def _render_slide(slide, w, h):
     w = w or 0
     h = h or 0
     bg = slide.get("bg") or "#ffffff"
+    bg_attr = ""
+    if slide.get("bg_asset"):
+        bg_attr = f' data-bg-asset="{escape(slide["bg_asset"], quote=True)}"'
     shapes = "".join(_render_shape(sh) for sh in slide.get("shapes") or [])
     return (
-        f'<section class="slide" style="width:{w}pt;height:{h}pt;background:{bg}">'
+        f'<section class="slide" style="width:{w}pt;height:{h}pt;background:{bg}"{bg_attr}>'
         f"{shapes}</section>"
     )
 
@@ -87,7 +102,10 @@ def _render_shape(sh):
         st += f"justify-content:{_valign(sh.get('valign'))};"
         klass = "shp txt"
     elif kind == "image":
-        inner = f'<img src="{sh["src"]}" alt="">'
+        if sh.get("src"):
+            inner = f'<img src="{sh["src"]}" alt="">'
+        else:
+            inner = f'<img data-asset="{escape(sh.get("asset") or "", quote=True)}" alt="">'
         klass = "shp img"
     elif kind == "table":
         inner = _render_table(sh)
