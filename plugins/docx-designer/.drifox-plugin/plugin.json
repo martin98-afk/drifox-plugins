@@ -25,9 +25,11 @@
         "preview"
     ],
     "dependencies": {
-        "pip": [
-            "python-docx>=1.1.0"
-        ]
+        "pip": {
+            "default": [
+                "python-docx>=1.1.0"
+            ]
+        }
     },
     "components": {
         "commands": false,
