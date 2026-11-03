@@ -99,7 +99,7 @@ def _get_dispatcher():
 
 # ── 目标判定 ──────────────────────────────────────────────
 
-_DOCX_SUFFIX = ".docx"
+_DOCX_SUFFIXES = (".docx", ".pptx")
 
 
 def _docx_local_path(target: str) -> Optional[Path]:
@@ -115,7 +115,7 @@ def _docx_local_path(target: str) -> Optional[Path]:
         t = t.lstrip("/")  # file:///C:/x → C:/x；UNC（file://server/x）保留 // 前缀
         if t and not t[1:].startswith(":") and not t.startswith("//"):
             return None
-    if not t.lower().endswith(_DOCX_SUFFIX):
+    if not t.lower().endswith(_DOCX_SUFFIXES):
         return None
     try:
         p = Path(t)

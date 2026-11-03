@@ -18,8 +18,8 @@ def _open_docx_impl(tool_ctx, **kwargs):
     p = Path(path).expanduser()
     if not p.is_file():
         return ToolResult(False, content=f"文件不存在: {path}")
-    if p.suffix.lower() != ".docx":
-        return ToolResult(False, content=f"仅支持 .docx，收到: {p.suffix}")
+    if p.suffix.lower() not in (".docx", ".pptx"):
+        return ToolResult(False, content=f"仅支持 .docx / .pptx，收到: {p.suffix}")
     try:
         from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
 
@@ -49,14 +49,14 @@ _SCHEMA = {
     "function": {
         "name": "open_docx",
         "description": (
-            "打开 docx 文档设计预览窗口：解析 Word 文档并渲染可拾取预览，"
-            "用户在窗口内点「拾取」后点击任意段落/表格/公式/图片，"
+            "打开 docx/pptx 文档设计预览窗口：解析 Word 文档或 PowerPoint 并渲染可拾取预览，"
+            "用户在窗口内点「拾取」后点击任意段落/表格/公式/图片/文本框，"
             "元素的锚点+文本+截图会自动回填到输入框，供你针对精确元素做修改。"
         ),
         "parameters": {
             "type": "object",
             "properties": {
-                "path": {"type": "string", "description": "docx 文件绝对路径"},
+                "path": {"type": "string", "description": "docx / pptx 文件绝对路径"},
             },
             "required": ["path"],
         },
@@ -69,5 +69,5 @@ def register(registry):
     registry.register(
         "open_docx", _SCHEMA, impl=_open_docx_impl,
         danger="safe", cn_name="打开文档预览",
-        group="文档", description="打开 docx 设计预览窗口（可拾取元素回填）",
+        group="文档", description="打开 docx/pptx 设计预览窗口（可拾取元素回填）",
     )
