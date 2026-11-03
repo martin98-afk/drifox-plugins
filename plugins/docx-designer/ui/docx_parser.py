@@ -893,16 +893,21 @@ def _parse_table(tbl, doc, index, style_names):
     }
 
 def _cell_content(tc, part):
-    """单元格 → (首段 runs, 各段落文本 join)。"""
+    """单元格 → (全部段落 runs，段落间以 {"text":"\\n"} 分隔， 各段落文本 join)。
+
+    多段单元格此前只回传首段 runs，渲染层随之丢掉其余段落（简历类文档
+    正文几乎全在大表格单元格里）；改为全段落拼接，空段保留空行占位。
+    """
     texts = []
-    first_runs = None
+    runs = []
     for p in tc.findall(f"{{{W}}}p"):
-        runs, text = _parse_runs(p, part)
-        if first_runs is None and runs:
-            first_runs = runs
+        p_runs, text = _parse_runs(p, part)
+        if runs:
+            runs.append({"text": "\n"})
+        runs.extend(p_runs)
         if text.strip():
             texts.append(text)
-    return (first_runs or []), "\n".join(texts)
+    return runs, "\n".join(texts)
 
 
 def _table_plain_text(rows):
