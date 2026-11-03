@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+### ✨ docx-designer v0.3.0：pptx 预览与拾取标注
+- **pptx 预览**：python-pptx 解析 → 固定画布绝对定位渲染（每页一张 slide）；文本框/占位符（字号/颜色/加粗/对齐/行距，版式占位符回退）、图片、表格、形状填充；图表/媒体降级占位
+- **拾取/标注**：pptx 锚点 \`幻灯片:元素\`（0 起），复用同一套拾取回填、截图、标注持久化与发送流程；\`format_pick\`/\`format_annotations\` 按 pptx 语义描述
+- **接入**：打开对话框与拖拽支持 \`.pptx\`；≡ 菜单缩放对幻灯片生效（deck zoom）
+- **依赖**：deps 预置 python-pptx 1.0.2 + Pillow 13（cp314 win32）+ XlsxWriter；测试新增 4 条（解析/字体回退/表格/渲染）
+
 ### ✨ docx-designer v0.2.5：docx 文档设计模式（预览 + 拾取 + 标注）
 - **预览**：python-docx XML 流解析 → 自生成 HTML（QWebEngineView 分页视图，sectPr 页面尺寸/边距 + JS 装箱分页 + 页眉页脚随页重复）；样式链继承（basedOn）、多级编号（numbering.xml 状态机，中文数字/字母/罗马）、段落属性（对齐/缩进/段距/行距）、run 字号颜色字体、表格 vMerge/gridSpan 与 tblGrid 列宽、内嵌图片、OMML 公式 HTML/CSS 模拟
 - **拾取**：「拾取」态点击元素 → 锚点（body 块索引）+ 类型/样式 + 全文文本 + 区域截图回填输入框（QWebChannel），连续拾取连续追加
