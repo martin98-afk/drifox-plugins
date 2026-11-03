@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+### ✨ browser v1.5.0：Design Mode（点页面元素直接进对话输入框）
+- **交互**：工具栏 `⌖` 按钮、`Ctrl+Shift+C`、右键菜单「选取此元素」三条入口；鼠标移动高亮元素，点击后把 HTML、过滤后的计算样式、元素截图（外扩 40px）追加到输入框，可连续点多个，`Esc` 退出
+- **实现**：事件挂在 `view.focusProxy()` 上（Qt WebEngine 实际渲染控件），页面内只跑无状态 `runJavaScript` 查询，高亮框是 Python 侧透明 QWidget，不污染页面 DOM
+- **回填**：走能力池 `caps_for("input.write")`，首次覆盖后续追加，`focus=False` 保证不抢焦点（否则无法连续拾取）
+- **限制**：closed shadow DOM 只能选到宿主，跨域 iframe 只能选到容器，拿不到 matchedCSSRules（那需要 CDP）
+- **附带**：刷新/停止按钮移到地址栏右侧
+- **验证**：`tests/test_browser_design_mode.py` 11 条纯函数单测通过；`validate_plugins.py` OK
+
 ### 🔧 ssh-toolkit v0.4.4：本地路径黑名单豁免 `~/.drifox/workspaces`（项目工作区误伤）
 - **问题**：`~/.drifox` 整棵在硬黑名单，DriFox 项目工作区 `~/.drifox/workspaces/<proj>` 恰在其下，ssh_upload/ssh_download 对工作区文件一律拒绝，`allow_paths` 显式放行也救不回（硬黑名单优先于边界判定）
 - **修复**：`tools/_guard.py` 新增 `_EXEMPT_SUBTREES` 豁免子树，仅放行 `~/.drifox/workspaces`；`_dir_blocked` 命中豁免子树即跳过目录黑名单。`.drifox` 根下其余位置（connections.json 等凭据落盘）仍拒绝；凭据文件名黑名单（.env / *.pem / sessions.db…）与 workdir/allow_paths 边界在豁免子树内仍生效

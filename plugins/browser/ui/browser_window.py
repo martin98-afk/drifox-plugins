@@ -95,6 +95,7 @@ class BrowserWindowCard(QWidget):
         self._is_dark = True
         self._c = theme_colors(None)  # 主题派生色缓存（apply_theme 前的默认观感）
         self._loader = AsyncDataLoader(self)
+        self._design_mode = None
         self._views = []  # [{view, url, title, placeholder}]
         # H2 修复：地址栏补全数据走异步加载，主线程读内存缓存
         self._suggestions_cache: List[Tuple[str, str]] = []
@@ -158,8 +159,6 @@ class BrowserWindowCard(QWidget):
         self._btn_stop.setVisible(False)
         tly.addWidget(self._btn_back)
         tly.addWidget(self._btn_forward)
-        tly.addWidget(self._btn_reload)
-        tly.addWidget(self._btn_stop)
 
         self._btn_back.clicked.connect(self._go_back)
         self._btn_forward.clicked.connect(self._go_forward)
@@ -171,6 +170,13 @@ class BrowserWindowCard(QWidget):
         self._url_bar.navigate_requested.connect(self._navigate_to_url)
         self._url_bar.set_completer_source(self._get_suggestions)
         tly.addWidget(self._url_bar, 1)
+        tly.addWidget(self._btn_reload)
+        tly.addWidget(self._btn_stop)
+
+        # Design Mode（拾取页面元素 → 回填输入框）
+        self._btn_pick = self._make_tool_btn("⌖", "选取页面元素 (Ctrl+Shift+C)")
+        self._btn_pick.clicked.connect(self._toggle_design_mode)
+        tly.addWidget(self._btn_pick)
 
         # 收藏星标（★/☆ 保留字符，_update_bookmark_state 动态切换）
         self._btn_bookmark = self._make_tool_btn("☆", "收藏当前网页")
@@ -418,6 +424,7 @@ class BrowserWindowCard(QWidget):
         self._update_tab_buttons()
 
     def _on_tab_changed(self, idx: int):
+        self._exit_design_mode()
         if 0 <= idx < len(self._views):
             entry = self._views[idx]
             if entry["view"] is None:
@@ -477,6 +484,7 @@ class BrowserWindowCard(QWidget):
     # ── 加载状态（80ms 合并）──
 
     def _on_load_started(self, view):
+        self._exit_design_mode()
         idx = self._index_for_view(view)
         if idx < 0 or idx >= len(self._views):
             return
@@ -580,6 +588,32 @@ class BrowserWindowCard(QWidget):
         if 0 <= idx < len(self._views):
             return self._views[idx].get("view")
         return None
+
+    # ── Design Mode ──
+
+    def _toggle_design_mode(self):
+        from .design_mode import DesignMode
+
+        if self._design_mode is None:
+            self._design_mode = DesignMode(self)
+        self._design_mode.toggle()
+
+    def _exit_design_mode(self):
+        """切标签、导航、关卡片时调用，幂等。"""
+        mode = getattr(self, "_design_mode", None)
+        if mode is not None:
+            mode.stop()
+
+    def _focus_input(self):
+        """退出拾取后把焦点交还输入框（input.write 已填好内容）。"""
+        try:
+            from app.plugins.sdk import caps_for
+
+            write = caps_for("input.write", plugin="browser", surface="ui")
+            if write is not None:
+                write("", append=True, focus=True)
+        except Exception:
+            pass
 
     def _update_tab_buttons(self):
         view = self._current_view()
