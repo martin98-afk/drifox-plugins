@@ -5,7 +5,7 @@
         "light": "icon.svg",
         "dark": "icon_dark.svg"
     },
-    "version": "0.1.0",
+    "version": "0.1.1",
     "author": {
         "name": "DriFox Contributors"
     },
@@ -24,7 +24,8 @@
         "theme.read",
         "storage.data_dir",
         "window.host",
-        "tool.read"
+        "tool.read",
+        "mcp.call"
     ],
     "keywords": [
         "bilibili",
