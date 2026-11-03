@@ -57,6 +57,39 @@ def test_parse_canvas_and_slides(deck):
     assert model["h_pt"] == pytest.approx(540.0, abs=0.5)
     assert len(model["slides"]) == 2
     assert model["slides"][0]["bg"].startswith("#")
+    assert model["slides"][0]["bg_asset"] is None
+
+def test_image_assets_dedup(deck, tmp_path):
+    """同一图片多次引用只嵌一份资产（回归：多页 logo 重复 base64 致 HTML 39MB）。"""
+    import base64
+
+    parser = _load_ui_module("pptx_parser")
+    renderer = _load_ui_module("pptx_renderer")
+    from pptx import Presentation
+    from pptx.util import Inches
+
+    png = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ"
+        "AAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    )
+    img = tmp_path / "dot.png"
+    img.write_bytes(png)
+    prs = Presentation(str(deck))
+    s = prs.slides[0]
+    s.shapes.add_picture(str(img), Inches(1), Inches(1))
+    s.shapes.add_picture(str(img), Inches(3), Inches(1))
+    p2 = tmp_path / "deck2.pptx"
+    prs.save(str(p2))
+    model = parser.parse_presentation(str(p2))
+    imgs = [sh for sh in model["slides"][0]["shapes"] if sh["kind"] == "image"]
+    assert len(imgs) == 2
+    assert imgs[0]["asset"] == imgs[1]["asset"]
+    assert len(model["assets"]) == 1
+    html = renderer.render_pptx_html(model)
+    assert "window.__assets" in html
+    assert "data-asset=" in html
+    assert "data-bg-asset" not in html or "bg_asset" in model["slides"][0]
+    assert html.count("data:image/png;base64,") == 1  # 资产只嵌一次
 
 
 def test_placeholder_text_and_font(deck):

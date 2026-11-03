@@ -13,6 +13,10 @@ _DEFAULT_PT = 18.0
 _TITLE_PT = 44.0
 _SUBTITLE_PT = 32.0
 
+_NS_P = "{http://schemas.openxmlformats.org/presentationml/2006/main}"
+_NS_A = "{http://schemas.openxmlformats.org/drawingml/2006/main}"
+_NS_R = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}"
+
 
 def _pt(length, default=None):
     if length is None:
@@ -34,38 +38,98 @@ def _rgb(color, default=None):
 
 
 def parse_presentation(path):
-    """pptx → {w_pt, h_pt, slides:[{index, bg, shapes}]}。"""
+    """pptx → {w_pt, h_pt, slides:[{index, bg, bg_asset, shapes}], assets:{hash: data_uri}}。"""
     prs = Presentation(str(path))
+    assets = {}
     model = {
         "w_pt": _pt(prs.slide_width, 960.0),
         "h_pt": _pt(prs.slide_height, 540.0),
         "slides": [],
+        "assets": assets,
     }
     for si, slide in enumerate(prs.slides):
         shapes = []
+        # 版式/母版非占位符形状垫底（背景图/装饰件；占位符是原型不渲染）
+        _collect_layer(slide.slide_layout, slide, si, "L", assets, shapes)
+        if _show_master_sp(slide.slide_layout):
+            _collect_layer(slide.slide_layout.slide_master, slide, si, "M", assets, shapes)
         for shape in slide.shapes:
             try:
-                _collect(shape, slide, si, shapes, 0.0, 0.0)
+                _collect(shape, slide, si, assets, shapes, 0.0, 0.0)
             except Exception:
                 continue
-        model["slides"].append({"index": si, "bg": _slide_bg(slide), "shapes": shapes})
+        color, bg_asset = _slide_background(slide, assets)
+        model["slides"].append(
+            {"index": si, "bg": color, "bg_asset": bg_asset, "shapes": shapes}
+        )
     return model
 
+def _collect_layer(layer, slide, si, prefix, assets, out):
+    for shape in layer.shapes:
+        try:
+            if shape.is_placeholder:
+                continue
+            _collect(shape, slide, si, assets, out, 0.0, 0.0, prefix)
+        except Exception:
+            continue
 
-def _collect(shape, slide, si, out, ox, oy):
+def _show_master_sp(layout):
+    """版式 showMasterSp="0" 时母版形状对该版式不可见。"""
+    try:
+        return layout._element.get("showMasterSp") != "0"
+    except Exception:
+        return True
+
+def _slide_background(slide, assets):
+    """背景链 slide→layout→master 首个有效填充；bgRef（主题引用）不解析。"""
+    for obj in (slide, slide.slide_layout, slide.slide_layout.slide_master):
+        color, asset = _part_bg(obj._element, obj.part, assets)
+        if color or asset:
+            return color or "#ffffff", asset
+    return "#ffffff", None
+
+def _part_bg(el, part, assets):
+    bg = el.find(f"{_NS_P}cSld/{_NS_P}bg")
+    if bg is None:
+        return None, None
+    bgPr = bg.find(f"{_NS_P}bgPr")
+    if bgPr is None:
+        return None, None
+    blip = bgPr.find(f"{_NS_A}blipFill/{_NS_A}blip")
+    if blip is not None:
+        rid = blip.get(f"{_NS_R}embed")
+        try:
+            tp = part.rels[rid].target_part
+            import base64
+            import hashlib
+            blob = tp.blob
+            h = hashlib.md5(blob).hexdigest()[:16]
+            if h not in assets:
+                ct = tp.content_type or "image/png"
+                assets[h] = f"data:{ct};base64," + base64.b64encode(blob).decode("ascii")
+            return None, h
+        except Exception:
+            return None, None
+    solid = bgPr.find(f"{_NS_A}solidFill/{_NS_A}srgbClr")
+    if solid is not None:
+        return f"#{solid.get('val')}", None
+    return None, None
+
+
+def _collect(shape, slide, si, assets, out, ox, oy, apfx=""):
     """shape → 中间结构；组合递归展平（子坐标加偏移）。"""
     if shape.shape_type == MSO_SHAPE_TYPE.GROUP:
         gl = _pt(shape.left, 0.0)
         gt = _pt(shape.top, 0.0)
         for child in shape.shapes:
-            _collect(child, slide, si, out, ox + gl, oy + gt)
+            _collect(child, slide, si, assets, out, ox + gl, oy + gt, apfx)
         return
     geom = _geometry(shape, slide)
     if geom is None:
         return
     left, top, width, height = geom
     base = {
-        "anchor": f"{si}:{len(out)}",
+        "anchor": f"{si}:{apfx}{len(out)}",
         "left": round(left + ox, 2),
         "top": round(top + oy, 2),
         "width": width,
@@ -77,7 +141,7 @@ def _collect(shape, slide, si, out, ox, oy):
     elif getattr(shape, "has_chart", False):
         item = {"kind": "unsupported", "label": "图表"}
     elif shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
-        item = _image_item(shape)
+        item = _image_item(shape, assets)
     elif getattr(shape, "has_text_frame", False) and shape.text_frame.text.strip():
         item = _text_item(shape, slide)
     else:
@@ -206,14 +270,18 @@ def _align(value):
     return None
 
 
-def _image_item(shape):
+def _image_item(shape, assets):
+    """图片 → 按 blob 哈希去重的资产引用（同一 logo 多页复用只嵌一次）。"""
     try:
+        import base64
+        import hashlib
         img = shape.image
-        return {
-            "kind": "image",
-            "src": f"data:{img.content_type or 'image/png'};base64,"
-                   + __import__("base64").b64encode(img.blob).decode("ascii"),
-        }
+        blob = img.blob
+        h = hashlib.md5(blob).hexdigest()[:16]
+        if h not in assets:
+            ct = img.content_type or "image/png"
+            assets[h] = f"data:{ct};base64," + base64.b64encode(blob).decode("ascii")
+        return {"kind": "image", "asset": h}
     except Exception:
         return None
 
@@ -247,14 +315,3 @@ def _shape_item(shape):
     if not fill and not line:
         return None
     return {"kind": "shape", "fill": fill, "line": line}
-
-
-def _slide_bg(slide):
-    try:
-        from pptx.enum.dml import MSO_FILL
-        fill = slide.background.fill
-        if fill.type == MSO_FILL.SOLID:
-            return _rgb(fill.fore_color, "#ffffff")
-    except Exception:
-        pass
-    return "#ffffff"

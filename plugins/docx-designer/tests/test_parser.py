@@ -132,6 +132,9 @@ def test_cell_multi_paragraph_runs(tmp_path):
     bold = next(r for r in c["runs"] if r.get("text") == "第二段")
     assert bold["bold"] is True
     assert c["text"] == "第一段\n第二段\n第三段"
+    # 逐段落结构：供渲染层出块级 <p> 与分页行内拆分
+    assert len(c["para_runs"]) == 3
+    assert any(r.get("text") == "第二段" and r.get("bold") for r in c["para_runs"][1])
 
 def test_omml_math_extracted(tmp_path):
     """用 omml-docx 的构造器造一个含下标公式的文档。"""
