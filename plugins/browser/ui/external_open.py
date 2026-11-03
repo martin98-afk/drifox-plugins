@@ -437,7 +437,7 @@ def _extract_start_url(command: str) -> Optional[str]:
     - start D:\\report.html / explorer report.html  # 本地 html（走 intercept_html）
     非 URL 且非 html 文件（start notepad.exe / explorer D:\\folder）→ None，不拦截。
     """
-    from .redirect_config import _is_local_html
+    from .redirect_config import _HTML_SUFFIX_RE, _is_local_doc
 
     m = _START_RE.match(command.strip())
     if not m:
@@ -454,7 +454,7 @@ def _extract_start_url(command: str) -> Optional[str]:
     if re.search(r"\.(?:exe|bat|cmd|msi|lnk|dll|ps1|vbs|jar)$", tok, re.IGNORECASE):
         return None
     # 本地 html 文件（D:/a.html、/tmp/a.html、file:///a.html）→ 直接返回
-    if _is_local_html(tok):
+    if _is_local_doc(tok, _HTML_SUFFIX_RE):
         return tok
     # 规范化：localhost/裸域名补 scheme；非 URL（本地路径/可执行文件）→ 空
     try:

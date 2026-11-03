@@ -41,6 +41,9 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "intercept_web": True,
     # 拦截打开本地 html 文件（file:// / os.startfile / 磁盘 .html 路径）
     "intercept_html": True,
+    # 拦截打开本地 pdf 文件（file:// / os.startfile / 磁盘 .pdf 路径）
+    # → 内置浏览器（WebEngine PdfViewerEnabled 内嵌渲染）
+    "intercept_pdf": True,
 }
 
 # 旧版（≤v1.3.2）配置键 → 迁移来源；加载时自动折算进 intercept_web
@@ -150,6 +153,7 @@ def reset_config_for_test(path: Path) -> ConfigStore:
 # ── 拦截决策（供 external_open 调用）─────────────────────
 
 _HTML_SUFFIX_RE = re.compile(r"\.(?:html?|xhtml)$", re.IGNORECASE)
+_PDF_SUFFIX_RE = re.compile(r"\.pdf$", re.IGNORECASE)
 
 
 _URL_SCHEMES = ("http", "https", "file", "ftp", "sftp", "ws", "wss")
@@ -182,7 +186,8 @@ def _normalize_to_str(url: Any) -> str:
                 # 检查第一个冒号前是否是已知 URL scheme，是则还原
                 head, sep, rest = as_str.partition(":")
                 if sep and head.lower() in _URL_SCHEMES and (rest.startswith("\\") or rest.startswith("/")):
-                    return f"{head}://{rest.lstrip('\\/')}"
+                    _rest = rest.lstrip("\\/")
+                    return f"{head}://{_rest}"
             return as_str
     except Exception:
         pass
@@ -212,13 +217,13 @@ def _is_http(url: str) -> bool:
     return u.startswith("http://") or u.startswith("https://")
 
 
-def _is_local_html(url: str) -> bool:
-    """是否为本地 html 文件（file:// 协议或磁盘 .html 路径）
+def _is_local_doc(url: str, suffix_re: "re.Pattern") -> bool:
+    """是否为指定后缀的本地文件（file:// 协议或磁盘路径）
 
-    判定：
+    判定（与 _is_local_html 同构，后缀可复用）：
     - file:// 开头（含 file:/// 与 file://server/）→ 看后缀
-    - 其余（本地路径 D:/x.html、/home/x.html、UNC 路径）→ 看后缀
-    - http/https 链接即使带 .html 后缀也不算本地文件（避免把网页 URL 当本地）
+    - 其余（本地路径 D:/x.pdf、/home/x.pdf、UNC 路径）→ 看后缀
+    - http/https 链接即使带该后缀也不算本地文件（避免把网页 URL 当本地）
     """
     u = url.strip()
     if not u:
@@ -226,12 +231,17 @@ def _is_local_html(url: str) -> bool:
     if _is_http(u):
         return False
     if u.lower().startswith("file://"):
-        return bool(_HTML_SUFFIX_RE.search(u))
-    # 无协议字符串（本地路径/相对文件名）：带 html 后缀即视为本地文件。
-    # 排除带 scheme:// 的（ftp://x/a.html 等仍走原逻辑；http/https 已在前面剔除）
-    if not _HTML_SUFFIX_RE.search(u):
+        return bool(suffix_re.search(u))
+    # 无协议字符串（本地路径/相对文件名）：带后缀即视为本地文件。
+    # 排除带 scheme:// 的（ftp://x/a.pdf 等仍走原逻辑；http/https 已在前面剔除）
+    if not suffix_re.search(u):
         return False
     return not bool(re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*://", u))
+
+
+def _is_local_pdf(url: str) -> bool:
+    """是否为本地 pdf 文件（file:// 协议或磁盘 .pdf 路径）"""
+    return _is_local_doc(url, _PDF_SUFFIX_RE)
 
 
 def to_browser_url(url: Any) -> str:
@@ -283,8 +293,10 @@ def should_intercept(url: Any, entry: str = "") -> bool:
     u = _normalize_to_str(url)
     if not u:
         return False
-    if _is_local_html(u):
+    if _is_local_doc(u, _HTML_SUFFIX_RE):
         return bool(cfg.get("intercept_html", True))
+    if _is_local_pdf(u):
+        return bool(cfg.get("intercept_pdf", True))
     if _is_http(u):
         return bool(cfg.get("intercept_web", True))
     return False
@@ -300,6 +312,6 @@ def config_summary() -> str:
     if not cfg.get("enabled", True):
         return "拦截:关"
     parts = []
-    for k, label in (("intercept_web", "网页"), ("intercept_html", "HTML")):
+    for k, label in (("intercept_web", "网页"), ("intercept_html", "HTML"), ("intercept_pdf", "PDF")):
         parts.append(f"{label}·{'开' if cfg.get(k, True) else '关'}")
     return "拦截:开 [" + " ".join(parts) + "]"

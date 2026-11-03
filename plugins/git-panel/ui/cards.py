@@ -1470,6 +1470,13 @@ def _compute_lanes(commits: list, branch_name: str = "") -> int:
         c["_lane_in"] = [(j, ln["color"]) for j, ln in enumerate(lanes)
                          if ln["hash"] is not None]
 
+        # 2.5 释放冗余槽：同一 commit 的出边被本行（idx）消费后，
+        # 其余指向它的槽已终结，不清掉会导致幽灵绿线无限延续、
+        # 且 lane_out 残留使绘制层「汇合」判定永不触发（分叉起点不显示）。
+        for j, ln in enumerate(lanes):
+            if j != idx and ln["hash"] == hash_:
+                lanes[j] = {"hash": None, "color": ln["color"]}
+
         # 3. 出边记账：mainline 继承本槽，merge 的其余 parent 各占一槽
         parents = c.get("parents") or []
         lanes[idx] = {"hash": parents[0] if parents else None, "color": color}
