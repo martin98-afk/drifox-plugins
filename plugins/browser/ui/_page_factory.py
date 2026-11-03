@@ -81,6 +81,10 @@ def create_page(view, profile, new_page_callback=None, is_dark=True):
         _c = theme_colors(owner)
         menu.setStyleSheet(menu_style(_c["ff"], _c["fs"], _c["card"], _c["border"], _c["hover"], _c["text"]))
 
+        if owner is not None and hasattr(owner, "_toggle_design_mode"):
+            menu.addAction("选取此元素", owner._toggle_design_mode)
+            menu.addSeparator()
+
         if link_url.isValid() and not link_url.isEmpty():
             menu.addAction("在当前标签打开", lambda: view.setUrl(link_url))
             if new_page_callback is not None:
