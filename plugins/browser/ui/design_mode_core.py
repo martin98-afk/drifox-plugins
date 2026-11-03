@@ -24,7 +24,28 @@ STYLE_KEYS = (
     "transform", "transition",
 )
 
-_NOISE_VALUES = frozenset({"none", "normal", "auto", "0px", "0", "rgba(0, 0, 0, 0)"})
+_NOISE_VALUES = frozenset({"none", "normal", "0px", "0"})
+
+# 属性 -> 初始值集合。命中即丢弃，因为这些值等于没写。
+_DEFAULTS = {
+    "position": {"static"},
+    "box-sizing": {"content-box"},
+    "width": {"auto"},
+    "height": {"auto"},
+    "min-width": {"auto"},
+    "min-height": {"auto"},
+    "opacity": {"1"},
+    "visibility": {"visible"},
+    "font-weight": {"400", "normal"},
+    "font-style": {"normal"},
+    "text-align": {"left", "start"},
+    "background-position": {"0% 0%", "0px 0px", "0% 0% 0%"},
+    "transition": {"all 0s ease 0s", "none 0s ease 0s", "all 0s"},
+}
+
+# 只在 flex / grid 布局下才有意义的属性前缀
+_FLEX_ONLY = ("flex-", "align-", "justify-", "row-gap", "column-gap", "gap")
+_GRID_ONLY = ("grid-",)
 
 
 def clamp_rect(x, y, w, h, vw, vh, pad=40):
@@ -39,13 +60,37 @@ def clamp_rect(x, y, w, h, vw, vh, pad=40):
 
 
 def filter_styles(raw):
-    """按白名单过滤计算样式，剔除空值与噪音默认值。返回 [(key, value)]。"""
+    """按白名单过滤计算样式，剔除初始值、不生效属性与重复简写。返回 [(key, value)]。"""
+    display = (raw.get("display") or "").strip().lower()
+    is_flex = "flex" in display
+    is_grid = "grid" in display
+    overflow = (raw.get("overflow") or "").strip().lower()
+
     out = []
     for key in STYLE_KEYS:
         value = raw.get(key)
         if not value:
             continue
-        if value.strip().lower() in _NOISE_VALUES:
+        v = value.strip().lower()
+        if v in _NOISE_VALUES:
+            continue
+        # 零边框：0px none <color> 整元素组都是废话
+        if key.startswith("border-") and v.startswith("0px none"):
+            continue
+        # text-decoration 的 none 后面常跟颜色，前缀判定
+        if key == "text-decoration" and v.startswith("none"):
+            continue
+        if key == "background-color" and v in ("rgba(0, 0, 0, 0)", "transparent"):
+            continue
+        # 布局无关的 flex/grid 属性在全掉
+        if key.startswith(_GRID_ONLY) and not is_grid:
+            continue
+        if key.startswith(_FLEX_ONLY) and not (is_flex or is_grid):
+            continue
+        # overflow-x/y 与 overflow 同值时只留简写
+        if key in ("overflow-x", "overflow-y") and v == overflow:
+            continue
+        if v in _DEFAULTS.get(key, ()):
             continue
         out.append((key, value))
     return out

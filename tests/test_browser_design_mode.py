@@ -61,6 +61,40 @@ def test_filter_styles_drops_noise_values():
     assert out["font-size"] == "16px"
 
 
+def test_filter_styles_drops_flex_props_under_block_layout():
+    raw = {"display": "block", "flex-direction": "row", "justify-content": "center"}
+    out = dict(core.filter_styles(raw))
+    assert "flex-direction" not in out
+    assert "justify-content" not in out
+
+
+def test_filter_styles_keeps_flex_props_under_flex_layout():
+    raw = {"display": "flex", "flex-direction": "column", "justify-content": "center"}
+    out = dict(core.filter_styles(raw))
+    assert out["flex-direction"] == "column"
+    assert out["justify-content"] == "center"
+
+
+def test_filter_styles_drops_zero_borders_and_initial_values():
+    raw = {
+        "border-top": "0px none rgb(34, 34, 34)",
+        "position": "static",
+        "opacity": "1",
+        "visibility": "visible",
+        "font-weight": "400",
+        "transition": "all 0s ease 0s",
+        "text-decoration": "none solid rgb(34, 34, 34)",
+    }
+    assert core.filter_styles(raw) == []
+
+
+def test_filter_styles_dedupes_overflow_shorthand():
+    raw = {"overflow": "hidden", "overflow-x": "hidden", "overflow-y": "auto"}
+    out = dict(core.filter_styles(raw))
+    assert "overflow-x" not in out
+    assert out["overflow-y"] == "auto"
+
+
 def test_style_keys_has_no_duplicates():
     assert len(core.STYLE_KEYS) == len(set(core.STYLE_KEYS))
 
