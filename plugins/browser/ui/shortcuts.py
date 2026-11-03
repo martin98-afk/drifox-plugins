@@ -48,9 +48,18 @@ def install_shortcuts(card) -> None:
         sc.setContext(Qt.WidgetWithChildrenShortcut)
         sc.activated.connect(card._reload)
 
+    def _on_escape():
+        mode = getattr(card, "_design_mode", None)
+        if mode is not None and mode.is_active():
+            mode.stop()
+            card._focus_input()
+            return
+        card._stop()
+        card._menu_panel.setVisible(False)
+
     sc = QShortcut(QKeySequence("Esc"), card)
     sc.setContext(Qt.WidgetWithChildrenShortcut)
-    sc.activated.connect(lambda: card._stop() or card._menu_panel.setVisible(False))
+    sc.activated.connect(_on_escape)
 
     for key in ("F12", "Ctrl+Shift+I"):
         sc = QShortcut(QKeySequence(key), card)
@@ -81,6 +90,10 @@ def install_shortcuts(card) -> None:
         sc = QShortcut(QKeySequence(f"Ctrl+{num}"), card)
         sc.setContext(Qt.WidgetWithChildrenShortcut)
         sc.activated.connect(lambda n=num - 1: _jump_tab(card, n))
+
+    sc = QShortcut(QKeySequence("Ctrl+Shift+C"), card)
+    sc.setContext(Qt.WidgetWithChildrenShortcut)
+    sc.activated.connect(card._toggle_design_mode)
 
 
 # ── 辅助函数 ──
