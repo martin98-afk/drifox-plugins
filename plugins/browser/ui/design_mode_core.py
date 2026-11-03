@@ -24,6 +24,12 @@ STYLE_KEYS = (
     "transform", "transition",
 )
 
+_SVG_STYLE_KEYS = (
+    "fill", "fill-opacity", "stroke", "stroke-width", "stroke-opacity",
+    "opacity", "transform",
+    "text-anchor", "font-family", "font-size", "font-weight",
+)
+
 _NOISE_VALUES = frozenset({"none", "normal", "0px", "0"})
 
 # 属性 -> 初始值集合。命中即丢弃，因为这些值等于没写。
@@ -103,6 +109,35 @@ def filter_styles(raw):
     return out
 
 
+def filter_svg_styles(raw):
+    """SVG 图形属性过滤：去默认值，无描边时丢 stroke 组，无填充时丢 fill 组。"""
+    fill = (raw.get("fill") or "").strip().lower()
+    stroke = (raw.get("stroke") or "").strip().lower()
+    out = []
+    for key in _SVG_STYLE_KEYS:
+        value = raw.get(key)
+        if not value:
+            continue
+        v = value.strip().lower()
+        if key == "fill" and v == "none":
+            continue
+        if key == "fill-opacity" and fill == "none":
+            continue
+        if key == "stroke" and v == "none":
+            continue
+        if key in ("stroke-width", "stroke-opacity") and stroke == "none":
+            continue
+        if key in ("opacity", "fill-opacity", "stroke-opacity") and v == "1":
+            continue
+        if key == "transform" and v in ("none", "matrix(1, 0, 0, 1, 0, 0)"):
+            continue
+        out.append((key, value))
+    return out
+
+def filter_pick_styles(raw, is_svg=False):
+    """拾取样式过滤入口：SVG 图形元素走图形属性，其余走 HTML 白名单。"""
+    return filter_svg_styles(raw) if is_svg else filter_styles(raw)
+
 def build_prompt(*, index, url, title, selector, html, styles, shot_path):
     """把一次拾取组装成可读的 Markdown 片段。"""
     parts = [f"<!-- drifox-pick {index} -->", f"页面：{url}"]
@@ -117,10 +152,47 @@ def build_prompt(*, index, url, title, selector, html, styles, shot_path):
     return "\n".join(parts)
 
 
+_JS_HELPERS = r"""
+  var _SHAPE_TAGS = {path:1, rect:1, circle:1, ellipse:1, line:1,
+    polygon:1, polyline:1, image:1, use:1, text:1, tspan:1};
+  function _drifoxVisible(el) {
+    var cs = getComputedStyle(el);
+    if (cs.display === 'none' || cs.visibility === 'hidden') return false;
+    if (el.ownerSVGElement != null) {
+      var tag = (el.tagName || '').toLowerCase();
+      if (!_SHAPE_TAGS[tag]) return true;
+      var fill = cs.fill || 'none';
+      var stroke = cs.stroke || 'none';
+      var fo = parseFloat(cs.fillOpacity);
+      var so = parseFloat(cs.strokeOpacity);
+      var fillOk = fill !== 'none' && !(fo === 0);
+      var strokeOk = stroke !== 'none' && !(so === 0);
+      return fillOk || strokeOk;
+    }
+    return parseFloat(cs.opacity) !== 0;
+  }
+  function _drifoxTarget(x, y) {
+    var list = document.elementsFromPoint
+      ? document.elementsFromPoint(x, y)
+      : [document.elementFromPoint(x, y)];
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && _drifoxVisible(list[i])) return list[i];
+    }
+    var el = list[0];
+    while (el && el !== document.body && el !== document.documentElement
+        && !_drifoxVisible(el)) {
+      el = el.parentElement;
+    }
+    return el;
+  }
+"""
+
 _JS_PICK_TMPL = r"""
+__HELPERS__
 (function(x, y) {
-  var el = document.elementFromPoint(x, y);
+  var el = _drifoxTarget(x, y);
   if (!el) return null;
+  var inSvg = el.ownerSVGElement != null;
   var path = [];
   var cur = el;
   while (cur && cur.nodeType === 1 && cur !== document.body) {
@@ -140,7 +212,7 @@ _JS_PICK_TMPL = r"""
     cur = cur.parentElement;
   }
   var cs = getComputedStyle(el);
-  var keys = __KEYS__;
+  var keys = inSvg ? __SVG_KEYS__ : __KEYS__;
   var styles = {};
   for (var i = 0; i < keys.length; i++) {
     var v = cs.getPropertyValue(keys[i]);
@@ -151,6 +223,7 @@ _JS_PICK_TMPL = r"""
     selector: path.join(' > ') || el.tagName.toLowerCase(),
     html: (el.outerHTML || '').slice(0, 4000),
     styles: styles,
+    is_svg: inSvg,
     rect: {x: r.left, y: r.top, w: r.width, h: r.height},
     text: (el.innerText || '').slice(0, 200)
   };
@@ -158,8 +231,9 @@ _JS_PICK_TMPL = r"""
 """
 
 _JS_HIT_TMPL = r"""
+__HELPERS__
 (function(x, y) {
-  var el = document.elementFromPoint(x, y);
+  var el = _drifoxTarget(x, y);
   if (!el) return null;
   var r = el.getBoundingClientRect();
   return {
@@ -179,9 +253,14 @@ def _fill(tmpl, x, y, **extra):
 
 def js_pick(x, y):
     """返回取完整元素信息的 JS（IIFE，不依赖页面全局函数）。"""
-    return _fill(_JS_PICK_TMPL, x, y, KEYS=json.dumps(list(STYLE_KEYS)))
+    return _fill(
+        _JS_PICK_TMPL, x, y,
+        KEYS=json.dumps(list(STYLE_KEYS)),
+        SVG_KEYS=json.dumps(list(_SVG_STYLE_KEYS)),
+        HELPERS=_JS_HELPERS,
+    )
 
 
 def js_hit(x, y):
-    """返回只取矩形的 JS，用于悬停高亮。"""
-    return _fill(_JS_HIT_TMPL, x, y)
+    """返回只取矩形的 JS，用于悬停高亮（同样跳过不可见命中层）。"""
+    return _fill(_JS_HIT_TMPL, x, y, HELPERS=_JS_HELPERS)

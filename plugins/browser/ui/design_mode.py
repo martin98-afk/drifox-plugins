@@ -13,7 +13,13 @@ from PyQt5.QtCore import QEvent, QObject, QPoint, QTimer, Qt
 from PyQt5.QtGui import QColor, QPainter, QPen
 from PyQt5.QtWidgets import QWidget
 
-from .design_mode_core import build_prompt, clamp_rect, filter_styles, js_hit, js_pick
+from .design_mode_core import (
+    build_prompt,
+    clamp_rect,
+    filter_pick_styles,
+    js_hit,
+    js_pick,
+)
 
 
 def _picks_dir():
@@ -203,7 +209,9 @@ class DesignMode(QObject):
                 self._card._set_status("Design Mode：该位置取不到元素")
                 return
             self._count += 1
-            styles = filter_styles(result.get("styles") or {})
+            styles = filter_pick_styles(
+                result.get("styles") or {}, bool(result.get("is_svg"))
+            )
             shot = self._capture(result.get("rect") or {}, self._count)
             text = build_prompt(
                 index=self._count,

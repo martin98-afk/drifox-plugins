@@ -7,10 +7,19 @@
 - 超过 MAX_ALIVE_TABS 时后台标签冻结（setLifecycleState Frozen，M3 性能）
 """
 
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QMenu, QTabBar
+import os
+
+from PyQt5.QtCore import QSize, Qt, pyqtSignal
+from PyQt5.QtGui import QIcon
+from PyQt5.QtWidgets import QMenu, QTabBar, QToolButton
 
 from .theme import menu_style, theme_colors
+
+# 图标资源目录（ui/assets/）
+_ICON_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+
+def _close_icon(is_dark: bool) -> QIcon:
+    return QIcon(os.path.join(_ICON_DIR, "close_dark.svg" if is_dark else "close.svg"))
 
 # 后台标签冻结阈值：超过此数量的标签，非活跃标签冻结释放内存
 MAX_ALIVE_TABS = 6
@@ -25,7 +34,7 @@ class ChromeTabBar(QTabBar):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._c = theme_colors(None)  # 主题派生色缓存（apply_theme 前默认观感）
-        self.setTabsClosable(True)
+        self.setTabsClosable(False)  # 关闭按钮自绘（原生按钮在深色下是一团圆点 + 英文 tooltip）
         self.setMovable(True)
         self.setExpanding(False)
         self.setDocumentMode(True)
@@ -65,45 +74,84 @@ class ChromeTabBar(QTabBar):
         """应用主题派生色字典（来自 theme.theme_colors(owner)）。"""
         self._c = c
         self.setStyleSheet(_tab_bar_style(c))
+        icon = _close_icon(c["is_dark"])
+        for i in range(self.count()):
+            btn = self.tabButton(i, QTabBar.RightSide)
+            if isinstance(btn, QToolButton):
+                btn.setIcon(icon)
         # 收敛到 menu_style 组合器：selected 背景用 hover（对齐主程序 QMenu 规格，
         # 弱化选中感避免与浏览器页面右键菜单观感割裂）
         self._menu_style = menu_style(c["ff"], c["fs"], c["card"], c["border"], c["hover"], c["text"])
 
+    # ── 自绘关闭按钮 ──
+
+    def tabInserted(self, index):
+        super().tabInserted(index)
+        self._sync_close_buttons()
+
+    def tabRemoved(self, index):
+        super().tabRemoved(index)
+        self._sync_close_buttons()
+
+    def _sync_close_buttons(self):
+        for i in range(self.count()):
+            if isinstance(self.tabButton(i, QTabBar.RightSide), QToolButton):
+                continue
+            self.setTabButton(i, QTabBar.RightSide, self._make_close_button())
+
+    def _make_close_button(self) -> QToolButton:
+        btn = QToolButton(self)
+        btn.setIcon(_close_icon(self._c["is_dark"]))
+        btn.setIconSize(QSize(12, 12))
+        btn.setFixedSize(18, 18)
+        btn.setCursor(Qt.PointingHandCursor)
+        btn.setToolTip("关闭标签")
+        btn.clicked.connect(lambda _checked=False, b=btn: self._close_from_button(b))
+        return btn
+
+    def _close_from_button(self, btn: QToolButton):
+        pos = btn.mapTo(self, btn.rect().center())
+        idx = self.tabAt(pos)
+        if idx >= 0:
+            self.tabCloseRequested.emit(idx)
+
 
 def _tab_bar_style(c: dict) -> str:
-    text = c["text"]
-    fs = c["fs"]
+    # 选中标签用页面同色 + 顶部 2px accent 指示条，未选中降为 secondary
+    # （原来是 selected_bg 铺满整块，彩色块观感廉价）
     return f"""
+    QTabBar {{
+        background: transparent;
+    }}
     QTabBar::tab {{
         background: transparent;
         border: none;
-        padding: 0 8px;
-        min-width: 150px;
-        max-width: 280px;
-        height: 36px;
+        border-top: 2px solid transparent;
+        padding: 0 10px;
+        min-width: 120px;
+        max-width: 220px;
+        height: 34px;
         font-family: '{c["ff"]}';
-        font-size: {fs}px;
-        color: {text};
-        border-top-left-radius: 6px;
-        border-top-right-radius: 6px;
+        font-size: {max(11, c["fs"] - 1)}px;
+        color: {c["secondary"]};
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
     }}
     QTabBar::tab:selected {{
-        background: {c["selected"]};
-        color: {text};
+        background: {c["surface"]};
+        border-top: 2px solid {c["accent"]};
+        color: {c["text"]};
     }}
     QTabBar::tab:hover:!selected {{
         background: {c["hover"]};
+        color: {c["text"]};
     }}
-    QTabBar::close-button {{
+    QTabBar QToolButton {{
         border: none;
-        border-radius: 8px;
-        width: 16px;
-        height: 16px;
-        margin: 2px;
-        subcontrol-origin: padding;
-        subcontrol-position: right;
+        border-radius: 9px;
+        background: transparent;
     }}
-    QTabBar::close-button:hover {{
-        background: rgba(255,80,80,0.8);
+    QTabBar QToolButton:hover {{
+        background: {c["hover"]};
     }}
     """

@@ -17,6 +17,7 @@
         "tool.read",
         "ui.notify",
         "ui.card.show",
+        "input.read",
         "input.write"
     ],
     "keywords": [

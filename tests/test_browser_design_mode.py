@@ -172,3 +172,67 @@ def test_js_hit_returns_rect_only():
 
 def test_js_pick_embeds_style_keys():
     assert '"display"' in core.js_pick(0, 0)
+
+def test_js_pick_targets_visible_element():
+    script = core.js_pick(120, 340)
+    assert "_drifoxTarget(x, y)" in script
+    assert "elementsFromPoint" in script
+    assert "_drifoxVisible" in script
+    assert "is_svg" in script
+
+def test_js_pick_embeds_svg_keys():
+    script = core.js_pick(0, 0)
+    assert '"fill"' in script
+    assert '"fill-opacity"' in script
+    assert '"stroke-width"' in script
+
+def test_js_hit_targets_visible_element():
+    script = core.js_hit(10, 20)
+    assert "_drifoxTarget(x, y)" in script
+    assert "_drifoxVisible" in script
+
+def test_filter_svg_styles_keeps_painted_fill_and_stroke():
+    raw = {
+        "fill": "rgb(253, 141, 60)",
+        "fill-opacity": "0",
+        "stroke": "rgb(0, 0, 0)",
+        "stroke-width": "2px",
+        "stroke-opacity": "1",
+        "opacity": "1",
+        "transform": "matrix(1, 0, 0, 1, 0, 0)",
+        "font-family": "Inter",
+    }
+    out = dict(core.filter_svg_styles(raw))
+    assert out["fill"] == "rgb(253, 141, 60)"
+    assert out["fill-opacity"] == "0"
+    assert out["stroke-width"] == "2px"
+    assert "stroke-opacity" not in out
+    assert "opacity" not in out
+    assert "transform" not in out
+
+def test_filter_svg_styles_drops_unpainted_groups():
+    raw = {
+        "fill": "none",
+        "fill-opacity": "0",
+        "stroke": "none",
+        "stroke-width": "1px",
+        "stroke-opacity": "1",
+    }
+    assert core.filter_svg_styles(raw) == []
+
+def test_filter_svg_styles_keeps_transparent_only_with_painted_counterpart():
+    raw = {"fill": "none", "stroke": "rgb(255, 0, 0)", "stroke-width": "1px"}
+    out = dict(core.filter_svg_styles(raw))
+    assert out["stroke"] == "rgb(255, 0, 0)"
+    assert "fill" not in out
+    assert "fill-opacity" not in out
+    assert "stroke-width" in out
+
+def test_filter_pick_styles_dispatches_by_svg_flag():
+    html_raw = {"display": "flex", "color": "rgb(0, 0, 0)", "fill": "none"}
+    assert "display" in dict(core.filter_pick_styles(html_raw, False))
+    assert "fill" not in dict(core.filter_pick_styles(html_raw, False))
+    svg_raw = {"fill": "rgb(1, 2, 3)", "fill-opacity": "1"}
+    out = dict(core.filter_pick_styles(svg_raw, True))
+    assert out["fill"] == "rgb(1, 2, 3)"
+    assert "fill-opacity" not in out
