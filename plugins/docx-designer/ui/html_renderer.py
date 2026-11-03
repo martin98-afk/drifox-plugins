@@ -17,17 +17,24 @@ _CSS = (
     ":root { --doc-fs: 15px; --accent: %(accent)s; } "
     "* { box-sizing: border-box; } "
     "html, body { margin: 0; padding: 0; } "
-    "body { background: %(outer)s; font-family: '%(ff)s', 'Microsoft YaHei', sans-serif; } "
+    "body { background: %(outer)s; font-family: 'Microsoft YaHei', sans-serif; } "
     ".page { max-width: 860px; margin: 20px auto; background: #ffffff; color: #1a1a1a; "
     "padding: 56px 72px; box-shadow: 0 2px 12px rgba(0,0,0,0.35); "
-    "font-size: var(--doc-fs); line-height: 1.75; font-family: '%(ff)s', sans-serif; } "
-    "h1, h2, h3, h4 { line-height: 1.4; margin: 0.9em 0 0.4em; } "
+    "font-size: var(--doc-fs); line-height: 1.75; "
+    "font-family: %(page_font)s 'SimSun', 'Microsoft YaHei', serif; } "
+    "h1, h2, h3, h4 { line-height: 1.35; color: #000; "
+    "font-family: 'Microsoft YaHei', 'SimHei', sans-serif; } "
+    "h1 { font-size: 1.52em; margin: 0.8em 0 0.45em; } "
+    "h2 { font-size: 1.33em; margin: 0.75em 0 0.4em; } "
+    "h3 { font-size: 1.19em; margin: 0.7em 0 0.35em; } "
+    "h4 { font-size: 1.05em; margin: 0.6em 0 0.3em; } "
     "p { margin: 0.45em 0; } "
+    "p.doc-p, h1.doc-p, h2.doc-p, h3.doc-p, h4.doc-p { margin: 0.35em 0; } "
+    ".lnum { display: inline-block; margin-right: 0.45em; } "
     "img { max-width: 100%%; height: auto; } "
     "figure { margin: 0.8em 0; text-align: center; } "
     "table { border-collapse: collapse; margin: 0.8em 0; width: 100%%; } "
-    "td, th { border: 1px solid #b9b9b9; padding: 5px 9px; font-size: 0.92em; "
-    "vertical-align: top; } "
+    "td, th { border: 1px solid #9c9c9c; padding: 4px 8px; vertical-align: top; } "
     "body.pick [data-anchor] { cursor: crosshair; } "
     "body.pick [data-anchor]:hover { outline: 2px solid var(--accent); "
     "outline-offset: 1px; background: %(tint)s; } "
@@ -66,11 +73,18 @@ _PICK_JS = (
 )
 
 
-def render_html(blocks, *, outer="#1d2533", accent="#66c6ff", font_family=None):
+def render_html(blocks, *, outer="#1d2533", accent="#66c6ff", doc_font=None):
     tint = "rgba(102, 198, 255, 0.10)" if accent == "#66c6ff" else "rgba(0, 120, 212, 0.08)"
     body = "".join(_render_block(b) for b in blocks)
-    css_vars = {"accent": accent, "outer": outer, "tint": tint,
-                "ff": (font_family or "Microsoft YaHei").replace("'", "")}
+    if doc_font is None:  # 从块级 fmt 推断文档默认字体（docx_parser 已注入 docDefaults）
+        for b in blocks:
+            f = (b.get("fmt") or {}).get("font")
+            if f:
+                doc_font = f
+                break
+    safe_font = (doc_font or "").replace("'", "")
+    page_font = f"'{safe_font}', " if safe_font else ""
+    css_vars = {"accent": accent, "outer": outer, "tint": tint, "page_font": page_font}
     return (
         '<!DOCTYPE html><html><head><meta charset="utf-8">'
         f"<style>{_CSS % css_vars}</style>"
@@ -81,21 +95,55 @@ def render_html(blocks, *, outer="#1d2533", accent="#66c6ff", font_family=None):
     )
 
 
+def _fmt_style(f):
+    """Block.fmt / run 属性 dict → 内联 CSS 片段。字号以 Word 五号 10.5pt 为基准转 em（保留缩放）。"""
+    if not f:
+        return ""
+    parts = []
+    if f.get("align"):
+        parts.append(f"text-align:{f['align']}")
+    if f.get("first_line_pt"):
+        parts.append(f"text-indent:{f['first_line_pt']}pt")
+    if f.get("left_pt"):
+        parts.append(f"margin-left:{f['left_pt']}pt")
+    if f.get("before_pt"):
+        parts.append(f"margin-top:{f['before_pt']}pt")
+    if f.get("after_pt"):
+        parts.append(f"margin-bottom:{f['after_pt']}pt")
+    if f.get("line"):
+        parts.append(f"line-height:{f['line']}")
+    if f.get("size_pt"):
+        try:
+            parts.append(f"font-size:{round(float(f['size_pt']) / 10.5, 2)}em")
+        except (TypeError, ValueError):
+            pass
+    if f.get("font") or f.get("font_east"):
+        fname = (f.get("font") or f.get("font_east") or "").replace("'", "")
+        if fname:
+            parts.append(f"font-family:'{fname}'")
+    if f.get("color"):
+        parts.append(f"color:{f['color']}")
+    return (";".join(parts) + ";") if parts else ""
+
+
 def _render_block(b):
     a = escape(b["anchor"], quote=True)
     kind = b["kind"]
     if kind == "table":
         return _render_table(b)
     if kind == "image":
-        return (
-            f'<figure data-anchor="{a}">'
-            f'<img src="{b["image"]}" alt=""></figure>'
-        )
+        style = _fmt_style(b.get("fmt"))
+        st_attr = f' style="{escape(style, quote=True)}"' if style else ""
+        return f'<figure data-anchor="{a}"{st_attr}><img src="{b["image"]}" alt=""></figure>'
     tag = _HEADING_TAGS.get(b.get("level") or 0, "h4") if kind == "heading" else "p"
+    style = _fmt_style(b.get("fmt"))
     inner = _render_runs(b.get("runs"))
-    if b.get("is_list"):
-        inner = '<span style="display:inline-block;width:1.4em;">&#8226;</span>' + inner
-    return f'<{tag} data-anchor="{a}">{inner}</{tag}>'
+    if b.get("list_label"):
+        inner = f'<span class="lnum">{escape(b["list_label"])}</span>{inner}'
+    elif b.get("is_list"):
+        inner = '<span class="lnum">&#8226;</span>' + inner
+    st_attr = f' style="{escape(style, quote=True)}"' if style else ""
+    return f'<{tag} class="doc-p" data-anchor="{a}"{st_attr}>{inner}</{tag}>'
 
 
 def _render_runs(runs):
@@ -110,19 +158,30 @@ def _render_runs(runs):
             if not t:
                 continue
             t = t.replace("\n", "<br>").replace("\t", "&nbsp;&nbsp;&nbsp;&nbsp;")
+            style = _fmt_style({k: r[k] for k in ("size_pt", "color", "font_east") if r.get(k)})
             if r.get("bold"):
                 t = f"<strong>{t}</strong>"
             if r.get("italic"):
                 t = f"<em>{t}</em>"
             if r.get("underline"):
                 t = f"<u>{t}</u>"
+            if style:
+                t = f'<span style="{escape(style, quote=True)}">{t}</span>'
             out.append(t)
     return "".join(out)
 
 
 def _render_table(b):
     a = escape(b["anchor"], quote=True)
+    widths = b.get("col_widths") or []
+    total = sum(w for w in widths if w > 0)
     parts = [f'<table data-anchor="{a}">']
+    if total > 0:
+        cols = []
+        for w in widths:
+            pct = round(w * 100.0 / total, 1) if w > 0 else None
+            cols.append(f'<col style="width:{pct}%">' if pct else "<col>")
+        parts.append(f"<colgroup>{''.join(cols)}</colgroup>")
     for row in b["rows"]:
         parts.append("<tr>")
         for cell in row:

@@ -114,10 +114,12 @@ class DocxWindowCard(QWidget):
         self._accent_hex = accent_hex
         self._ff = c["ff"]
         self.setStyleSheet(
-            f"DocxWindowCard {{ background: {c['surface']}; }}"
-            f"QLabel {{ color: {c['text']}; font-size: 12px; }}"
+            f"DocxWindowCard {{ background: {c['surface']}; "
+            f"font-family: '{c['ff']}'; font-size: {c['fs']}px; }}"
+            f"QLabel {{ color: {c['text']}; font-family: '{c['ff']}'; font-size: {c['fs']}px; }}"
             f"QPushButton {{ background: {c['raised']}; border: 1px solid {c['border']};"
-            f" border-radius: 6px; color: {c['text']}; padding: 5px 14px; }}"
+            f" border-radius: 6px; color: {c['text']}; padding: 5px 14px;"
+            f" font-family: '{c['ff']}'; font-size: {c['fs']}px; }}"
             f"QPushButton:hover {{ background: {c['hover']}; }}"
             f"QPushButton:checked {{ border-color: {accent_hex}; }}"
         )
@@ -149,9 +151,7 @@ class DocxWindowCard(QWidget):
         self._count = 0
         if self._pick_on:
             self._pick_on = False
-        html = render_html(
-            blocks, outer=self._outer_bg, accent=self._accent_hex, font_family=self._ff
-        )
+        html = render_html(blocks, outer=self._outer_bg, accent=self._accent_hex)
         self._view.setHtml(html, QUrl("http://docx-designer.local/"))
         self._name_label.setText(p.name)
         self._set_status(f"已打开 {p.name}（{len(blocks)} 个块），点「拾取」开始选取元素")
