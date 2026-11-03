@@ -2,6 +2,7 @@
 """pptx 中间结构 → HTML（固定画布绝对定位，拾取/标注 JS 复用 docx 实现）。"""
 
 import json
+import math
 from html import escape
 
 from .html_renderer import _ANNOTATE_JS, _BOOT_JS, _PICK_JS
@@ -15,6 +16,9 @@ _CSS = (
     ".slide { position: relative; margin: 16px auto; overflow: hidden; "
     "box-shadow: 0 2px 14px rgba(0,0,0,0.45); } "
     ".shp { position: absolute; overflow: hidden; } "
+    ".shp.tbl { overflow: visible; } "
+    "svg.lines { position: absolute; left: 0; top: 0; width: 100%%; height: 100%%; "
+    "overflow: visible; pointer-events: none; } "
     ".shp.txt { display: flex; flex-direction: column; padding: 3.6pt 7.2pt; } "
     ".shp.txt > p { margin: 0; } "
     ".shp img { width: 100%%; height: 100%%; object-fit: contain; } "
@@ -85,11 +89,51 @@ def _render_slide(slide, w, h):
     bg_attr = ""
     if slide.get("bg_asset"):
         bg_attr = f' data-bg-asset="{escape(slide["bg_asset"], quote=True)}"'
-    shapes = "".join(_render_shape(sh) for sh in slide.get("shapes") or [])
+    shapes_all = slide.get("shapes") or []
+    lines = [sh for sh in shapes_all if sh.get("kind") == "line"]
+    others = [sh for sh in shapes_all if sh.get("kind") != "line"]
+    shapes = _render_lines_svg(lines) + "".join(_render_shape(sh) for sh in others)
     return (
         f'<section class="slide" style="width:{w}pt;height:{h}pt;background:{bg}"{bg_attr}>'
         f"{shapes}</section>"
     )
+
+_DASH_GAP = {"dashed": "6,4", "dotted": "1.5,3"}
+
+def _render_lines_svg(lines):
+    if not lines:
+        return ""
+    body = "".join(_line_svg(sh) for sh in lines)
+    return f'<svg class="lines">{body}</svg>'
+
+def _line_svg(sh):
+    x1, y1, x2, y2 = sh["x1"], sh["y1"], sh["x2"], sh["y2"]
+    color = escape(str(sh.get("color") or "#333333"), quote=True)
+    wpt = max(float(sh.get("width_pt") or 0.75), 0.5)
+    dash = _DASH_GAP.get(sh.get("dash") or "")
+    da = f' stroke-dasharray="{dash}"' if dash else ""
+    seg = f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="{color}" stroke-width="{wpt:g}"{da}/>'
+    arrow = ""
+    if sh.get("tail"):
+        x2, y2, poly = _arrow_at(x1, y1, x2, y2, color)
+        arrow += poly
+    if sh.get("head"):
+        x1, y1, poly2 = _arrow_at(x2, y2, x1, y1, color)
+        arrow += poly2
+    if arrow:
+        seg = f'<line x1="{x1}" y1="{y1}" x2="{x2}" y2="{y2}" stroke="{color}" stroke-width="{wpt:g}"{da}/>'
+    return seg + arrow
+
+def _arrow_at(fx, fy, tx, ty, color):
+    """在 t 端画实心三角箭头（方向 f→t），返回缩短后的 (tx,ty) 与 polygon。"""
+    dx, dy = tx - fx, ty - fy
+    ln = math.hypot(dx, dy) or 1.0
+    ux, uy = dx / ln, dy / ln
+    bx, by = tx - ux * 7.0, ty - uy * 7.0
+    nx, ny = -uy, ux
+    pts = (f"{tx:.2f},{ty:.2f} {bx + nx * 2.6:.2f},{by + ny * 2.6:.2f} "
+           f"{bx - nx * 2.6:.2f},{by - ny * 2.6:.2f}")
+    return round(bx, 2), round(by, 2), f'<polygon points="{pts}" fill="{color}"/>'
 
 
 def _render_shape(sh):
@@ -100,6 +144,10 @@ def _render_shape(sh):
     if kind == "text":
         inner = _render_paras(sh.get("paras") or [])
         st += f"justify-content:{_valign(sh.get('valign'))};"
+        if sh.get("fill"):
+            st += f"background:{sh['fill']};"
+        if sh.get("line"):
+            st += f"border:1pt solid {sh['line']};"
         klass = "shp txt"
     elif kind == "image":
         if sh.get("src"):
@@ -188,6 +236,11 @@ def _render_table(sh):
     for row in sh.get("rows") or []:
         parts.append("<tr>")
         for cell in row:
-            parts.append(f'<td>{escape(cell.get("text") or "")}</td>')
+            span = ""
+            if cell.get("colspan"):
+                span += f' colspan="{cell["colspan"]}"'
+            if cell.get("rowspan"):
+                span += f' rowspan="{cell["rowspan"]}"'
+            parts.append(f"<td{span}>{escape(cell.get('text') or '')}</td>")
         parts.append("</tr>")
     return "<table>" + "".join(parts) + "</table>"
