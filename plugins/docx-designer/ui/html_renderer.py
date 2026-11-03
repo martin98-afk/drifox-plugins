@@ -80,6 +80,10 @@ _CSS = (
 )
 
 _BOOT_JS = (
+    "window.onerror = function(msg){"
+    " document.title = 'JS错误: ' + msg;"
+    " if (window.__bridge && window.__bridge.report_error) window.__bridge.report_error(String(msg));"
+    " return false; };"
     "if (window.qt && qt.webChannelTransport) {"
     " new QWebChannel(qt.webChannelTransport, function(ch) {"
     " window.__bridge = ch.objects.docxbridge; }); }"
@@ -134,9 +138,9 @@ _PAGINATE_JS = (
     " while (pagesEl.firstChild) {"
     "  var sheet = pagesEl.firstChild;"
     "  var bodies = sheet.querySelectorAll('.sheet-body');"
-    "  bodies.forEach(function(bd){ while (bd.firstChild) kids.push(bd.firstChild); });"
+    "  bodies.forEach(function(bd){ while (bd.firstChild) kids.push(bd.removeChild(bd.firstChild)); });"
     "  pagesEl.removeChild(sheet); }"
-    " while (flow.firstChild) kids.push(flow.firstChild);"
+    " while (flow.firstChild) kids.push(flow.removeChild(flow.firstChild));"
     " var pg = window.__page;"
     " var probe = _mkSheet(pg, 0); pagesEl.appendChild(probe);"
     " var pbody = probe.querySelector('.sheet-body');"
@@ -193,13 +197,7 @@ _ANNOTATE_JS = (
     "  el.classList.add('annotated');"
     "  var mark = document.createElement('span'); mark.className = 'amark';"
     "  mark.textContent = a.seq; el.insertBefore(mark, el.firstChild); }); };"
-    "document.addEventListener('DOMContentLoaded', function(){"
-    " var box = document.createElement('div'); box.id = 'note-box'; box.style.display = 'none';"
-    " box.innerHTML = '<textarea placeholder=\"输入对选中元素的注释…\"></textarea>'"
-    " + '<div class=\"nbtns\"><button onclick=\"window.__closeNote(false)\">取消</button>'"
-    " + '<button class=\"primary\" onclick=\"window.__closeNote(true)\">保存注释</button></div>';"
-    " document.body.appendChild(box);"
-    " window.__restoreAnnotations(); });"
+    "window.addEventListener('load', function(){ window.__restoreAnnotations(); });"
 )
 
 
