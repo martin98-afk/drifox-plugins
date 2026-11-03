@@ -541,7 +541,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 3,
+            "downloads": 5,
             "keywords": [
                 "bilibili",
                 "b站",
@@ -636,7 +636,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 75,
+            "downloads": 79,
             "keywords": [
                 "browser",
                 "web",
@@ -1715,6 +1715,7 @@
                 "ui": true,
                 "tools": true
             },
+            "downloads": 4,
             "keywords": [
                 "document",
                 "docx",
@@ -6631,7 +6632,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "video",
                 "short-video",
