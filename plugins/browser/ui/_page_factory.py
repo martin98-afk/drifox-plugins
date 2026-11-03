@@ -24,6 +24,10 @@ def create_page(view, profile, new_page_callback=None, is_dark=True):
     settings.setAttribute(QWebEngineSettings.LocalStorageEnabled, True)
     settings.setAttribute(QWebEngineSettings.PluginsEnabled, True)
     settings.setAttribute(QWebEngineSettings.FullScreenSupportEnabled, True)
+    # 内嵌 PDF 查看器（Qt 5.13+ 枚举；缺失时 PDF 导航会走下载，防御性跳过）
+    _pdf_viewer = getattr(QWebEngineSettings, "PdfViewerEnabled", None)
+    if _pdf_viewer is not None:
+        settings.setAttribute(_pdf_viewer, True)
 
     thumb = "rgba(255,255,255,.55)" if is_dark else "rgba(60,70,85,.55)"
     hover = "rgba(100,150,230,.78)"
