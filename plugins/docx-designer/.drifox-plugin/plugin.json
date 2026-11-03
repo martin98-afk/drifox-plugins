@@ -1,0 +1,37 @@
+{
+    "name": "docx-designer",
+    "description": "docx 文档设计模式 — 独立窗口预览 Word 文档，页内拾取元素（段落/表格/公式/图片），锚点+文本+截图回填输入框，让模型精确修改。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "0.1.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "api_version": 2,
+    "min_host_version": "0.6.10",
+    "capabilities": [
+        "input.read",
+        "input.write",
+        "storage.data_dir"
+    ],
+    "keywords": [
+        "docx",
+        "word",
+        "document",
+        "preview"
+    ],
+    "dependencies": {
+        "pip": [
+            "python-docx>=1.1.0"
+        ]
+    },
+    "components": {
+        "commands": false,
+        "ui": true,
+        "tools": true
+    }
+}
