@@ -21,7 +21,8 @@ from PyQt5.QtWebChannel import QWebChannel
 
 from .docx_parser import parse_document
 from .html_renderer import render_html
-from .picker import DocxBridge, capture_view_rect, format_pick, write_input
+from .picker import DocxBridge, capture_view_rect, write_input
+from .pick_format import format_pick
 from .theme import theme_colors
 
 _CURRENT_CARD = None
@@ -47,6 +48,7 @@ class DocxWindowCard(QWidget):
         self._fs = 15
         self._accent_hex = "#66c6ff"
         self._outer_bg = "#1d2533"
+        self._ff = "Microsoft YaHei"
         self._setup_ui()
         self._setup_webchannel()
         self.setAcceptDrops(True)
@@ -110,6 +112,7 @@ class DocxWindowCard(QWidget):
         c = theme_colors(self)
         accent_hex = "#66c6ff" if c["is_dark"] else "#0078d4"
         self._accent_hex = accent_hex
+        self._ff = c["ff"]
         self.setStyleSheet(
             f"DocxWindowCard {{ background: {c['surface']}; }}"
             f"QLabel {{ color: {c['text']}; font-size: 12px; }}"
@@ -146,7 +149,9 @@ class DocxWindowCard(QWidget):
         self._count = 0
         if self._pick_on:
             self._pick_on = False
-        html = render_html(blocks, outer=self._outer_bg, accent=self._accent_hex)
+        html = render_html(
+            blocks, outer=self._outer_bg, accent=self._accent_hex, font_family=self._ff
+        )
         self._view.setHtml(html, QUrl("http://docx-designer.local/"))
         self._name_label.setText(p.name)
         self._set_status(f"已打开 {p.name}（{len(blocks)} 个块），点「拾取」开始选取元素")
@@ -172,20 +177,20 @@ class DocxWindowCard(QWidget):
         self._count += 1
         text = format_pick(
             self._count,
-            Path(self._current_path).name if self._current_path else "?",
+            self._current_path or "?",
             anchor,
-            self._block_by_anchor(anchor),
+            self._lookup_block(anchor),
             preview,
             str(shot) if shot else None,
+            include_guide=(self._count == 1),
         )
         if write_input(text, self._count):
             self._set_status(f"已回填第 {self._count} 个元素（Esc 退出）")
         else:
             self._set_status("已拾取，但输入框写入失败（能力 input.write 不可用）")
 
-    def _block_by_anchor(self, anchor):
-        if ":r" in anchor:
-            return None
+    def _lookup_block(self, anchor):
+        """锚点 → 所在块（单元格锚点返回其表格块）；找不到返回 None。"""
         idx_s = anchor.split(":", 1)[0]
         for b in self._blocks:
             if b["anchor"] == idx_s:

@@ -17,10 +17,10 @@ _CSS = (
     ":root { --doc-fs: 15px; --accent: %(accent)s; } "
     "* { box-sizing: border-box; } "
     "html, body { margin: 0; padding: 0; } "
-    "body { background: %(outer)s; font-family: 'Microsoft YaHei', sans-serif; } "
+    "body { background: %(outer)s; font-family: '%(ff)s', 'Microsoft YaHei', sans-serif; } "
     ".page { max-width: 860px; margin: 20px auto; background: #ffffff; color: #1a1a1a; "
     "padding: 56px 72px; box-shadow: 0 2px 12px rgba(0,0,0,0.35); "
-    "font-size: var(--doc-fs); line-height: 1.75; } "
+    "font-size: var(--doc-fs); line-height: 1.75; font-family: '%(ff)s', sans-serif; } "
     "h1, h2, h3, h4 { line-height: 1.4; margin: 0.9em 0 0.4em; } "
     "p { margin: 0.45em 0; } "
     "img { max-width: 100%%; height: auto; } "
@@ -66,12 +66,14 @@ _PICK_JS = (
 )
 
 
-def render_html(blocks, *, outer="#1d2533", accent="#66c6ff"):
+def render_html(blocks, *, outer="#1d2533", accent="#66c6ff", font_family=None):
     tint = "rgba(102, 198, 255, 0.10)" if accent == "#66c6ff" else "rgba(0, 120, 212, 0.08)"
     body = "".join(_render_block(b) for b in blocks)
+    css_vars = {"accent": accent, "outer": outer, "tint": tint,
+                "ff": (font_family or "Microsoft YaHei").replace("'", "")}
     return (
         '<!DOCTYPE html><html><head><meta charset="utf-8">'
-        f"<style>{_CSS % {'accent': accent, 'outer': outer, 'tint': tint}}</style>"
+        f"<style>{_CSS % css_vars}</style>"
         '<script src="qrc:///qtwebchannel/qwebchannel.js"></script>'
         f"<script>{_BOOT_JS}</script>"
         f"</head><body><div class=\"page\">{body}</div>"
