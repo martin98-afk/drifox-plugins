@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+### 🔧 browser v1.5.1：修复「在外部浏览器打开」回环到内置浏览器
+- **问题**：工具栏外链按钮走 `open_url_external()`，原实现只取一层 `_drifox_orig_startfile`。热重载接管若把旧代理当成「原始入口」存下，取回的 orig 本身仍是拦截代理，调用后重新走 `_try_intercept` → 内置浏览器新标签，而函数末尾照旧 `return True`，状态栏还报「已在系统默认浏览器打开」
+- **修复**：新增 `_unwrap_startfile()` 沿 `_drifox_orig_startfile` 逐层剥代理（最多 8 层，兼容自环），剥不干净退回模块 stash `_orig_os_startfile`；仍不可用则 Windows 走 `ctypes.windll.shell32.ShellExecuteW`（不经过 Python 层任何 patch，必然落到系统默认浏览器）
+- **诊断**：新增 `[browser-external]` 日志，每次外部打开打印 `os.startfile` / resolved / stash 三个对象，代理链异常可直接定位
+- **验证**：剥链逻辑用四种代理形态（双层代理 / 断链 / 原生 / 自环）探针验证全通过；`py_compile` 通过
+
 ### ✨ browser v1.5.0：Design Mode（点页面元素直接进对话输入框）
 - **交互**：工具栏 `⌖` 按钮、`Ctrl+Shift+C`、右键菜单「选取此元素」三条入口；鼠标移动高亮元素，点击后把 HTML、过滤后的计算样式、元素截图（外扩 40px）追加到输入框，可连续点多个，`Esc` 退出
 - **实现**：事件挂在 `view.focusProxy()` 上（Qt WebEngine 实际渲染控件），页面内只跑无状态 `runJavaScript` 查询，高亮框是 Python 侧透明 QWidget，不污染页面 DOM
