@@ -14,6 +14,14 @@ from loguru import logger
 
 
 def register_ui(registry):
+    # 0) 安装 docx 文件拦截：系统打开 .docx 默认进文档设计预览
+    try:
+        from .external_open import install_docx_redirect
+
+        install_docx_redirect()
+    except Exception:
+        logger.exception("[docx-designer] docx 文件拦截安装失败（不影响其余功能）")
+
     # 1) 清理旧子模块缓存（热重载防旧 .pyc）
     prefix = "ui_plugin_docx_designer."
     stale = [k for k in sys.modules if k.startswith(prefix)]

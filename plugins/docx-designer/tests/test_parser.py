@@ -3,15 +3,26 @@
 
 Run: python -m pytest plugins/docx-designer/tests/test_parser.py -v
 """
+import importlib.util
 import sys
 from pathlib import Path
 
 import pytest
 
 PLUGIN = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PLUGIN))
 
-from ui.docx_parser import parse_document  # noqa: E402
+
+def _load_module(mod_name, filename):
+    """按文件路径加载插件 ui 模块（避免与其它插件的顶层 ui 包名冲突）"""
+    spec = importlib.util.spec_from_file_location(mod_name, PLUGIN / "ui" / filename)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[mod_name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+_docx_parser = _load_module("docx_designer_docx_parser", "docx_parser.py")
+parse_document = _docx_parser.parse_document
 
 DEMO_OMML = (
     PLUGIN.parent / "omml-docx" / "skills" / "omml-docx" / "scripts" / "demo_omml.docx"
@@ -100,12 +111,16 @@ def test_table_gridspan_vmerge(tmp_path):
 
 def test_omml_math_extracted(tmp_path):
     """用 omml-docx 的构造器造一个含下标公式的文档。"""
-    sys.path.insert(0, str(PLUGIN.parent / "omml-docx" / "skills" / "omml-docx" / "scripts"))
-    from omml_utils import build_docx, mixed_para, sub_math
+    omml_scripts = PLUGIN.parent / "omml-docx" / "skills" / "omml-docx" / "scripts"
+    sys.path.insert(0, str(omml_scripts))
+    try:
+        from omml_utils import build_docx, mixed_para, sub_math
 
-    body = mixed_para([("text", "状态 "), ("math", sub_math("x", "t")), ("text", "。")])
-    out = tmp_path / "m.docx"
-    build_docx(body, str(out))
+        body = mixed_para([("text", "状态 "), ("math", sub_math("x", "t")), ("text", "。")])
+        out = tmp_path / "m.docx"
+        build_docx(body, str(out))
+    finally:
+        sys.path.remove(str(omml_scripts))
     blocks = parse_document(str(out))
     p = next(b for b in blocks if "状态" in b["text"])
     assert any("math" in r for r in p["runs"])
