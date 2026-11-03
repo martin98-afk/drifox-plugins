@@ -48,20 +48,6 @@ class _Highlight(QWidget):
         painter.drawRect(self.rect().adjusted(1, 1, -2, -2))
 
 
-class _EscFilter(QObject):
-    """Esc 优先退出 Design Mode，其余按键放行。"""
-
-    def __init__(self, mode):
-        super().__init__(mode)
-        self._mode = mode
-
-    def eventFilter(self, obj, event):
-        if event.type() == QEvent.KeyPress and event.key() == Qt.Key_Escape:
-            self._mode.stop()
-            return True
-        return False
-
-
 class DesignMode(QObject):
     """拾取模式控制器。"""
 
@@ -73,7 +59,6 @@ class DesignMode(QObject):
         self._view = None
         self._proxy = None
         self._highlight = None
-        self._esc_filter = None
         self._active = False
         self._count = 0
         self._pending = False
@@ -118,8 +103,6 @@ class DesignMode(QObject):
         self._highlight.show()
         self._highlight.raise_()
         proxy.installEventFilter(self)
-        self._esc_filter = _EscFilter(self)
-        view.installEventFilter(self._esc_filter)
         self._active = True
         self._count = 0
         view.setFocus()
@@ -136,15 +119,9 @@ class DesignMode(QObject):
                 self._proxy.removeEventFilter(self)
             except RuntimeError:
                 pass
-        if self._view is not None and self._esc_filter is not None:
-            try:
-                self._view.removeEventFilter(self._esc_filter)
-            except RuntimeError:
-                pass
         if self._highlight is not None:
             self._highlight.deleteLater()
             self._highlight = None
-        self._esc_filter = None
         self._view = None
         self._proxy = None
         self._sync_button()
@@ -195,8 +172,6 @@ class DesignMode(QObject):
     def _query_hover(self):
         if not self._active or self._pending or self._view is None:
             return
-        if self._highlight is not None:
-            self._highlight.resize(self._view.size())
         x, y = self._to_page(self._last_pos)
         self._pending = True
 
