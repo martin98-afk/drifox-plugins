@@ -21,9 +21,14 @@ class DocxBridge(QObject):
     def pick(self, anchor, x, y, w, h, preview):
         self._window.on_element_picked(anchor, x, y, w, h, preview)
 
+    @pyqtSlot(str, str, int, str)
+    def annotate_added(self, anchor, comment, seq, snippet):
+        self._window.on_annotation_added(anchor, comment, seq, snippet)
+
     @pyqtSlot()
     def escape(self):
         self._window.set_pick_mode(False)
+        self._window.set_annotate_mode(False)
 
 
 def make_picks_dir():

@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
-"""文档设计窗口：工具栏（打开/拾取/缩放）+ QWebEngineView 预览 + 状态栏。
+"""文档设计窗口：工具栏（打开/拾取/标注/发送标注/缩放）+ 分页预览 + 状态栏。
 
-拾取交互：页面内 JS 点击监听（HTML 自生成，元素自带 data-anchor），
-bridge 回传锚点与矩形，Python 裁剪截图并回填；Esc 由页面 keydown 上报。
+拾取：页面内 JS 点击监听回传锚点与矩形，Python 裁剪截图并回填。
+标注：标注态点击元素弹注释框，角标编号；「发送标注」把全部注释一次性回填。
+分页：sectPr 页面尺寸 + JS 装箱分页，页眉页脚随页重复。
 """
 
+import hashlib
+import json
 from pathlib import Path
 
 from PyQt5.QtCore import QUrl
@@ -19,10 +22,10 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtWebChannel import QWebChannel
 
-from .docx_parser import parse_document
+from .docx_parser import docx_header_footer, docx_page_setup, parse_document
 from .html_renderer import render_html
 from .picker import DocxBridge, capture_view_rect, write_input
-from .pick_format import format_pick
+from .pick_format import format_annotations, format_pick
 from .theme import theme_colors
 
 _CURRENT_CARD = None
@@ -44,7 +47,9 @@ class DocxWindowCard(QWidget):
         self._blocks = []
         self._current_path = ""
         self._pick_on = False
+        self._annotate_on = False
         self._count = 0
+        self._annotations = []
         self._fs = 15
         self._accent_hex = "#66c6ff"
         self._outer_bg = "#1d2533"
@@ -86,11 +91,16 @@ class DocxWindowCard(QWidget):
         self._btn_open.clicked.connect(self._on_open_clicked)
         self._btn_pick = QPushButton("拾取")
         self._btn_pick.clicked.connect(self.toggle_pick)
+        self._btn_annotate = QPushButton("标注")
+        self._btn_annotate.clicked.connect(self.toggle_annotate)
+        self._btn_send = QPushButton("发送标注")
+        self._btn_send.clicked.connect(self._send_annotations)
         self._btn_smaller = QPushButton("A−")
         self._btn_smaller.clicked.connect(lambda: self._zoom(-1))
         self._btn_bigger = QPushButton("A+")
         self._btn_bigger.clicked.connect(lambda: self._zoom(1))
-        for b in (self._btn_open, self._btn_pick, self._btn_smaller, self._btn_bigger):
+        for b in (self._btn_open, self._btn_pick, self._btn_annotate,
+                  self._btn_send, self._btn_smaller, self._btn_bigger):
             top.addWidget(b)
         root.addLayout(top)
 
@@ -149,12 +159,24 @@ class DocxWindowCard(QWidget):
         self._blocks = blocks
         self._current_path = str(p)
         self._count = 0
-        if self._pick_on:
-            self._pick_on = False
-        html = render_html(blocks, outer=self._outer_bg, accent=self._accent_hex)
+        self._pick_on = False
+        self._annotate_on = False
+        self._btn_pick.setDown(False)
+        self._btn_annotate.setDown(False)
+        restored = self._load_annotations()
+        self._annotations = list(restored)
+        html = render_html(
+            blocks,
+            outer=self._outer_bg,
+            accent=self._accent_hex,
+            page_setup=docx_page_setup(str(p)),
+            hdr_ftr=docx_header_footer(str(p)),
+            restored=restored,
+        )
         self._view.setHtml(html, QUrl("http://docx-designer.local/"))
         self._name_label.setText(p.name)
-        self._set_status(f"已打开 {p.name}（{len(blocks)} 个块），点「拾取」开始选取元素")
+        note = f"，恢复 {len(restored)} 条历史标注" if restored else ""
+        self._set_status(f"已打开 {p.name}（{len(blocks)} 个块）{note}；「标注」读文档写注释，「发送标注」统一交给模型")
         return True
 
     # ── 拾取 ──
@@ -164,6 +186,10 @@ class DocxWindowCard(QWidget):
 
     def set_pick_mode(self, on):
         self._pick_on = bool(on)
+        if on:
+            self._annotate_on = False
+            self._btn_annotate.setDown(False)
+            self._view.page().runJavaScript("document.body.classList.remove('annotate');")
         flag = "true" if on else "false"
         self._view.page().runJavaScript(f"document.body.classList.toggle('pick', {flag});")
         self._btn_pick.setDown(on)
@@ -171,6 +197,71 @@ class DocxWindowCard(QWidget):
             self._set_status("拾取模式：点击文档元素回填输入框（Esc 退出）")
         else:
             self._set_status("拾取模式已退出")
+
+    # ── 标注 ──
+
+    def toggle_annotate(self):
+        self.set_annotate_mode(not self._annotate_on)
+
+    def set_annotate_mode(self, on):
+        self._annotate_on = bool(on)
+        if on:
+            self._pick_on = False
+            self._btn_pick.setDown(False)
+            self._view.page().runJavaScript("document.body.classList.remove('pick');")
+        flag = "true" if on else "false"
+        self._view.page().runJavaScript(f"document.body.classList.toggle('annotate', {flag});")
+        self._btn_annotate.setDown(on)
+        if on:
+            self._set_status("标注模式：点击元素写注释，通读完点「发送标注」统一交给模型（Esc 退出）")
+        else:
+            self._set_status("标注模式已退出")
+
+    def on_annotation_added(self, anchor, comment, seq, snippet):
+        self._annotations.append(
+            {"anchor": anchor, "comment": comment, "seq": seq, "snippet": snippet}
+        )
+        self._save_annotations()
+        self._set_status(f"已保存第 {seq} 条标注（共 {len(self._annotations)} 条，Esc 退出）")
+
+    def _annotations_path(self):
+        try:
+            from app.plugins.sdk import caps_for
+
+            root = Path(str(caps_for("storage.data_dir", plugin="docx-designer", surface="ui")))
+        except Exception:
+            root = Path.home() / ".drifox"
+        key = hashlib.md5(self._current_path.encode("utf-8")).hexdigest()[:12]
+        d = root / "plugin_data" / "docx-designer" / "annotations"
+        d.mkdir(parents=True, exist_ok=True)
+        return d / f"{key}.json"
+
+    def _save_annotations(self):
+        try:
+            self._annotations_path().write_text(
+                json.dumps(self._annotations, ensure_ascii=False, indent=1), encoding="utf-8"
+            )
+        except Exception:
+            pass
+
+    def _load_annotations(self):
+        try:
+            f = self._annotations_path()
+            if f.is_file():
+                return json.loads(f.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+        return []
+
+    def _send_annotations(self):
+        if not self._annotations:
+            self._set_status("没有可发送的标注（先进入「标注」模式写注释）")
+            return
+        text = format_annotations(self._current_path or "?", self._annotations)
+        if write_input(text, count=2):
+            self._set_status(f"已发送 {len(self._annotations)} 条标注到输入框")
+        else:
+            self._set_status("发送失败（能力 input.write 不可用）")
 
     def on_element_picked(self, anchor, x, y, w, h, preview):
         shot = capture_view_rect(self._view, x, y, w, h)
@@ -203,8 +294,9 @@ class DocxWindowCard(QWidget):
         self._fs = max(11, min(24, self._fs + delta))
         self._view.page().runJavaScript(
             f"document.documentElement.style.setProperty('--doc-fs', '{self._fs}px');"
+            " setTimeout(function(){ if (window.paginate) paginate(); }, 30);"
         )
-        self._set_status(f"正文字号 {self._fs}px")
+        self._set_status(f"正文字号 {self._fs}px（已重新分页）")
 
     def _set_status(self, text):
         self._status.setText(text)

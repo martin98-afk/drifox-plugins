@@ -83,3 +83,15 @@ def test_guide_on_first_pick():
 def test_table_text_truncation():
     rows = [[{"text": "x" * 100, "anchor": "0:r0c0", "col": 0}] for _ in range(50)]
     assert len(format_table_text(rows)) <= pf._TABLE_CAP + 10
+
+
+def test_format_annotations_layout():
+    anns = [
+        {"anchor": "12", "comment": "逻辑不通", "seq": 1, "snippet": "为什么要先做 X"},
+        {"anchor": "15:r1c0", "comment": "数值来源？", "seq": 2, "snippet": "0.82"},
+    ]
+    text = pf.format_annotations(r"C:\d\a.docx", anns)
+    assert "共 2 条" in text and r"C:\d\a.docx" in text
+    assert "①[元素 #12]" in text and "②[表格 #15 单元格 r1c0]" in text
+    assert "↳ 注释：逻辑不通" in text
+    assert "锚点规则" in text
