@@ -53,12 +53,25 @@ def _circled(n):
     return _CIRCLED[n - 1] if 1 <= n <= 20 else f"({n})"
 
 
+def _is_pptx(path_display):
+    return str(path_display).lower().endswith(".pptx")
+
+def _pptx_desc(anchor):
+    try:
+        page, idx = anchor.split(":", 1)
+        return f"[幻灯片 {int(page) + 1} 元素 {int(idx) + 1}]"
+    except (ValueError, TypeError):
+        return f"[元素 #{anchor}]"
+
 def format_annotations(path_display, annotations):
     """标注统一发送文本：模型逐条按注释修改。"""
-    lines = [f"📝 docx 标注 共 {len(annotations)} 条 [{path_display}]"]
+    kind = "pptx" if _is_pptx(path_display) else "docx"
+    lines = [f"📝 {kind} 标注 共 {len(annotations)} 条 [{path_display}]"]
     for a in annotations:
         anchor = a.get("anchor") or "?"
-        if ":r" in anchor:
+        if _is_pptx(path_display):
+            desc = _pptx_desc(anchor)
+        elif ":r" in anchor:
             base, cell = anchor.split(":", 1)
             desc = f"[表格 #{base} 单元格 {cell}]"
         else:
@@ -77,8 +90,21 @@ def format_annotations(path_display, annotations):
 
 def format_pick(count, path_display, anchor, block, preview, shot_path, *, include_guide=False):
     """组装回填文本。anchor 含 ":r" 即表格单元格。"""
-    lines = [f"📎 docx 拾取 #{count} [{path_display}]"]
-    if ":r" in anchor:
+    kind = "pptx" if _is_pptx(path_display) else "docx"
+    lines = [f"📎 {kind} 拾取 #{count} [{path_display}]"]
+    if _is_pptx(path_display):
+        lines.append(_pptx_desc(anchor))
+        if block is not None and block.get("kind") == "table":
+            full = format_table_text(block.get("rows") or [])
+            lines.append(full if full else f'"{preview}"')
+        elif block is not None:
+            text = (block.get("text") or "").strip()
+            if len(text) > _TEXT_CAP:
+                text = text[:_TEXT_CAP] + "…(截断)"
+            lines.append(f'"{text}"' if text else f'"{preview}"')
+        elif preview:
+            lines.append(f'"{preview}"')
+    elif ":r" in anchor:
         base, cell = anchor.split(":", 1)
         lines.append(f"[表格 #{base} 单元格 {cell}]")
         if block is not None and block.get("kind") == "table":

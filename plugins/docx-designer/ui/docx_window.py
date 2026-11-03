@@ -49,6 +49,8 @@ class DocxWindowCard(QWidget):
 
         self._context_provider = None
         self._blocks = []
+        self._pptx_model = None
+        self._mode = "docx"
         self._current_path = ""
         self._pick_on = False
         self._annotate_on = False
@@ -151,24 +153,29 @@ class DocxWindowCard(QWidget):
     # ── 打开文档 ──
 
     def _on_open_clicked(self):
-        path, _ = QFileDialog.getOpenFileName(self, "打开 Word 文档", "", "Word 文档 (*.docx)")
+        path, _ = QFileDialog.getOpenFileName(self, "打开文档", "", "Word / PowerPoint (*.docx *.pptx)")
         if path:
             self.open_path(path)
 
     def open_path(self, path):
-        """解析并渲染 docx。供工具侧调用；返回是否成功。"""
+        """解析并渲染 docx/pptx。供工具侧调用；返回是否成功。"""
         p = Path(path)
         if not p.is_file():
             self._set_status(f"文件不存在: {path}")
             return False
-        if p.suffix.lower() != ".docx":
-            self._set_status("仅支持 .docx 文件")
+        suffix = p.suffix.lower()
+        if suffix == ".pptx":
+            return self._open_pptx(p)
+        if suffix != ".docx":
+            self._set_status("仅支持 .docx / .pptx 文件")
             return False
         try:
             blocks = parse_document(str(p))
         except Exception as e:
             self._set_status(f"解析失败: {e}")
             return False
+        self._mode = "docx"
+        self._pptx_model = None
         self._blocks = blocks
         self._current_path = str(p)
         self._count = 0
@@ -190,6 +197,41 @@ class DocxWindowCard(QWidget):
         self._name_label.setText(p.name)
         note = f"，恢复 {len(restored)} 条历史标注" if restored else ""
         self._set_status(f"已打开 {p.name}（{len(blocks)} 个块）{note}；「标注」读文档写注释，「发送标注」统一交给模型")
+        return True
+
+    def _open_pptx(self, p):
+        """pptx：固定画布绝对定位渲染，拾取/标注复用同一套桥。"""
+        try:
+            from .pptx_parser import parse_presentation
+            from .pptx_renderer import render_pptx_html
+        except Exception as e:
+            self._set_status(f"pptx 支持不可用: {e}")
+            return False
+        try:
+            model = parse_presentation(str(p))
+        except Exception as e:
+            self._set_status(f"解析失败: {e}")
+            return False
+        self._mode = "pptx"
+        self._pptx_model = model
+        self._blocks = []
+        self._current_path = str(p)
+        self._count = 0
+        self._pick_on = False
+        self._annotate_on = False
+        self._btn_pick.setDown(False)
+        self._btn_annotate.setDown(False)
+        restored = self._load_annotations()
+        self._annotations = list(restored)
+        html = render_pptx_html(
+            model, outer=self._outer_bg, accent=self._accent_hex, restored=restored
+        )
+        self._view.setHtml(html, QUrl("http://docx-designer.local/"))
+        self._name_label.setText(p.name)
+        note = f"，恢复 {len(restored)} 条历史标注" if restored else ""
+        self._set_status(
+            f"已打开 {p.name}（{len(model['slides'])} 页）{note}；「拾取」取元素，「标注」写注释"
+        )
         return True
 
     # ── 拾取 ──
@@ -342,16 +384,45 @@ class DocxWindowCard(QWidget):
 
     def _lookup_block(self, anchor):
         """锚点 → 所在块（单元格锚点返回其表格块）；找不到返回 None。"""
+        if self._mode == "pptx":
+            return self._lookup_pptx_shape(anchor)
         idx_s = anchor.split(":", 1)[0]
         for b in self._blocks:
             if b["anchor"] == idx_s:
                 return b
         return None
 
+    def _lookup_pptx_shape(self, anchor):
+        try:
+            si, idx = (int(x) for x in anchor.split(":", 1))
+            sh = self._pptx_model["slides"][si]["shapes"][idx]
+        except Exception:
+            return None
+        kind = sh.get("kind")
+        if kind == "table":
+            rows = [[{"text": c.get("text") or ""} for c in row] for row in sh.get("rows") or []]
+            return {"kind": "table", "style": "表格", "rows": rows, "text": ""}
+        if kind == "text":
+            text = "\n".join(
+                "".join(r.get("text") or "" for r in p.get("runs") or [])
+                for p in sh.get("paras") or []
+            )
+            return {"kind": "text", "style": "文本框", "text": text}
+        if kind == "image":
+            return {"kind": "image", "style": "图片", "text": ""}
+        return {"kind": kind or "shape", "style": "形状", "text": ""}
+
     # ── 缩放 ──
 
     def _zoom(self, delta):
         self._fs = max(11, min(24, self._fs + delta))
+        if self._mode == "pptx":
+            zoom = round(self._fs / 15.0, 2)
+            self._view.page().runJavaScript(
+                f"var d=document.getElementById('deck'); if(d) d.style.zoom='{zoom}';"
+            )
+            self._set_status(f"幻灯片缩放 {int(zoom * 100)}%")
+            return
         self._view.page().runJavaScript(
             f"document.documentElement.style.setProperty('--doc-fs', '{self._fs}px');"
             " setTimeout(function(){ if (window.paginate) paginate(); }, 30);"
@@ -373,6 +444,6 @@ class DocxWindowCard(QWidget):
     def dropEvent(self, event):
         for url in event.mimeData().urls():
             p = url.toLocalFile()
-            if p.lower().endswith(".docx"):
+            if p.lower().endswith((".docx", ".pptx")):
                 self.open_path(p)
                 break
