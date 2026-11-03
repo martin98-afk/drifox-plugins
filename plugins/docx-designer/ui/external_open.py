@@ -27,6 +27,7 @@
 """
 
 import os
+import sys
 from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import unquote
@@ -144,13 +145,8 @@ def _open_in_designer(path: Path) -> bool:
 
 
 def open_in_system(path):
-    """绕过拦截，用系统默认程序打开（供「用系统程序打开」菜单项）"""
-    if _orig_os_startfile is not None:
-        _orig_os_startfile(str(path))
-    elif hasattr(os, "startfile"):
-        os.startfile(str(path))
-    else:
-        raise OSError("os.startfile 不可用")
+    """绕过全部拦截代理，系统级打开（供「用系统程序打开」菜单项）"""
+    _shell_open(str(path))
 
 
 def _try_intercept(target: Any) -> bool:
@@ -181,15 +177,37 @@ def _try_intercept(target: Any) -> bool:
 
 
 def _fallback_open(path: Path):
-    """窗口打开失败时回退原始入口，保证文件仍能被系统程序打开。"""
-    logger.warning(f"[docx-redirect] 预览打开失败，回退系统打开: {path}")
+    """窗口打开失败时系统级打开（不走任何 startfile 代理，防回环）。"""
+    logger.warning(f"[docx-redirect] 预览打开失败，系统级打开: {path}")
+    _shell_open(str(path))
+
+
+def _shell_open(path: str) -> bool:
+    """系统级打开：不经过 webbrowser / QDesktopServices / os.startfile 任何代理。
+
+    Windows 走 ShellExecuteW；macOS 走 open；Linux 桌面走 xdg-open。
+    """
     try:
-        if _orig_os_startfile is not None:
-            _orig_os_startfile(str(path))
-        elif hasattr(os, "startfile"):
-            os.startfile(str(path))
+        if sys.platform == "win32":
+            import ctypes
+
+            rc = ctypes.windll.shell32.ShellExecuteW(None, "open", path, None, None, 1)
+            if rc > 32:
+                return True
+            logger.warning(f"[docx-redirect] ShellExecuteW 失败 rc={rc}: {path[:80]}")
+            return False
+        if sys.platform == "darwin":
+            import subprocess
+
+            subprocess.Popen(["open", path])
+            return True
+        import subprocess
+
+        subprocess.Popen(["xdg-open", path])
+        return True
     except Exception:
-        logger.exception("[docx-redirect] 回退系统打开失败")
+        logger.exception(f"[docx-redirect] 系统级打开异常: {path[:80]}")
+        return False
 
 
 # ── 代理 ─────────────────────────────────────────────────

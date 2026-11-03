@@ -103,8 +103,6 @@ class DocxWindowCard(QWidget):
         more_menu.addAction("增大字号", lambda: self._zoom(1))
         more_menu.addAction("减小字号", lambda: self._zoom(-1))
         self._btn_more.setMenu(more_menu)
-        self._btn_smaller.hide()
-        self._btn_bigger.hide()
         for b in (self._btn_open, self._btn_pick, self._btn_annotate, self._btn_more):
             top.addWidget(b)
         root.addLayout(top)
