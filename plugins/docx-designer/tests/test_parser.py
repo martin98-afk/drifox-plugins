@@ -100,8 +100,6 @@ def test_table_gridspan_vmerge(tmp_path):
 
 def test_omml_math_extracted(tmp_path):
     """用 omml-docx 的构造器造一个含下标公式的文档。"""
-    import sys as _sys
-
     sys.path.insert(0, str(PLUGIN.parent / "omml-docx" / "skills" / "omml-docx" / "scripts"))
     from omml_utils import build_docx, mixed_para, sub_math
 
