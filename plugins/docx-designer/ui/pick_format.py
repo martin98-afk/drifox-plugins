@@ -7,17 +7,16 @@
 - 单元格给「格文本 + 所在行 + 表格全文」三层上下文
 - 段落给全文（超长截断），不再用 200 字预览
 - 首次回填附锚点语义说明（#N = body 第 N 个块）
+- pptx 锚点为 `幻灯片:元素`（0 起）
 """
 
 _TEXT_CAP = 1200      # 单块文本上限
 _TABLE_CAP = 3000     # 全表文本上限
 
-
 def _row_text(row):
     return " | ".join(
         (c.get("text") or "").replace("\n", " ").strip() for c in row
     )
-
 
 def format_table_text(rows, cap=_TABLE_CAP):
     lines = [_row_text(row) for row in (rows or [])]
@@ -25,7 +24,6 @@ def format_table_text(rows, cap=_TABLE_CAP):
     if len(text) > cap:
         text = text[:cap] + "…(截断)"
     return text
-
 
 def _cell_info(block, anchor):
     """单元格锚点 → (格文本, 所在行文本)。找不到返回 (None, None)。"""
@@ -45,20 +43,30 @@ def _cell_info(block, anchor):
             break
     return cell_text, _row_text(row)
 
-
 _CIRCLED = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
-
 
 def _circled(n):
     return _CIRCLED[n - 1] if 1 <= n <= 20 else f"({n})"
 
+def _is_pptx(path_display):
+    return str(path_display).lower().endswith(".pptx")
+
+def _pptx_desc(anchor):
+    try:
+        page, idx = anchor.split(":", 1)
+        return f"[幻灯片 {int(page) + 1} 元素 {int(idx) + 1}]"
+    except (ValueError, TypeError):
+        return f"[元素 #{anchor}]"
 
 def format_annotations(path_display, annotations):
     """标注统一发送文本：模型逐条按注释修改。"""
-    lines = [f"📝 docx 标注 共 {len(annotations)} 条 [{path_display}]"]
+    kind = "pptx" if _is_pptx(path_display) else "docx"
+    lines = [f"📝 {kind} 标注 共 {len(annotations)} 条 [{path_display}]"]
     for a in annotations:
         anchor = a.get("anchor") or "?"
-        if anchor == "header":
+        if _is_pptx(path_display):
+            desc = _pptx_desc(anchor)
+        elif anchor == "header":
             desc = "[页眉]"
         elif anchor == "footer":
             desc = "[页脚]"
@@ -74,15 +82,27 @@ def format_annotations(path_display, annotations):
             lines.append(f"  截图：{a['shot']}")
     lines.append(
         "（锚点规则: #N = 文档 body 第 N 个块,从 0 数起;表格单元格 N:r行c列;"
-        "header/footer = 页眉/页脚;请逐条按注释修改对应元素）"
+        "header/footer = 页眉/页脚;pptx 为 幻灯片:元素;请逐条按注释修改对应元素）"
     )
     return "\n".join(lines)
 
-
 def format_pick(count, path_display, anchor, block, preview, shot_path, *, include_guide=False):
     """组装回填文本。anchor 含 ":r" 即表格单元格。"""
-    lines = [f"📎 docx 拾取 #{count} [{path_display}]"]
-    if anchor == "header":
+    kind = "pptx" if _is_pptx(path_display) else "docx"
+    lines = [f"📎 {kind} 拾取 #{count} [{path_display}]"]
+    if _is_pptx(path_display):
+        lines.append(_pptx_desc(anchor))
+        if block is not None and block.get("kind") == "table":
+            full = format_table_text(block.get("rows") or [])
+            lines.append(full if full else f'"{preview}"')
+        elif block is not None:
+            text = (block.get("text") or "").strip()
+            if len(text) > _TEXT_CAP:
+                text = text[:_TEXT_CAP] + "…(截断)"
+            lines.append(f'"{text}"' if text else f'"{preview}"')
+        elif preview:
+            lines.append(f'"{preview}"')
+    elif anchor == "header":
         lines.append("[页眉]")
         if preview:
             lines.append(f'"{preview}"')
@@ -125,6 +145,7 @@ def format_pick(count, path_display, anchor, block, preview, shot_path, *, inclu
     if include_guide:
         lines.append(
             "（锚点规则: #N = 文档 body 第 N 个块,从 0 数起;表格单元格 N:r行c列;"
-            "header/footer = 页眉/页脚;可用 python-docx 遍历 body 的 w:p/w:tbl 按序定位）"
+            "header/footer = 页眉/页脚;pptx 为 幻灯片:元素;"
+            "可用 python-docx 遍历 body 的 w:p/w:tbl 按序定位）"
         )
     return "\n".join(lines)
