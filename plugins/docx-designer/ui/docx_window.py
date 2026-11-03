@@ -257,15 +257,34 @@ class DocxWindowCard(QWidget):
         self._save_annotations()
         self._set_status(f"已删除标注，剩余 {len(self._annotations)} 条")
 
+    def _confirm_clear(self, count):
+        """宿主统一 ConfirmDialog（MaskDialogBase 风格）；不可用时回退 QMessageBox。"""
+        try:
+            from app.widgets.common_dialogs import ConfirmDialog
+
+            dialog = ConfirmDialog(
+                title="清空标注",
+                content=f"确定删除全部 {count} 条标注？删除后不可恢复。",
+                confirm_text="清空",
+                cancel_text="取消",
+                parent=self.window(),
+            )
+            picked = {"ok": False}
+            dialog.confirmed.connect(lambda: picked.update(ok=True))
+            dialog.exec_()
+            return picked["ok"]
+        except Exception:
+            ans = QMessageBox.question(
+                self, "清空标注", f"确定删除全部 {count} 条标注？",
+                QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
+            )
+            return ans == QMessageBox.Yes
+
     def _clear_annotations(self):
         if not self._annotations:
             self._set_status("当前没有标注")
             return
-        ans = QMessageBox.question(
-            self, "清空标注", f"确定删除全部 {len(self._annotations)} 条标注？",
-            QMessageBox.Yes | QMessageBox.No, QMessageBox.No,
-        )
-        if ans != QMessageBox.Yes:
+        if not self._confirm_clear(len(self._annotations)):
             return
         self._annotations = []
         self._save_annotations()
