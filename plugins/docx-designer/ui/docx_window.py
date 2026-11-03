@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
+    QMenu,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -23,6 +24,7 @@ from PyQt5.QtWebEngineWidgets import QWebEngineView
 from PyQt5.QtWebChannel import QWebChannel
 
 from .docx_parser import docx_header_footer, docx_page_setup, parse_document
+from .external_open import open_in_system
 from .html_renderer import render_html
 from .picker import DocxBridge, capture_view_rect, write_input
 from .pick_format import format_annotations, format_pick
@@ -93,14 +95,17 @@ class DocxWindowCard(QWidget):
         self._btn_pick.clicked.connect(self.toggle_pick)
         self._btn_annotate = QPushButton("标注")
         self._btn_annotate.clicked.connect(self.toggle_annotate)
-        self._btn_send = QPushButton("发送标注")
-        self._btn_send.clicked.connect(self._send_annotations)
-        self._btn_smaller = QPushButton("A−")
-        self._btn_smaller.clicked.connect(lambda: self._zoom(-1))
-        self._btn_bigger = QPushButton("A+")
-        self._btn_bigger.clicked.connect(lambda: self._zoom(1))
-        for b in (self._btn_open, self._btn_pick, self._btn_annotate,
-                  self._btn_send, self._btn_smaller, self._btn_bigger):
+        self._btn_more = QPushButton("≡")
+        more_menu = QMenu(self._btn_more)
+        more_menu.addAction("发送标注", self._send_annotations)
+        more_menu.addAction("用系统程序打开", self._open_external)
+        more_menu.addSeparator()
+        more_menu.addAction("增大字号", lambda: self._zoom(1))
+        more_menu.addAction("减小字号", lambda: self._zoom(-1))
+        self._btn_more.setMenu(more_menu)
+        self._btn_smaller.hide()
+        self._btn_bigger.hide()
+        for b in (self._btn_open, self._btn_pick, self._btn_annotate, self._btn_more):
             top.addWidget(b)
         root.addLayout(top)
 
@@ -132,6 +137,10 @@ class DocxWindowCard(QWidget):
             f" font-family: '{c['ff']}'; font-size: {c['fs']}px; }}"
             f"QPushButton:hover {{ background: {c['hover']}; }}"
             f"QPushButton:checked {{ border-color: {accent_hex}; }}"
+            f"QPushButton::menu-indicator {{ image: none; width: 0px; }}"
+            f"QMenu {{ background: {c['surface']}; color: {c['text']}; border: 1px solid {c['border']}; }}"
+            f"QMenu::item {{ padding: 6px 24px; }}"
+            f"QMenu::item:selected {{ background: {c['hover']}; }}"
         )
         self._outer_bg = c["raised"]
 
@@ -217,12 +226,32 @@ class DocxWindowCard(QWidget):
         else:
             self._set_status("标注模式已退出")
 
-    def on_annotation_added(self, anchor, comment, seq, snippet):
+    def on_annotation_added(self, anchor, comment, seq, snippet, x, y, w, h):
+        shot = capture_view_rect(self._view, x, y, w, h)
         self._annotations.append(
-            {"anchor": anchor, "comment": comment, "seq": seq, "snippet": snippet}
+            {"anchor": anchor, "comment": comment, "seq": seq, "snippet": snippet,
+             "shot": str(shot) if shot else None}
         )
         self._save_annotations()
         self._set_status(f"已保存第 {seq} 条标注（共 {len(self._annotations)} 条，Esc 退出）")
+
+    def on_annotation_updated(self, anchor, comment):
+        for a in self._annotations:
+            if a["anchor"] == anchor:
+                a["comment"] = comment
+        self._save_annotations()
+        self._set_status(f"标注 [{anchor}] 已更新")
+
+    def _open_external(self):
+        """用系统默认程序打开当前文档（绕过拦截）"""
+        if not self._current_path:
+            self._set_status("尚未打开文档")
+            return
+        try:
+            open_in_system(self._current_path)
+            self._set_status(f"已用系统默认程序打开: {Path(self._current_path).name}")
+        except Exception as e:
+            self._set_status(f"系统打开失败: {e}")
 
     def _annotations_path(self):
         try:

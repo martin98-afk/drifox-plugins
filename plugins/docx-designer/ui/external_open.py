@@ -129,10 +129,28 @@ def _open_in_designer(path: Path) -> bool:
 
     registry = UIPluginRegistry.get_instance()
     registry.toggle_floating_card("docx-designer")
-    card = registry.get_card_widget("docx-designer")
+    card = registry.get_floating_card_widget("docx-designer")
+    if card is None:
+        # 兜底：模块级单例（热重载后 registry 缓存缺失时）
+        try:
+            from .docx_window import _get_current_card
+
+            card = _get_current_card()
+        except Exception:
+            card = None
     if card is None:
         return False
     return bool(card.open_path(str(path)))
+
+
+def open_in_system(path):
+    """绕过拦截，用系统默认程序打开（供「用系统程序打开」菜单项）"""
+    if _orig_os_startfile is not None:
+        _orig_os_startfile(str(path))
+    elif hasattr(os, "startfile"):
+        os.startfile(str(path))
+    else:
+        raise OSError("os.startfile 不可用")
 
 
 def _try_intercept(target: Any) -> bool:
@@ -146,10 +164,13 @@ def _try_intercept(target: Any) -> bool:
         return False
 
     def _open():
-        if _open_in_designer(path):
-            logger.info(f"[docx-redirect] 已拦截 → 文档设计预览: {path.name}")
-        else:
-            _fallback_open(path)
+        try:
+            if _open_in_designer(path):
+                logger.info(f"[docx-redirect] 已拦截 → 文档设计预览: {path.name}")
+                return
+        except Exception:
+            logger.exception("[docx-redirect] 预览打开异常")
+        _fallback_open(path)
 
     disp = _get_dispatcher()
     if disp is not None:
