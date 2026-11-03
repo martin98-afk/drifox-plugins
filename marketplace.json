@@ -1697,7 +1697,7 @@
         {
             "name": "docx-designer",
             "description": "docx 文档设计模式 — 独立窗口预览 Word 文档，页内拾取元素（段落/表格/公式/图片），锚点+文本+截图回填输入框，让模型精确修改。",
-            "version": "0.2.0",
+            "version": "0.2.1",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
