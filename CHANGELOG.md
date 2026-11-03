@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+### 🔧 docx-designer v0.3.1：大表格分页丢内容 + 拖拽失效修复
+- **多段单元格整段丢失**：单元格解析此前只回传首段 runs，渲染层随之丢掉其余段落（简历类文档正文几乎全在大表格单元格里）；改为全段落 runs 拼接（段落间插 `\n` 分隔渲染成 `<br>`），空段保留空行占位；页眉页脚表格同链路受益
+- **超页大表格被裁剪**：JS 装箱分页的溢出处理只在页内已有多个元素时才把元素挪到新页，单元素超页高时直接留下被 `overflow:hidden` 裁剪（29 行简历大表第 20 行后全部不可见）；新增 `_splitTable`：表格单独超页时按行装箱拆到后续页，断点回退到整行网格起点（colspan 和 ≥ 总列数才断，避免切碎 rowspan），单行超页时硬断兜底
+- **拖拽打开失效**：预览区被 QWebEngineView 铺满，拖拽事件第一接收者是 WebEngine 内部 delegate（focusProxy），落在窗口的 dragEnterEvent/dropEvent 永远收不到；按宿主 card_viewers 同款模式在 delegate 上幂等装 eventFilter（loadFinished/showEvent 补装，防 delegate 重建），拦截 URL 拖拽转 `dropEvent`（同时阻止 Chromium 用拖入文件导航覆盖预览），非 .docx/.pptx 拖入给状态栏提示
+- **验证**：真实 3 页简历经无头 Chrome 跑分页 → 29 行拆进 5 页、全量文本探针命中；测试 39→42 条（多段单元格 runs/`<br>` 渲染/分页 JS 拆表分支）
+
 ### ✨ docx-designer v0.3.0：pptx 预览与拾取标注
 - **pptx 预览**：python-pptx 解析 → 固定画布绝对定位渲染（每页一张 slide）；文本框/占位符（字号/颜色/加粗/对齐/行距，版式占位符回退）、图片、表格、形状填充；图表/媒体降级占位
 - **拾取/标注**：pptx 锚点 \`幻灯片:元素\`（0 起），复用同一套拾取回填、截图、标注持久化与发送流程；\`format_pick\`/\`format_annotations\` 按 pptx 语义描述

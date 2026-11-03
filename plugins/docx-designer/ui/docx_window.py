@@ -10,7 +10,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from PyQt5.QtCore import QUrl
+from PyQt5.QtCore import QEvent, QUrl
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QFileDialog,
@@ -127,6 +127,48 @@ class DocxWindowCard(QWidget):
         self._channel = QWebChannel(self._view.page())
         self._channel.registerObject("docxbridge", self._bridge)
         self._view.page().setWebChannel(self._channel)
+        self._view.loadFinished.connect(self._ensure_drop_filter)
+        self._ensure_drop_filter()
+
+    def _ensure_drop_filter(self, *args):
+        """把拖拽过滤器幂等装到 WebEngine 内部 delegate（focusProxy）上。
+
+        预览区被 QWebEngineView 铺满，拖拽事件的第一接收者是内部 delegate
+        （RenderWidgetHostViewQtDelegateWidget，即 focusProxy），落在父窗口的
+        dragEnterEvent/dropEvent 永远收不到。delegate 在页面加载/显示后才就绪
+        且可能重建，按宿主 card_viewers 同款模式在 loadFinished/showEvent 补装
+        （不能用 ChildAdded，delegate 构造期直挂不发该事件）。
+        """
+        try:
+            fp = self._view.focusProxy()
+        except RuntimeError:
+            return
+        if fp is None or fp is getattr(self, "_drop_filter_target", None):
+            return
+        fp.installEventFilter(self)
+        self._drop_filter_target = fp
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self._ensure_drop_filter()
+
+    def eventFilter(self, obj, ev):
+        if obj is getattr(self, "_drop_filter_target", None):
+            t = ev.type()
+            if t in (QEvent.DragEnter, QEvent.DragMove):
+                if ev.mimeData().hasUrls():
+                    ev.acceptProposedAction()
+                    return True
+                ev.ignore()
+                return True
+            if t == QEvent.Drop:
+                if ev.mimeData().hasUrls():
+                    self.dropEvent(ev)
+                    ev.acceptProposedAction()
+                    return True
+                ev.ignore()
+                return True
+        return super().eventFilter(obj, ev)
 
     def _apply_theme(self):
         c = theme_colors(self)
@@ -472,8 +514,12 @@ class DocxWindowCard(QWidget):
         event.acceptProposedAction()
 
     def dropEvent(self, event):
+        opened = False
         for url in event.mimeData().urls():
             p = url.toLocalFile()
             if p.lower().endswith((".docx", ".pptx")):
                 self.open_path(p)
+                opened = True
                 break
+        if not opened:
+            self._set_status("仅支持 .docx / .pptx 文件")

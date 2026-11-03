@@ -104,6 +104,29 @@ def test_image_block_renders_img():
     assert "<figure" in html and 'src="data:image/png;base64,AAAA"' in html
 
 
+def test_cell_paragraph_break_renders_br():
+    """单元格多段 runs 中的 \n 分隔必须渲染成 <br>（回归：多段只显示首段）。"""
+    t = {
+        "kind": "table", "index": 1, "anchor": "1", "style": "", "level": 0,
+        "text": "", "runs": [], "is_list": False,
+        "rows": [[
+            {"text": "一\n二", "runs": [
+                {"text": "一", "bold": False, "italic": False, "underline": False},
+                {"text": "\n"},
+                {"text": "二", "bold": True, "italic": False, "underline": False},
+            ], "colspan": 1, "rowspan": 1, "col": 0, "anchor": "1:r0c0"},
+        ]],
+    }
+    html = render_html([t])
+    assert "<br>" in html
+    assert "<strong>二</strong>" in html
+
+def test_paginate_js_splits_tall_tables():
+    """分页 JS 必须把超页大表按行拆到后续页（回归：单元素超页被裁剪丢内容）。"""
+    html = render_html([_para(0, "x")])
+    assert "_splitTable" in html
+    assert "el.tagName === 'TABLE'" in html
+
 def test_pick_js_and_channel_script():
     html = render_html([_para(0, "x")])
     assert "qwebchannel.js" in html

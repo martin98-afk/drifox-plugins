@@ -109,6 +109,30 @@ def test_table_gridspan_vmerge(tmp_path):
     assert all(c["col"] != 0 for c in t["rows"][2])
 
 
+def test_cell_multi_paragraph_runs(tmp_path):
+    """多段单元格必须保留全部段落 runs（回归：曾只回传首段，简历正文整段丢失）。"""
+    from docx import Document
+
+    doc = Document()
+    tbl = doc.add_table(rows=1, cols=2)
+    cell = tbl.cell(0, 0)
+    cell.text = "第一段"
+    p2 = cell.add_paragraph()
+    r2 = p2.add_run("第二段")
+    r2.bold = True
+    p3 = cell.add_paragraph("第三段")
+    tbl.cell(0, 1).text = "旁"
+    path = _save(doc, tmp_path)
+    blocks = parse_document(str(path))
+    t = next(b for b in blocks if b["kind"] == "table")
+    c = t["rows"][0][0]
+    texts = [r["text"] for r in c["runs"] if "text" in r]
+    assert "第一段" in texts and "第二段" in texts and "第三段" in texts
+    assert "\n" in texts  # 段落分隔标记，渲染层转 <br>
+    bold = next(r for r in c["runs"] if r.get("text") == "第二段")
+    assert bold["bold"] is True
+    assert c["text"] == "第一段\n第二段\n第三段"
+
 def test_omml_math_extracted(tmp_path):
     """用 omml-docx 的构造器造一个含下标公式的文档。"""
     omml_scripts = PLUGIN.parent / "omml-docx" / "skills" / "omml-docx" / "scripts"
