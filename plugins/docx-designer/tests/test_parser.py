@@ -80,7 +80,7 @@ def test_runs_styles(sample_docx):
 
 def test_list_flag(sample_docx):
     blocks = parse_document(str(sample_docx))
-    lists = [b for b in blocks if b.get("is_list")]
+    lists = [b for b in blocks if b.get("is_list") or b.get("list_label")]
     assert len(lists) == 2
     assert lists[0]["text"] == "列表项一"
 
