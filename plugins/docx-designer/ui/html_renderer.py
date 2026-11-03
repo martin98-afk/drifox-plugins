@@ -5,6 +5,7 @@
 拾取态由 body.pick 驱动 CSS hover 高亮；QWebChannel 桥对象名固定 docxbridge。
 """
 
+import json
 from html import escape
 
 from lxml import etree
@@ -33,11 +34,37 @@ _CSS = (
     ".lnum { display: inline-block; margin-right: 0.45em; } "
     "img { max-width: 100%%; height: auto; } "
     "figure { margin: 0.8em 0; text-align: center; } "
-    "table { border-collapse: collapse; margin: 0.8em 0; width: 100%%; } "
+    "table { border-collapse: collapse; margin: 0.6em 0; width: 100%%; } "
     "td, th { border: 1px solid #9c9c9c; padding: 4px 8px; vertical-align: top; } "
     "body.pick [data-anchor] { cursor: crosshair; } "
     "body.pick [data-anchor]:hover { outline: 2px solid var(--accent); "
     "outline-offset: 1px; background: %(tint)s; } "
+    "body.annotate [data-anchor] { cursor: text; } "
+    "body.annotate [data-anchor]:hover { outline: 2px dashed #e6a23c; "
+    "outline-offset: 1px; background: rgba(230,162,60,0.08); } "
+    "[data-anchor].annotated { background: rgba(230,162,60,0.16); } "
+    ".amark { display: inline-block; min-width: 1.3em; margin-right: 0.3em; "
+    "padding: 0 0.25em; border-radius: 3px; background: #e6a23c; color: #fff; "
+    "font-size: 0.72em; text-align: center; font-weight: bold; vertical-align: 0.25em; } "
+    ".sheet { position: relative; background: #ffffff; color: #1a1a1a; "
+    "margin: 14px auto; box-shadow: 0 2px 14px rgba(0,0,0,0.4); "
+    "font-size: var(--doc-fs); line-height: 1.65; overflow: hidden; } "
+    ".sheet-head { position: absolute; text-align: center; "
+    "color: #444; font-size: 0.78em; line-height: 1.3; overflow: hidden; } "
+    ".sheet-head img { max-height: 36pt; max-width: 80%%; } "
+    ".sheet-foot { position: absolute; text-align: center; "
+    "color: #555; font-size: 0.78em; line-height: 1.3; overflow: hidden; } "
+    ".pageno { position: absolute; text-align: center; "
+    "color: #777; font-size: 0.72em; } "
+    ".sheet-body { height: 100%%; overflow: hidden; } "
+    "#note-box { position: absolute; z-index: 99; background: #fffbe6; border: 1px solid #e6a23c; "
+    "border-radius: 6px; padding: 8px; box-shadow: 0 3px 10px rgba(0,0,0,0.3); width: 280px; } "
+    "#note-box textarea { width: 100%%; height: 54px; box-sizing: border-box; border: 1px solid #d9d9d9; "
+    "border-radius: 4px; font-size: 12px; padding: 4px; resize: vertical; } "
+    "#note-box .nbtns { margin-top: 6px; text-align: right; } "
+    "#note-box button { border: 1px solid #d9d9d9; background: #fff; border-radius: 4px; "
+    "padding: 2px 10px; margin-left: 6px; cursor: pointer; } "
+    "#note-box button.primary { background: #e6a23c; color: #fff; border-color: #e6a23c; } "
     ".mr { font-family: 'Cambria Math', 'Cambria', serif; font-style: italic; } "
     ".mrb { font-weight: bold; } "
     ".frac { display: inline-block; vertical-align: middle; text-align: center; margin: 0 2px; } "
@@ -60,6 +87,10 @@ _BOOT_JS = (
 
 _PICK_JS = (
     "document.addEventListener('click', function(ev){"
+    " if (document.body.classList.contains('annotate')) {"
+    "  var el2 = ev.target.closest('[data-anchor]');"
+    "  if (el2) { ev.preventDefault(); ev.stopPropagation(); window.__openNote(el2); }"
+    "  return; }"
     " var el = ev.target.closest('[data-anchor]');"
     " if (!el || !document.body.classList.contains('pick')) return;"
     " ev.preventDefault(); ev.stopPropagation();"
@@ -69,11 +100,111 @@ _PICK_JS = (
     " el.getAttribute('data-anchor'), r.left, r.top, r.width, r.height,"
     " (el.textContent || '').replace(/\\s+/g, ' ').slice(0, 200)); });"
     "document.addEventListener('keydown', function(ev){"
-    " if (ev.key === 'Escape' && window.__bridge) window.__bridge.escape(); });"
+    " if (ev.key === 'Escape' && !window.__noteOpen && window.__bridge) window.__bridge.escape(); });"
+)
+
+_PAGINATE_JS = (
+    "function _mkSheet(pg, idx){"
+    " var s = document.createElement('section'); s.className = 'sheet';"
+    " s.style.width = pg.w_pt + 'pt'; s.style.height = pg.h_pt + 'pt';"
+    " var m = pg.mar;"
+    " s.style.paddingTop = m.top + 'pt'; s.style.paddingBottom = m.bottom + 'pt';"
+    " s.style.paddingLeft = m.left + 'pt'; s.style.paddingRight = m.right + 'pt';"
+    " var head = document.createElement('div'); head.className = 'sheet-head';"
+    " head.style.top = (m.header * 0.5) + 'pt'; head.style.left = m.left + 'pt'; head.style.right = m.right + 'pt';"
+    " if (pg.header){"
+    "  (pg.header.images || []).forEach(function(src){"
+    "   var im = document.createElement('img'); im.src = src; head.appendChild(im); });"
+    "  if (pg.header.text && pg.header.text.length){"
+    "   var ht = document.createElement('div'); ht.textContent = pg.header.text.join(' / '); head.appendChild(ht); } }"
+    " var foot = document.createElement('div'); foot.className = 'sheet-foot';"
+    " foot.style.bottom = (m.footer * 0.5) + 'pt'; foot.style.left = m.left + 'pt'; foot.style.right = m.right + 'pt';"
+    " if (pg.footer && pg.footer.text && pg.footer.text.length){"
+    "  var ft = document.createElement('div'); ft.textContent = pg.footer.text.join(' / '); foot.appendChild(ft); }"
+    " var pn = document.createElement('div'); pn.className = 'pageno';"
+    " pn.style.bottom = '6pt'; pn.style.left = m.left + 'pt'; pn.style.right = m.right + 'pt';"
+    " pn.textContent = '- ' + (idx + 1) + ' -';"
+    " var body = document.createElement('div'); body.className = 'sheet-body';"
+    " s.appendChild(head); s.appendChild(foot); s.appendChild(pn); s.appendChild(body);"
+    " return s; }"
+    "function paginate(){"
+    " var flow = document.getElementById('flow');"
+    " var pagesEl = document.getElementById('pages');"
+    " var kids = [];"
+    " while (pagesEl.firstChild) {"
+    "  var sheet = pagesEl.firstChild;"
+    "  var bodies = sheet.querySelectorAll('.sheet-body');"
+    "  bodies.forEach(function(bd){ while (bd.firstChild) kids.push(bd.firstChild); });"
+    "  pagesEl.removeChild(sheet); }"
+    " while (flow.firstChild) kids.push(flow.firstChild);"
+    " var pg = window.__page;"
+    " var probe = _mkSheet(pg, 0); pagesEl.appendChild(probe);"
+    " var pbody = probe.querySelector('.sheet-body');"
+    " var pageH = pbody.clientHeight || 700;"
+    " pagesEl.removeChild(probe);"
+    " var cur = null, curBody = null, idx = 0;"
+    " function newPage(){ cur = _mkSheet(pg, idx); curBody = cur.querySelector('.sheet-body');"
+    "  pagesEl.appendChild(cur); idx += 1; }"
+    " newPage();"
+    " for (var i = 0; i < kids.length; i++){"
+    "  var el = kids[i];"
+    "  curBody.appendChild(el);"
+    "  if (curBody.scrollHeight > pageH && curBody.children.length > 1){"
+    "   curBody.removeChild(el); newPage(); curBody.appendChild(el); } }"
+    " var all = pagesEl.querySelectorAll('.pageno');"
+    " all.forEach(function(pn, i){ pn.textContent = '- ' + (i + 1) + ' -'; }); }"
+    "window.addEventListener('load', paginate);"
+)
+
+_ANNOTATE_JS = (
+    "window.__annotations = window.__restored || [];"
+    "window.__noteOpen = false;"
+    "window.__openNote = function(el){"
+    " var box = document.getElementById('note-box');"
+    " window.__noteTarget = el;"
+    " var r = el.getBoundingClientRect();"
+    " box.style.left = Math.min(r.left, window.innerWidth - 300) + 'px';"
+    " box.style.top = (r.bottom + window.scrollY + 4) + 'px';"
+    " box.style.display = 'block';"
+    " box.querySelector('textarea').value = '';"
+    " window.__noteOpen = true;"
+    " box.querySelector('textarea').focus(); };"
+    "window.__closeNote = function(commit){"
+    " var box = document.getElementById('note-box');"
+    " var ta = box.querySelector('textarea');"
+    " var comment = ta.value.trim();"
+    " var el = window.__noteTarget;"
+    " box.style.display = 'none'; window.__noteOpen = false; window.__noteTarget = null;"
+    " if (!commit || !comment || !el) return;"
+    " var seq = window.__annotations.length + 1;"
+    " var anchor = el.getAttribute('data-anchor');"
+    " var snippet = (el.textContent || '').replace(/\\s+/g, ' ').trim().slice(0, 120);"
+    " window.__annotations.push({anchor: anchor, comment: comment, seq: seq, snippet: snippet});"
+    " el.classList.add('annotated');"
+    " var mark = document.createElement('span'); mark.className = 'amark'; mark.textContent = seq;"
+    " el.insertBefore(mark, el.firstChild);"
+    " if (window.__bridge && window.__bridge.annotate_added)"
+    "  window.__bridge.annotate_added(anchor, comment, seq, snippet); };"
+    "window.__restoreAnnotations = function(){"
+    " (window.__restored || []).forEach(function(a){"
+    "  var sel = '[data-anchor=\"' + a.anchor + '\"]';"
+    "  var el = document.querySelector(sel);"
+    "  if (!el) return;"
+    "  el.classList.add('annotated');"
+    "  var mark = document.createElement('span'); mark.className = 'amark';"
+    "  mark.textContent = a.seq; el.insertBefore(mark, el.firstChild); }); };"
+    "document.addEventListener('DOMContentLoaded', function(){"
+    " var box = document.createElement('div'); box.id = 'note-box'; box.style.display = 'none';"
+    " box.innerHTML = '<textarea placeholder=\"输入对选中元素的注释…\"></textarea>'"
+    " + '<div class=\"nbtns\"><button onclick=\"window.__closeNote(false)\">取消</button>'"
+    " + '<button class=\"primary\" onclick=\"window.__closeNote(true)\">保存注释</button></div>';"
+    " document.body.appendChild(box);"
+    " window.__restoreAnnotations(); });"
 )
 
 
-def render_html(blocks, *, outer="#1d2533", accent="#66c6ff", doc_font=None):
+def render_html(blocks, *, outer="#1d2533", accent="#66c6ff", doc_font=None,
+                page_setup=None, hdr_ftr=None, restored=None):
     tint = "rgba(102, 198, 255, 0.10)" if accent == "#66c6ff" else "rgba(0, 120, 212, 0.08)"
     body = "".join(_render_block(b) for b in blocks)
     if doc_font is None:  # 从块级 fmt 推断文档默认字体（docx_parser 已注入 docDefaults）
@@ -85,12 +216,26 @@ def render_html(blocks, *, outer="#1d2533", accent="#66c6ff", doc_font=None):
     safe_font = (doc_font or "").replace("'", "")
     page_font = f"'{safe_font}', " if safe_font else ""
     css_vars = {"accent": accent, "outer": outer, "tint": tint, "page_font": page_font}
+    setup_json = json.dumps(page_setup or {}, ensure_ascii=False)
+    hdr_json = json.dumps(hdr_ftr or {}, ensure_ascii=False)
+    restored_json = json.dumps(restored or [], ensure_ascii=False)
     return (
         '<!DOCTYPE html><html><head><meta charset="utf-8">'
         f"<style>{_CSS % css_vars}</style>"
         '<script src="qrc:///qtwebchannel/qwebchannel.js"></script>'
         f"<script>{_BOOT_JS}</script>"
-        f"</head><body><div class=\"page\">{body}</div>"
+        '<script>window.__page = ' + setup_json + ';'
+        'window.__hdrftr = ' + hdr_json + ';'
+        'window.__restored = ' + restored_json + ';</script>'
+        "</head><body>"
+        f"<div id=\"flow\" style=\"display:none\">{body}</div>"
+        "<div id=\"pages\"></div>"
+        '<div id=\"note-box\" style=\"display:none\">'
+        '<textarea placeholder="输入对选中元素的注释…"></textarea>'
+        '<div class="nbtns"><button onclick="window.__closeNote(false)">取消</button>'
+        '<button class="primary" onclick="window.__closeNote(true)">保存注释</button></div></div>'
+        f"<script>{_PAGINATE_JS}</script>"
+        f"<script>{_ANNOTATE_JS}</script>"
         f"<script>{_PICK_JS}</script></body></html>"
     )
 

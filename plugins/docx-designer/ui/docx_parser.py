@@ -73,6 +73,84 @@ def parse_document(path):
     return blocks
 
 
+def docx_page_setup(path):
+    """sectPr → 页面尺寸与边距（pt）。缺省 A4（595×842pt，边距 1in）"""
+    setup = {
+        "w_pt": 595.0, "h_pt": 842.0,
+        "mar": {"top": 72.0, "right": 72.0, "bottom": 72.0, "left": 72.0,
+                "header": 35.0, "footer": 35.0},
+    }
+    try:
+        doc = Document(str(path))
+        body = doc.element.body
+        sect = body.find(f"{{{W}}}sectPr")
+        if sect is None:
+            return setup
+        pgsz = sect.find(f"{{{W}}}pgSz")
+        if pgsz is not None:
+            w = _twips_to_pt(pgsz.get(f"{{{W}}}w"))
+            h = _twips_to_pt(pgsz.get(f"{{{W}}}h"))
+            if w and h:
+                setup["w_pt"], setup["h_pt"] = w, h
+        mar = sect.find(f"{{{W}}}pgMar")
+        if mar is not None:
+            for key, attr in (("top", "top"), ("right", "right"), ("bottom", "bottom"),
+                              ("left", "left"), ("header", "header"), ("footer", "footer")):
+                pt = _twips_to_pt(mar.get(f"{{{W}}}{attr}"))
+                if pt is not None:
+                    setup["mar"][key] = pt
+    except Exception:
+        pass
+    return setup
+
+
+def _hdr_ftr_text(part):
+    """页眉/页脚 part → {text: 段落文本行, images: [data_uri]}。"""
+    out = {"text": [], "images": []}
+    try:
+        root = getattr(part, "element", None)
+        if root is None:
+            return out
+        for p in root.iter(f"{{{W}}}p"):
+            line = "".join(t.text or "" for t in p.iter(f"{{{W}}}t"))
+            if line.strip():
+                out["text"].append(line.strip())
+        for blip in root.iter(f"{{{A}}}blip"):
+            rid = blip.get(f"{{{R}}}embed")
+            try:
+                tp = part.rels[rid].target_part
+                uri = f"data:{tp.content_type or 'image/png'};base64," + base64.b64encode(tp.blob).decode("ascii")
+                out["images"].append(uri)
+            except Exception:
+                continue
+    except Exception:
+        pass
+    return out
+
+
+def docx_header_footer(path):
+    """第一节 sectPr 的 header/footerReference → {header, footer}。"""
+    out = {"header": {"text": [], "images": []}, "footer": {"text": [], "images": []}}
+    try:
+        doc = Document(str(path))
+        sect = doc.element.body.find(f"{{{W}}}sectPr")
+        if sect is None:
+            return out
+        for ref in sect.findall(f"{{{W}}}headerReference") + sect.findall(f"{{{W}}}footerReference"):
+            rid = ref.get(f"{{{R}}}id")
+            if not rid:
+                continue
+            part = doc.part.rels[rid].target_part
+            data = _hdr_ftr_text(part)
+            key = "header" if ref.tag.endswith("headerReference") else "footer"
+            if data["text"] or data["images"]:
+                out[key] = data
+            break  # 只取第一个 default 引用
+    except Exception:
+        pass
+    return out
+
+
 def _style_name_map(doc):
     """styleId → 显示名（如 "Heading 1" / "标题 1"）。"""
     out = {}

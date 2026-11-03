@@ -46,6 +46,33 @@ def _cell_info(block, anchor):
     return cell_text, _row_text(row)
 
 
+_CIRCLED = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳"
+
+
+def _circled(n):
+    return _CIRCLED[n - 1] if 1 <= n <= 20 else f"({n})"
+
+
+def format_annotations(path_display, annotations):
+    """标注统一发送文本：模型逐条按注释修改。"""
+    lines = [f"📝 docx 标注 共 {len(annotations)} 条 [{path_display}]"]
+    for a in annotations:
+        anchor = a.get("anchor") or "?"
+        if ":r" in anchor:
+            base, cell = anchor.split(":", 1)
+            desc = f"[表格 #{base} 单元格 {cell}]"
+        else:
+            desc = f"[元素 #{anchor}]"
+        snippet = (a.get("snippet") or "").strip()
+        lines.append(f"{_circled(int(a.get('seq') or 0))}{desc} \"{snippet}\"")
+        lines.append(f"  ↳ 注释：{a.get('comment') or ''}")
+    lines.append(
+        "（锚点规则: #N = 文档 body 第 N 个块,从 0 数起;表格单元格 N:r行c列;"
+        "请逐条按注释修改对应元素）"
+    )
+    return "\n".join(lines)
+
+
 def format_pick(count, path_display, anchor, block, preview, shot_path, *, include_guide=False):
     """组装回填文本。anchor 含 ":r" 即表格单元格。"""
     lines = [f"📎 docx 拾取 #{count} [{path_display}]"]
