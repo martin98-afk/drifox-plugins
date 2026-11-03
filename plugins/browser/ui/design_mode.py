@@ -7,7 +7,6 @@
 """
 
 import time
-from pathlib import Path
 
 from PyQt5.QtCore import QEvent, QObject, QPoint, QTimer, Qt
 from PyQt5.QtGui import QColor, QPainter, QPen
@@ -23,7 +22,9 @@ from .design_mode_core import (
 
 
 def _picks_dir():
-    root = Path.home() / ".drifox" / "plugins" / "browser" / "data" / "picks"
+    from .paths import picks_dir
+
+    root = picks_dir()
     root.mkdir(parents=True, exist_ok=True)
     return root
 

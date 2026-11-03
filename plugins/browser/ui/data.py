@@ -6,7 +6,7 @@
 - history(url, title, visited_at, visit_count)
 - downloads(id, url, path, state, bytes_received, bytes_total, created_at)
 
-数据目录：~/.drifox/plugins/browser/data/browser.db
+数据目录：<app_data>/plugin_data/browser/browser.db（v1.5.3 起；旧版在插件安装目录）
 
 设计约束（闭包）：
 - 不导入 app.core 或 app.widgets 内部的任何模块
@@ -24,10 +24,13 @@ from typing import Callable, List, Optional, Tuple
 from PyQt5.QtCore import QObject, pyqtSignal
 from loguru import logger
 
-# ── 路径常量 ──────────────────────────────────────────────
+from .paths import data_dir
 
-_DATA_DIR = Path.home() / ".drifox" / "plugins" / "browser" / "data"
-_DB_PATH = _DATA_DIR / "browser.db"
+# ── 路径 ────────────────────────────────────────────────
+
+def _db_path() -> Path:
+    """数据库文件路径（延迟解析：能力池就绪与旧数据迁移都在首次使用时完成）"""
+    return data_dir() / "browser.db"
 
 # ── 数据库初始化 ──────────────────────────────────────────
 
@@ -64,8 +67,8 @@ def _ensure_db() -> None:
     """确保数据库文件与表结构存在（线程安全，幂等）"""
     with _lock:
         try:
-            _DATA_DIR.mkdir(parents=True, exist_ok=True)
-            conn = sqlite3.connect(str(_DB_PATH), timeout=5)
+            data_dir().mkdir(parents=True, exist_ok=True)
+            conn = sqlite3.connect(str(_db_path()), timeout=5)
             conn.executescript(_SCHEMA)
             conn.commit()
             conn.close()
@@ -75,7 +78,7 @@ def _ensure_db() -> None:
 
 def _get_conn() -> sqlite3.Connection:
     """获取数据库连接（row_factory=sqlite3.Row）"""
-    conn = sqlite3.connect(str(_DB_PATH), timeout=5)
+    conn = sqlite3.connect(str(_db_path()), timeout=5)
     conn.row_factory = sqlite3.Row
     return conn
 

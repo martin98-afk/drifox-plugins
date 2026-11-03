@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """浏览器拦截配置 — 控制系统软件打开浏览器/URL/HTML 的拦截行为
 
-配置存储：~/.drifox/plugins/browser/data/browser-redirect.json
-（与收藏/历史/下载 browser.db 同数据目录，随 profile 一并保留）
+配置存储：<app_data>/plugin_data/browser/browser-redirect.json
+（与收藏/历史/下载 browser.db 同数据目录；旧版在插件安装目录，升级即丢）
 
 配置项（DEFAULT_CONFIG 说明）：
 - enabled         全局总开关：False 时所有拦截全部失效（走原系统逻辑）
@@ -46,13 +46,11 @@ DEFAULT_CONFIG: Dict[str, Any] = {
 # 旧版（≤v1.3.2）配置键 → 迁移来源；加载时自动折算进 intercept_web
 _LEGACY_WEB_KEYS = ("intercept_system", "intercept_shell")
 
-# 配置文件的固定相对路径（运行时按用户目录解析）
-_CONFIG_REL = Path(".drifox") / "plugins" / "browser" / "data" / "browser-redirect.json"
-
-
 def _get_config_path() -> Path:
-    """定位配置文件：~/.drifox/plugins/browser/data/browser-redirect.json"""
-    return Path.home() / _CONFIG_REL
+    """定位配置文件（<app_data>/plugin_data/browser/；旧版数据由 paths 统一迁移）"""
+    from .paths import redirect_config_path
+
+    return redirect_config_path()
 
 
 class ConfigStore:

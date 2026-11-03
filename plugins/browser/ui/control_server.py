@@ -200,7 +200,9 @@ def _op_screenshot() -> dict:
         return {"ok": False, "error": "截图失败"}
     from PyQt5.QtCore import QDateTime
 
-    out_dir = Path.home() / ".drifox" / "plugins" / "browser" / "data" / "screenshots"
+    from .paths import screenshots_dir
+
+    out_dir = screenshots_dir()
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"screenshot_{QDateTime.currentMSecsSinceEpoch()}.png"
     if not pixmap.save(str(path), "PNG"):
