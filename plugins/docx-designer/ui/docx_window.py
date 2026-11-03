@@ -102,6 +102,7 @@ class DocxWindowCard(QWidget):
         self._more_menu = more_menu
         more_menu.addAction("发送标注", self._send_annotations)
         more_menu.addAction("清空标注", self._clear_annotations)
+        more_menu.addAction("重新加载文档", self._reload_document)
         more_menu.addAction("用系统程序打开", self._open_external)
         more_menu.addSeparator()
         more_menu.addAction("增大字号", lambda: self._zoom(1))
@@ -272,6 +273,16 @@ class DocxWindowCard(QWidget):
             "window.__clearAnnotations && window.__clearAnnotations();"
         )
         self._set_status("已清空全部标注")
+
+    def _reload_document(self):
+        """重新解析当前文档（外部修改后刷新预览，保留拾取计数与标注）。"""
+        if not self._current_path:
+            self._set_status("尚未打开文档")
+            return
+        count = self._count
+        if self.open_path(self._current_path):
+            self._count = count
+            self._set_status(f"已重新加载 {Path(self._current_path).name}")
 
     def _open_external(self):
         """用系统默认程序打开当前文档（绕过拦截）"""
