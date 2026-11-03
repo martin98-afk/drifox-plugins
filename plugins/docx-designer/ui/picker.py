@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 """拾取模式：body.pick 切换 → JS 点击回传锚点与矩形 → 视口截图裁剪 → input.write 回填。
 
-回填格式（同 browser design_mode 惯例）：
-  📎 docx 拾取 #N [文件名]
-  [段落 #12 | Heading 1] "文本预览"
-  截图：<picks 绝对路径>
+回填文本格式化见 pick_format.py（纯函数）；本模块只管 Qt 侧：桥、截图、能力池写入。
 """
 
 import time
@@ -76,19 +73,3 @@ def capture_view_rect(view, x, y, w, h):
         return None
     path = make_picks_dir() / f"pick_{int(time.time() * 1000)}.png"
     return path if cropped.save(str(path), "PNG") else None
-
-
-def format_pick(count, path_name, anchor, block, preview, shot_path):
-    """组装回填文本。anchor 含 ":r" 即表格单元格。"""
-    if ":r" in anchor:
-        base, cell = anchor.split(":", 1)
-        desc = f"[表格 #{base} 单元格 {cell}]"
-    elif block is not None:
-        style = block.get("style") or block.get("kind", "?")
-        desc = f"[{block.get('kind', '?')} #{anchor} | {style}]"
-    else:
-        desc = f"[元素 #{anchor}]"
-    lines = [f"📎 docx 拾取 #{count} [{path_name}]", f'{desc} "{preview}"']
-    if shot_path:
-        lines.append(f"截图：{shot_path}")
-    return "\n".join(lines)
