@@ -129,23 +129,22 @@ def _hdr_ftr_text(part):
 
 
 def docx_header_footer(path):
-    """第一节 sectPr 的 header/footerReference → {header, footer}。"""
+    """第一节 sectPr 的 header/footerReference → {header, footer}（各自独立取首个）。"""
     out = {"header": {"text": [], "images": []}, "footer": {"text": [], "images": []}}
     try:
         doc = Document(str(path))
         sect = doc.element.body.find(f"{{{W}}}sectPr")
         if sect is None:
             return out
-        for ref in sect.findall(f"{{{W}}}headerReference") + sect.findall(f"{{{W}}}footerReference"):
-            rid = ref.get(f"{{{R}}}id")
-            if not rid:
-                continue
-            part = doc.part.rels[rid].target_part
-            data = _hdr_ftr_text(part)
-            key = "header" if ref.tag.endswith("headerReference") else "footer"
-            if data["text"] or data["images"]:
-                out[key] = data
-            break  # 只取第一个 default 引用
+        for kind, ref_tag in (("header", "headerReference"), ("footer", "footerReference")):
+            for ref in sect.findall(f"{{{W}}}{ref_tag}"):
+                rid = ref.get(f"{{{R}}}id")
+                if not rid:
+                    continue
+                data = _hdr_ftr_text(doc.part.rels[rid].target_part)
+                if data["text"] or data["images"]:
+                    out[kind] = data
+                    break
     except Exception:
         pass
     return out

@@ -21,9 +21,13 @@ class DocxBridge(QObject):
     def pick(self, anchor, x, y, w, h, preview):
         self._window.on_element_picked(anchor, x, y, w, h, preview)
 
-    @pyqtSlot(str, str, int, str)
-    def annotate_added(self, anchor, comment, seq, snippet):
-        self._window.on_annotation_added(anchor, comment, seq, snippet)
+    @pyqtSlot(str, str, int, str, float, float, float, float)
+    def annotate_added(self, anchor, comment, seq, snippet, x, y, w, h):
+        self._window.on_annotation_added(anchor, comment, seq, snippet, x, y, w, h)
+
+    @pyqtSlot(str, str)
+    def annotate_updated(self, anchor, comment):
+        self._window.on_annotation_updated(anchor, comment)
 
     @pyqtSlot()
     def escape(self):

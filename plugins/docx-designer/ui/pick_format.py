@@ -66,6 +66,8 @@ def format_annotations(path_display, annotations):
         snippet = (a.get("snippet") or "").strip()
         lines.append(f"{_circled(int(a.get('seq') or 0))}{desc} \"{snippet}\"")
         lines.append(f"  ↳ 注释：{a.get('comment') or ''}")
+        if a.get("shot"):
+            lines.append(f"  截图：{a['shot']}")
     lines.append(
         "（锚点规则: #N = 文档 body 第 N 个块,从 0 数起;表格单元格 N:r行c列;"
         "请逐条按注释修改对应元素）"
