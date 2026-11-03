@@ -128,3 +128,107 @@ def test_render_html(deck):
     assert "<table>" in html
     assert "window.__restored" in html
     assert "改标题" in html
+
+def test_text_shape_keeps_fill_and_line(deck, tmp_path):
+    """带文字的 AUTO_SHAPE 底色/边框不丢（回归：架构图白框只剩裸文字）。"""
+    parser = _load_ui_module("pptx_parser")
+    renderer = _load_ui_module("pptx_renderer")
+    from pptx import Presentation
+    from pptx.dml.color import RGBColor
+    from pptx.enum.shapes import MSO_SHAPE
+    from pptx.util import Inches
+
+    prs = Presentation(str(deck))
+    s = prs.slides[1]
+    box = s.shapes.add_shape(MSO_SHAPE.RECTANGLE, Inches(1), Inches(4), Inches(3), Inches(1))
+    box.text_frame.text = "框内文字"
+    box.fill.solid()
+    box.fill.fore_color.rgb = RGBColor(0xFF, 0x00, 0x00)
+    box.line.color.rgb = RGBColor(0x00, 0xAA, 0x00)
+    p = tmp_path / "t1.pptx"
+    prs.save(str(p))
+    model = parser.parse_presentation(str(p))
+    item = next(sh for sh in model["slides"][1]["shapes"]
+                if sh["kind"] == "text"
+                and any("框内文字" in r.get("text", "") for pa in sh["paras"] for r in pa["runs"]))
+    assert item.get("fill") == "#FF0000"
+    assert item.get("line") == "#00AA00"
+    html = renderer.render_pptx_html(model)
+    assert "background:#FF0000" in html
+    assert "border:1pt solid #00AA00" in html
+
+def test_connector_becomes_line(deck, tmp_path):
+    """连接符（含水平/垂直零宽高）转 line 条目，不再被几何过滤拦截。"""
+    parser = _load_ui_module("pptx_parser")
+    renderer = _load_ui_module("pptx_renderer")
+    from pptx import Presentation
+    from pptx.dml.color import RGBColor
+    from pptx.enum.shapes import MSO_CONNECTOR
+    from pptx.util import Inches, Pt
+
+    prs = Presentation(str(deck))
+    s = prs.slides[1]
+    c1 = s.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, Inches(0.5), Inches(1), Inches(2.5), Inches(3))
+    c1.line.color.rgb = RGBColor(0x12, 0x34, 0x56)
+    c1.line.width = Pt(2)
+    c2 = s.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, Inches(1), Inches(5), Inches(3), Inches(5))
+    c2.line.color.rgb = RGBColor(0x66, 0x66, 0x66)
+    p = tmp_path / "t2.pptx"
+    prs.save(str(p))
+    model = parser.parse_presentation(str(p))
+    lines = [sh for sh in model["slides"][1]["shapes"] if sh["kind"] == "line"]
+    assert len(lines) == 2
+    diag = next(ln for ln in lines if ln["x1"] != ln["x2"] and ln["y1"] != ln["y2"])
+    assert diag["color"] == "#123456"
+    assert diag["x2"] > diag["x1"] and diag["y2"] > diag["y1"]
+    flat = next(ln for ln in lines if ln["y1"] == ln["y2"])
+    assert flat["x2"] > flat["x1"]
+    html = renderer.render_pptx_html(model)
+    assert '<svg class="lines">' in html
+    assert "<line " in html
+
+def test_group_child_absolute_position(deck, tmp_path):
+    """组合内子形状换算后绝对位置与放入时一致（回归：只加 off 偏移致元素跑页外）。"""
+    parser = _load_ui_module("pptx_parser")
+    from pptx import Presentation
+    from pptx.util import Inches
+
+    prs = Presentation(str(deck))
+    s = prs.slides[1]
+    group = s.shapes.add_group_shape()
+    tb = group.shapes.add_textbox(Inches(2), Inches(2), Inches(1), Inches(0.5))
+    tb.text_frame.text = "组内文本"
+    p = tmp_path / "t3.pptx"
+    prs.save(str(p))
+    model = parser.parse_presentation(str(p))
+    item = next(sh for sh in model["slides"][1]["shapes"]
+                if sh["kind"] == "text"
+                and any("组内文本" in r.get("text", "") for pa in sh["paras"] for r in pa["runs"]))
+    assert item["left"] == pytest.approx(2 * 72, abs=2.0)
+    assert item["top"] == pytest.approx(2 * 72, abs=2.0)
+    assert item["left"] < model["w_pt"] and item["top"] < model["h_pt"]
+
+def test_table_merge_spans(deck, tmp_path):
+    """合并单元格输出 colspan/rowspan（回归：跨列标题塞进窄列撑爆整表致表格空白）。"""
+    parser = _load_ui_module("pptx_parser")
+    renderer = _load_ui_module("pptx_renderer")
+    from pptx import Presentation
+    from pptx.util import Inches
+
+    prs = Presentation(str(deck))
+    s = prs.slides[1]
+    tbl = s.shapes.add_table(2, 2, Inches(6), Inches(4), Inches(4), Inches(1)).table
+    tbl.cell(0, 0).text = "跨列标题"
+    tbl.cell(0, 0).merge(tbl.cell(0, 1))
+    tbl.cell(1, 0).text = "左"
+    tbl.cell(1, 1).text = "右"
+    p = tmp_path / "t4.pptx"
+    prs.save(str(p))
+    model = parser.parse_presentation(str(p))
+    table = next(sh for sh in model["slides"][1]["shapes"]
+                 if sh["kind"] == "table" and any("跨列标题" in c.get("text", "") for c in sh["rows"][0]))
+    assert len(table["rows"][0]) == 1
+    assert table["rows"][0][0].get("colspan") == 2
+    assert table["rows"][1][0]["text"] == "左"
+    html = renderer.render_pptx_html(model)
+    assert 'colspan="2"' in html

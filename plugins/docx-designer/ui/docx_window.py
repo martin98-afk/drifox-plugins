@@ -247,7 +247,9 @@ class DocxWindowCard(QWidget):
         try:
             from app.plugins.sdk import caps_for
 
-            root = Path(str(caps_for("storage.data_dir", plugin="docx-designer", surface="ui")))
+            # 必须 resolve：开发宿主 get_app_data_dir() 返回相对路径 .drifox，
+            # 相对路径进 QUrl.fromLocalFile 生成 file:.drifox/... 畸形 URL → ERR_FILE_NOT_FOUND
+            root = Path(str(caps_for("storage.data_dir", plugin="docx-designer", surface="ui"))).resolve()
         except Exception:
             root = Path.home() / ".drifox"
         d = root / "plugin_data" / "docx-designer"
