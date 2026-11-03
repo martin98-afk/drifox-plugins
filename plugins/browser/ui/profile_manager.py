@@ -16,10 +16,9 @@
 from pathlib import Path
 from typing import Optional
 
-# 数据根目录：~/.drifox/plugins/browser/data/
-DATA_DIR = Path.home() / ".drifox" / "plugins" / "browser" / "data"
-PROFILE_DIR = DATA_DIR / "profile"
-CACHE_DIR = DATA_DIR / "cache"
+from .paths import cache_dir, profile_dir
+
+# 数据目录（<app_data>/plugin_data/browser/，延迟解析：旧版插件目录数据首次访问时迁移）
 DOWNLOAD_DIR = Path.home() / "Downloads"
 
 
@@ -39,8 +38,8 @@ _APP_PROFILE_ATTR = "_drifox_browser_profile_singleton"
 
 def _ensure_dirs() -> None:
     """确保数据目录存在"""
-    PROFILE_DIR.mkdir(parents=True, exist_ok=True)
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    profile_dir().mkdir(parents=True, exist_ok=True)
+    cache_dir().mkdir(parents=True, exist_ok=True)
 
 
 # 不使用自定义 HTTP User-Agent：让 QtWebEngine 暴露真实 Chromium 83 内核
@@ -83,8 +82,8 @@ def get_browser_profile():
     _ensure_dirs()
 
     profile = QWebEngineProfile(_PROFILE_NAME)
-    profile.setPersistentStoragePath(str(PROFILE_DIR))
-    profile.setCachePath(str(CACHE_DIR))
+    profile.setPersistentStoragePath(str(profile_dir()))
+    profile.setCachePath(str(cache_dir()))
     profile.setPersistentCookiesPolicy(QWebEngineProfile.ForcePersistentCookies)
     profile.setHttpCacheType(QWebEngineProfile.DiskHttpCache)
     profile.setHttpCacheMaximumSize(256 * 1024 * 1024)

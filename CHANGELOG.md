@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+### 🔧 browser v1.5.3：用户数据迁到 `plugin_data/browser/`，插件更新不再丢
+- **问题**：书签/历史/下载记录（`browser.db`）、拦截配置（`browser-redirect.json`）、登录态 `profile/`、拾取截图 `picks/`、MCP 截图 `screenshots/` 全落在插件安装目录 `~/.drifox/plugins/browser/data/`，而插件升级是整目录替换，更新即丢
+- **修复**：新增 `ui/paths.py` 统一解析落点，走能力池 `storage.data_dir`（返回 app_data 根）自拼 `plugin_data/browser/`；能力池不可用（MCP 子进程 / 纯逻辑单测）回退 `~/.drifox`。`data.py`、`profile_manager.py`、`redirect_config.py`、`design_mode.py`、`control_server.py` 五处路径全部改走它，`cache/` 可再生不迁
+- **迁移**：首次访问自动把旧目录的 `browser.db` / `browser-redirect.json` / `picks` / `screenshots` / `profile` 复制到新位置，**复制不删**，旧目录留作回滚；全部成功才写 `.migrated-from-plugin-dir` 标记，被文件锁打断则下次重试
+- **注意**：登录态 profile 要重启 DriFox 才切到新路径（运行中的 WebEngine 仍持有旧 profile 实例）
+- **测试**：新增 `tests/test_browser_paths.py` 6 条（落点、helper 同源、文件+目录迁移、只迁一次、目标已有内容不覆盖、无旧目录空跑），`6 passed`
+
 ### 🔧 browser v1.5.2：外部打开彻底绕开代理链（v1.5.1 未修净）
 - **v1.5.1 为何不够**：剥链只认 `_drifox_redirect` 标记，而实机上收到的 `resolved` 是一个**丢了标记的旧版代理**（`<function _redirect_os_startfile at ...>`），被当成原生入口直接调用，于是又走拦截进内置浏览器；日志实锤 `resolved=<function _redirect_os_startfile>`、`stash=None`
 - **根因**：`install_redirect` 接管时用 `elif _orig_os_startfile is None: = prev_sf` 兜底，把「无标记的旧代理」存成了原始入口；安装日志里那次也没打印「接管热重载遗留的 os.startfile 代理」
