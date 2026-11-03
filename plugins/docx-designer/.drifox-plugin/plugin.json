@@ -5,7 +5,7 @@
         "light": "icon.svg",
         "dark": "icon_dark.svg"
     },
-    "version": "0.1.0",
+    "version": "0.2.0",
     "author": {
         "name": "DriFox Contributors"
     },
@@ -27,7 +27,8 @@
     "dependencies": {
         "pip": {
             "default": [
-                "python-docx>=1.1.0"
+                "python-docx>=1.1.0",
+                "lxml>=3.1.0"
             ]
         }
     },

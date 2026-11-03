@@ -3,13 +3,23 @@
 
 Run: python -m pytest plugins/docx-designer/tests/test_renderer.py -v
 """
+import importlib.util
 import sys
 from pathlib import Path
 
 PLUGIN = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(PLUGIN))
 
-from ui.html_renderer import render_html  # noqa: E402
+
+def _load_module(mod_name, filename):
+    """按文件路径加载插件 ui 模块（避免与其它插件的顶层 ui 包名冲突）"""
+    spec = importlib.util.spec_from_file_location(mod_name, PLUGIN / "ui" / filename)
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[mod_name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+render_html = _load_module("docx_designer_html_renderer", "html_renderer.py").render_html
 
 
 def _para(idx, text, **kw):
@@ -70,7 +80,9 @@ def test_table_col_row_span():
 def test_math_html_frac_sub_sup():
     from lxml import etree
 
-    from ui.html_renderer import omml_to_html
+    omml_to_html = _load_module(
+        "docx_designer_html_renderer", "html_renderer.py"
+    ).omml_to_html
 
     M = "http://schemas.openxmlformats.org/officeDocument/2006/math"
     frac_xml = (
