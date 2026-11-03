@@ -618,7 +618,7 @@
         {
             "name": "browser",
             "description": "内置浏览器 — Chrome 体验多标签浏览 + 外部链接接管 + AI 智能体浏览控制（MCP）。",
-            "version": "1.5.3",
+            "version": "1.6.0",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -1692,6 +1692,48 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            }
+        },
+        {
+            "name": "docx-designer",
+            "description": "docx 文档设计模式 — 独立窗口预览 Word 文档，页内拾取元素（段落/表格/公式/图片），锚点+文本+截图回填输入框，让模型精确修改。",
+            "version": "0.2.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "ui",
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/docx-designer",
+                "ref": "main"
+            },
+            "components": {
+                "commands": false,
+                "ui": true,
+                "tools": true
+            },
+            "keywords": [
+                "docx",
+                "word",
+                "document",
+                "preview"
+            ],
+            "dependencies": {
+                "pip": {
+                    "default": [
+                        "python-docx>=1.1.0",
+                        "lxml>=3.1.0"
+                    ]
+                }
+            },
+            "min_host_version": "0.6.10",
+            "api_version": 2,
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {

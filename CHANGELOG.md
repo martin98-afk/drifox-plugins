@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+### ✨ docx-designer v0.2.0：docx 文档设计模式（预览 + 拾取 + 标注）
+- **预览**：python-docx XML 流解析 → 自生成 HTML（QWebEngineView 分页视图，sectPr 页面尺寸/边距 + JS 装箱分页 + 页眉页脚随页重复）；样式链继承（basedOn）、多级编号（numbering.xml 状态机，中文数字/字母/罗马）、段落属性（对齐/缩进/段距/行距）、run 字号颜色字体、表格 vMerge/gridSpan 与 tblGrid 列宽、内嵌图片、OMML 公式 HTML/CSS 模拟
+- **拾取**：「拾取」态点击元素 → 锚点（body 块索引）+ 类型/样式 + 全文文本 + 区域截图回填输入框（QWebChannel），连续拾取连续追加
+- **标注**：「标注」态点击元素写注释（角标编号 + 悬浮 tooltip），标注按文档路径持久化（重开恢复），悬浮可改；「≡ → 发送标注」把全部注释一次性回填供模型逐条修改
+- **拦截**：系统打开 .docx 默认进预览窗口（os.startfile / QDesktopServices 链式代理，独立标记不干扰 browser 接管）；≡ → 「用系统程序打开」走 ShellExecuteW/open/xdg-open 系统级绕代理
+- **依赖**：python-docx + lxml（deps/ 预置 cp314 win32）；测试 40 条（解析/渲染/标注格式/页眉页脚/拦截判定）
+### ✨ browser v1.6.0：拦截本地 PDF 打开进内置浏览器
+- **拦截**：本地 .pdf（磁盘路径 / file://）默认进内置浏览器（WebEngine PdfViewerEnabled 内嵌渲染），配置键 \`intercept_pdf\`（默认开，拦截设置面板可关）
+- **实现**：redirect_config 新增 \`_is_local_pdf\` 判定（\`_is_local_html\` 重构为通用 \`_is_local_doc\`）；\`_page_factory\` 开启 \`PdfViewerEnabled\`（Qt 5.13+，缺失时防御性跳过）
+- **测试**：新增 \`tests/test_redirect_pdf.py\` 5 条（判定/开关/总闸/html 回归）
 ### 🔧 browser v1.5.3：用户数据迁到 `plugin_data/browser/`，插件更新不再丢
 - **问题**：书签/历史/下载记录（`browser.db`）、拦截配置（`browser-redirect.json`）、登录态 `profile/`、拾取截图 `picks/`、MCP 截图 `screenshots/` 全落在插件安装目录 `~/.drifox/plugins/browser/data/`，而插件升级是整目录替换，更新即丢
 - **修复**：新增 `ui/paths.py` 统一解析落点，走能力池 `storage.data_dir`（返回 app_data 根）自拼 `plugin_data/browser/`；能力池不可用（MCP 子进程 / 纯逻辑单测）回退 `~/.drifox`。`data.py`、`profile_manager.py`、`redirect_config.py`、`design_mode.py`、`control_server.py` 五处路径全部改走它，`cache/` 可再生不迁
