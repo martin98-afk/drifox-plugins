@@ -58,7 +58,11 @@ def format_annotations(path_display, annotations):
     lines = [f"📝 docx 标注 共 {len(annotations)} 条 [{path_display}]"]
     for a in annotations:
         anchor = a.get("anchor") or "?"
-        if ":r" in anchor:
+        if anchor == "header":
+            desc = "[页眉]"
+        elif anchor == "footer":
+            desc = "[页脚]"
+        elif ":r" in anchor:
             base, cell = anchor.split(":", 1)
             desc = f"[表格 #{base} 单元格 {cell}]"
         else:
@@ -70,7 +74,7 @@ def format_annotations(path_display, annotations):
             lines.append(f"  截图：{a['shot']}")
     lines.append(
         "（锚点规则: #N = 文档 body 第 N 个块,从 0 数起;表格单元格 N:r行c列;"
-        "请逐条按注释修改对应元素）"
+        "header/footer = 页眉/页脚;请逐条按注释修改对应元素）"
     )
     return "\n".join(lines)
 
@@ -78,7 +82,15 @@ def format_annotations(path_display, annotations):
 def format_pick(count, path_display, anchor, block, preview, shot_path, *, include_guide=False):
     """组装回填文本。anchor 含 ":r" 即表格单元格。"""
     lines = [f"📎 docx 拾取 #{count} [{path_display}]"]
-    if ":r" in anchor:
+    if anchor == "header":
+        lines.append("[页眉]")
+        if preview:
+            lines.append(f'"{preview}"')
+    elif anchor == "footer":
+        lines.append("[页脚]")
+        if preview:
+            lines.append(f'"{preview}"')
+    elif ":r" in anchor:
         base, cell = anchor.split(":", 1)
         lines.append(f"[表格 #{base} 单元格 {cell}]")
         if block is not None and block.get("kind") == "table":
@@ -113,6 +125,6 @@ def format_pick(count, path_display, anchor, block, preview, shot_path, *, inclu
     if include_guide:
         lines.append(
             "（锚点规则: #N = 文档 body 第 N 个块,从 0 数起;表格单元格 N:r行c列;"
-            "可用 python-docx 遍历 body 的 w:p/w:tbl 按序定位）"
+            "header/footer = 页眉/页脚;可用 python-docx 遍历 body 的 w:p/w:tbl 按序定位）"
         )
     return "\n".join(lines)
