@@ -3,16 +3,18 @@
 
 结构（Chrome 风格）：
 ┌──────────────────────────────────────────┐
-│ [<][>][reload][stop] [ 地址栏 ] [+][menu] │  ← 工具栏
-│ ┌────┐┌────┐┌────┐                       │  ← 标签栏
-│ │Tab1││Tab2││Tab3│                       │
-│ └────┘└────┘└────┘                       │
+│ [<][>][reload] [ 地址栏 ] [☆][↗][≡]       │  ← 工具栏
+│ ┌────┐┌────┐┌────┐ [+]                    │  ← 标签栏（+ 紧跟最后一个标签）
+│ │Tab1││Tab2││Tab3│                        │
+│ └────┘└────┘└────┘                        │
 │ ┌──────────────────────────────────────┐ │
 │ │          QStackedWidget              │ │  ← 页面区
 │ │      (每个标签一个 QWebEngineView)    │ │
 │ └──────────────────────────────────────┘ │
-│ [收藏] [历史] [下载] [DevTools] [隐身]    │  ← 底部状态栏
 └──────────────────────────────────────────┘
+
+低频操作（收藏夹/历史/下载/拾取元素/拦截设置/关闭）全部收进 ≡ 菜单，
+工具栏只留导航 + 地址栏 + 收藏 + 外部打开 + 菜单。
 
 性能设计（M3 强化）：
 - MAX_ALIVE_TABS=6：超过时后台标签 setLifecycleState(Frozen) 释放内存
@@ -24,7 +26,7 @@ import os
 from typing import List, Optional, Tuple
 from urllib.parse import urlparse
 
-from PyQt5.QtCore import QPoint, QSize, Qt, pyqtSignal
+from PyQt5.QtCore import QPoint, QSize, Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor, QFont, QIcon
 from PyQt5.QtWidgets import (
     QFrame,
@@ -59,14 +61,14 @@ def _icon_path(name: str, is_dark: bool) -> str:
 
 
 def _tool_btn_style(c: dict) -> str:
-    """工具栏按钮 QSS：28×28 布局 + 6px 圆角 + fs 字号 + hover token。"""
+    """工具栏按钮 QSS：30×30 布局 + 8px 圆角 + fs 字号 + hover token。"""
     return (
-        "QToolButton { border: none; border-radius: 6px;"
+        "QToolButton { border: none; border-radius: 8px;"
         f" {font_css(c['ff'], max(10, c['fs'] - 1))} color: {c['text']};"
         " background: transparent; }"
         f"QToolButton:hover {{ background: {c['hover']}; }}"
-        f"QToolButton:pressed {{ background: {c['hover']}; }}"
-        f"QToolButton:disabled {{ color: {c['secondary']}; }}"
+        f"QToolButton:pressed {{ background: {c['selected']}; }}"
+        f"QToolButton:disabled {{ color: {c['muted']}; background: transparent; }}"
     )
 
 
@@ -149,9 +151,10 @@ class BrowserWindowCard(QWidget):
         toolbar.setObjectName("browserToolbar")
         toolbar.setStyleSheet("#browserToolbar { background: transparent; }")
         tly = QHBoxLayout(toolbar)
-        tly.setContentsMargins(12, 8, 12, 4)
+        tly.setContentsMargins(12, 10, 12, 6)
         tly.setSpacing(2)
 
+        # 左侧导航组：← → ↻（刷新与停止共用同一位置，加载中互换）
         self._btn_back = self._make_tool_btn(FluentIcon.LEFT_ARROW, "后退")
         self._btn_forward = self._make_tool_btn(FluentIcon.RIGHT_ARROW, "前进")
         self._btn_reload = self._make_tool_btn(FluentIcon.SYNC, "刷新")
@@ -159,50 +162,36 @@ class BrowserWindowCard(QWidget):
         self._btn_stop.setVisible(False)
         tly.addWidget(self._btn_back)
         tly.addWidget(self._btn_forward)
+        tly.addWidget(self._btn_reload)
+        tly.addWidget(self._btn_stop)
 
         self._btn_back.clicked.connect(self._go_back)
         self._btn_forward.clicked.connect(self._go_forward)
         self._btn_reload.clicked.connect(self._reload)
         self._btn_stop.clicked.connect(self._stop)
 
+        tly.addSpacing(8)
+
         # 地址栏
         self._url_bar = UrlBar(toolbar)
         self._url_bar.navigate_requested.connect(self._navigate_to_url)
         self._url_bar.set_completer_source(self._get_suggestions)
         tly.addWidget(self._url_bar, 1)
-        tly.addWidget(self._btn_reload)
-        tly.addWidget(self._btn_stop)
 
-        # Design Mode（拾取页面元素 → 回填输入框）
-        self._btn_pick = self._make_tool_btn("⌖", "选取页面元素 (Ctrl+Shift+C)")
-        self._btn_pick.clicked.connect(self._toggle_design_mode)
-        tly.addWidget(self._btn_pick)
+        tly.addSpacing(8)
 
-        # 收藏星标（★/☆ 保留字符，_update_bookmark_state 动态切换）
-        self._btn_bookmark = self._make_tool_btn("☆", "收藏当前网页")
-        self._btn_bookmark.clicked.connect(self._toggle_current_bookmark)
-        tly.addWidget(self._btn_bookmark)
-
-        # 新标签按钮
-        self._btn_new_tab = self._make_tool_btn(FluentIcon.ADD, "新建标签")
-        self._btn_new_tab.clicked.connect(self._new_tab)
-        tly.addWidget(self._btn_new_tab)
-
-        # 菜单按钮（收藏/历史/下载）
-        self._btn_menu = self._make_tool_btn(FluentIcon.MENU, "菜单")
-        self._btn_menu.clicked.connect(self._toggle_menu)
-        tly.addWidget(self._btn_menu)
-
-        # 在外部浏览器打开（系统默认浏览器，绕过内置浏览器重定向）
+        # 右侧动作组：外部打开 / 菜单（收藏星标已内嵌地址栏，次要操作收进菜单）
         self._btn_external = self._make_tool_btn(
             QIcon(_icon_path("external_open", self._is_dark)), "在外部浏览器打开"
         )
         self._btn_external.clicked.connect(self._open_in_system_browser)
         tly.addWidget(self._btn_external)
 
-        self._btn_close = self._make_tool_btn(FluentIcon.CLOSE, "关闭浏览器")
-        self._btn_close.clicked.connect(self._close_card)
-        tly.addWidget(self._btn_close)
+        self._btn_menu = self._make_tool_btn(FluentIcon.MENU, "菜单")
+        self._btn_menu.clicked.connect(self._toggle_menu)
+        tly.addWidget(self._btn_menu)
+
+        self._url_bar.bookmark_toggled.connect(self._toggle_current_bookmark)
 
         root.addWidget(toolbar)
 
@@ -211,11 +200,16 @@ class BrowserWindowCard(QWidget):
         self._bookmark_bar.open_url.connect(self._navigate_to_url)
         root.addWidget(self._bookmark_bar)
 
-        # ── 标签栏 ──
-        tab_row = QWidget(self)
+        # ── 标签栏（新建按钮紧跟最后一个标签，Chrome 布局）──
+        tab_row = QFrame(self)
+        tab_row.setObjectName("browserTabRow")
+        tab_row.setStyleSheet(
+            f"#browserTabRow {{ border-bottom: 1px solid {self._c['border']}; }}"
+        )
+        self._tab_row = tab_row
         trly = QHBoxLayout(tab_row)
         trly.setContentsMargins(12, 0, 12, 0)
-        trly.setSpacing(4)
+        trly.setSpacing(2)
 
         self._tab_bar = ChromeTabBar(tab_row)
         self._tab_bar.currentChanged.connect(self._on_tab_changed)
@@ -223,7 +217,13 @@ class BrowserWindowCard(QWidget):
         self._tab_bar.new_tab_requested.connect(self._new_tab)
         self._tab_bar.close_others_requested.connect(self._close_others)
         self._tab_bar.tabMoved.connect(self._on_tab_moved)
-        trly.addWidget(self._tab_bar, 1)
+        trly.addWidget(self._tab_bar, 0, Qt.AlignVCenter)
+
+        self._btn_new_tab = self._make_tool_btn(FluentIcon.ADD, "新建标签")
+        self._btn_new_tab.setFixedSize(26, 26)
+        self._btn_new_tab.clicked.connect(self._new_tab)
+        trly.addWidget(self._btn_new_tab, 0, Qt.AlignVCenter)
+        trly.addStretch(1)
 
         # 隐身标识（默认隐藏）
         self._incognito_badge = QLabel("隐身", tab_row)
@@ -277,6 +277,8 @@ class BrowserWindowCard(QWidget):
         status.setVisible(False)
         root.addWidget(status)
 
+        self._install_popup_autohide()
+
     def _make_tool_btn(self, icon, tip: str) -> QToolButton:
         """工具栏按钮：支持 FluentIcon/qicon、QIcon 或文本（★/☆ 收藏星标）。"""
         btn = QToolButton(self)
@@ -288,7 +290,7 @@ class BrowserWindowCard(QWidget):
             btn.setIcon(icon)
             btn.setIconSize(QSize(16, 16))
         btn.setToolTip(tip)
-        btn.setFixedSize(28, 28)
+        btn.setFixedSize(30, 30)
         btn.setStyleSheet(_tool_btn_style(self._c))
         return btn
 
@@ -594,6 +596,7 @@ class BrowserWindowCard(QWidget):
     def _toggle_design_mode(self):
         from .design_mode import DesignMode
 
+        self._menu_panel.setVisible(False)
         if self._design_mode is None:
             self._design_mode = DesignMode(self)
         self._design_mode.toggle()
@@ -605,13 +608,21 @@ class BrowserWindowCard(QWidget):
             mode.stop()
 
     def _focus_input(self):
-        """退出拾取后把焦点交还输入框（input.write 已填好内容）。"""
+        """退出拾取后把焦点交还输入框。
+
+        input.write 没有纯聚焦接口，且 append=True 的实现是
+        ``existing + "\n" + text``，写空串会凭空多一个换行。
+        改为读回原文再用覆盖模式原样写回：文本不变，光标落到末尾。
+        """
         try:
             from app.plugins.sdk import caps_for
 
+            read = caps_for("input.read", plugin="browser", surface="ui")
             write = caps_for("input.write", plugin="browser", surface="ui")
-            if write is not None:
-                write("", append=True, focus=True)
+            if read is None or write is None:
+                return
+            text = (read() or {}).get("text", "") or ""
+            write(text, append=False, focus=True)
         except Exception:
             pass
 
@@ -699,16 +710,18 @@ class BrowserWindowCard(QWidget):
             self._btn_forward,
             self._btn_reload,
             self._btn_stop,
-            self._btn_bookmark,
             self._btn_new_tab,
             self._btn_menu,
             self._btn_external,
-            self._btn_close,
         ):
             button.setStyleSheet(button_style)
+        self._tab_row.setStyleSheet(
+            f"#browserTabRow {{ border-bottom: 1px solid {c['border']}; }}"
+        )
 
         # 外部打开按钮图标随主题切换（深色主题用浅色线条版本）
         self._btn_external.setIcon(QIcon(_icon_path("external_open", c["is_dark"])))
+        self._menu_pick_btn.setIcon(QIcon(_icon_path("picker", c["is_dark"])))
 
         self._menu_panel.setStyleSheet(
             f"QFrame {{ background: {c['surface']}; border: 1px solid {c['border']}; border-radius: 8px; }}"
@@ -736,7 +749,7 @@ class BrowserWindowCard(QWidget):
 
     def _build_menu_panel(self, parent) -> QWidget:
         panel = QFrame(parent)
-        panel.setFixedWidth(150)
+        panel.setFixedWidth(168)
         ply = QVBoxLayout(panel)
         ply.setContentsMargins(6, 6, 6, 6)
         ply.setSpacing(2)
@@ -754,11 +767,21 @@ class BrowserWindowCard(QWidget):
             btn.clicked.connect(slot)
             ply.addWidget(btn)
 
-        # 拦截设置（分离线）
+        # 工具组（分离线）：拾取页面元素 / 拦截设置
         sep = QFrame(panel)
         sep.setFixedHeight(1)
         sep.setStyleSheet("background: rgba(128,128,128,0.15);")
         ply.addWidget(sep)
+
+        btn = QToolButton(panel)
+        btn.setIcon(QIcon(_icon_path("picker", self._is_dark)))
+        btn.setIconSize(QSize(16, 16))
+        btn.setText("拾取页面元素")
+        btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        btn.setToolTip("Ctrl+Shift+C")
+        btn.clicked.connect(self._toggle_design_mode)
+        self._menu_pick_btn = btn
+        ply.addWidget(btn)
 
         btn = QToolButton(panel)
         btn.setIcon(FluentIcon.SETTING.qicon())
@@ -766,6 +789,20 @@ class BrowserWindowCard(QWidget):
         btn.setText("拦截设置")
         btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         btn.clicked.connect(self._open_redirect_settings)
+        ply.addWidget(btn)
+
+        # 末项：关闭窗口（工具栏不再常驻关闭按钮）
+        sep = QFrame(panel)
+        sep.setFixedHeight(1)
+        sep.setStyleSheet("background: rgba(128,128,128,0.15);")
+        ply.addWidget(sep)
+
+        btn = QToolButton(panel)
+        btn.setIcon(FluentIcon.CLOSE.qicon())
+        btn.setIconSize(QSize(16, 16))
+        btn.setText("关闭浏览器")
+        btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        btn.clicked.connect(self._close_card)
         ply.addWidget(btn)
         return panel
 
@@ -782,8 +819,60 @@ class BrowserWindowCard(QWidget):
         self._position_popup(self._menu_panel)
 
     # 卡片内嵌悬浮面板（历史/收藏/下载统一弹窗格式）的属性名清单：
-    # 菜单打开时互斥隐藏、resize 时统一重定位
+    # 菜单打开时互斥隐藏、resize 时统一重定位、失焦时自动收起
     _POPUP_PANEL_ATTRS = ("_history_panel", "_bookmarks_panel", "_downloads_panel")
+
+    def _popup_panels(self):
+        """全部卡片内嵌悬浮弹层（含菜单与收藏栏溢出）"""
+        panels = [self._menu_panel]
+        for attr in self._POPUP_PANEL_ATTRS:
+            panel = getattr(self, attr, None)
+            if panel is not None:
+                panels.append(panel)
+        overflow = getattr(self._bookmark_bar, "_overflow", None)
+        if overflow is not None:
+            panels.append(overflow)
+        return panels
+
+    def _hide_all_popups(self):
+        for panel in self._popup_panels():
+            panel.hide()
+
+    def _install_popup_autohide(self):
+        """弹层失焦自动收起：点页面/地址栏/切窗口时关闭，而不是一直悬着"""
+        from PyQt5.QtWidgets import QApplication
+
+        app = QApplication.instance()
+        if app is not None:
+            self._focus_app = app
+            app.focusChanged.connect(self._on_app_focus_changed)
+
+    def _on_app_focus_changed(self, _old, _new):
+        if not any(panel.isVisible() for panel in self._popup_panels()):
+            return
+        # 合并同一轮连续焦点变化，避开点击触发按钮瞬间误关
+        QTimer.singleShot(0, self._hide_popups_outside_focus)
+
+    def _hide_popups_outside_focus(self):
+        from PyQt5.QtWidgets import QApplication
+
+        app = QApplication.instance()
+        focus = app.focusWidget() if app is not None else None
+        triggers = {self._btn_menu, getattr(self._bookmark_bar, "_more_btn", None)}
+        triggers.discard(None)
+        for panel in self._popup_panels():
+            if not panel.isVisible():
+                continue
+            if focus is not None and (panel is focus or panel.isAncestorOf(focus)):
+                continue
+            # 焦点落在触发按钮上时不关，交给 clicked 的 toggle 处理
+            if any(t is focus or t.isAncestorOf(focus) for t in triggers):
+                continue
+            panel.hide()
+
+    def mousePressEvent(self, event):
+        self._hide_all_popups()
+        super().mousePressEvent(event)
 
     def _hide_popup_panels(self):
         """隐藏全部卡片内嵌悬浮面板（互斥显示，同一时刻只留一个）"""
@@ -860,9 +949,7 @@ class BrowserWindowCard(QWidget):
         url = self._current_bookmark_url()
         valid = bool(url and not is_blank_page(url))
         saved = valid and any(item.get("url") == url for item in self._bookmarks_cache)
-        self._btn_bookmark.setEnabled(valid)
-        self._btn_bookmark.setText("★" if saved else "☆")
-        self._btn_bookmark.setToolTip("取消收藏" if saved else "收藏当前网页")
+        self._url_bar.set_bookmark_state(saved, valid)
         self._btn_external.setEnabled(valid)
 
     def _toggle_current_bookmark(self):
@@ -985,7 +1072,9 @@ class BrowserWindowCard(QWidget):
             theme_manager.unregister_refresh_target(self)
         except Exception:
             pass
-        # N12 修复：释放持久 Profile 单例引用（避免热重载/卸载时 Qt 端 C++ 对象悬空）
+        # N12：清模块级 Profile 引用。所有权在 QApplication（见
+        # profile_manager.get_browser_profile 的 setParent），此处清引用
+        # 不会析构 C++ Profile，view 销毁顺序不再受 Profile 析构威胁
         try:
             reset_profiles()
         except Exception:
@@ -998,6 +1087,13 @@ class BrowserWindowCard(QWidget):
         except Exception:
             pass
         self._loader.cleanup()
+        app = getattr(self, "_focus_app", None)
+        if app is not None:
+            try:
+                app.focusChanged.disconnect(self._on_app_focus_changed)
+            except (TypeError, RuntimeError):
+                pass
+            self._focus_app = None
         for entry in self._views:
             view = entry.get("view")
             if view is not None:

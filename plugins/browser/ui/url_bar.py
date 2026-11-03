@@ -7,10 +7,12 @@
 - 自动补全：从历史 + 收藏合并排序（QCompleter 数据源）
 """
 
+import os
 import re
 from typing import Callable, List, Tuple
 
 from PyQt5.QtCore import QTimer, Qt, pyqtSignal
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
     QCompleter,
     QHBoxLayout,
@@ -20,6 +22,14 @@ from PyQt5.QtWidgets import (
 )
 
 from .theme import font_css, list_item_style, theme_colors
+
+# 收藏星标图标目录（ui/assets/）
+_ICON_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
+
+def _bookmark_icon_path(saved: bool, is_dark: bool) -> str:
+    """星标图标路径：已收藏用实心版，深色主题用 _dark 后缀版本"""
+    name = "bookmark_filled" if saved else "bookmark"
+    return os.path.join(_ICON_DIR, f"{name}_dark.svg" if is_dark else f"{name}.svg")
 
 # ── URL 规范化 ──────────────────────────────────────────
 
@@ -72,20 +82,23 @@ class UrlBar(QWidget):
 
     Signals:
         navigate_requested(str url): 用户回车导航
+        bookmark_toggled(): 点击内嵌星标
     """
 
     navigate_requested = pyqtSignal(str)
+    bookmark_toggled = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self._loading = False
         self._progress = 0
+        self._bookmark_saved = False
         self._completer_source: Callable[[], List[Tuple[str, str]]] = lambda: []
         self._c = theme_colors(None)  # 主题派生色缓存（apply_theme 前的默认观感）
         self._setup_ui()
 
     def _setup_ui(self):
-        self.setFixedHeight(38)
+        self.setFixedHeight(36)
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
@@ -95,8 +108,19 @@ class UrlBar(QWidget):
         self._edit.textChanged.connect(self._sync_placeholder)
         self._edit.setClearButtonEnabled(True)
         self._edit.returnPressed.connect(self._on_return_pressed)
-        self._edit.setMinimumHeight(34)
+        self._edit.setMinimumHeight(32)
         self._edit.setStyleSheet(self._edit_style(self._c))
+
+        # 收藏星标内嵌输入框右端（Chrome 做法），空白页时隐藏
+        self._bookmark_action = self._edit.addAction(
+            QIcon(_bookmark_icon_path(False, self._c["is_dark"])),
+            QLineEdit.TrailingPosition,
+        )
+        self._bookmark_action.setToolTip("收藏当前网页")
+        self._bookmark_action.triggered.connect(
+            lambda _checked=False: self.bookmark_toggled.emit()
+        )
+        self._bookmark_action.setVisible(False)
 
         layout.addWidget(self._edit, 1)
 
@@ -118,11 +142,11 @@ class UrlBar(QWidget):
     # ── 样式构建（对齐主程序输入框观感） ──
 
     def _edit_style(self, c: dict) -> str:
-        """输入框 QSS：content_bg 底 + input_border/focus_border + 8px 圆角"""
+        """输入框 QSS：胶囊形（圆角 = 高度/2）+ input_border/focus_border"""
         return (
             f"QLineEdit {{ {font_css(c['ff'], c['fs'])} color: {c['text']};"
-            f" border: 1px solid {c['input_border']}; border-radius: 8px;"
-            f" padding: 0 12px; background: {c['raised']};"
+            f" border: 1px solid {c['input_border']}; border-radius: 16px;"
+            f" padding: 0 14px; background: {c['raised']};"
             f" selection-background-color: {c['selected']}; }}"
             f"QLineEdit:focus {{ border: 1px solid {c['focus_border']};"
             f" background: {c['raised']}; }}"
@@ -149,9 +173,24 @@ class UrlBar(QWidget):
         self._c = c
         self._edit.setStyleSheet(self._edit_style(c))
         self._progress_bar.setStyleSheet(self._progress_style(c))
+        self._bookmark_action.setIcon(
+            QIcon(_bookmark_icon_path(self._bookmark_saved, c["is_dark"]))
+        )
         completer = self._edit.completer()
         if completer is not None:
             completer.popup().setStyleSheet(self._completer_style(c))
+
+    # ── 收藏星标状态 ──
+
+    def set_bookmark_state(self, saved: bool, enabled: bool):
+        """更新内嵌星标：saved 决定实心/描边，enabled 决定是否显示与可点。"""
+        self._bookmark_saved = bool(saved)
+        self._bookmark_action.setIcon(
+            QIcon(_bookmark_icon_path(self._bookmark_saved, self._c["is_dark"]))
+        )
+        self._bookmark_action.setToolTip("取消收藏" if saved else "收藏当前网页")
+        self._bookmark_action.setEnabled(enabled)
+        self._bookmark_action.setVisible(enabled)
 
     def _sync_placeholder(self, text: str):
         """避免部分高 DPI/主题组合下 placeholder 与 URL 同时绘制。"""

@@ -32,6 +32,10 @@ _browser_profile: Optional[object] = None
 
 _PROFILE_NAME = "browser-profile"
 
+# 跨热重载复用锚点：存活 Profile 挂在 QApplication 属性上，
+# 模块对象随热重载生灭，app 属性不随其消失
+_APP_PROFILE_ATTR = "_drifox_browser_profile_singleton"
+
 
 def _ensure_dirs() -> None:
     """确保数据目录存在"""
@@ -59,7 +63,22 @@ def get_browser_profile():
         except RuntimeError:
             _browser_profile = None
 
+    from PyQt5.QtCore import QCoreApplication
     from PyQt5.QtWebEngineWidgets import QWebEngineProfile
+
+    app = QCoreApplication.instance()
+
+    # 跨热重载复用：模块对象随重载生灭，从 app 属性找回存活实例，
+    # 避免同名 storageName 的 Profile 并存（数据竞争风险）
+    if app is not None:
+        cached = getattr(app, _APP_PROFILE_ATTR, None)
+        if cached is not None:
+            try:
+                cached.storageName()
+                _browser_profile = cached
+                return cached
+            except RuntimeError:
+                pass
 
     _ensure_dirs()
 
@@ -71,6 +90,14 @@ def get_browser_profile():
     profile.setHttpCacheMaximumSize(256 * 1024 * 1024)
     profile.setDownloadPath(str(DOWNLOAD_DIR))
     profile.setHttpAcceptLanguage(_ACCEPT_LANG)
+
+    # 所有权转给 QApplication：Python 侧引用清零/模块重载/GC 都不会
+    # 析构 C++ Profile。曾因先析构 Profile、后析构仍存活的
+    # QWebEnginePage 触发 ACCESS_VIOLATION（Qt 警告 "Release of profile
+    # requested but WebEnginePage still not deleted"）。生命周期 = app。
+    if app is not None:
+        profile.setParent(app)
+        setattr(app, _APP_PROFILE_ATTR, profile)
 
     _browser_profile = profile
     return profile
@@ -154,10 +181,12 @@ def get_profile_for(incognito: bool = False):
 
 
 def reset_profiles() -> None:
-    """清空持久 Profile 单例引用（热重载/卸载时调用，避免旧 Profile 泄漏）
+    """清空模块级 Profile 引用（热重载/卸载时调用）
 
-    隐身 Profile 不缓存，所以此处无需处理。调用方（如 browser_window.deleteLater）
-    应已通过关闭所有隐身窗口释放它们各自的匿名 profile。
+    所有权已转给 QApplication（get_browser_profile 中 setParent），
+    清引用不会析构 C++ 对象；存活实例经 app 属性在下次
+    get_browser_profile 跨模块复用，热重载安全。
+    隐身 Profile 不走此路径（每次全新、随窗口关闭销毁）。
     """
     global _browser_profile
     _browser_profile = None
