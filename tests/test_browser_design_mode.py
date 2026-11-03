@@ -95,6 +95,32 @@ def test_filter_styles_dedupes_overflow_shorthand():
     assert out["overflow-y"] == "auto"
 
 
+def test_filter_styles_drops_offsets_when_not_positioned():
+    raw = {
+        "position": "static",
+        "top": "auto",
+        "right": "auto",
+        "bottom": "auto",
+        "left": "auto",
+        "z-index": "auto",
+        "overflow": "visible",
+        "background-size": "auto",
+    }
+    assert core.filter_styles(raw) == []
+
+
+def test_filter_styles_keeps_offsets_when_positioned():
+    raw = {"position": "absolute", "top": "12px", "left": "0px"}
+    out = dict(core.filter_styles(raw))
+    assert out["position"] == "absolute"
+    assert out["top"] == "12px"
+
+
+def test_filter_styles_keeps_non_default_box_sizing():
+    raw = {"display": "block", "box-sizing": "border-box"}
+    assert dict(core.filter_styles(raw))["box-sizing"] == "border-box"
+
+
 def test_style_keys_has_no_duplicates():
     assert len(core.STYLE_KEYS) == len(set(core.STYLE_KEYS))
 
