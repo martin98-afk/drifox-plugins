@@ -5,7 +5,7 @@
         "light": "icon.svg",
         "dark": "icon_dark.svg"
     },
-    "version": "1.6.0",
+    "version": "1.6.1",
     "author": {
         "name": "DriFox Contributors"
     },
@@ -18,7 +18,8 @@
         "ui.notify",
         "ui.card.show",
         "input.read",
-        "input.write"
+        "input.write",
+        "storage.data_dir"
     ],
     "keywords": [
         "browser",
