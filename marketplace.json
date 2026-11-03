@@ -636,7 +636,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 74,
+            "downloads": 75,
             "keywords": [
                 "browser",
                 "web",
@@ -1053,6 +1053,7 @@
             "components": {
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "animation",
                 "动画",
@@ -3087,7 +3088,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 94,
+            "downloads": 95,
             "keywords": [
                 "git",
                 "source-control",
@@ -3713,7 +3714,7 @@
                 "skills": true,
                 "tools": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "image-generation",
                 "video-generation",
