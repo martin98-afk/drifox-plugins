@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+### 🔧 browser v1.5.2：外部打开彻底绕开代理链（v1.5.1 未修净）
+- **v1.5.1 为何不够**：剥链只认 `_drifox_redirect` 标记，而实机上收到的 `resolved` 是一个**丢了标记的旧版代理**（`<function _redirect_os_startfile at ...>`），被当成原生入口直接调用，于是又走拦截进内置浏览器；日志实锤 `resolved=<function _redirect_os_startfile>`、`stash=None`
+- **根因**：`install_redirect` 接管时用 `elif _orig_os_startfile is None: = prev_sf` 兜底，把「无标记的旧代理」存成了原始入口；安装日志里那次也没打印「接管热重载遗留的 os.startfile 代理」
+- **修复**：代理判定改为「`_drifox_redirect` 标记 **或** `__name__` 命中 `_redirect_os_startfile` / `_redirect_webbrowser_open` / `_redirect_execute_bash` 或类身份」，`_strip_proxy_chain(fn, attr)` 逐层剥到原生（8 层上限防自环），webbrowser / QDesktopServices / os.startfile 三处接管统一走它
+- **外部打开**：`open_url_external()` 不再依赖 `os.startfile` 的代理链，直接 `ShellExecuteW`（Win）/ `open`（macOS）/ `xdg-open`（Linux），从根上断掉回环
+- **兜底**：`_orig_os_startfile` 为 None 时 `_redirect_os_startfile` 内部改走 `_shell_open`，不再 `TypeError`
+- **验证**：探针复现实机现场（新代理 → 无标记旧代理 → 原生），三层接管后解析出 `<built-in function startfile>`，自环返回 None，原生原样返回；`py_compile` 通过
+
 ### 🔧 browser v1.5.1：修复「在外部浏览器打开」回环到内置浏览器
 - **问题**：工具栏外链按钮走 `open_url_external()`，原实现只取一层 `_drifox_orig_startfile`。热重载接管若把旧代理当成「原始入口」存下，取回的 orig 本身仍是拦截代理，调用后重新走 `_try_intercept` → 内置浏览器新标签，而函数末尾照旧 `return True`，状态栏还报「已在系统默认浏览器打开」
 - **修复**：新增 `_unwrap_startfile()` 沿 `_drifox_orig_startfile` 逐层剥代理（最多 8 层，兼容自环），剥不干净退回模块 stash `_orig_os_startfile`；仍不可用则 Windows 走 `ctypes.windll.shell32.ShellExecuteW`（不经过 Python 层任何 patch，必然落到系统默认浏览器）
