@@ -563,26 +563,66 @@ def install_bash_redirect() -> bool:
     return True
 
 
+def _unwrap_startfile(startfile: Any) -> Any:
+    """逐层剥掉本插件的 startfile 代理，返回真正的系统入口
+
+    ⚠️ 只取一层 ``_drifox_orig_startfile`` 不够：热重载接管若曾把旧代理
+    当成「原始函数」存下来（旧版代理无 ``_drifox_redirect`` 标记），
+    orig 本身仍是代理，调用后会重新走拦截 → 按钮点了又弹内置浏览器。
+    剥到没有代理标记或链断为止；剥不干净返回 None，由调用方走系统级兜底。
+    """
+    cur = startfile
+    for _ in range(8):
+        if cur is None:
+            return None
+        if not getattr(cur, "_drifox_redirect", False):
+            return cur
+        cur = getattr(cur, "_drifox_orig_startfile", None)
+    return None
+
 def open_url_external(url: str) -> bool:
     """绕过全部拦截补丁，强制用系统默认浏览器/程序打开 URL
 
     供浏览器卡片「在外部浏览器打开」按钮使用 —— 修复回环 bug：
     该按钮原来直接 os.startfile(url)，而 os.startfile 已被本模块 patch，
     http URL 会被再次拦截回内置浏览器（按钮点了等于没点）。
-    通过代理函数属性取回原始 os.startfile（热重载后依然可取）。
+    通过代理函数属性取回原始 os.startfile（热重载后依然可取），
+    并逐层剥掉可能残留的旧代理；仍剥不干净时用 ShellExecuteW 兜底
+    （不经 Python 层任何 patch，必然落到系统默认浏览器）。
     """
     if not url:
         return False
-    try:
-        if hasattr(os, "startfile"):
-            orig = getattr(os.startfile, "_drifox_orig_startfile", None)
-            (orig or os.startfile)(url)  # type: ignore[operator]
-            return True
-        import subprocess
-        import sys as _sys
+    if hasattr(os, "startfile"):
+        orig = _unwrap_startfile(os.startfile)
+        if orig is None:
+            orig = _unwrap_startfile(_orig_os_startfile)
+        logger.info(
+            f"[browser-external] url={url[:80]} "
+            f"os.startfile={os.startfile!r} resolved={orig!r} stash={_orig_os_startfile!r}"
+        )
+        if orig is not None:
+            try:
+                orig(url)  # type: ignore[operator]
+                return True
+            except Exception:
+                logger.exception(f"[browser-external] 原始入口调用失败，改走 ShellExecuteW: {url[:80]}")
+        if sys.platform == "win32":
+            try:
+                import ctypes
 
-        opener = "open" if _sys.platform == "darwin" else "xdg-open"
+                rc = ctypes.windll.shell32.ShellExecuteW(None, "open", url, None, None, 1)
+                if rc > 32:
+                    return True
+                logger.warning(f"[browser-external] ShellExecuteW 失败 rc={rc}: {url[:80]}")
+            except Exception:
+                logger.exception(f"[browser-external] ShellExecuteW 异常: {url[:80]}")
+        return False
+    try:
+        import subprocess
+
+        opener = "open" if sys.platform == "darwin" else "xdg-open"
         subprocess.Popen([opener, url])
         return True
     except Exception:
+        logger.exception(f"[browser-external] 系统打开器失败: {url[:80]}")
         return False
