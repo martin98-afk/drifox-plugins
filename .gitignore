@@ -3,6 +3,8 @@ __pycache__/
 *.py[co]
 *$py.class
 *.so
+# 插件 vendored 平台二进制豁免（deps/<platform>/ 的 mac so 与 dylib 必须入库）
+!plugins/*/deps/**/*.so
 .Python
 *.egg-info/
 .pytest_cache/
