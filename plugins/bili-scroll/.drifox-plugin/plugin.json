@@ -5,7 +5,7 @@
         "light": "icon.svg",
         "dark": "icon_dark.svg"
     },
-    "version": "0.2.0",
+    "version": "0.2.1",
     "author": {
         "name": "DriFox Contributors"
     },
@@ -35,6 +35,28 @@
         "mcp",
         "定时任务"
     ],
+    "dependencies": {
+        "pip": {
+            "default": [
+                "mcp==1.30.0",
+                "httpx>=0.27",
+                "pyyaml>=6.0",
+                "beautifulsoup4>=4.12"
+            ],
+            "darwin": [
+                "aiohttp>=3.9.0",
+                "brotli>=1.1",
+                "Pillow>=9.0",
+                "pycryptodomex>=3"
+            ],
+            "linux": [
+                "aiohttp>=3.9.0",
+                "brotli>=1.1",
+                "Pillow>=9.0",
+                "pycryptodomex>=3"
+            ]
+        }
+    },
     "config_schema": {
         "fields": [
             {
@@ -69,9 +91,18 @@
                 "type": "select",
                 "default": "full",
                 "options": [
-                    {"value": "full", "label": "完整（标题/UP/为什么值得）"},
-                    {"value": "thin", "label": "薄版（每条一两行）"},
-                    {"value": "none", "label": "不写日报"}
+                    {
+                        "value": "full",
+                        "label": "完整（标题/UP/为什么值得）"
+                    },
+                    {
+                        "value": "thin",
+                        "label": "薄版（每条一两行）"
+                    },
+                    {
+                        "value": "none",
+                        "label": "不写日报"
+                    }
                 ]
             },
             {
@@ -94,9 +125,18 @@
                 "type": "select",
                 "default": "comment",
                 "options": [
-                    {"value": "comment", "label": "只发公开评论（默认）"},
-                    {"value": "dm_only", "label": "只发私信（不在别人视频下留言）"},
-                    {"value": "both", "label": "评论 + 私信"}
+                    {
+                        "value": "comment",
+                        "label": "只发公开评论（默认）"
+                    },
+                    {
+                        "value": "dm_only",
+                        "label": "只发私信（不在别人视频下留言）"
+                    },
+                    {
+                        "value": "both",
+                        "label": "评论 + 私信"
+                    }
                 ]
             },
             {
