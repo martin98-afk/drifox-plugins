@@ -57,6 +57,7 @@ memory/
 *.egg
 build/
 dist/
+dist_test/
 *.spec
 
 # 系统文件

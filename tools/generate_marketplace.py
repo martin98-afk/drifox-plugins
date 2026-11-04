@@ -33,6 +33,8 @@ MARKETPLACE_PATH = REPO_ROOT / "marketplace.json"
 MANIFEST_PATH = Path(".drifox-plugin") / "plugin.json"
 # 下载量缓存（由 tools/fetch_downloads.py 定时拉取计数服务生成）
 DOWNLOADS_CACHE_PATH = REPO_ROOT / "downloads_cache.json"
+# tarball 构建产物索引（tools/build_plugin_tarballs.py 生成；不入库，缺失时保留现有清单字段）
+TARBALL_INDEX_PATH = REPO_ROOT / "dist" / "tarball_index.json"
 
 # 仓库元信息（硬编码，与 README 中的 GitHub 链接一致）
 REPO_NAME = "drifox-official"
@@ -181,7 +183,39 @@ def infer_categories(manifest: dict) -> list[str]:
 # ============================================================
 
 
-def build_plugin_entry(plugin_dir: Path, manifest: dict) -> dict:
+def load_tarball_index() -> dict:
+    """读取 tarball 构建索引：{插件名: {"version":..., "tarball": {...}}}
+
+    索引缺失（未跑构建 / CI checkout 无 dist）时返回空字典——调用方应回退
+    到旧 marketplace.json 里的 tarball 字段，避免一次生成就把已发布的
+    tarball 信息清掉。
+    """
+    if not TARBALL_INDEX_PATH.is_file():
+        return {}
+    try:
+        data = json.loads(TARBALL_INDEX_PATH.read_text(encoding="utf-8"))
+        return data.get("plugins") or {}
+    except Exception as e:
+        print(_yellow(f"[warn] tarball 索引读取失败（忽略）: {e}"))
+        return {}
+
+
+def load_existing_tarballs() -> dict:
+    """旧 marketplace.json 里的 tarball 字段：{插件名: tarball}"""
+    if not MARKETPLACE_PATH.is_file():
+        return {}
+    try:
+        data = json.loads(MARKETPLACE_PATH.read_text(encoding="utf-8"))
+        return {
+            p.get("name"): p.get("tarball")
+            for p in data.get("plugins", [])
+            if p.get("name") and p.get("tarball")
+        }
+    except Exception:
+        return {}
+
+
+def build_plugin_entry(plugin_dir: Path, manifest: dict, tarball_entry: dict | None = None) -> dict:
     """从 plugin.json 构建一条 marketplace 插件条目。"""
     entry: dict = {
         "name": manifest["name"],
@@ -233,6 +267,13 @@ def build_plugin_entry(plugin_dir: Path, manifest: dict) -> dict:
     if icon_value:
         entry["icon"] = icon_value
 
+    # tarball 按平台分发（工具出库后的主通道，含 deps）；无产物则字段缺失，
+    # 老客户端继续走 source=git-subdir，新客户端走 tarball——双轨兼容。
+    if tarball_entry:
+        tb = tarball_entry.get("tarball") if isinstance(tarball_entry, dict) else None
+        if tb:
+            entry["tarball"] = tb
+
     return entry
 
 
@@ -240,6 +281,8 @@ def generate_marketplace() -> dict:
     """扫描所有插件，生成完整的 marketplace.json 结构。"""
     global _downloads_cache
     _downloads_cache = load_downloads_cache(DOWNLOADS_CACHE_PATH)
+    tarball_index = load_tarball_index()
+    existing_tarballs = load_existing_tarballs()
     plugins = discover_plugins()
     entries: list[dict] = []
 
@@ -251,7 +294,12 @@ def generate_marketplace() -> dict:
         if manifest.get("name") in DRIFOX_BUILTIN_PLUGINS:
             print(f"  {_yellow('SKIP')} {plugin_dir.name} — DriFox 运行时内置插件，不进市场")
             continue
-        entries.append(build_plugin_entry(plugin_dir, manifest))
+        name = manifest.get("name") or plugin_dir.name
+        # 优先级：本次构建产物 > 旧清单保留字段（避免无 dist 的生成把产物信息抹掉）
+        tb_entry = tarball_index.get(name)
+        if not tb_entry and existing_tarballs.get(name):
+            tb_entry = {"tarball": existing_tarballs[name]}
+        entries.append(build_plugin_entry(plugin_dir, manifest, tb_entry))
 
     return {
         "name": REPO_NAME,
