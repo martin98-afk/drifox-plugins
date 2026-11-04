@@ -48,8 +48,81 @@ class _VendoredPilFinder:
 def _pil_modules():
     return [k for k in sys.modules if k == "PIL" or k.startswith("PIL.")]
 
+def _log_pil_origin() -> None:
+    """记录当前实际生效的 PIL 来源与版本（只读，绝不抛异常）。
+
+    为什么需要：宿主 deps_loader 把每个插件的 deps 目录 insert(0) 到 sys.path，
+    带 PIL 的插件谁后加载谁占位，先进 sys.modules 的那份赢。本机实测：
+    docx-designer(Pillow 13.0.0) 会赢过本插件的 12.2.0。SDK 是按自带版本写
+    和测的，跨版本跑可能摸到已移除 API，而报错现场离根因极远（曾为了一个
+    UnidentifiedImageError 查到多插件临时文件冲突）。这里只留一行现场快照，
+    不改任何行为。
+    """
+    try:
+        mod = sys.modules.get("PIL")
+        if mod is None:
+            return
+        actual_file = str(getattr(mod, "__file__", "") or "")
+        actual_ver = str(getattr(mod, "__version__", "") or "?")
+        own_dir = vendored_pil_dir()
+        own_ver = "?"
+        if own_dir is not None:
+            try:
+                vi = own_dir / "_version.py"
+                if vi.is_file():
+                    for line in vi.read_text(encoding="utf-8").splitlines():
+                        if line.startswith("__version__"):
+                            own_ver = line.split("=", 1)[1].strip().strip("\"'")
+                            break
+            except Exception:
+                pass
+        from_own = bool(
+            own_dir is not None
+            and os.path.normcase(os.path.abspath(actual_file)).startswith(
+                os.path.normcase(str(own_dir))
+            )
+        )
+        level = logger.info
+        detail = f"本插件自带 {own_ver}"
+        if not from_own:
+            detail = f"非本插件自带，本插件自带 {own_ver}"
+        if own_ver not in ("?", actual_ver):
+            level = logger.warning
+        level(
+            f"[bili-scroll] PIL 实际生效：Pillow {actual_ver} @ {actual_file or '?'}"
+            f" | {detail}"
+        )
+    except Exception:  # noqa: BLE001 - 诊断日志绝不影响仲裁
+        pass
+
 def _pil_selftest():
-    from PIL import _imaging  # noqa: F401  残缺副本正是缺这个
+    """自检必须真解码一张图，不能只验 import。
+
+    踩过的坑：PyInstaller 打包版的 PIL 能 `from PIL import _imaging` 成功
+    （扩展在位、Image 能 import），但**格式插件没注册**，Image.open() 一律
+    抛 `UnidentifiedImageError: cannot identify image file`。只看 import
+    会判定「宿主副本完好」，跳过仲裁，结果所有吃图的能力（发动态带图、
+    视频封面上传）在真机上全废，且报错位置离根因很远。
+    """
+    from PIL import Image
+
+    Image.init()  # 触发插件注册（返回值不可靠，不判它）
+    if "PNG" not in Image.OPEN:
+        raise RuntimeError(f"PIL 未注册 PNG 解码器（已注册: {sorted(Image.OPEN)[:8]}）")
+    # 1x1 RGB 真 PNG（IHDR/IDAT/IEND 齐全、CRC 正确），走完整解码链路。
+    # 别手编字节：早先写的样本 CRC 错，PIL 报 "broken data stream"，
+    # 仲裁据此判定宿主 PIL 坏掉并误回滚。
+    sample = bytes.fromhex(
+        "89504e470d0a1a0a0000000d49484452000000010000000108020000"
+        "00907753de0000000c49444154789c63f8cfc0000003010100c9fe92ef"
+        "0000000049454e44ae426082"
+    )
+    import io
+
+    with Image.open(io.BytesIO(sample)) as im:
+        im.load()
+        if im.size != (1, 1):
+            raise RuntimeError(f"PIL 解码结果异常: {im.size}")
 
 def prefer_vendored_pil():
     """宿主 PIL 缺 _imaging 时换成 deps 版（幂等，失败回滚宿主原状）。"""
@@ -62,6 +135,7 @@ def prefer_vendored_pil():
     try:
         _pil_selftest()
         _PIL_SELFTEST_OK = True  # 宿主副本完好，不动
+        _log_pil_origin()
         return
     except Exception:
         pass
@@ -78,7 +152,8 @@ def prefer_vendored_pil():
             raise RuntimeError(f"vendored PIL 未生效：{new_file}")
         _pil_selftest()
         _PIL_SELFTEST_OK = True  # 钩子常驻：后续 PIL.* 子模块 import 仍需绕开 FrozenImporter
-        logger.info("[bili-scroll] 已仲裁 PIL → 插件 deps 版（宿主副本缺 _imaging）")
+        logger.info("[bili-scroll] 已仲裁 PIL → 插件 deps 版（宿主副本不可用）")
+        _log_pil_origin()
     except Exception as e:  # noqa: BLE001 - 任何失败都回滚到宿主现状
         logger.warning(f"[bili-scroll] vendored PIL 仲裁失败，回滚宿主原状: {e}")
         try:

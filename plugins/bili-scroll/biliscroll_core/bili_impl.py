@@ -163,6 +163,31 @@ import mcp_server as _server  # noqa: E402  vendor 模块（import 无副作用�
 
 # vendor 热修（patch ⑨⑩）也受共享顶层名滞留影响；@tool 工具表随模块重建，
 # _login_session 进程缓存会丢（扫码中热重载需重扫，可接受）
+#
+# ⚠️ 必须**先** reload bili_ext 再 reload _server：
+#   mcp_server 尾部 `from bili_ext import register_all` 在 reload 时拿到的是
+#   sys.modules 里**已存在的旧 bili_ext 模块对象**。只 reload _server 的话，
+#   挂载进去的还是旧 register_all ⇒ 改 bili_ext 等于没改（实证：修了分区
+#   解析结构，重载后仍返回旧的空结果）。
+import importlib as _importlib
+
+# 修过的 vendored SDK 文件（如 utils/picture.py 的临时文件冲突修复）同样会被
+# sys.modules 里的旧版挡住 —— bilibili_api 是共享顶层名，reload 必须点名到
+# 具体子模块，且要在 reload(_server) 之前完成（_server 在 import 期就绑定了引用）。
+for _mod in ("bilibili_api.utils.picture", "bilibili_api.video_uploader"):
+    try:
+        _m = _importlib.import_module(_mod)
+        _importlib.reload(_m)
+    except Exception as _e:  # noqa: BLE001 - 单模块失败不阻断整体
+        logger.warning(f"[bili-scroll] reload {_mod} 失败: {_e}")
+
+try:
+    import bili_ext as _bili_ext
+
+    _importlib.reload(_bili_ext)
+except Exception as _e:  # noqa: BLE001 - 扩展模块缺失不应阻断上游工具
+    logger.warning(f"[bili-scroll] reload bili_ext 失败（扩展工具可能未更新）: {_e}")
+
 importlib.reload(_server)
 
 IMPLS: dict = {}    # 工具名 → 同步 impl（kwargs → content str）

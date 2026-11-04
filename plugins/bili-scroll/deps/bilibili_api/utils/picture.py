@@ -47,15 +47,26 @@ class Picture:
         return f"Picture(height='{self.height}', width='{self.width}', imageType='{self.imageType}', size={self.size}, url='{self.url}')"
 
     def __set_picture_meta_from_bytes(self, imgtype: str) -> None:
-        tmp_dir = tempfile.gettempdir()
-        img_path = os.path.join(tmp_dir, "test." + imgtype)
-        with open(img_path, "wb+") as file:
-            file.write(self.content)
-        img = Image.open(img_path)
-        self.size = int(round(os.path.getsize(img_path) / 1024, 0))
-        self.height = img.height
-        self.width = img.width
-        self.imageType = imgtype
+        # ⚠️ 上游用固定路径 <TEMP>/test.<ext>。多插件共存时这是**共享可变全局量**：
+        #    docx-designer 等插件的 PIL 也读写同名文件，一方写到一半另一方就
+        #    读到截断内容，报 UnidentifiedImageError / broken data stream，
+        #    且报错地点离真正的原因很远（实测本机 docx-designer 与 bili-scroll 冲突）。
+        #    改成每次唯一文件名，用完删。
+        fd, img_path = tempfile.mkstemp(suffix="." + imgtype, prefix="bili_pic_")
+        try:
+            with os.fdopen(fd, "wb") as file:
+                file.write(self.content)
+            img = Image.open(img_path)
+            img.load()
+            self.size = int(round(os.path.getsize(img_path) / 1024, 0))
+            self.height = img.height
+            self.width = img.width
+            self.imageType = imgtype
+        finally:
+            try:
+                os.remove(img_path)
+            except OSError:
+                pass
 
     @staticmethod
     async def load_url(url: str) -> "Picture":
@@ -179,14 +190,13 @@ class Picture:
         Returns:
             Picture: `self`
         """
-        tmp_dir = tempfile.gettempdir()
-        img_path = os.path.join(tmp_dir, "test." + self.imageType)
-        open(img_path, "wb").write(self.content)
-        img = Image.open(img_path)
-        new_img_path = os.path.join(tmp_dir, "test." + new_format)
-        img.save(new_img_path)
-        with open(new_img_path, "rb") as file:
-            self.content = file.read()
+        # 同上：上游固定用 <TEMP>/test.*，多插件会互相覆写。改用唯一临时文件。
+        import io
+
+        img = Image.open(io.BytesIO(self.content))
+        buf = io.BytesIO()
+        img.save(buf, format=new_format.upper())
+        self.content = buf.getvalue()
         self.__set_picture_meta_from_bytes(new_format)
         return self
 

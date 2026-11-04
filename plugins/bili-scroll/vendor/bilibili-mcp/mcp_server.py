@@ -567,14 +567,18 @@ async def bili_subtitle(bvid: str) -> str:
         target = subtitles[0]
 
     # 下载字幕
-    import aiohttp
+    # ⚠️ 宿主打包环境没有 aiohttp（bilibili_api 走 httpx 客户端），
+    #    原来 import aiohttp 直接 ModuleNotFoundError，字幕工具全程不可用。
+    import httpx
+
     sub_url = target.get("subtitle_url", "")
     if sub_url.startswith("//"):
         sub_url = "https:" + sub_url
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(sub_url) as resp:
-            sub_data = await resp.json()
+    async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT) as client:
+        resp = await client.get(sub_url)
+        resp.raise_for_status()
+        sub_data = resp.json()
 
     texts = [item.get("content", "") for item in sub_data.get("body", [])]
     full_text = "\n".join(texts)
@@ -1689,8 +1693,6 @@ async def bili_cover(bvid: str) -> list:
         封面图 + 一句说明（标题、时长、图多大）。
         图能不能真被看见取决于当前模型是否支持图片输入；不支持时会被降级成文字。
     """
-    import aiohttp
-
     cred = load_credential()          # 封面是公开的，没登录也取得到
     try:
         v = video.Video(bvid=bvid, credential=cred)   # 格式不对时**构造时就抛**
@@ -1706,13 +1708,7 @@ async def bili_cover(bvid: str) -> list:
 
     url = _cover_url(pic)
     try:
-        timeout = aiohttp.ClientTimeout(total=_HTTP_TIMEOUT)
-        async with aiohttp.ClientSession(timeout=timeout) as s:
-            async with s.get(url, headers=_image_headers()) as resp:
-                if resp.status != 200:
-                    raise RuntimeError(f"HTTP {resp.status}")
-                raw = await resp.read()
-                mime = (resp.headers.get("Content-Type") or "image/jpeg").split(";")[0].strip()
+        raw, mime = await _fetch_bytes(url, _image_headers())
     except Exception as e:
         return _text_only({"bvid": bvid, "ok": False, "error": f"下载封面失败：{e}"})
 
@@ -1792,15 +1788,20 @@ async def _entries_from_pvdata(data: dict) -> list:
     return [(float(sec), i) for i, sec in enumerate(struct.unpack(f">{count}H", raw))]
 
 
-async def _fetch_bytes(url: str, headers: dict) -> bytes:
-    import aiohttp
+async def _fetch_bytes(url: str, headers: dict) -> tuple:
+    """下载二进制 + 取 Content-Type。
 
-    timeout = aiohttp.ClientTimeout(total=_HTTP_TIMEOUT)
-    async with aiohttp.ClientSession(timeout=timeout) as s:
-        async with s.get(_https(url), headers=headers) as resp:
-            if resp.status != 200:
-                raise RuntimeError(f"HTTP {resp.status}")
-            return await resp.read()
+    用 httpx 而不是 aiohttp：宿主打包环境只装了 httpx（bilibili_api 的客户端
+    依赖），没有 aiohttp，原来的 import aiohttp 在真机上直接 ModuleNotFoundError。
+    """
+    import httpx
+
+    async with httpx.AsyncClient(timeout=_HTTP_TIMEOUT, follow_redirects=True) as client:
+        resp = await client.get(_https(url), headers=headers)
+        if resp.status_code != 200:
+            raise RuntimeError(f"HTTP {resp.status_code}")
+        mime = (resp.headers.get("Content-Type") or "image/jpeg").split(";")[0].strip()
+        return resp.content, mime
 
 
 def _crop_tile(sheet: bytes, tile_index: int, tw: int, th: int) -> bytes:
@@ -2033,6 +2034,15 @@ async def bili_recommend(ps: int = 20) -> str:
         "count": len(videos),
         "videos": videos,
     }, ensure_ascii=False)
+
+
+# ========== 扩展工具（bili-scroll 自有，非上游） ==========
+# 上游 mcp_server.py 不直接改：新增的写能力（发动态/投稿/互动/关系/收藏夹管理）
+# 与补齐的读能力全在 bili_ext.py，这里只挂载。重新 vendor 上游时保留这几行即可。
+
+from bili_ext import register_all as _register_ext  # noqa: E402
+
+_register_ext(globals())
 
 
 # ========== 启动 ==========
