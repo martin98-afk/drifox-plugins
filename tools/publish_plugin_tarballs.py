@@ -109,6 +109,11 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="发布插件 tarball 到 GitHub Releases")
     ap.add_argument("--dry-run", action="store_true", help="只打印计划，不请求 API")
     ap.add_argument("--only", default="", help="只发布指定插件（逗号分隔）")
+    ap.add_argument(
+        "--replace",
+        action="store_true",
+        help="同名 asset 已存在时先删除再上传（同版本重打包用）",
+    )
     args = ap.parse_args()
 
     if not INDEX_PATH.is_file():
@@ -152,11 +157,19 @@ def main() -> int:
         if not upload_url:
             print(f"  [skip] 未取得 upload_url（release 可能已存在但无权限）")
             continue
-        existing = {a.get("name") for a in (rel.get("assets") or [])}
+        existing = {a.get("name"): a for a in (rel.get("assets") or [])}
         for f in files:
-            if f.name in existing:
-                print(f"    [跳过] 已存在: {f.name}")
-                continue
+            old = existing.get(f.name)
+            if old is not None:
+                if not args.replace:
+                    print(f"    [跳过] 已存在: {f.name}")
+                    continue
+                try:
+                    api("DELETE", str(old.get("url") or ""), token)
+                    print(f"    [删除] 旧 asset: {f.name}")
+                except urllib.error.HTTPError as e:
+                    print(f"    [warn] 删除旧 asset 失败 {f.name}: {e}")
+                    continue
             upload_asset(upload_url, f, token)
             print(f"    [上传] {f.name}")
 
