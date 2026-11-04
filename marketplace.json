@@ -653,7 +653,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 7,
+            "downloads": 8,
             "keywords": [
                 "bilibili",
                 "b站",
@@ -2139,7 +2139,7 @@
                 "ui": true,
                 "tools": true
             },
-            "downloads": 8,
+            "downloads": 9,
             "keywords": [
                 "document",
                 "docx",
@@ -3651,7 +3651,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 41,
+            "downloads": 46,
             "platforms": [
                 "windows",
                 "linux",
