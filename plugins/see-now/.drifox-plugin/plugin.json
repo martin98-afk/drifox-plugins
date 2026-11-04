@@ -1,0 +1,76 @@
+{
+    "name": "see-now",
+    "description": "看屏幕 — 按画面变化量给模型看屏幕：只把真正变了的几帧拼成一张宫格图，静止画面几乎不出图。动手自检、看用户在做什么都靠它。移植自 DSH dsh-see-now",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "0.2.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "homepage": "https://github.com/SAOS-3624/dsh-see-now",
+    "license": "Apache-2.0",
+    "type": "user",
+    "api_version": 2,
+    "min_host_version": "0.6.14",
+    "keywords": [
+        "see-now",
+        "screen",
+        "vision",
+        "screenshot",
+        "看屏幕",
+        "屏幕变化"
+    ],
+    "components": {
+        "tools": true
+    },
+    "config_schema": {
+        "title": "看屏幕",
+        "fields": [
+            {
+                "key": "enabled",
+                "label": "允许看屏幕",
+                "type": "bool",
+                "default": true,
+                "description": "总开关。关掉后 see_now 直接拒绝，不采集任何画面（隐私开关）"
+            },
+            {
+                "key": "fps",
+                "label": "采集帧率（fps）",
+                "type": "number",
+                "default": 1,
+                "min": 1,
+                "max": 6,
+                "description": "实测单帧约 104ms（抓屏占九成），1 fps 约 10% 单核；6 fps 约 62%，不建议"
+            },
+            {
+                "key": "threshold",
+                "label": "变化阈值",
+                "type": "number",
+                "default": 12,
+                "min": 0,
+                "max": 255,
+                "description": "低于这个分认为画面没变。静止桌面 0~3，滚网页 40~90，切窗口 120+"
+            },
+            {
+                "key": "fallback_seconds",
+                "label": "兜底秒数",
+                "type": "number",
+                "default": 20,
+                "min": 3,
+                "max": 300,
+                "description": "这么久没出图，无论变没变都给一张，让模型知道确实没变"
+            },
+            {
+                "key": "max_frames",
+                "label": "单张最多帧数",
+                "type": "number",
+                "default": 6,
+                "min": 1,
+                "max": 6,
+                "description": "帧越多信息越全，token 也越多。一张图内多帧不额外收费"
+            }
+        ]
+    }
+}

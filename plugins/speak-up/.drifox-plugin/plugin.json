@@ -1,0 +1,35 @@
+{
+    "name": "speak-up",
+    "description": "主动搭话 — 没人跟 AI 说话时，它自己按命中线掷骰决定要不要先开口。峰谷分时、安静时段、攒加成、冷却全套可调；默认演练模式只记账不真发。移植自 DSH dsh-speak-up",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "0.1.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "homepage": "https://github.com/Yuuyuko-uu/dsh-speak-up",
+    "license": "MIT",
+    "type": "user",
+    "api_version": 2,
+    "min_host_version": "0.6.14",
+    "capabilities": [
+        "session.send",
+        "session.read",
+        "ui.notify"
+    ],
+    "keywords": [
+        "speak-up",
+        "initiative",
+        "proactive",
+        "dice",
+        "主动搭话",
+        "自己开口"
+    ],
+    "components": {
+        "tools": true,
+        "hooks": true,
+        "ui": true
+    }
+}

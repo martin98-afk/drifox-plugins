@@ -1,0 +1,18 @@
+{
+    "description": "speak-up Hook — PostUserMessage 记录用户发消息的精确时刻，供时机因子使用",
+    "hooks": {
+        "PostUserMessage": [
+            {
+                "hooks": [
+                    {
+                        "type": "python",
+                        "function": ".speakup_hook:on_user_message",
+                        "timeout": 3,
+                        "enabled": true,
+                        "id": "speak-up-0001-4000-8000-000000000001"
+                    }
+                ]
+            }
+        ]
+    }
+}
