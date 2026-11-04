@@ -119,12 +119,14 @@ def _pip_download(
     ]
     if no_deps:
         cmd.append("--no-deps")
-    if plat_tags:
+    if only_binary:
+        # wheel 拉取必须始终指定目标 Python/ABI：不指定会按**本机**解释器
+        # 版本解析（CI 上 python 3.12 → 拉到 cp312 wheel，宿主 3.14 装不了）
         cmd += ["--python-version", PIP_PY_VERSION, "--implementation", "cp"]
-        for tag in plat_tags:
-            cmd += ["--platform", tag]
         for abi in PIP_ABIS:
             cmd += ["--abi", abi]
+        for tag in plat_tags:
+            cmd += ["--platform", tag]
     if index_url:
         cmd += ["--index-url", index_url]
     cmd += specs
@@ -167,26 +169,25 @@ def fetch_deps_via_pip(
     if not isinstance(pip_decl, dict):
         return {}, missing_by_plat
     default_specs = [str(s) for s in (pip_decl.get("default") or []) if s]
-    has_platform_specs = any(k in PLATFORMS and pip_decl.get(k) for k in pip_decl)
-    target_plats: List[str] = (
-        [p for p in platforms if pip_decl.get(p)] if has_platform_specs else ["all"]
-    )
-    if not target_plats and not default_specs:
+    plat_specs: Dict[str, List[str]] = {
+        p: [str(s) for s in (pip_decl.get(p) or []) if s] for p in PLATFORMS
+    }
+    if not default_specs and not any(plat_specs.values()):
         return {}, missing_by_plat
 
     python_cmd = pip_python or sys.executable
     result: Dict[str, Path] = {}
-    for plat in target_plats:
-        specs = list(default_specs)
-        if plat != "all":
-            specs += [str(s) for s in (pip_decl.get(plat) or []) if s]
+    # 逐平台拉取（default + 该平台专属）：绝不能产「无平台」包——那会落到
+    # CI 机器自己的平台/Python 版本（实测 linux cp312 的 .so 发给了 Windows 用户）
+    for plat in platforms:
+        specs = default_specs + plat_specs.get(plat, [])
         if not specs:
             continue
 
         dest = work_root / plat
         shutil.rmtree(dest, ignore_errors=True)
         dest.mkdir(parents=True, exist_ok=True)
-        tags = (PIP_PLATFORM_TAGS.get(plat) or [""]) if plat != "all" else [""]
+        tags = PIP_PLATFORM_TAGS.get(plat) or [""]
         # 1) 整批拉取（保留 pip 的依赖解析），tag 逐级回退
         ok = False
         for tag in tags:
@@ -223,7 +224,29 @@ def fetch_deps_via_pip(
         else:
             missing_by_plat.setdefault(plat, []).append("(整平台拉取失败)")
             print(f"  [warn] {plat} 平台依赖拉取失败，该平台不出包")
+
+    # 纯 Python 去重：全平台均无二进制扩展 → 三份内容等价，合并为一个
+    # "default" 包（客户端 _preferred_sources 优先按平台键取，回退 default）
+    if len(result) == len(platforms) and len(platforms) > 1:
+        if not any(_has_binary_ext(d) for d in result.values()):
+            keep = result[platforms[0]]
+            for p in platforms[1:]:
+                shutil.rmtree(result.get(p, Path()), ignore_errors=True)
+            print("  [pip] 全平台纯 Python → 合并为 default 单包")
+            return {"default": keep}, missing_by_plat
+
     return result, missing_by_plat
+
+
+def _has_binary_ext(root: Path) -> bool:
+    """目录内是否存在平台相关的二进制扩展（有 → 不能跨平台复用）"""
+    try:
+        for p in root.rglob("*"):
+            if p.is_file() and p.suffix.lower() in (".so", ".pyd", ".dll", ".dylib"):
+                return True
+    except OSError:
+        return True
+    return False
 
 
 def _extract_sdist(arc: Path, target: Path) -> bool:
@@ -409,7 +432,7 @@ def main() -> int:
                 strict_failures.append(f"{name} 缺依赖（{detail}）")
             if pip_deps:
                 for plat, d in sorted(pip_deps.items()):
-                    suffix = "all" if plat == "all" else plat
+                    suffix = "default" if plat == "default" else plat
                     fname = f"{name}-{version}-{suffix}.tar.gz"
                     sha, size = build_tarball(plugin_dir, d, out_dir / fname, keep_platforms=None)
                     entry[suffix] = {
