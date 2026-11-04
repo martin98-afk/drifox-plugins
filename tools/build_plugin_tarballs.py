@@ -63,11 +63,19 @@ EXCLUDE_SUFFIXES = {".pyc", ".pyo"}
 PIP_PY_VERSION = "3.14"
 PIP_ABIS = ("cp314", "abi3", "none")
 # 包内平台名 → pip --platform 候选（逐个尝试，首个能拉全的生效）。
-# darwin 优先 universal2（一份包盖 Intel/ARM，避免同名 .so 冲突），回退 arm64。
+# darwin 优先 universal2（一份包盖 Intel/ARM，避免同名 .so 冲突），回退 arm64
+#        （Apple Silicon 为主；Intel mac 因二进制同名无法与 arm64 共存一包）。
+# linux 从新到旧：现代 wheel 普遍标 manylinux_2_28/2_27（如 Pillow 13），
+#        老包才用 manylinux2014(=2_17)。
 PIP_PLATFORM_TAGS = {
     "win32": ["win_amd64"],
     "darwin": ["macosx_11_0_universal2", "macosx_11_0_arm64"],
-    "linux": ["manylinux2014_x86_64", "manylinux_2_17_x86_64"],
+    "linux": [
+        "manylinux_2_28_x86_64",
+        "manylinux_2_27_x86_64",
+        "manylinux2014_x86_64",
+        "manylinux_2_17_x86_64",
+    ],
 }
 
 

@@ -70,7 +70,11 @@ jobs:
           fi
 
       - name: 构建 tarball（严格模式）
+        id: build
         if: steps.detect.outputs.list != ''
+        # 单插件缺依赖时不中断整个 job：失败插件跳过发布，其余照发；
+        # 末尾汇总步骤再把 job 标记为失败（宁可不发也不发残缺包）。
+        continue-on-error: true
         run: |
           python tools/build_plugin_tarballs.py \
             --deps-source pip \
@@ -78,12 +82,13 @@ jobs:
             --only "${{ steps.detect.outputs.list }}" \
             --index-url https://pypi.org/simple
 
-      - name: 发布到 GitHub Releases
+      - name: 发布已构建的包
         if: steps.detect.outputs.list != ''
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          python tools/publish_plugin_tarballs.py --only "${{ steps.detect.outputs.list }}" --replace
+          # 不传 --only：tarball_index.json 里只有本次构建成功的插件
+          python tools/publish_plugin_tarballs.py --replace
 
       - name: 更新 marketplace.json
         if: steps.detect.outputs.list != ''
@@ -110,4 +115,10 @@ jobs:
             sleep 5
           done
           echo "连续 3 次推送失败，请检查分支保护或并发写入" >&2
+          exit 1
+
+      - name: 构建失败则标记 job 失败
+        if: steps.build.outcome == 'failure'
+        run: |
+          echo "::error::部分插件构建失败（已跳过其发布，详见上方构建日志）"
           exit 1
