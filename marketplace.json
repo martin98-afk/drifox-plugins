@@ -5449,6 +5449,40 @@
             }
         },
         {
+            "name": "see-now",
+            "description": "看屏幕 — 按画面变化量给模型看屏幕：只把真正变了的几帧拼成一张宫格图，静止画面几乎不出图。动手自检、看用户在做什么都靠它。移植自 DSH dsh-see-now",
+            "version": "0.2.0",
+            "author": "DriFox Contributors",
+            "license": "Apache-2.0",
+            "categories": [
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/see-now",
+                "ref": "main"
+            },
+            "components": {
+                "tools": true
+            },
+            "keywords": [
+                "see-now",
+                "screen",
+                "vision",
+                "screenshot",
+                "看屏幕",
+                "屏幕变化"
+            ],
+            "min_host_version": "0.6.14",
+            "api_version": 2,
+            "homepage": "https://github.com/SAOS-3624/dsh-see-now",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "self-evolver",
             "description": "DriFox 自进化工具集 — AI 可调用的 7 个工具：生成插件骨架、校验插件结构、扫描分析插件、管理 MCP 服务器配置（含 credential 凭据声明）、记录进化审计日志、查询系统日志诊断、发布到市场，配合技能引导实现自我开发/优化/修复插件。",
             "version": "0.10.0",
@@ -5845,6 +5879,43 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            }
+        },
+        {
+            "name": "speak-up",
+            "description": "主动搭话 — 没人跟 AI 说话时，它自己按命中线掷骰决定要不要先开口。峰谷分时、安静时段、攒加成、冷却全套可调；默认演练模式只记账不真发。移植自 DSH dsh-speak-up",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui",
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/speak-up",
+                "ref": "main"
+            },
+            "components": {
+                "tools": true,
+                "hooks": true,
+                "ui": true
+            },
+            "keywords": [
+                "speak-up",
+                "initiative",
+                "proactive",
+                "dice",
+                "主动搭话",
+                "自己开口"
+            ],
+            "min_host_version": "0.6.14",
+            "api_version": 2,
+            "homepage": "https://github.com/Yuuyuko-uu/dsh-speak-up",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
