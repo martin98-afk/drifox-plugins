@@ -703,18 +703,18 @@
             "tarball": {
                 "darwin": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.2.2/bili-scroll-0.2.2-darwin.tar.gz",
-                    "sha256": "9e5cde64600a178e907d303ca598c995721baa77b757519e9627f16645d945fc",
-                    "size": 10413495
+                    "sha256": "5d19a71289b55971714a6da0bdbfde85b9b7773c0afad735632d5b92ec6fe4c8",
+                    "size": 18968993
                 },
                 "linux": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.2.2/bili-scroll-0.2.2-linux.tar.gz",
-                    "sha256": "71ad0466f25724c82b5c9b6a1feb9adcfd08ba504b496c3a9e30987321482e06",
-                    "size": 15111486
+                    "sha256": "570a15fb105bca60345d6db0186702d28b7e2e1686c7e458317509fc6d6b84a1",
+                    "size": 20525500
                 },
                 "win32": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.2.2/bili-scroll-0.2.2-win32.tar.gz",
-                    "sha256": "07a48a0e7dbd29423256477a82dd17bd73b94923f4662f1c866f2e866d1d0ec2",
-                    "size": 5215068
+                    "sha256": "2c4c9a8847ff87bb056dbf342f9b1e2ca94eeb1026073aaf0365fb0f032eb132",
+                    "size": 14858482
                 }
             }
         },
@@ -1539,7 +1539,7 @@
             "tarball": {
                 "default": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-codegraph-tools-v1.0.0/codegraph-tools-1.0.0-default.tar.gz",
-                    "sha256": "5ff1c2dd672e170e608de1dd8551b6a49314ea14ca6f255041c11c637b9cc2fa",
+                    "sha256": "ef6c6620f9d51558df26ca64b97492abbedf91b38dc34328baa2fa4a620d358e",
                     "size": 343886
                 }
             }
@@ -1884,7 +1884,7 @@
             "tarball": {
                 "default": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.0.0/desktop-automation-1.0.0-default.tar.gz",
-                    "sha256": "e22f79a19509a5ae08b91eb61866fa6efc3d3bf14298c60bb14f752cfedd140f",
+                    "sha256": "acd341a45ae6ddf336664b49cc782102f603d867413796fb947c3d44e537a1b1",
                     "size": 148439
                 }
             }
@@ -2170,18 +2170,18 @@
             "tarball": {
                 "darwin": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-docx-designer-v0.3.3/docx-designer-0.3.3-darwin.tar.gz",
-                    "sha256": "98a01b0ddadcb6403f1fe9b183a0726623cad09db9fd2858dd2bce204fc3c569",
-                    "size": 14253167
+                    "sha256": "39470029c49d0ff411846dcae85f909553040a542b4c1dcc99fcc0ea86c2949a",
+                    "size": 14253168
                 },
                 "linux": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-docx-designer-v0.3.3/docx-designer-0.3.3-linux.tar.gz",
-                    "sha256": "dcf2f9da3201d0866d95c574788aa35199ff6f268398c1b3a9472669c662da9c",
-                    "size": 13186296
+                    "sha256": "86c6e54ff487c5a5edc15d9f59caf50eb5ce2816013e7bb6ffc676dcd4dd9755",
+                    "size": 13186306
                 },
                 "win32": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-docx-designer-v0.3.3/docx-designer-0.3.3-win32.tar.gz",
-                    "sha256": "6280ecb58ef14d09737865441c90aafd489e87ffa6ac484a08ec6223549288ef",
-                    "size": 11924958
+                    "sha256": "708e49625514862ac5a2a61d6476ff63bb959206fc847cdd328caec656859dd3",
+                    "size": 11924967
                 }
             }
         },
@@ -3558,18 +3558,18 @@
             "tarball": {
                 "darwin": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-dingtalk-v1.0.2/gateway-dingtalk-1.0.2-darwin.tar.gz",
-                    "sha256": "22a321c773c359bcf73bb8a7af59c836ce15988ff6e4e99923653d323223267a",
-                    "size": 2168637
+                    "sha256": "a12004fe27939529bac88ab60528378e87e96cbefc893b5851dbe407c7304745",
+                    "size": 2168609
                 },
                 "linux": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-dingtalk-v1.0.2/gateway-dingtalk-1.0.2-linux.tar.gz",
-                    "sha256": "6cf8d9a44632f74534559c411988523c23704b231b3b5346e275cf5955fd2108",
-                    "size": 3346958
+                    "sha256": "6416385b6694d5b7bd94da9a42793892d400666e065fb2d7f022df5ab3a74f15",
+                    "size": 3346931
                 },
                 "win32": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-dingtalk-v1.0.2/gateway-dingtalk-1.0.2-win32.tar.gz",
-                    "sha256": "0bf0969ca850a9eb6789e702ab6a69ffd1f5bbb492ff46bf261bc8748e50f99f",
-                    "size": 1689958
+                    "sha256": "3e8b32f7ed43141dee8cffabdd5010df291033701defa6c46571decb77aba1ee",
+                    "size": 1586535
                 }
             }
         },
@@ -3620,18 +3620,18 @@
             "tarball": {
                 "darwin": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-discord-v1.0.0/gateway-discord-1.0.0-darwin.tar.gz",
-                    "sha256": "f39df75290405b1f4552f393f7b220e92557e534e02b5026e11976b4153162a5",
-                    "size": 2430432
+                    "sha256": "e10068e8b478b74ad96bd2ee7971610ea8e4e13f3bc404ca67e829ef4825ee0b",
+                    "size": 2430407
                 },
                 "linux": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-discord-v1.0.0/gateway-discord-1.0.0-linux.tar.gz",
-                    "sha256": "32ca0c8a591e169e5ee0519a660765949624b11edffe271c130c297daffc57e4",
-                    "size": 3711614
+                    "sha256": "e2927f6b46a743734f30ee20dc4831142bc1da0bd4a1473fcf7ce7128dbb0b88",
+                    "size": 3711604
                 },
                 "win32": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-discord-v1.0.0/gateway-discord-1.0.0-win32.tar.gz",
-                    "sha256": "255b60072c712f1a470c010df2bb0a7e9b1439078227123453af13d5b63de6e6",
-                    "size": 240379
+                    "sha256": "24e8a63444bc4f7b2038fb097f84c2140c5de7f703e41339790fb14ef5b49e80",
+                    "size": 1965517
                 }
             }
         },
@@ -3684,18 +3684,18 @@
             "tarball": {
                 "darwin": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-feishu-v1.2.3/gateway-feishu-1.2.3-darwin.tar.gz",
-                    "sha256": "a73514929f63da613214d02136f6bf074b4ed66c149b7cd175806329c2cc0bfe",
-                    "size": 6110992
+                    "sha256": "7a2aa793c53a21e81f6e68853bd6435e3ae5442d89aa65e08ece4f63c1d9daf2",
+                    "size": 6110997
                 },
                 "linux": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-feishu-v1.2.3/gateway-feishu-1.2.3-linux.tar.gz",
-                    "sha256": "f768d7055ff41ae1db81a95769899122494a96800b7c466356236034ae15e566",
-                    "size": 5768404
+                    "sha256": "1af84956a23f5e98678fbd66a487fdd29a7235acf01181788e138488f69fbbff",
+                    "size": 5768389
                 },
                 "win32": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-feishu-v1.2.3/gateway-feishu-1.2.3-win32.tar.gz",
-                    "sha256": "432b1b9abbfa3a40be711db7eb4bc0e356c17f0be99c5a0cc1a586eb4e1c1191",
-                    "size": 5078260
+                    "sha256": "80c4e515d4073c17d95789e5679ffa8da60103f3e5fb77882462eec4b598adbd",
+                    "size": 5163586
                 }
             }
         },
@@ -3760,7 +3760,7 @@
             "tarball": {
                 "default": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-slack-v1.0.1/gateway-slack-1.0.1-default.tar.gz",
-                    "sha256": "78c681269c9e88bd0881b34d6149811c2a573ba6830c71f2b743ce7f3ca8dba2",
+                    "sha256": "44f6af2c3945612c04387f26c9834658aadc85a42970d8cc145c5efec5496c34",
                     "size": 251975
                 }
             }
@@ -3802,7 +3802,7 @@
             "tarball": {
                 "default": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-telegram-v1.0.1/gateway-telegram-1.0.1-default.tar.gz",
-                    "sha256": "ccbf77291b57d44c6a2d61b65ee95a21231b1e2f254e4ac0f29f70ac1dd2e2c2",
+                    "sha256": "0010943ca878b4e03fd61b5b58a87d760d52efead79a854928c52c20fc908cf3",
                     "size": 1040612
                 }
             }
@@ -3843,7 +3843,7 @@
             "tarball": {
                 "default": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-wechat-v0.3.1/gateway-wechat-0.3.1-default.tar.gz",
-                    "sha256": "435507f70c14a7587f59a79764f3174ca8a4d062883b291e0311db0ec801ef65",
+                    "sha256": "01809c60578533468bb6031725260c4d8a9896d49d9624ffee68da61c1359ec9",
                     "size": 88916
                 }
             }
@@ -6801,7 +6801,7 @@
             "tarball": {
                 "default": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-see-now-v0.2.0/see-now-0.2.0-default.tar.gz",
-                    "sha256": "444d501dc5c5bf7bd8dae1ba37c417058ee3f29ea9e4c5e45a3a111e75417c05",
+                    "sha256": "270bd2a54148ce56c0446ea9e1783abff454412fb6b0e6395010efc9b3d0b35f",
                     "size": 78007
                 }
             }
@@ -7423,18 +7423,18 @@
             "tarball": {
                 "darwin": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-ssh-toolkit-v0.4.4/ssh-toolkit-0.4.4-darwin.tar.gz",
-                    "sha256": "c0c262e11dd190e88c9a0f791bc0ef04e456647deb8a5638a2c45601fdd4b323",
-                    "size": 5305143
+                    "sha256": "cd517d432a4ead803c9e9cd85760923911e2782643fa726a0bb09329cea38045",
+                    "size": 5305149
                 },
                 "linux": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-ssh-toolkit-v0.4.4/ssh-toolkit-0.4.4-linux.tar.gz",
-                    "sha256": "a79a773fde796647ce6faa6e6c6c4f1a8163c7c84996cd414442cba12301eba4",
-                    "size": 6931405
+                    "sha256": "9595baaa000bbcfe210ccb3238d403f734713253d173a3dcdda57d236c27cf77",
+                    "size": 6931404
                 },
                 "win32": {
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-ssh-toolkit-v0.4.4/ssh-toolkit-0.4.4-win32.tar.gz",
-                    "sha256": "91669287521c35cb1c7a682cb38c422650dcfe1736362412ec264d346ce195be",
-                    "size": 4619144
+                    "sha256": "e325cd9871614120cf53fbf7189f1705e066b94a9588ccbd44e425827a36f7b2",
+                    "size": 4634122
                 }
             }
         },
