@@ -541,7 +541,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "bilibili",
                 "b站",
@@ -678,7 +678,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 79,
+            "downloads": 83,
             "keywords": [
                 "browser",
                 "web",
@@ -1775,7 +1775,7 @@
                 "ui": true,
                 "tools": true
             },
-            "downloads": 5,
+            "downloads": 8,
             "keywords": [
                 "document",
                 "docx",
@@ -3747,7 +3747,7 @@
                 "commands": false,
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "communication",
                 "collaboration",
@@ -4050,6 +4050,7 @@
                 "mcp": true,
                 "skills": true
             },
+            "downloads": 1,
             "keywords": [
                 "mcp",
                 "connector",
@@ -4182,6 +4183,7 @@
                 "lsp": false,
                 "themes": false
             },
+            "downloads": 3,
             "keywords": [
                 "live-data",
                 "finance",
@@ -5374,7 +5376,7 @@
             "components": {
                 "ui": true
             },
-            "downloads": 79,
+            "downloads": 80,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -5454,7 +5456,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 43,
+            "downloads": 44,
             "keywords": [
                 "screenshot",
                 "clipboard",
@@ -5585,6 +5587,7 @@
             "components": {
                 "tools": true
             },
+            "downloads": 2,
             "keywords": [
                 "see-now",
                 "screen",
@@ -6954,7 +6957,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 39,
+            "downloads": 40,
             "keywords": [
                 "voice",
                 "dictation",
@@ -7007,7 +7010,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 15,
+            "downloads": 16,
             "keywords": [
                 "voice",
                 "tts",
