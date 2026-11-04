@@ -12,7 +12,11 @@
     "homepage": "https://github.com/martin98-afk/drifox-plugins2",
     "license": "MIT",
     "type": "user",
-    "platforms": ["windows", "linux", "darwin"],
+    "platforms": [
+        "windows",
+        "linux",
+        "darwin"
+    ],
     "dependencies": {
         "pip": {
             "linux": [
@@ -32,6 +36,12 @@
                 "multidict==6.7.1",
                 "propcache==0.5.2",
                 "yarl==1.24.5"
+            ],
+            "default": [
+                "aiohappyeyeballs==2.7.1",
+                "aiosignal==1.4.0",
+                "attrs==26.1.0",
+                "idna==3.19"
             ]
         }
     },

@@ -21,5 +21,14 @@
     ],
     "components": {
         "tools": true
+    },
+    "dependencies": {
+        "pip": {
+            "default": [
+                "mss==10.2.0",
+                "pynput==1.8.2",
+                "six==1.17.0"
+            ]
+        }
     }
 }

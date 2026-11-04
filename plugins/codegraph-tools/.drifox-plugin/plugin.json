@@ -14,5 +14,14 @@
     "type": "user",
     "components": {
         "tools": true
+    },
+    "dependencies": {
+        "pip": {
+            "default": [
+                "click==8.4.2",
+                "codegraph-py==1.4.0",
+                "colorama==0.4.6"
+            ]
+        }
     }
 }

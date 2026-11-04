@@ -46,5 +46,12 @@
                 "placeholder": "前往 Slack API 创建"
             }
         ]
+    },
+    "dependencies": {
+        "pip": {
+            "default": [
+                "slack_sdk==3.43.0"
+            ]
+        }
     }
 }
