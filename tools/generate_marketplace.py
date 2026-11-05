@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -277,6 +278,40 @@ def build_plugin_entry(plugin_dir: Path, manifest: dict, tarball_entry: dict | N
     return entry
 
 
+def _published_version(tarball: dict) -> str:
+    """从清单的 tarball 字段反推已发布版本（取任一平台 URL 里的版本号）。"""
+    if not isinstance(tarball, dict):
+        return ""
+    for key, meta in tarball.items():
+        if key == "mirrors" or not isinstance(meta, dict):
+            continue
+        m = re.search(r"/download/plugin-[^/]+?-v(\d+\.\d+\.\d+)", str(meta.get("url") or ""))
+        if m:
+            return m.group(1)
+    return ""
+
+def _version_lt(a: str, b: str) -> bool:
+    """a < b 的语义版本比较（只处理点分数字，解析失败视为不小于）。"""
+    def _parts(v: str) -> list[int]:
+        return [int(x) for x in re.findall(r"\d+", v)]
+
+    pa, pb = _parts(a), _parts(b)
+    if not pa or not pb:
+        return False
+    # 补齐长度后逐段比较
+    width = max(len(pa), len(pb))
+    pa += [0] * (width - len(pa))
+    pb += [0] * (width - len(pb))
+    return pa < pb
+
+def _same_tarball(a: dict, b: dict) -> bool:
+    """两份 tarball 字段是否等价（按平台键比 url，不比键名顺序）。"""
+    if not isinstance(a, dict) or not isinstance(b, dict):
+        return a == b
+    ka = {k: (v or {}).get("url") for k, v in a.items() if k != "mirrors" and isinstance(v, dict)}
+    kb = {k: (v or {}).get("url") for k, v in b.items() if k != "mirrors" and isinstance(v, dict)}
+    return ka == kb
+
 def generate_marketplace() -> dict:
     """扫描所有插件，生成完整的 marketplace.json 结构。"""
     global _downloads_cache
@@ -296,7 +331,31 @@ def generate_marketplace() -> dict:
             continue
         name = manifest.get("name") or plugin_dir.name
         # 优先级：本次构建产物 > 旧清单保留字段（避免无 dist 的生成把产物信息抹掉）
+        # 但本地 dist/ 可能是几小时前的旧构建，直接采信会把远端已发布的新版本
+        # 回退成旧版本（实测：本地索引里 bili-scroll 仍是 0.2.2，而清单已发布 0.2.4，
+        # 一次 generate 就把清单退回 0.2.2）。因此要求索引版本不低于已发布版本。
         tb_entry = tarball_index.get(name)
+        if tb_entry:
+            idx_ver = str(tb_entry.get("version") or "")
+            pub_tb = existing_tarballs.get(name) or {}
+            pub_ver = _published_version(pub_tb)
+            if pub_ver and _version_lt(idx_ver, pub_ver):
+                print(
+                    f"  {_yellow('KEEP')} {name} — 本地索引 {idx_ver} 低于已发布 "
+                    f"{pub_ver}，保留清单现值（dist/ 是旧构建？）"
+                )
+                tb_entry = None
+            elif pub_ver and idx_ver == pub_ver and not _same_tarball(
+                tb_entry.get("tarball") or {}, pub_tb
+            ):
+                # 同版本但产物指纹不同：本地 dist/ 与远端已发布的是两批不同构建。
+                # 已发布的是既成事实，本地旧索引不该改写清单（否则 sha 与线上 asset
+                # 对不上，客户端校验必然失败）。
+                print(
+                    f"  {_yellow('KEEP')} {name} — 本地索引与已发布同版本但内容不同，"
+                    f"保留清单现值"
+                )
+                tb_entry = None
         if not tb_entry and existing_tarballs.get(name):
             tb_entry = {"tarball": existing_tarballs[name]}
         entries.append(build_plugin_entry(plugin_dir, manifest, tb_entry))

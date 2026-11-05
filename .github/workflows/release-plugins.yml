@@ -88,7 +88,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # 不传 --only：tarball_index.json 里只有本次构建成功的插件
-          python tools/publish_plugin_tarballs.py --replace
+          # 不传 --replace（该选项已移除）：已发布的同名 asset 若内容一致则跳过，
+          # 内容不同则直接失败。同版本重打包会让客户端 sha 校验与缓存互相矛盾，
+          # 正确做法是升版本号后重新发布。
+          python tools/publish_plugin_tarballs.py
 
       - name: 更新 marketplace.json
         if: steps.detect.outputs.list != ''

@@ -33,6 +33,7 @@ deps 来源（按优先级）：
 from __future__ import annotations
 
 import argparse
+import gzip
 import hashlib
 import json
 import shutil
@@ -339,9 +340,12 @@ def _run_smoke_checks(
         return entry, []
     try:
         from smoke_check_tarball import smoke_check
-    except Exception as e:  # noqa: BLE001 - 工具缺失不应阻断构建
-        print(f"  [warn] {name} 冒烟模块导入失败（跳过检查）: {e}")
-        return entry, []
+    except Exception as e:  # noqa: BLE001 - 门禁缺失必须中断发布
+        # fail-closed：门禁模块导入失败时宁可整批不发，也不能静默放行。
+        # 静默跳过意味着「工具被删/改名/语法错」这类事故会悄悄退回无门禁发布，
+        # 正是 bili-scroll 坏包事故的前提条件。
+        print(f"  [fatal] {name} 冒烟门禁不可用，拒绝发布: {e}")
+        return {}, [f"{name} 冒烟门禁不可用（{e}）"]
 
     kept: Dict[str, dict] = {}
     failures: List[str] = []
@@ -366,35 +370,45 @@ def build_tarball(
     out_path: Path,
     keep_platforms: Optional[set],
 ) -> Tuple[str, int]:
-    """打包插件源码 + deps，返回 (sha256, size)"""
+    """打包插件源码 + deps，返回 (sha256, size)
+
+    可复现性：tar 成员的 mtime/uid/gid/uname/gname 全部归零，且 gzip 容器头的
+    mtime 也归零。只归零 tar 成员不够 —— gzip 头默认写「当前时间」，同一份源码
+    间隔一秒构建两次 sha256 就不同，清单记录的 sha 与实际发布的 asset 会对不上
+    （2026-11 实测：235 条平台记录里 10 条 sha 不一致，全因这一处）。
+    排序：iter_files 已按路径排序，保证成员顺序稳定。
+    """
     out_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(out_path, "wb") as raw:
+        # mtime=0 让 gzip 头不携带构建时间，产物因此对构建时刻不敏感
+        with gzip.GzipFile(filename="", mode="wb", fileobj=raw, compresslevel=6, mtime=0) as gz:
+            with tarfile.open(fileobj=gz, mode="w") as tf:
+                # 1) 插件源码（不含 deps，deps 单独按平台过滤加入）
+                for abs_path, rel in iter_files(plugin_dir, skip_deps_platforms=set(PLATFORMS)):
+                    if rel.split("/", 1)[0] == "deps":
+                        continue
+                    info = tf.gettarinfo(str(abs_path), arcname=rel)
+                    info.uid = info.gid = 0
+                    info.uname = info.gname = ""
+                    info.mtime = 0
+                    with open(abs_path, "rb") as fh:
+                        tf.addfile(info, fh)
+                # 2) deps（按平台过滤）
+                if deps_dir is not None and deps_dir.is_dir():
+                    for abs_path, rel in iter_files(deps_dir, skip_deps_platforms=keep_platforms):
+                        arcname = f"deps/{rel}"
+                        info = tf.gettarinfo(str(abs_path), arcname=arcname)
+                        info.uid = info.gid = 0
+                        info.uname = info.gname = ""
+                        info.mtime = 0
+                        with open(abs_path, "rb") as fh:
+                            tf.addfile(info, fh)
+
     sha = hashlib.sha256()
-    with tarfile.open(out_path, "w:gz", compresslevel=6) as tf:
-        # 1) 插件源码（不含 deps，deps 单独按平台过滤加入）
-        for abs_path, rel in iter_files(plugin_dir, skip_deps_platforms=set(PLATFORMS)):
-            if rel.split("/", 1)[0] == "deps":
-                continue
-            info = tf.gettarinfo(str(abs_path), arcname=rel)
-            info.uid = info.gid = 0
-            info.uname = info.gname = ""
-            info.mtime = 0
-            with open(abs_path, "rb") as fh:
-                tf.addfile(info, fh)
-        # 2) deps（按平台过滤）
-        if deps_dir is not None and deps_dir.is_dir():
-            for abs_path, rel in iter_files(deps_dir, skip_deps_platforms=keep_platforms):
-                arcname = f"deps/{rel}"
-                info = tf.gettarinfo(str(abs_path), arcname=arcname)
-                info.uid = info.gid = 0
-                info.uname = info.gname = ""
-                info.mtime = 0
-                with open(abs_path, "rb") as fh:
-                    tf.addfile(info, fh)
-    size = out_path.stat().st_size
     with open(out_path, "rb") as fh:
         for chunk in iter(lambda: fh.read(1024 * 1024), b""):
             sha.update(chunk)
-    return sha.hexdigest(), size
+    return sha.hexdigest(), out_path.stat().st_size
 
 
 def release_url(name: str, version: str, filename: str) -> str:

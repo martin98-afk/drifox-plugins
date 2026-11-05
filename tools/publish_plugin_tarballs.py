@@ -22,6 +22,7 @@ publish_plugin_tarballs.py — 把 dist/ 里的插件包发布到 GitHub Release
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import re
 import subprocess
@@ -104,16 +105,49 @@ def upload_asset(upload_url: str, file_path: Path, token: str) -> None:
     url = f"{base}?name={urllib.parse.quote(file_path.name)}"
     api("POST", url, token, raw=file_path.read_bytes())
 
+def _sha256_file(path: Path) -> str:
+    """本地文件的 sha256"""
+    sha = hashlib.sha256()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            sha.update(chunk)
+    return sha.hexdigest()
+
+def _sha256_of_asset(asset: dict, token: str) -> Optional[str]:
+    """已发布 asset 的 sha256。
+
+    优先用 API 返回的 digest 字段（GitHub 已为 asset 计算 sha256，
+    格式 "sha256:<hex>"），避免为了比对而把几 MB 的包整个下载一遍。
+    老接口/字段缺失时退回下载比对；下载失败返回 None（调用方按冲突处理）。
+    """
+    digest = str(asset.get("digest") or "")
+    if digest.startswith("sha256:"):
+        return digest.split(":", 1)[1]
+    url = str(asset.get("url") or "")
+    if not url:
+        return None
+    try:
+        req = urllib.request.Request(
+            url,
+            headers={
+                "Authorization": f"token {token}",
+                "Accept": "application/octet-stream",
+                "User-Agent": "DriFox-plugin-publisher",
+            },
+        )
+        sha = hashlib.sha256()
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            for chunk in iter(lambda: resp.read(1024 * 1024), b""):
+                sha.update(chunk)
+        return sha.hexdigest()
+    except urllib.error.HTTPError:
+        return None
+
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="发布插件 tarball 到 GitHub Releases")
     ap.add_argument("--dry-run", action="store_true", help="只打印计划，不请求 API")
     ap.add_argument("--only", default="", help="只发布指定插件（逗号分隔）")
-    ap.add_argument(
-        "--replace",
-        action="store_true",
-        help="同名 asset 已存在时先删除再上传（同版本重打包用）",
-    )
     args = ap.parse_args()
 
     if not INDEX_PATH.is_file():
@@ -129,6 +163,7 @@ def main() -> int:
         return 2
 
     planned = 0
+    conflicts: list[str] = []
     for name, entry in sorted(index.items()):
         if only and name not in only:
             continue
@@ -161,18 +196,34 @@ def main() -> int:
         for f in files:
             old = existing.get(f.name)
             if old is not None:
-                if not args.replace:
-                    print(f"    [跳过] 已存在: {f.name}")
+                # 产物不可变：同一 tag 下的 asset 一旦发布就不再改写。
+                # 客户端按 marketplace.json 里记录的 sha256 校验下载结果，覆盖同名
+                # asset 会让「已下载过旧包的客户端」校验失败、缓存与新清单互相矛盾。
+                # 构建已做可复现（gzip mtime 归零），所以同源码重建的 sha 一致，
+                # 内容相同直接视为已发布；内容不同说明源码或依赖变了，必须升版本。
+                local_sha = _sha256_file(f)
+                remote_sha = _sha256_of_asset(old, token)
+                if remote_sha is not None and remote_sha == local_sha:
+                    print(f"    [跳过] 已发布且内容一致: {f.name}")
                     continue
-                try:
-                    api("DELETE", str(old.get("url") or ""), token)
-                    print(f"    [删除] 旧 asset: {f.name}")
-                except urllib.error.HTTPError as e:
-                    print(f"    [warn] 删除旧 asset 失败 {f.name}: {e}")
-                    continue
+                print(
+                    f"    [冲突] {f.name} 已存在且内容不同"
+                    f"（远端 {str(remote_sha)[:12]} / 本地 {local_sha[:12]}）",
+                    file=sys.stderr,
+                )
+                conflicts.append(f"{tag}/{f.name}")
+                continue
             upload_asset(upload_url, f, token)
             print(f"    [上传] {f.name}")
 
+    if conflicts:
+        print(
+            f"\n✗ {len(conflicts)} 个 asset 与已发布内容冲突，拒绝覆盖：\n  "
+            + "\n  ".join(conflicts)
+            + "\n\n产物不可变：请升插件版本号后重新构建发布。",
+            file=sys.stderr,
+        )
+        return 1
     print(f"\n完成：{planned} 个包{'(dry-run)' if args.dry_run else '已处理'}")
     return 0
 

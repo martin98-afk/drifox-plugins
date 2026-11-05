@@ -298,6 +298,33 @@ def _mentions_symbol(source: bytes, name: str) -> bool:
     return False
 
 
+def _parse_name_version(tarball: Path) -> tuple[str, str]:
+    """从文件名 <name>-<version>-<platform>.tar.gz 解析出 (name, version)。
+
+    插件名可能含连字符（如 docx-designer、gateway-dingtalk），版本号固定形如
+    数字开头且含点，因此以「版本形态」的那一段作为锚点反推：
+        docx-designer-0.3.3-darwin → ("docx-designer", "0.3.3")
+    解析失败返回 ("", "")，调用方跳过该项检查。
+    """
+    stem = tarball.name
+    for suffix in (".tar.gz", ".tgz"):
+        if stem.endswith(suffix):
+            stem = stem[: -len(suffix)]
+            break
+    parts = stem.split("-")
+    if len(parts) < 2:
+        return "", ""
+    for idx in range(1, len(parts)):
+        if re.fullmatch(r"\d+(?:\.\d+)+", parts[idx]):
+            name = "-".join(parts[:idx])
+            rest = parts[idx + 1 :]
+            # 版本后可能带预发布后缀（0.3.3-beta1），一并归入版本段
+            version = parts[idx]
+            if rest and rest[0] and rest[0] not in ("all", "default", "darwin", "win32", "linux"):
+                version = f"{version}-{rest[0]}"
+            return name, version
+    return "", ""
+
 def _platform_from_filename(tarball: Path) -> str:
     """从 tarball 文件名推断平台：<name>-<version>-<platform>.tar.gz
 
@@ -343,6 +370,20 @@ def smoke_check(tarball: Path) -> tuple[bool, list[str], list[str]]:
 
         plugin_name = str(manifest.get("name") or tarball.stem)
 
+        # B. manifest 与包内版本一致：文件名 <name>-<version>-<platform>.tar.gz
+        # 的 version 段必须等于 manifest.version。防止源码已升版本但产物是旧的
+        # （或反之），客户端按清单版本更新却拿到旧内容。
+        name_part, ver_part = _parse_name_version(tarball)
+        manifest_ver = str(manifest.get("version") or "")
+        if ver_part and manifest_ver and ver_part != manifest_ver:
+            errors.append(
+                f"文件名版本 {ver_part} 与 manifest.version {manifest_ver} 不一致"
+            )
+        if name_part and manifest.get("name") and name_part != manifest["name"]:
+            errors.append(
+                f"文件名插件名 {name_part} 与 manifest.name {manifest['name']} 不一致"
+            )
+
         # C. 依赖子模块存在性
         vendored = _vendored_roots(tf)
         if vendored:
@@ -374,6 +415,19 @@ def smoke_check(tarball: Path) -> tuple[bool, list[str], list[str]]:
             spec_count = sum(len(v) if isinstance(v, list) else 1 for v in declared.values())
             warnings.append(
                 f"{plugin_name} 声明 {spec_count} 条 pip 依赖但包内无 deps/，安装端需自行补装"
+            )
+
+        # D2. 平台专属依赖不能塞进 default 单包：
+        #    default 包会被所有平台下载，但平台专属依赖（如 darwin 的 pyobjc）
+        #    只在对应平台存在 wheel，混进单包会让其他平台多装无用依赖，
+        #    更常见的是「按平台拉取」时被跳过，导致目标平台运行时缺后端
+        #    （desktop-automation 的 pynput 在 macOS 缺 pyobjc 即此形态）。
+        platform_key_for_dep = _platform_from_filename(tarball)
+        plat_specific = [k for k in declared if k != "default"] if isinstance(declared, dict) else []
+        if plat_specific and platform_key_for_dep == "default":
+            warnings.append(
+                f"{plugin_name} 含平台专属依赖 {plat_specific}，但产物是 default 单包"
+                f"（平台专属依赖需按平台分包才会生效）"
             )
 
         # E. 平台结构：包内二进制是否属于该平台 / ABI 是否匹配
