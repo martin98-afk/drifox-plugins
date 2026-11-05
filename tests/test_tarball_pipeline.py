@@ -169,6 +169,62 @@ class TestSmokeCheckRejectsBrokenPackage:
         ok, errors, _warnings = smoke.smoke_check(tar_path)
         assert not ok, "manifest 版本与文件名不一致必须拒绝"
 
+class TestDeclaredDepsPresent:
+    """声明的 pip 依赖必须真的在包内。
+
+    2026-11 desktop-automation 事故：manifest 只写了 pyobjc-framework-Quartz
+    和 ApplicationServices，漏了它们共同依赖的 pyobjc-core。逐包兜底路径用
+    pip --no-deps，不会自动补传递依赖，于是打出「有 Quartz 但 import objc
+    直接失败」的包，CI 全绿。构建机无法真实 import（跨平台二进制），
+    所以靠 top_level.txt 静态校验模块落点。
+    """
+
+    MANIFEST = {
+        "name": "demo",
+        "version": "1.0.1",
+        "dependencies": {
+            "pip": {
+                "default": ["pynput==1.8.2"],
+                "darwin": ["pyobjc-core==11.1", "pyobjc-framework-Quartz==11.1"],
+            }
+        },
+    }
+
+    def _build(self, tmp_path: Path, with_core: bool) -> Path:
+        import json as _json
+
+        files = {
+            ".drifox-plugin/plugin.json": _json.dumps(self.MANIFEST),
+            "deps/pynput/_util/darwin.py": "import objc\n",
+            "deps/pynput/__init__.py": "",
+            "deps/pynput-1.8.2.dist-info/top_level.txt": "pynput\n",
+            "deps/Quartz/__init__.py": "import objc\n",
+            "deps/pyobjc_framework_quartz-11.1.dist-info/top_level.txt": "Quartz\n",
+            "deps/pyobjc_core-11.1.dist-info/top_level.txt": "objc\n",
+        }
+        if with_core:
+            files["deps/objc/__init__.py"] = ""
+        path = tmp_path / "demo-1.0.1-darwin.tar.gz"
+        with tarfile.open(path, "w:gz") as tf:
+            for n, c in files.items():
+                data = c.encode()
+                info = tarfile.TarInfo(n)
+                info.size = len(data)
+                info.mtime = 0
+                tf.addfile(info, io.BytesIO(data))
+        return path
+
+    def test_rejects_missing_transitive_dep(self, tmp_path):
+        smoke = _load_tool("smoke_check_tarball")
+        ok, errors, _ = smoke.smoke_check(self._build(tmp_path, with_core=False))
+        assert not ok, "manifest 声明了 pyobjc-core 但包内无 objc，必须拒绝"
+        assert any("objc" in e for e in errors), errors
+
+    def test_accepts_when_dep_present(self, tmp_path):
+        smoke = _load_tool("smoke_check_tarball")
+        ok, errors, _ = smoke.smoke_check(self._build(tmp_path, with_core=True))
+        assert ok, f"依赖齐全却被误杀: {errors}"
+
 class TestSmokeGateFailClosed:
     """门禁不可用时必须拒绝发布，不能静默放行"""
 

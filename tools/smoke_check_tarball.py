@@ -298,6 +298,55 @@ def _mentions_symbol(source: bytes, name: str) -> bool:
     return False
 
 
+def _read_member_text(tf: tarfile.TarFile, raw_members: dict, key: str) -> str:
+    """读取包内某个文本成员的内容，失败返回空串"""
+    member = raw_members.get(key)
+    if member is None:
+        return ""
+    try:
+        fh = tf.extractfile(member)
+        if fh is None:
+            return ""
+        return fh.read().decode("utf-8", errors="replace")
+    except Exception:
+        return ""
+
+def _missing_declared_modules(
+    specs: list[str], paths: set[str], read_text
+) -> set[str]:
+    """检查 manifest 声明的 pip 依赖，其顶层模块是否真的在包内。
+
+    包名与模块名不一致是常态（pyobjc-core → objc，PyYAML → yaml），
+    不能靠字符串推断。做法：读包内 dist-info 的 top_level.txt；
+    没有该文件时跳过（宁可漏检也不误杀）。
+    只检查「包内有对应 dist-info」的依赖 —— dist-info 完全缺失由另一项报告。
+    """
+    missing: set[str] = set()
+    for spec in specs:
+        pkg = re.split(r"[<>=!~\[; ]", spec.strip(), maxsplit=1)[0].lower()
+        if not pkg:
+            continue
+        norm = re.sub(r"[-_.]+", "_", pkg)
+        tl = [
+            p
+            for p in paths
+            if re.match(
+                rf"deps/{re.escape(norm)}-[^/]+\.dist-info/top_level\.txt$", p, re.I
+            )
+        ]
+        if not tl:
+            continue  # 无 top_level.txt：跳过，避免误杀
+        body = read_text(tl[0]) or ""
+        for line in body.splitlines():
+            mod = line.strip()
+            if not mod:
+                continue
+            # 顶层模块应有 deps/<mod>/__init__.py 或 deps/<mod>.py
+            if f"deps/{mod}/__init__.py" in paths or f"deps/{mod}.py" in paths:
+                continue
+            missing.add(mod)
+    return missing
+
 def _parse_name_version(tarball: Path) -> tuple[str, str]:
     """从文件名 <name>-<version>-<platform>.tar.gz 解析出 (name, version)。
 
@@ -384,6 +433,30 @@ def smoke_check(tarball: Path) -> tuple[bool, list[str], list[str]]:
                 f"文件名插件名 {name_part} 与 manifest.name {manifest['name']} 不一致"
             )
 
+        # E2. 声明的依赖必须真的在包内：
+        #    逐包兜底路径用 pip --no-deps，manifest 漏写传递依赖时不会报错，
+        #    打出的包会在运行期 ImportError（desktop-automation 缺 pyobjc-core
+        #    即此形态：Quartz 是薄封装，全部 import objc，而 objc 根本不在包里）。
+        #    只校验「该平台生效的依赖」（default + 平台专属）。
+        declared = (manifest.get("dependencies") or {}).get("pip") or {}
+        has_deps_dir = any(p.startswith("deps/") for p in paths)
+        this_plat = _platform_from_filename(tarball)
+        plat_keys = ["default"] + ([this_plat] if this_plat != "default" else [])
+        declared_specs: list[str] = []
+        for k in plat_keys:
+            v = declared.get(k) if isinstance(declared, dict) else None
+            if isinstance(v, list):
+                declared_specs.extend(str(s) for s in v)
+        if declared_specs and has_deps_dir:
+            missing_mods = _missing_declared_modules(
+                declared_specs, paths, lambda key: _read_member_text(tf, raw_members, key)
+            )
+            if missing_mods:
+                errors.append(
+                    f"包内缺少声明的依赖模块: {', '.join(sorted(missing_mods))}"
+                    f"（manifest 未列出传递依赖？逐包兜底走 --no-deps 不会自动补）"
+                )
+
         # C. 依赖子模块存在性
         vendored = _vendored_roots(tf)
         if vendored:
@@ -409,8 +482,6 @@ def smoke_check(tarball: Path) -> tuple[bool, list[str], list[str]]:
                         )
 
         # D. 声明了 pip 依赖却完全没有 deps 目录
-        declared = (manifest.get("dependencies") or {}).get("pip") or {}
-        has_deps_dir = any(p.startswith("deps/") for p in paths)
         if declared and not has_deps_dir:
             spec_count = sum(len(v) if isinstance(v, list) else 1 for v in declared.values())
             warnings.append(
