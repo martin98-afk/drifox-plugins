@@ -5,7 +5,7 @@
         "light": "icon.svg",
         "dark": "icon_dark.svg"
     },
-    "version": "0.2.2",
+    "version": "0.2.3",
     "author": {
         "name": "DriFox Contributors"
     },
@@ -46,7 +46,7 @@
                 "apscheduler",
                 "attrs==26.1.0",
                 "beautifulsoup4>=4.12",
-                "bilibili_api",
+                "bilibili-api-python>=17.4.1,<18",
                 "brotli>=1.1",
                 "frozenlist",
                 "httpx>=0.27",

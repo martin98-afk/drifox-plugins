@@ -1,6 +1,24 @@
 # Changelog
 
 ## Unreleased
+### 🚀 发布流程：新插件自动发布 + tarball 冒烟门禁
+- **新插件首次推送即自动发布**：`tools/detect_plugin_changes.py` 的真源从 `marketplace.json` 改为 `plugins/*/.drifox-plugin/plugin.json`。此前新插件因清单里还没有 tarball 字段而被跳过，必须人工跑 build + publish；现在按「版本未发布过 / 版本不一致」判定，新插件与改版插件走同一条自动链路
+- **新增 `tools/smoke_check_tarball.py`**：发布前逐包体检，`build_plugin_tarballs.py` 已接入（未通过的包从索引剔除、不发布）。检查项：
+  - **依赖子模块存在性**：业务代码 `from X.Y import Z` 时，若 X 属于包内 vendored 依赖，则 Z 必须真实存在于 X.Y 下（含 `__init__.py` 重导出，做 AST 内容级校验而非仅看文件存在）
+  - **平台归属**：包内 `.so`/`.pyd` 的平台标签必须与包名一致，交叉污染（darwin 包装了 win_amd64）直接拦下
+  - **ABI 匹配**：二进制扩展的 `cpython-3XX` 标签必须等于目标运行时（cp314）；CI 在 py3.12 上拉错 wheel 会被拦下
+  - **包完整性**：tarball 可解压、`.drifox-plugin/plugin.json` 存在且可解析
+  - **依赖缺失提示**：声明了 pip 依赖却无 `deps/` 目录时告警
+- **为什么需要**：2026-11 bili-scroll v0.2.2 事故——manifest 的 pip 包名写成停更的 `bilibili_api`，业务代码要的是 `bilibili-api-python` 17.x。CI 一路绿灯发了三平台包，用户装完才发现 `from bilibili_api import login_v2` 直接 ImportError，插件 UI 与 MCP 控制端点双双失效。静态检查在旧包上精确复现该错误、在新包上放行
+- **取舍**：只用单 runner（ubuntu）做静态校验，不引入三平台 runner。原因：macOS runner 按 10 倍额度计费，而 217/223 个插件是纯 Python；真实 import 在 CI 上对含原生扩展的包必然是假阳性（cp314 的 `.so` 无法在 py3.12 加载），插件业务代码还依赖 DriFox 宿主模块。明确验不了的一项：`.so` 文件名不含 CPU 架构（mac arm64 与 x86_64 同名），架构错配无法静态判定
+### 🔧 bili-scroll v0.2.3：依赖包名修正 + MCP 入口跨平台
+- **症状**：macOS / Linux 上开启 `bili` MCP 报 `[Errno 2] No such file or directory: 'py'`；即便能起壳，插件 UI 装载也报 `ImportError: cannot import name 'login_v2' from 'bilibili_api'`，控制端点起不来导致 MCP 拿不到工具表
+- **根因（依赖）**：`dependencies.pip` 写的是 PyPI 包名 `bilibili_api`（MoyuScript 的老包，停更在 9.1.0/2021），而 vendor 代码 `mcp_server.py` / `bili_impl.py` 用的是 `bilibili-api-python`（Nemo2011 fork，17.x）的 API，`login_v2` / `opus` / `homepage` 老包一概没有。CI 按 manifest 拉依赖，于是每个平台打包进去的都是老 SDK
+- **根因（入口）**：`.mcp.json` 写死 `command: py` + `args: [-3, …]`，这是 Windows Python launcher 专属写法，macOS/Linux 无此命令
+- **修复**：依赖改为 `bilibili-api-python>=17.4.1,<18`（与 `vendor/bilibili-mcp/requirements.txt` 对齐）；`.mcp.json` 入口改为 `python3`，去掉 `-3`（壳内 `_bootstrap` 仍会按 bridge.json 自举到带 mcp/httpx 的解释器）
+- **验证**：本地 deps 换装 17.4.2 后 `bili_impl` 导入成功、patch ⑨ 正常打上、62 个工具注册；控制端点 `/healthz` 与 `/api/tools` 正常；stdio MCP 壳端到端握手成功并拉到 62 个工具
+### 🔧 browser v1.6.2：MCP 入口跨平台
+- `.mcp.json` 的 `command: py` + `args: [-3, …]` 为 Windows Python launcher 专属写法，macOS/Linux 上 MCP 直接报 `[Errno 2] No such file or directory: 'py'`；改 `python3` 并去掉 `-3`（壳内 `_bootstrap` 自举机制不变）
 ### 🔧 live-data v0.1.1：修复四工具全部返回「未知工具：」的致命分发 bug
 - **症状**：finance_live / dev_live / weather_live / misc_live 任一调用都返回「未知工具：」（名为空），插件自上架以来从未真正执行过；schema 注入与注册均正常，仅执行层失败
 - **根因**：四工具共用单一 `_impl`，靠 `getattr(tool_ctx, "tool_name")` 区分；但宿主注入的 tool_ctx 是 dict 且不含工具名（kwargs 也无 `__tool__` 键），getattr 对 dict 恒返回默认值空串，全部落入「未知工具：{tool}」兜底分支

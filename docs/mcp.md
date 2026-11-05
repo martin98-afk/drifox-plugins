@@ -51,7 +51,7 @@ mcp 让插件声明 [Model Context Protocol (MCP)](https://modelcontextprotocol.
 | 字段 | 必填 | 说明 |
 |------|------|------|
 | `mcpServers` | ✅ | 顶层字典，键为服务器名 |
-| `<server>.command` | stdio 必填 | 启动命令（如 `uvx`、`npx`） |
+| `<server>.command` | stdio 必填 | 启动命令（如 `uvx`、`npx`、`python3`） |
 | `<server>.args` | ❌ | 命令参数列表 |
 | `<server>.env` | ❌ | 注入的环境变量 |
 | `<server>.type` | ✅ | `stdio`（本地进程） \| `http`（远程 HTTP） \| `sse`（远程 SSE） |
@@ -189,6 +189,18 @@ Key 存在 `<app_data>/plugin_data/<插件>/config.json`，键名 `_mcp_cred_<se
 - 顶层必须有 `mcpServers` 字典
 - 每个 server 必须有 `command`（stdio）或 `url`（http）之一
 - `type` 字段推荐显式指定
+
+### 跨平台命令（必读）
+stdio 的 `command` 必须是**三平台都存在**的命令：
+
+- ✅ `python3` —— macOS / Linux 自带；Windows 由宿主回落到 `python`
+- ✅ `uvx` / `npx` / `node` —— 跨平台
+- ❌ `py` —— Windows Python launcher 专属，macOS / Linux 无此命令，MCP 直接报 `[Errno 2] No such file or directory: 'py'`
+- ❌ `py -3` —— 同上，`-3` 是 launcher 专属参数，真实解释器不认
+
+宿主对 `py` / `python` / `python3` 会先探测可用性再回落，但这只是兜底：**不要依赖它**，manifest 里直接写跨平台命令。
+两个常见坑：Windows 上 `python3` 可能命中 Microsoft Store 占位 stub（宿主会跳过它继续找），
+以及 `python3` 在不同系统上版本不同 —— 需要特定版本时靠脚本内部自举（如 `mcp/server.py` 的 `_bootstrap` 按 `bridge.json` 重启到目标解释器），不要写死在 `command` 里。
 
 ## 安全注意
 
