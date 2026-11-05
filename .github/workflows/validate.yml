@@ -2,9 +2,9 @@ name: Validate Plugins
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, community]
   push:
-    branches: [main]
+    branches: [main, community]
 
 # 防止并发运行导致 marketplace.json 修复冲突
 concurrency:

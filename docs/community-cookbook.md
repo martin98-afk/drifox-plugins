@@ -9,17 +9,21 @@
 ## 0. 本分支的定位与协作流
 
 ```
-你 fork community 分支
+你 fork community 分支（并在 fork 里启用 Actions）
    └─ 基于 plugins/example-plugin 派生你的插件
    └─ 开发、本地用 DriFox 热重载验证
-   └─ push 到你的 fork
-        └─ 本仓库的 CI（.github/workflows/sync-community.yml）每周扫描所有 fork
-             └─ 只把你的插件「来源」写进 marketplace.json（不复制代码）
-                  └─ 开 PR 由维护者审核合并
-                       └─ 用户在 plugin-marketplace 看到你的插件 + 来源，去你的 fork 下载
+   └─ push 到你 fork 的 community 分支
+        └─ 你 fork 自己的 CI（release-plugins.yml）自动接管：
+             校验 → 构建 tarball（按平台含依赖）→ 发布到你 fork 的 GitHub Releases
+             → 重新生成 marketplace.json → 写回分支
+   └─ 你（或任何用户）在 DriFox plugin-marketplace 添加源：
+        https://raw.githubusercontent.com/<你>/<fork>/community/marketplace.json
+   └─ 插件出现在市场里，安装下载全部走你的 fork
 ```
 
-**关键约定**：本仓库**不汇聚代码**，只汇聚来源。模板区 `plugins/` 永远只有 `example-plugin`；社区插件的代码留在各 fork，下载从 fork 走。
+**关键约定**：fork 即独立市场源。官方仓库不参与分发（代码不汇聚、审核不设卡），
+插件作者拥有完整分发链路：代码在 fork、Release 在 fork、清单在 fork。
+模板区 `plugins/` 只留 `example-plugin` 作起点，你的插件与它并列即可。
 
 ---
 
@@ -378,15 +382,23 @@ python tools/validate_plugins.py
 
 ---
 
-## 10. 发布到社区市场
+## 10. 发布：fork 即源
 
-1. fork 本 community 分支。
+1. fork 本仓库，切到 `community` 分支，并在 fork 的 `Actions` 页**启用 Actions**（fork 默认禁用，一次性操作）。
 2. 在 fork 里 `plugins/` 下开发你的插件（**不要删除 example-plugin**，它是模板）。
-3. push 到你的 fork。
-4. 本仓库 CI 每周扫描所有 fork，把你的插件**来源**（name + fork URL + 下载地址）写进 `marketplace.json`，开 PR。
-5. 维护者审核合并后，用户在 plugin-marketplace 看到你的插件，去你的 fork 下载。
+3. 升版本 = 改 `.drifox-plugin/plugin.json` 的 `version`，push 到你 fork 的 `community` 分支。
+4. CI（`release-plugins.yml`）自动：校验 → 构建 tarball（win32/darwin/linux，含 pip 依赖）→ 发布到你 fork 的 GitHub Releases（tag 形如 `plugin-<名>-v<版本>`）→ 重新生成 `marketplace.json` 写回分支。
+5. 用户在 plugin-marketplace 添加源即可安装：
 
-**不汇聚代码**的原因：保持模板分支纯净、避免版权/安全耦合；下载直达 fork，作者拥有自己的仓库。
+```
+https://raw.githubusercontent.com/<你的用户名>/<fork 仓库名>/community/marketplace.json
+```
+
+**为什么零配置**：清单生成与 tarball 链接都自适应仓库归属——CI 在哪个仓库哪个分支跑，`source.url` / `ref` / tarball 链接就指向哪里。fork 不需要改任何脚本或密钥；`GITHUB_TOKEN`（Actions 自带）足够发布 Release。
+
+**版本更新**：改 manifest 的 `version` 再 push，CI 只重发变更的插件；清单同步更新，市场端即可拉到新版。
+
+**下载量统计**：官方计数服务仅官方仓库接入，fork 清单不带 `downloads` 字段（不展示下载量，不影响安装）。
 
 ---
 

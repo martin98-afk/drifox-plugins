@@ -1,0 +1,133 @@
+name: Release Plugin Tarballs
+
+# 插件升版本后自动构建并发布单插件 tarball（含该平台依赖）
+#
+# 触发：push 到 main / community（插件或构建脚本有改动）。
+#   community 分支是社区模板：fork 仓库的用户推自己的插件到此分支，
+#   CI 自动把 tarball 发到 fork 自己的 Release、清单写回同分支，
+#   用户即可把「fork + 分支」作为独立插件市场源添加到 DriFox。
+#   官方仓库的 community 分支是纯模板（只有 example-plugin），不发布。
+# 判定：marketplace.json 里已启用 tarball 通道的插件，版本与已发布包不一致 → 发布
+#      未启用 tarball 的插件（新插件首次）由 detect_plugin_changes 按清单真源自动检出
+#
+# 安全策略：
+#   1. --strict-deps：任一插件缺依赖即构建失败，不发残缺包
+#   2. concurrency 串行且不取消：发布中途取消会留下半上传的 release
+#   3. 提交 marketplace.json 带 [skip ci]：避免自触发循环
+#   4. 提交前 pull --rebase + 重试：与 validate.yml 的 auto-fix 并发写清单时防冲突
+on:
+  push:
+    branches: [community, main]
+    paths:
+      - "plugins/**"
+      - "tools/build_plugin_tarballs.py"
+      - "tools/publish_plugin_tarballs.py"
+      - "tools/detect_plugin_changes.py"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "强制重打全部已启用 tarball 的插件（忽略版本比对）"
+        type: boolean
+        default: false
+      only:
+        description: "只处理指定插件（逗号分隔，留空=按检测结果）"
+        type: string
+        default: ""
+
+concurrency:
+  group: release-tarballs
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: 构建并发布 tarball
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    # 官方仓库的 community 分支是纯模板（无真实插件），不发布，避免污染官方 Release；
+    # fork 仓库无论哪个分支都发布。官方 main 照常发布。
+    if: github.repository != 'martin98-afk/drifox-plugins' || github.ref_name != 'community'
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 设置 Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 检测版本变更
+        id: detect
+        run: |
+          if [ -n "${{ inputs.only }}" ]; then
+            LIST="${{ inputs.only }}"
+          elif [ "${{ inputs.force }}" = "true" ]; then
+            LIST=$(python tools/detect_plugin_changes.py --all)
+          else
+            LIST=$(python tools/detect_plugin_changes.py)
+          fi
+          echo "list=${LIST}" >> "$GITHUB_OUTPUT"
+          if [ -z "$LIST" ]; then
+            echo "无插件版本变更，跳过构建与发布"
+          else
+            echo "待发布插件: $LIST"
+          fi
+
+      - name: 构建 tarball（严格模式）
+        id: build
+        if: steps.detect.outputs.list != ''
+        # 单插件缺依赖时不中断整个 job：失败插件跳过发布，其余照发；
+        # 末尾汇总步骤再把 job 标记为失败（宁可不发也不发残缺包）。
+        continue-on-error: true
+        run: |
+          python tools/build_plugin_tarballs.py \
+            --deps-source pip \
+            --strict-deps \
+            --only "${{ steps.detect.outputs.list }}" \
+            --index-url https://pypi.org/simple
+
+      - name: 发布已构建的包
+        if: steps.detect.outputs.list != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 不传 --only：tarball_index.json 里只有本次构建成功的插件
+          python tools/publish_plugin_tarballs.py --replace
+
+      - name: 更新 marketplace.json
+        if: steps.detect.outputs.list != ''
+        run: python tools/generate_marketplace.py
+
+      - name: 提交清单（带重试，容忍并发写入）
+        if: steps.detect.outputs.list != ''
+        env:
+          TARGET_BRANCH: ${{ github.ref_name }}
+        run: |
+          git config user.name "drifox-bot"
+          git config user.email "drifox-bot@users.noreply.github.com"
+          git add marketplace.json
+          if git diff --cached --quiet; then
+            echo "marketplace.json 无变化，跳过提交"
+            exit 0
+          fi
+          git commit -m "chore(marketplace): tarball 自动发布 ${{ steps.detect.outputs.list }} [skip ci]"
+          for i in 1 2 3; do
+            if git pull --rebase origin "$TARGET_BRANCH" && git push origin "HEAD:$TARGET_BRANCH"; then
+              echo "清单已推送"
+              exit 0
+            fi
+            echo "push 冲突，重试 $i/3"
+            git rebase --abort 2>/dev/null || true
+            sleep 5
+          done
+          echo "连续 3 次推送失败，请检查分支保护或并发写入" >&2
+          exit 1
+
+      - name: 构建失败则标记 job 失败
+        if: steps.build.outcome == 'failure'
+        run: |
+          echo "::error::部分插件构建失败（已跳过其发布，详见上方构建日志）"
+          exit 1

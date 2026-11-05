@@ -85,6 +85,23 @@
       "items": { "type": "string", "minLength": 1 },
       "uniqueItems": true
     },
+    "min_host_version": {
+      "type": "string",
+      "pattern": "^v?\\d+\\.\\d+(\\.\\d+)?$",
+      "description": "最低宿主版本（如 \"0.6.10\"）。宿主 app/plugins/version_gate.py 的 check_host_version 读取：不满足则整插件拒载（工具/UI/hooks 全不加载）。格式非法同样拒载。缺省=不限制，老宿主仍可安装。"
+    },
+    "api_version": {
+      "type": "integer",
+      "minimum": 1,
+      "default": 1,
+      "description": "插件 API 契约版本。宿主 HOST_PLUGIN_API_VERSION 当前为 2：声明 2 且未写 capabilities 视为空清单（拿不到任何能力）；声明高于宿主则拒载。缺省=1，兼容期全量放行能力。"
+    },
+    "capabilities": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "description": "声明的能力清单（仅 api_version>=2 时参与裁剪），如 [\"session.read\", \"ui.notify\"]。支持通配 \"tool.*\" 与 \"*\"。可用能力见 DriFox docs/plugins/capabilities.md。"
+    },
     "components": {
       "type": "object",
       "additionalProperties": false,
@@ -99,7 +116,15 @@
         { "required": ["lsp"] },
         { "required": ["ui"] },
         { "required": ["tools"] },
-        { "required": ["providers"] }
+        { "required": ["providers"] },
+        { "required": ["storages"] },
+        { "required": ["serializers"] },
+        { "required": ["engines"] },
+        { "required": ["gateways"] },
+        { "required": ["loop_policies"] },
+        { "required": ["hook_policies"] },
+        { "required": ["model_adapters"] },
+        { "required": ["team_templates"] }
       ],
       "properties": {
         "tools": {
@@ -141,6 +166,54 @@
         "providers": {
           "type": "boolean",
           "description": "启用 providers/*.py 服务商定义（每个文件暴露 register(registry)，注册 AI 服务商）"
+        },
+        "storages": {
+          "type": "boolean",
+          "description": "启用 storages/*.py 存储引擎（register 暴露存储后端）"
+        },
+        "serializers": {
+          "type": "boolean",
+          "description": "启用 serializers/*.py 序列化器"
+        },
+        "engines": {
+          "type": "boolean",
+          "description": "启用 engines/*.py 引擎"
+        },
+        "gateways": {
+          "type": "boolean",
+          "description": "启用 gateways/*.py 消息网关适配器"
+        },
+        "loop_policies": {
+          "type": "boolean",
+          "description": "启用 loop_policies/*.py 循环策略"
+        },
+        "hook_policies": {
+          "type": "boolean",
+          "description": "启用 hook_policies/*.py hook 触发策略（每个文件暴露 register(registry)，注册 HookPolicy 策略对象）"
+        },
+        "model_adapters": {
+          "type": "boolean",
+          "description": "启用 model_adapters/*.py 模型适配器"
+        },
+        "team_templates": {
+          "type": "boolean",
+          "description": "启用 team_templates/*.md 团队模板"
+        },
+        "transports": {
+          "type": "boolean",
+          "description": "启用 transports/ 协议传输层（契约 app.plugins.contracts.protocol_transport）"
+        },
+        "stream_sinks": {
+          "type": "boolean",
+          "description": "启用 stream_sinks/ 流式输出落点（契约 app.plugins.contracts.stream_sink）"
+        },
+        "context_tiers": {
+          "type": "boolean",
+          "description": "启用 context_tiers/ 系统上下文分层（契约 app.plugins.contracts.context_policy）"
+        },
+        "budget_resolvers": {
+          "type": "boolean",
+          "description": "启用 budget_resolvers/ 上下文预算解析器（与 context_tiers 配套）"
         }
       }
     },
@@ -177,13 +250,82 @@
         }
       }
     },
+    "config_schema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fields"],
+      "description": "插件配置表单 Schema，供 UI 渲染配置项",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "配置面板标题"
+        },
+        "description": {
+          "type": "string",
+          "description": "配置说明"
+        },
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["key", "label", "type"],
+            "properties": {
+              "key": { "type": "string", "minLength": 1 },
+              "label": { "type": "string", "minLength": 1 },
+              "type": { "type": "string" },
+              "default": {},
+              "placeholder": { "type": "string" },
+              "description": { "type": "string" },
+              "rows": {},
+              "options": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "required": ["label", "value"],
+                  "properties": {
+                    "label": { "type": "string" },
+                    "value": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "dependencies": {
       "type": "object",
       "additionalProperties": {
-        "type": "string",
-        "pattern": "^[\\^~>=<]*\\s*\\d+\\.\\d+\\.\\d+.*$"
+        "oneOf": [
+          {
+            "type": "string",
+            "pattern": "^[\\^~>=<]*\\s*\\d+\\.\\d+\\.\\d+.*$",
+            "description": "插件依赖：SemVer 范围"
+          },
+          {
+            "type": "object",
+            "description": "pip 依赖声明（保留 key pip）：default + 平台 key（win32/linux/darwin），值为规格字符串或数组。运行时见 app/plugins/deps_loader.py resolve_pip_deps",
+            "additionalProperties": {
+              "oneOf": [
+                { "type": "string" },
+                { "type": "array", "items": { "type": "string" } }
+              ]
+            }
+          }
+        ]
       },
-      "description": "插件间依赖，键为插件名，值为 SemVer 范围"
+      "description": "插件间依赖（键=插件名，值=SemVer 范围）；dependencies.pip 为 pip 依赖声明"
+    },
+    "platforms": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["windows", "win32", "linux", "darwin", "macos", "mac"]
+      },
+      "description": "支持平台声明（缺省=全平台兼容）。友好名映射见 app/plugins/deps_loader.py PLATFORM_DIR_MAP"
     }
   }
 }

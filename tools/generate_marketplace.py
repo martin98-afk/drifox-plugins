@@ -33,19 +33,62 @@ MARKETPLACE_PATH = REPO_ROOT / "marketplace.json"
 MANIFEST_PATH = Path(".drifox-plugin") / "plugin.json"
 # 下载量缓存（由 tools/fetch_downloads.py 定时拉取计数服务生成）
 DOWNLOADS_CACHE_PATH = REPO_ROOT / "downloads_cache.json"
+# tarball 构建产物索引（tools/build_plugin_tarballs.py 生成；不入库，缺失时保留现有清单字段）
+TARBALL_INDEX_PATH = REPO_ROOT / "dist" / "tarball_index.json"
 
-# 仓库元信息（硬编码，与 README 中的 GitHub 链接一致）
+# 仓库元信息：官方仓库名称与描述固定；URL/分支运行时推导——fork 仓库的 CI
+# 生成清单时自动指向 fork 自己的仓库与触发分支，用户即可把 fork 当独立市场源。
 REPO_NAME = "drifox-official"
 REPO_DESCRIPTION = "DriFox 官方插件市场 — 托管官方插件与社区贡献插件的统一入口"
-REPO_URL = "https://github.com/martin98-afk/drifox-plugins"
-DEFAULT_REF = "main"
 DEFAULT_LICENSE = "GPL-3.0-or-later"
+
+
+def _infer_repo() -> tuple[str, str]:
+    """推导 (repo_url, default_ref)，供插件 source 字段使用。
+
+    优先级：GitHub Actions 环境变量 > git origin remote > 官方仓库（回退）。
+    - fork CI：GITHUB_REPOSITORY/GITHUB_REF_NAME 指向 fork 仓库与触发分支，
+      生成清单里 source.url/ref 自然指向 fork——推完插件即可把 fork 当源。
+    - 本地运行：解析 git remote get-url origin 与当前分支。
+    - 都失败（如纯 tarball 下载后运行）：回退官方仓库。
+    """
+    official_url = "https://github.com/martin98-afk/drifox-plugins"
+    official_ref = "main"
+    import os
+    import re
+    import subprocess
+
+    repo = (os.environ.get("GITHUB_REPOSITORY") or "").strip()
+    server = (os.environ.get("GITHUB_SERVER_URL") or "https://github.com").rstrip("/")
+    ref = (os.environ.get("GITHUB_REF_NAME") or "").strip()
+    if repo and re.fullmatch(r"[\w.-]+/[\w.-]+", repo):
+        return f"{server}/{repo}", ref or official_ref
+
+    try:
+        url = subprocess.check_output(
+            ["git", "remote", "get-url", "origin"], cwd=REPO_ROOT, text=True
+        ).strip()
+        m = re.search(r"github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?$", url)
+        if m:
+            branch = ""
+            try:
+                branch = subprocess.check_output(
+                    ["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=REPO_ROOT, text=True
+                ).strip()
+            except subprocess.SubprocessError:
+                pass
+            return f"https://github.com/{m.group(1)}/{m.group(2)}", branch or official_ref
+    except subprocess.SubprocessError:
+        pass
+    return official_url, official_ref
+
+
+REPO_URL, DEFAULT_REF = _infer_repo()
 
 # DriFox 运行时内置插件（D:/work/DriFox/plugins/ 下的插件）。
 # 这些插件随 DriFox 分发，无需从市场安装，出现在市场中会让用户困惑，
 # 因此生成 marketplace.json 时一律跳过。
 DRIFOX_BUILTIN_PLUGINS = {
-    "context-usage-stats",
     "file-tree",
     "plugin-manager",
     "plugin-marketplace",
@@ -182,7 +225,39 @@ def infer_categories(manifest: dict) -> list[str]:
 # ============================================================
 
 
-def build_plugin_entry(plugin_dir: Path, manifest: dict) -> dict:
+def load_tarball_index() -> dict:
+    """读取 tarball 构建索引：{插件名: {"version":..., "tarball": {...}}}
+
+    索引缺失（未跑构建 / CI checkout 无 dist）时返回空字典——调用方应回退
+    到旧 marketplace.json 里的 tarball 字段，避免一次生成就把已发布的
+    tarball 信息清掉。
+    """
+    if not TARBALL_INDEX_PATH.is_file():
+        return {}
+    try:
+        data = json.loads(TARBALL_INDEX_PATH.read_text(encoding="utf-8"))
+        return data.get("plugins") or {}
+    except Exception as e:
+        print(_yellow(f"[warn] tarball 索引读取失败（忽略）: {e}"))
+        return {}
+
+
+def load_existing_tarballs() -> dict:
+    """旧 marketplace.json 里的 tarball 字段：{插件名: tarball}"""
+    if not MARKETPLACE_PATH.is_file():
+        return {}
+    try:
+        data = json.loads(MARKETPLACE_PATH.read_text(encoding="utf-8"))
+        return {
+            p.get("name"): p.get("tarball")
+            for p in data.get("plugins", [])
+            if p.get("name") and p.get("tarball")
+        }
+    except Exception:
+        return {}
+
+
+def build_plugin_entry(plugin_dir: Path, manifest: dict, tarball_entry: dict | None = None) -> dict:
     """从 plugin.json 构建一条 marketplace 插件条目。"""
     entry: dict = {
         "name": manifest["name"],
@@ -209,9 +284,21 @@ def build_plugin_entry(plugin_dir: Path, manifest: dict) -> dict:
     if manifest.get("keywords"):
         entry["keywords"] = manifest["keywords"]
 
-    drifox_compat = manifest.get("drifox")
-    if drifox_compat:
-        entry["drifox"] = drifox_compat
+    # 平台声明（platforms）与 pip 依赖（dependencies）：透传给市场端，
+    # 客户端据此显示兼容徽标/置灰不兼容平台的安装按钮，并在安装时自动装依赖
+    if manifest.get("platforms"):
+        entry["platforms"] = manifest["platforms"]
+    if manifest.get("dependencies"):
+        entry["dependencies"] = manifest["dependencies"]
+
+    # 宿主版本门槛：市场端据此把版本不足的「安装 / 更新」按钮置灰并说明原因。
+    # 注意 drifox.min_version 是废字段（宿主从不读取），真正生效的是 min_host_version，
+    # 历史条目里的 drifox 块不再透传。
+    if manifest.get("min_host_version"):
+        entry["min_host_version"] = manifest["min_host_version"]
+    # api_version：宿主插件 API 契约版本，市场端可用于标注「需新版 DriFox」
+    if manifest.get("api_version"):
+        entry["api_version"] = manifest["api_version"]
 
     if manifest.get("homepage"):
         entry["homepage"] = manifest["homepage"]
@@ -222,6 +309,13 @@ def build_plugin_entry(plugin_dir: Path, manifest: dict) -> dict:
     if icon_value:
         entry["icon"] = icon_value
 
+    # tarball 按平台分发（工具出库后的主通道，含 deps）；无产物则字段缺失，
+    # 老客户端继续走 source=git-subdir，新客户端走 tarball——双轨兼容。
+    if tarball_entry:
+        tb = tarball_entry.get("tarball") if isinstance(tarball_entry, dict) else None
+        if tb:
+            entry["tarball"] = tb
+
     return entry
 
 
@@ -229,6 +323,8 @@ def generate_marketplace() -> dict:
     """扫描所有插件，生成完整的 marketplace.json 结构。"""
     global _downloads_cache
     _downloads_cache = load_downloads_cache(DOWNLOADS_CACHE_PATH)
+    tarball_index = load_tarball_index()
+    existing_tarballs = load_existing_tarballs()
     plugins = discover_plugins()
     entries: list[dict] = []
 
@@ -240,7 +336,12 @@ def generate_marketplace() -> dict:
         if manifest.get("name") in DRIFOX_BUILTIN_PLUGINS:
             print(f"  {_yellow('SKIP')} {plugin_dir.name} — DriFox 运行时内置插件，不进市场")
             continue
-        entries.append(build_plugin_entry(plugin_dir, manifest))
+        name = manifest.get("name") or plugin_dir.name
+        # 优先级：本次构建产物 > 旧清单保留字段（避免无 dist 的生成把产物信息抹掉）
+        tb_entry = tarball_index.get(name)
+        if not tb_entry and existing_tarballs.get(name):
+            tb_entry = {"tarball": existing_tarballs[name]}
+        entries.append(build_plugin_entry(plugin_dir, manifest, tb_entry))
 
     return {
         "name": REPO_NAME,

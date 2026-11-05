@@ -25,6 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    # 计数服务是官方仓库专属：fork 没有该服务，跳过（fork 清单不带 downloads 字段即无下载量）
+    if: github.repository == 'martin98-afk/drifox-plugins'
 
     steps:
       - uses: actions/checkout@v4

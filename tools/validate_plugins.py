@@ -153,7 +153,15 @@ def basic_manifest_check(manifest: dict) -> list[str]:
             )
 
         comps = manifest.get("components", {})
-        valid_comps = {"commands", "agents", "skills", "themes", "hooks", "mcp", "lsp", "ui", "tools", "providers"}
+        # 与 schemas/plugin.schema.json 的 components.properties 对齐（22 类）。
+        # 这条是「未安装 jsonschema 时的兜底」，少了任何一类都会把合法插件误判成未知键。
+        valid_comps = {
+            "commands", "agents", "skills", "themes", "hooks", "mcp", "lsp",
+            "ui", "tools", "providers", "storages", "serializers", "engines",
+            "gateways", "loop_policies", "hook_policies", "model_adapters",
+            "team_templates", "transports", "stream_sinks", "context_tiers",
+            "budget_resolvers",
+        }
         extra = set(comps) - valid_comps
         if extra:
             errors.append(f"components 包含未知键: {sorted(extra)}")
@@ -924,6 +932,8 @@ def check_dependencies(
     } if PLUGINS_DIR.exists() else set()
 
     for dep_name in deps:
+        if dep_name == "pip":  # 保留 key：pip 依赖声明（deps_loader），非插件名
+            continue
         if dep_name not in available:
             errors.append(f"dependencies 引用的插件不存在: {dep_name}")
 
