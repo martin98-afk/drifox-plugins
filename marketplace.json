@@ -1844,7 +1844,7 @@
         {
             "name": "desktop-automation",
             "description": "桌面自动化工具（mouse / keyboard / screenshot）—— 通过 pynput + mss 控制桌面，从 DriFox 主程序迁出（工具插件化）",
-            "version": "1.0.3",
+            "version": "1.0.4",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -1888,19 +1888,19 @@
             },
             "tarball": {
                 "darwin": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.0.3/desktop-automation-1.0.3-darwin.tar.gz",
-                    "sha256": "50084320bf169141470986b8a2881bbc47c7a06b83857d4904d83d3529125544",
-                    "size": 1047789
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.0.4/desktop-automation-1.0.4-darwin.tar.gz",
+                    "sha256": "51caf74e0e1ee714428dcf04f4b8c06a57cf0ce630868d2885662ca68fc1ac99",
+                    "size": 1047862
                 },
                 "linux": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.0.3/desktop-automation-1.0.3-linux.tar.gz",
-                    "sha256": "afd100d1a5012e5343c1d4d68e128d5f0fd21292d8b57fec2e85c87a6eaabceb",
-                    "size": 148451
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.0.4/desktop-automation-1.0.4-linux.tar.gz",
+                    "sha256": "9b3afbc77d110b95e9092043c2e39b851aabce403b9c32b8358153fc4a1614a8",
+                    "size": 148518
                 },
                 "win32": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.0.3/desktop-automation-1.0.3-win32.tar.gz",
-                    "sha256": "afd100d1a5012e5343c1d4d68e128d5f0fd21292d8b57fec2e85c87a6eaabceb",
-                    "size": 148451
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.0.4/desktop-automation-1.0.4-win32.tar.gz",
+                    "sha256": "9b3afbc77d110b95e9092043c2e39b851aabce403b9c32b8358153fc4a1614a8",
+                    "size": 148518
                 }
             }
         },
