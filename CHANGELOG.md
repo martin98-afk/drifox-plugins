@@ -11,6 +11,11 @@
   - **依赖缺失提示**：声明了 pip 依赖却无 `deps/` 目录时告警
 - **为什么需要**：2026-11 bili-scroll v0.2.2 事故——manifest 的 pip 包名写成停更的 `bilibili_api`，业务代码要的是 `bilibili-api-python` 17.x。CI 一路绿灯发了三平台包，用户装完才发现 `from bilibili_api import login_v2` 直接 ImportError，插件 UI 与 MCP 控制端点双双失效。静态检查在旧包上精确复现该错误、在新包上放行
 - **取舍**：只用单 runner（ubuntu）做静态校验，不引入三平台 runner。原因：macOS runner 按 10 倍额度计费，而 217/223 个插件是纯 Python；真实 import 在 CI 上对含原生扩展的包必然是假阳性（cp314 的 `.so` 无法在 py3.12 加载），插件业务代码还依赖 DriFox 宿主模块。明确验不了的一项：`.so` 文件名不含 CPU 架构（mac arm64 与 x86_64 同名），架构错配无法静态判定
+### 🔧 bili-scroll v0.2.4：MCP 壳 bridge.json 验活，修 app 重启后首连崩溃
+- **症状**：app 重启后 `bili` MCP 首连必失败，日志报 `连接服务器 'bili' 失败: Expecting value: line 1 column 1 (char 0)`；手动重连一次即恢复。spawn 到失败仅约 2 秒，且无任何子进程 stderr 输出
+- **根因**：MCP 壳 `server.py` 的 `_main` 对 `bridge.json` 只查**存在性**。app 重启后磁盘上残留的是上次实例写的过期文件（端口/token 已失效），壳据此跳过等待直接开始 stdio 握手——握手本身不需要控制端点所以成功；随后 `list_tools` 按 bridge.json 里的旧端口发请求，连接失败使壳进程崩溃退出，客户端读到 EOF，SDK 把空流报成 JSON 解析错误。等插件 UI 加载、控制端点重启并重写 `bridge.json` 后重连即成功，形成「首连必败、重连就好」的模式
+- **修复**：`_main` 先经 `_endpoint_alive()` 对 bridge.json 里的端口做 `/healthz` 验活；文件不存在或端点不通一律走 `_wait_bridge()` 轮询（每轮重读端口），等端点就绪后才握手。含原生扩展解释器（`py -3` 指向系统 Python 3.12）时控制端点未就绪的场景同样被覆盖
+- **验证**：`_endpoint_alive` 有效/过期判定单测通过；真实 spawn 壳进程 + initialize 握手成功（serverInfo `bili-scroll 1.28.1`）；app 内实连 62 工具稳定
 ### 🔧 bili-scroll v0.2.3：依赖包名修正 + MCP 入口跨平台
 - **症状**：macOS / Linux 上开启 `bili` MCP 报 `[Errno 2] No such file or directory: 'py'`；即便能起壳，插件 UI 装载也报 `ImportError: cannot import name 'login_v2' from 'bilibili_api'`，控制端点起不来导致 MCP 拿不到工具表
 - **根因（依赖）**：`dependencies.pip` 写的是 PyPI 包名 `bilibili_api`（MoyuScript 的老包，停更在 9.1.0/2021），而 vendor 代码 `mcp_server.py` / `bili_impl.py` 用的是 `bilibili-api-python`（Nemo2011 fork，17.x）的 API，`login_v2` / `opus` / `homepage` 老包一概没有。CI 按 manifest 拉依赖，于是每个平台打包进去的都是老 SDK

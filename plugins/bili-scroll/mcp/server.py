@@ -152,8 +152,24 @@ async def _call_tool(name: str, arguments: dict) -> list[types.TextContent]:
     return [types.TextContent(type="text", text=data.get("content", ""))]
 
 
+def _endpoint_alive() -> bool:
+    """bridge.json 存在且端点 healthz 可达。
+
+    只查存在性不够：app 重启后残留的上次实例 bridge.json（端口/token 已失效）
+    会让本壳提前握手，list_tools 连旧端口失败崩溃，客户端表现为
+    "Expecting value: line 1 column 1"（stdio EOF）。
+    """
+    try:
+        bridge = _bridge()
+        st = httpx.get(f"http://127.0.0.1:{bridge['port']}/healthz", timeout=2)
+        return st.status_code == 200
+    except Exception:
+        return False
+
+
 async def _main():
-    if not _BRIDGE_PATH.exists():
+    if not _endpoint_alive():
+        # 不存在或已过期 → 轮询等端点启动/重启重写 bridge.json（每次循环重读端口）
         if not _wait_bridge():
             sys.stderr.write("[bili-mcp] bridge.json 未就绪（插件 UI 未加载？）\n")
             sys.exit(1)
