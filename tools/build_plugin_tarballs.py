@@ -8,8 +8,8 @@ build_plugin_tarballs.py — 为市场插件构建按平台分发的 tarball
   分发。每个包 = 插件源码 + 当前平台 deps，客户端下载后解压即用，离线可用。
 
 产物：
-  dist/<name>-<version>-<platform>.tar.gz      单平台包（含该平台 deps）
-  dist/<name>-<version>-all.tar.gz             无平台差异的插件（纯源码或无平台 deps）
+  dist/<name>/<name>-<version>-<platform>.tar.gz   单平台包（含该平台 deps）
+  dist/<name>/<name>-<version>-all.tar.gz          无平台差异的插件（纯源码或无平台 deps）
   dist/tarball_index.json                      包索引（url/sha256/size），供
                                                marketplace.json 的 tarball 字段合并
 
@@ -351,7 +351,7 @@ def _run_smoke_checks(
     failures: List[str] = []
     for plat, meta in entry.items():
         fname = str(meta.get("url") or "").rsplit("/", 1)[-1]
-        tar_path = out_dir / fname
+        tar_path = out_dir / name / fname
         ok, errors, warnings = smoke_check(tar_path)
         for w in warnings:
             print(f"  [smoke warn] {name} {plat}: {w}")
@@ -489,7 +489,7 @@ def main() -> int:
                 for plat, d in sorted(pip_deps.items()):
                     suffix = "default" if plat == "default" else plat
                     fname = f"{name}-{version}-{suffix}.tar.gz"
-                    sha, size = build_tarball(plugin_dir, d, out_dir / fname, keep_platforms=None)
+                    sha, size = build_tarball(plugin_dir, d, out_dir / name / fname, keep_platforms=None)
                     entry[suffix] = {
                         "url": release_url(name, version, fname),
                         "sha256": sha,
@@ -516,7 +516,7 @@ def main() -> int:
             wanted = [p for p in platforms if p in present]
             for plat in wanted:
                 fname = f"{name}-{version}-{plat}.tar.gz"
-                sha, size = build_tarball(plugin_dir, deps_dir, out_dir / fname, keep_platforms={plat})
+                sha, size = build_tarball(plugin_dir, deps_dir, out_dir / name / fname, keep_platforms={plat})
                 entry[plat] = {
                     "url": release_url(name, version, fname),
                     "sha256": sha,
@@ -527,7 +527,7 @@ def main() -> int:
                 print(f"  {fname:56s} {size/1048576:7.2f} MB")
         else:
             fname = f"{name}-{version}-all.tar.gz"
-            sha, size = build_tarball(plugin_dir, deps_dir, out_dir / fname, keep_platforms=None)
+            sha, size = build_tarball(plugin_dir, deps_dir, out_dir / name / fname, keep_platforms=None)
             entry["default"] = {
                 "url": release_url(name, version, fname),
                 "sha256": sha,
