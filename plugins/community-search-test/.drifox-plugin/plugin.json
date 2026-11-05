@@ -1,0 +1,18 @@
+{
+    "name": "community-search-test",
+    "description": "社区分支模板机制验证插件 — 用于测试「fork 即源」发布链路：市场源添加后能否搜索到并安装。提供一枚回声工具。",
+    "version": "0.1.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "keywords": [
+        "test",
+        "community",
+        "template"
+    ],
+    "components": {
+        "tools": true
+    }
+}

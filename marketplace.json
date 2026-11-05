@@ -4,6 +4,31 @@
     "homepage": "https://github.com/martin98-afk/drifox-plugins",
     "plugins": [
         {
+            "name": "community-search-test",
+            "description": "社区分支模板机制验证插件 — 用于测试「fork 即源」发布链路：市场源添加后能否搜索到并安装。提供一枚回声工具。",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "tool",
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/community-search-test",
+                "ref": "community"
+            },
+            "components": {
+                "tools": true
+            },
+            "keywords": [
+                "test",
+                "community",
+                "template"
+            ]
+        },
+        {
             "name": "example-plugin",
             "description": "DriFox 插件的最小参考实现 — 展示全部 9 类组件（tools/commands/agents/skills/themes/hooks/mcp/lsp/ui）的标准写法。",
             "version": "1.0.0",
@@ -43,6 +68,13 @@
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/dingmama2/drifox-plugins/releases/download/plugin-example-plugin-v1.0.0/example-plugin-1.0.0-all.tar.gz",
+                    "sha256": "ffcc298eea100728dc9ccfc921eaf5408220948a08a6a569f911e6353db43f12",
+                    "size": 12943
+                }
             }
         }
     ]
