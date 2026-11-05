@@ -5,7 +5,7 @@
     },
     "name": "desktop-automation",
     "description": "桌面自动化工具（mouse / keyboard / screenshot）—— 通过 pynput + mss 控制桌面，从 DriFox 主程序迁出（工具插件化）",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "author": {
         "name": "DriFox Contributors"
     },
@@ -28,6 +28,10 @@
                 "mss==10.2.0",
                 "pynput==1.8.2",
                 "six==1.17.0"
+            ],
+            "darwin": [
+                "pyobjc-framework-Quartz==11.1",
+                "pyobjc-framework-ApplicationServices==11.1"
             ]
         }
     }
