@@ -57,7 +57,9 @@ jobs:
           retention-days: 1
 
       - name: Python 代码 lint（ruff）
-        run: ruff check tools/ plugins/*/hooks/
+        # 锁定经典错误集（语法/未用变量/未定义名），不随 ruff 升级引入风格规则：
+        # 模板分支面向社区，UP009/EXE001/I001 之类风格规则会误伤照文档写的用户
+        run: ruff check --select E4,E7,E9,F tools/ plugins/*/hooks/
 
       - name: 检查文档内部链接
         run: |
