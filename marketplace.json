@@ -653,7 +653,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 13,
+            "downloads": 17,
             "keywords": [
                 "bilibili",
                 "b站",
@@ -811,7 +811,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 86,
+            "downloads": 89,
             "keywords": [
                 "browser",
                 "web",
@@ -1859,7 +1859,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 19,
+            "downloads": 24,
             "keywords": [
                 "desktop",
                 "automation",
@@ -2650,7 +2650,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "team",
                 "团队",
@@ -2803,6 +2803,7 @@
             "components": {
                 "agents": true
             },
+            "downloads": 1,
             "keywords": [
                 "agents",
                 "experts",
@@ -3063,7 +3064,7 @@
             "components": {
                 "agents": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "agents",
                 "experts",
