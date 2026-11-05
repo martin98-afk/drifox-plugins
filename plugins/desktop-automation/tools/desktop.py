@@ -295,7 +295,7 @@ _KEY_ALIASES = {
     "tab": _pynput_kb.Key.tab,
     "space": _pynput_kb.Key.space, "backspace": _pynput_kb.Key.backspace,
     "delete": _pynput_kb.Key.delete, "del": _pynput_kb.Key.delete,
-    "insert": _pynput_kb.Key.insert,
+    "insert": getattr(_pynput_kb.Key, "insert", None),  # darwin(macOS) 无此键
     "home": _pynput_kb.Key.home, "end": _pynput_kb.Key.end,
     "page_up": _pynput_kb.Key.page_up, "page_down": _pynput_kb.Key.page_down,
     "up": _pynput_kb.Key.up, "down": _pynput_kb.Key.down,
@@ -315,7 +315,10 @@ _KEY_ALIASES = {
 def _resolve_key(name: str):
     name_lower = name.lower()
     if name_lower in _KEY_ALIASES:
-        return _KEY_ALIASES[name_lower]
+        val = _KEY_ALIASES[name_lower]
+        if val is None:
+            raise ValueError(f"当前平台不支持按键: {name}")
+        return val
     if len(name) == 1:
         return name
     return name
