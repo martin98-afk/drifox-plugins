@@ -1887,20 +1887,15 @@
                 "dark": "icon_dark.svg"
             },
             "tarball": {
-                "darwin": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.0.1/desktop-automation-1.0.1-darwin.tar.gz",
-                    "sha256": "b14db45c76d16a59d60ae9d577b13fdc2b7c45a2788fdfcffb4fc9b2e21d39c2",
-                    "size": 392194
-                },
                 "linux": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.0.1/desktop-automation-1.0.1-linux.tar.gz",
-                    "sha256": "6dacb1a46c35896e9fea0d813d4132080aae95fc8ca64cee8819cebdd5a24a64",
-                    "size": 148446
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.0.2/desktop-automation-1.0.2-linux.tar.gz",
+                    "sha256": "5fc4905a511f5b8547f59df68727a506bb9ccf2d49768e31bb43b9bf8c7bc1ec",
+                    "size": 148451
                 },
                 "win32": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.0.1/desktop-automation-1.0.1-win32.tar.gz",
-                    "sha256": "6dacb1a46c35896e9fea0d813d4132080aae95fc8ca64cee8819cebdd5a24a64",
-                    "size": 148446
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.0.2/desktop-automation-1.0.2-win32.tar.gz",
+                    "sha256": "5fc4905a511f5b8547f59df68727a506bb9ccf2d49768e31bb43b9bf8c7bc1ec",
+                    "size": 148451
                 }
             }
         },
