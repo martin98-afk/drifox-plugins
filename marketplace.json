@@ -653,7 +653,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 8,
+            "downloads": 13,
             "keywords": [
                 "bilibili",
                 "b站",
@@ -811,7 +811,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 83,
+            "downloads": 86,
             "keywords": [
                 "browser",
                 "web",
@@ -2139,7 +2139,7 @@
                 "ui": true,
                 "tools": true
             },
-            "downloads": 11,
+            "downloads": 12,
             "keywords": [
                 "document",
                 "docx",
@@ -3414,7 +3414,7 @@
                 "commands": true,
                 "skills": true
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "frontend",
                 "a11y",
@@ -3651,7 +3651,7 @@
             "components": {
                 "gateways": true
             },
-            "downloads": 46,
+            "downloads": 47,
             "platforms": [
                 "windows",
                 "linux",
@@ -3826,7 +3826,7 @@
                 "gateways": true,
                 "ui": true
             },
-            "downloads": 15,
+            "downloads": 18,
             "dependencies": {
                 "pip": {
                     "default": [
@@ -5070,7 +5070,7 @@
                 "lsp": false,
                 "themes": false
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "live-data",
                 "finance",
@@ -6775,7 +6775,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "see-now",
                 "screen",
