@@ -72,5 +72,12 @@
                 "description": "帧越多信息越全，token 也越多。一张图内多帧不额外收费"
             }
         ]
+    },
+    "dependencies": {
+        "pip": {
+            "default": [
+                "mss"
+            ]
+        }
     }
 }

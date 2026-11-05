@@ -3,6 +3,9 @@ __pycache__/
 *.py[co]
 *$py.class
 *.so
+# 插件依赖已出库：vendored deps 不再入库，构建时按平台打进 tarball。
+# 本地开发需依赖时跑 tools/sync_plugin_deps.py 从备份/构建产物同步（不进 git）。
+plugins/*/deps/
 .Python
 *.egg-info/
 .pytest_cache/
@@ -54,6 +57,7 @@ memory/
 *.egg
 build/
 dist/
+dist_test/
 *.spec
 
 # 系统文件
@@ -69,17 +73,8 @@ $RECYCLE.BIN/
 .drifox/
 
 
-# ssh-toolkit vendored deps: keep Windows compiled extensions (.pyd) tracked
-!plugins/ssh-toolkit/deps/*.pyd
-!plugins/ssh-toolkit/deps/**/*.pyd
-
-# 网关插件 vendor 的 certifi CA 包：被上方 `*.pem` 误伤，必须随插件分发（公共证书，非密钥）。
-# 否则分发后 deps/certifi/ 缺 cacert.pem → certifi.where() 返回不存在路径 →
-# ssl.create_default_context(cafile=...) 抛 FileNotFoundError，且因 sys.path.insert(0, deps)
-# 全局抢占主程序 certifi，导致所有 OpenAI/HTTPS 调用崩溃。
-!plugins/gateway-dingtalk/deps/certifi/cacert.pem
-!plugins/gateway-feishu/deps/certifi/cacert.pem
-!plugins/gateway-telegram/deps/certifi/cacert.pem
+# deps 已出库（统一由 plugins/*/deps/ 规则忽略），原 .pyd / certifi 豁免规则随之下线；
+# 这些文件在构建 tarball 时由 tools/build_plugin_tarballs.py 打进包内。
 # 网关插件用户配置（含 App Secret 等凭据，禁止入库）
 plugins/*/config.json
 .worktrees/ 

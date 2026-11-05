@@ -1,28 +1,32 @@
 {
-  "name": "ssh-toolkit",
-  "description": "SSH 远程工具包：连接管理（AI 工具 + 系统设置页）、命令执行、文件传输(SFTP)、端口转发、目录浏览，基于 paramiko 实现，AI 自动调用。",
-  "icon": {
-    "light": "icon.svg",
-    "dark": "icon_dark.svg"
-  },
-  "version": "0.4.4",
-  "author": "马丁",
-  "platforms": ["windows", "linux", "darwin"],
-  "dependencies": {
-    "pip": {
-      "linux": [
-        "bcrypt==5.0.0",
-        "cffi==2.1.1",
-        "cryptography==50.0.0",
-        "PyNaCl==1.6.2"
-      ],
-      "darwin": [
-        "bcrypt==5.0.0",
-        "cffi==2.1.1",
-        "cryptography==50.0.0",
-        "PyNaCl==1.6.2"
-      ]
+    "name": "ssh-toolkit",
+    "description": "SSH 远程工具包：连接管理（AI 工具 + 系统设置页）、命令执行、文件传输(SFTP)、端口转发、目录浏览，基于 paramiko 实现，AI 自动调用。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "0.4.4",
+    "author": "马丁",
+    "platforms": [
+        "windows",
+        "linux",
+        "darwin"
+    ],
+    "dependencies": {
+        "pip": {
+            "default": [
+                "PyNaCl==1.6.2",
+                "bcrypt==5.0.0",
+                "cffi==2.1.1",
+                "cryptography==50.0.0",
+                "invoke==3.0.3",
+                "paramiko==5.0.0",
+                "pycparser==3.0"
+            ]
+        }
+    },
+    "components": {
+        "tools": true,
+        "ui": true
     }
-  },
-  "components": { "tools": true, "ui": true }
 }

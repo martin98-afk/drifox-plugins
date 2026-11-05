@@ -132,6 +132,39 @@ def _text_color(secondary: bool = False) -> str:
     return "rgba(0,0,0,0.45)" if secondary else "rgba(0,0,0,0.85)"
 
 
+def _fallback_semantic(key: str) -> str:
+    """语义色兜底：主题色板缺键时按明暗二分
+
+    accent=强调（hash/链接）、add=新增行、del=删除行、
+    hover=悬停底、panel=展开区底
+    """
+    dark = isDarkTheme()
+    table = {
+        "accent": ("#62a0ea", "#2878dc"),
+        "add": ("#50e3c2", "#16a34a"),
+        "del": ("#f14c4c", "#dc2626"),
+        "hover": ("rgba(255,255,255,0.07)", "rgba(0,0,0,0.05)"),
+        "panel": ("rgba(255,255,255,0.045)", "rgba(0,0,0,0.04)"),
+    }
+    d, l = table[key]
+    return d if dark else l
+
+
+def _css_color_to_qcolor(val: str) -> QColor:
+    """CSS 颜色串 → QColor（QColor 构造不认 rgba()/rgb() 函数串，hex 与色名才可直填）"""
+    val = (val or "").strip()
+    m = re.match(
+        r"^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([\d.]+)\s*)?\)$", val
+    )
+    if m:
+        c = QColor(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        if m.group(4) is not None:
+            c.setAlphaF(min(max(float(m.group(4)), 0.0), 1.0))
+        return c
+    c = QColor(val)
+    return c if c.isValid() else QColor(128, 128, 128, 12)
+
+
 def _diff_area_bg() -> str:
     """diff 区域背景：深色主题深底，浅色主题浅底"""
     return "rgba(0,0,0,0.2)" if isDarkTheme() else "rgba(0,0,0,0.04)"
@@ -1557,18 +1590,27 @@ class _CommitFileRow(QWidget):
 
     clicked = pyqtSignal(str)  # path
 
-    def __init__(self, hash_: str, f: dict, parent=None, ff: str = "", fs: int = 0):
+    def __init__(self, hash_: str, f: dict, parent=None, theme: dict = None):
         super().__init__(parent)
         self._hash = hash_
         self._path = f["path"]
         self.setCursor(Qt.PointingHandCursor)
         self.setToolTip(f"查看 {f['path']} 的 diff")
         self.setObjectName("CommitFileRow")
+
+        t = theme or {}
+        ff = t.get("ff", "")
+        fs = int(t.get("fs", 14) or 14)
+        tc = t.get("tc") or _text_color()
+        tcs = t.get("tcs") or _text_color(secondary=True)
+        add_c = t.get("add") or _fallback_semantic("add")
+        del_c = t.get("del") or _fallback_semantic("del")
+        hover = t.get("hover") or _fallback_semantic("hover")
         font_part = f"font-family: '{ff}'; font-size: {max(fs - 1, 11)}px;" if ff else ""
         self.setStyleSheet(
             "#CommitFileRow { background: transparent; border-radius: 4px; "
-            f"color: {_text_color()}; {font_part} padding: 2px 8px; }} "
-            "#CommitFileRow:hover { background: rgba(128,128,128,0.08); }"
+            f"color: {tc}; {font_part} padding: 2px 8px; }} "
+            f"#CommitFileRow:hover {{ background: {hover}; }}"
         )
 
         ly = QHBoxLayout(self)
@@ -1582,16 +1624,19 @@ class _CommitFileRow(QWidget):
         else:
             stat_lb.setTextFormat(Qt.RichText)
             stat_lb.setText(
-                f"<span style='color:#50e3c2'>+{f['add']}</span> "
-                f"<span style='color:#f14c4c'>−{f['del']}</span>"
+                f"<span style='color:{add_c}'>+{f['add']}</span> "
+                f"<span style='color:{del_c}'>−{f['del']}</span>"
             )
-        stat_lb.setStyleSheet(f"background: transparent; {font_part}")
+        # bin 场景无 span 着色，需显式次要色否则继承默认黑（深色主题不可见）
+        stat_lb.setProperty("keepColor", True)
+        stat_lb.setStyleSheet(f"background: transparent; color: {tcs}; {font_part}")
         ly.addWidget(stat_lb)
 
         # 文件路径（可省略 label：超长中间省略，tooltip 完整路径）
         path_lb = _ElidedLabel(f["path"], self)
+        path_lb.setProperty("keepColor", True)  # 字号已随系统字体显式指定，避免 retheme 重涂
         path_lb.setStyleSheet(
-            f"background: transparent; color: {_text_color()}; {font_part}"
+            f"background: transparent; color: {tc}; {font_part}"
         )
         path_lb.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         ly.addWidget(path_lb, 1)
@@ -1612,7 +1657,7 @@ class _CommitFilesWidget(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.Antialiasing)
         p.setPen(Qt.NoPen)
-        p.setBrush(QColor(128, 128, 128, 12))
+        p.setBrush(self._panel_color)
         p.drawRoundedRect(self.rect(), 6, 6)
         lane_out = self._info.get("_lane_out") or []
         h = self.height()
@@ -1621,29 +1666,40 @@ class _CommitFilesWidget(QWidget):
             x = j * _LANE_W + _LANE_W // 2
             p.drawLine(x, 0, x, h)
 
-    def __init__(self, info: dict, parent=None, ff: str = "", fs: int = 0):
+    def __init__(self, info: dict, parent=None, theme: dict = None):
         super().__init__(parent)
         self._info = info
+        t = theme or {}
+        ff = t.get("ff", "")
+        fs = int(t.get("fs", 14) or 14)
+        tc = t.get("tc") or _text_color()
+        tcs = t.get("tcs") or _text_color(secondary=True)
+        # 展开区底色随主题（card_bg_dim / 明暗二分），解析 rgba() 串后再入 QPainter
+        self._panel_color = _css_color_to_qcolor(
+            t.get("panel") or _fallback_semantic("panel")
+        )
         ly = QVBoxLayout(self)
         ly.setContentsMargins(20, 4, 12, 6)
         ly.setSpacing(0)
         files = info.get("stat_files") or []
         if not files:
             empty = QLabel("（无文件变更 / merge commit）", self)
+            empty.setProperty("keepColor", True)  # 字号已随系统字体显式指定，避免 retheme 重涂
             empty.setStyleSheet(
-                f"color: {_text_color(secondary=True)}; font-family: '{ff}'; "
+                f"color: {tcs}; font-family: '{ff}'; "
                 f"font-size: {max(fs - 2, 10)}px; padding: 2px 6px;"
             )
             ly.addWidget(empty)
             return
         for f in files[:20]:
-            row = _CommitFileRow(info["hash"], f, self, ff=ff, fs=fs)
+            row = _CommitFileRow(info["hash"], f, self, theme=t)
             row.clicked.connect(lambda p, h=info["hash"]: self.file_requested.emit(h, p))
             ly.addWidget(row)
         if len(files) > 20:
             more = QLabel(f"… 其余 {len(files) - 20} 个文件（双击行查看完整 diff）", self)
+            more.setProperty("keepColor", True)  # 字号已随系统字体显式指定，避免 retheme 重涂
             more.setStyleSheet(
-                f"color: {_text_color(secondary=True)}; font-family: '{ff}'; "
+                f"color: {tcs}; font-family: '{ff}'; "
                 f"font-size: {max(fs - 2, 10)}px; padding: 2px 6px;"
             )
             ly.addWidget(more)
@@ -1656,12 +1712,21 @@ class _CommitRowWidget(QWidget):
     detail_requested = pyqtSignal(str)   # hash（双击，保留）
     commit_action = pyqtSignal(str, str)  # (action, hash) 右键菜单动作
 
-    def __init__(self, commit_info: dict, graph_lanes: int = 2, parent=None):
+    def __init__(self, commit_info: dict, graph_lanes: int = 2, parent=None,
+                 theme: dict = None):
         super().__init__(parent)
         self._info = commit_info
         self._files_widget = None
         self.setObjectName("CommitRow")
         self.setCursor(Qt.PointingHandCursor)
+
+        t = theme or {}
+        ff = t.get("ff", "")
+        fs = int(t.get("fs", 14) or 14)
+        tc = t.get("tc") or _text_color()
+        tcs = t.get("tcs") or _text_color(secondary=True)
+        accent = t.get("accent") or _fallback_semantic("accent")
+        hover = t.get("hover") or _fallback_semantic("hover")
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(8, 0, 8, 0)
@@ -1675,7 +1740,7 @@ class _CommitRowWidget(QWidget):
         self._main.setToolTip(self._build_tooltip())
         self._main.setStyleSheet(
             "#CommitRowMain { background: transparent; }"
-            "#CommitRowMain:hover { background: rgba(128,128,128,0.06); border-radius: 4px; }"
+            f"#CommitRowMain:hover {{ background: {hover}; border-radius: 4px; }}"
         )
         self._main.mousePressEvent = self._on_main_press
         self._main.mouseDoubleClickEvent = self._on_main_double
@@ -1688,11 +1753,12 @@ class _CommitRowWidget(QWidget):
         # graph 列（圆点 + 分支线）
         ly.addWidget(_GraphColumnWidget(commit_info, max(2, graph_lanes), self._main))
 
-        # Hash（7 位惯例，省出宽度给描述）
+        # Hash（7 位惯例，省出宽度给描述；等宽是哈希语义需要，色/字号随主题）
         hash_lb = QLabel(commit_info["hash"], self._main)
-        hash_lb.setProperty("keepColor", True)
+        hash_lb.setProperty("keepColor", True)  # 强调色已显式指定，避免 retheme 重涂
         hash_lb.setStyleSheet(
-            "background: transparent; color: #62a0ea; font-size: 11px; font-family: 'Consolas', monospace;"
+            f"background: transparent; color: {accent};"
+            f"font-family: 'Consolas', monospace; font-size: {max(fs - 3, 10)}px;"
         )
         hash_lb.setFixedWidth(64)
         ly.addWidget(hash_lb)
@@ -1701,8 +1767,10 @@ class _CommitRowWidget(QWidget):
         date_lb = QLabel(
             _relative_time(commit_info.get("date_iso", "")) or commit_info["date"], self._main
         )
+        date_lb.setProperty("keepColor", True)  # 字号已随系统字体显式指定，避免 retheme 重涂
         date_lb.setStyleSheet(
-            f"background: transparent; color: {_text_color(secondary=True)}; font-size: 11px;"
+            f"background: transparent; color: {tcs}; font-family: '{ff}'; "
+            f"font-size: {max(fs - 3, 10)}px;"
         )
         date_lb.setFixedWidth(74)
         ly.addWidget(date_lb)
@@ -1715,8 +1783,10 @@ class _CommitRowWidget(QWidget):
         subject_lb = _ElidedLabel(
             commit_info["subject"], self._main, elide_mode=Qt.ElideRight
         )
+        subject_lb.setProperty("keepColor", True)  # 字号已随系统字体显式指定，避免 retheme 重涂
         subject_lb.setStyleSheet(
-            f"background: transparent; color: {_text_color()}; font-size: 12px;"
+            f"background: transparent; color: {tc}; font-family: '{ff}'; "
+            f"font-size: {max(fs - 2, 11)}px;"
         )
         ly.addWidget(subject_lb, 1)
 
@@ -2359,6 +2429,11 @@ class GitPanelCard(QWidget):
         self._cached_border = "rgba(128,128,128,0.15)"
         self._cached_ff = "Microsoft YaHei"
         self._cached_fs = 14
+        self._cached_accent = _fallback_semantic("accent")
+        self._cached_add = _fallback_semantic("add")
+        self._cached_del = _fallback_semantic("del")
+        self._cached_hover = _fallback_semantic("hover")
+        self._cached_panel = _fallback_semantic("panel")
 
         self._setup_ui()
 
@@ -2383,9 +2458,21 @@ class GitPanelCard(QWidget):
         tc = _ctx_text_color(ctx)
         tcs = _ctx_text_color(ctx, secondary=True)
         border_c = _ctx_border_color(ctx)
+        theme_colors = ctx.get("colors", {}) or {}
+
+        def _sem(cache_key: str, ctx_key: str) -> str:
+            """主题色板优先，缺键回退明暗二分"""
+            val = theme_colors.get(ctx_key, "")
+            return val if val else _fallback_semantic(cache_key)
+
         self._cached_tc = tc
         self._cached_tcs = tcs
         self._cached_border = border_c
+        self._cached_accent = _sem("accent", "accent")
+        self._cached_add = _sem("add", "syntax_success")
+        self._cached_del = _sem("del", "syntax_error")
+        self._cached_hover = _sem("hover", "hover_bg")
+        self._cached_panel = _sem("panel", "card_bg_dim")
         self._cached_ff = font_family
         self._cached_fs = font_size
 
@@ -2411,6 +2498,23 @@ class GitPanelCard(QWidget):
 
         # 更新 header 样式
         self._header_widget.setStyleSheet("background: transparent;")
+
+    def _theme_snapshot(self) -> dict:
+        """细项构建用主题快照：色板 + 字体一次取齐
+
+        构造即适配当前主题；主题切换后随数据刷新/重建生效
+        """
+        return {
+            "tc": self._cached_tc,
+            "tcs": self._cached_tcs,
+            "accent": self._cached_accent,
+            "add": self._cached_add,
+            "del": self._cached_del,
+            "hover": self._cached_hover,
+            "panel": self._cached_panel,
+            "ff": self._cached_ff,
+            "fs": self._cached_fs,
+        }
 
     def _retheme(self):
         tc = self._cached_tc
@@ -3216,7 +3320,7 @@ class GitPanelCard(QWidget):
         if log:
             max_lanes = _compute_lanes(log, branch_name=data.get("branch", ""))
             for item in log:
-                row = _CommitRowWidget(item, graph_lanes=max_lanes)
+                row = _CommitRowWidget(item, graph_lanes=max_lanes, theme=self._theme_snapshot())
                 row.expand_toggled.connect(self._on_commit_row_expand)
                 row.detail_requested.connect(self._on_commit_detail)
                 row.commit_action.connect(self._on_commit_row_action)
@@ -3551,7 +3655,7 @@ class GitPanelCard(QWidget):
             row.collapse()
             self._expanded_row = None
         else:
-            files = _CommitFilesWidget(row.info(), ff=self._cached_ff, fs=self._cached_fs)
+            files = _CommitFilesWidget(row.info(), theme=self._theme_snapshot())
             files.file_requested.connect(self._on_commit_file_diff)
             row.expand(files)
             self._expanded_row = row

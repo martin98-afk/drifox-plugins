@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+### 🔧 live-data v0.1.1：修复四工具全部返回「未知工具：」的致命分发 bug
+- **症状**：finance_live / dev_live / weather_live / misc_live 任一调用都返回「未知工具：」（名为空），插件自上架以来从未真正执行过；schema 注入与注册均正常，仅执行层失败
+- **根因**：四工具共用单一 `_impl`，靠 `getattr(tool_ctx, "tool_name")` 区分；但宿主注入的 tool_ctx 是 dict 且不含工具名（kwargs 也无 `__tool__` 键），getattr 对 dict 恒返回默认值空串，全部落入「未知工具：{tool}」兜底分支
+- **修复**：每工具注册独立包装函数硬编码名字（`_finance_live_impl` 等），共享 `_run_tool` 做分发与异常归一；删除不可达的 getattr/`__tool__` 取名逻辑
+- **验证**：新增 7 条分发回归测试（含 ToolExecutor 端到端 seam）全绿；运行时 10 个真实分支逐一联网实测全通（汇率/股票/指数/金价/npm/PyPI/GitHub/天气/B站/IP）
+
 ### 🔧 docx-designer v0.3.1：大表格分页丢内容 + 拖拽失效修复
 - **pptx 大文件预览空白**：`setHtml` 超 ~2MB 静默不渲染（光大售前 PPT 渲染出 39MB HTML，表现为状态栏「已打开」但内容不刷新）；>1.5MB 自动改走本地文件加载（`plugin_data/docx-designer/preview_a/b.html` 轮换防缓存），qwebchannel.js 用 QFile 读 qrc 资源内联进页面，file:// 加载下拾取/标注桥照常可用；另图片按 blob 哈希去重（同一 logo 多页/多层复用只嵌一份）
 - **pptx 版式/母版背景丢失**：此前只渲染 slide 自身形状（模板背景图/装饰件在版式的非占位符形状里，MindSpore 封面山景图整张丢失）；现在版式与母版非占位符形状垫底渲染（`showMasterSp="0"` 时跳过母版层），背景填充链 slide→layout→master 逐级取（支持图片填充）；版式/母版锚点 `:L`/`:M` 前缀区分

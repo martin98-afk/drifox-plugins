@@ -38,5 +38,12 @@
                 "description": "推荐用设置卡「扫码登录」按钮；token 失效（约 24h 无活动）后需重新扫码"
             }
         ]
+    },
+    "dependencies": {
+        "pip": {
+            "default": [
+                "segno"
+            ]
+        }
     }
 }

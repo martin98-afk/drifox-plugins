@@ -618,7 +618,8 @@ _DEV_KINDS = ["npm", "pypi", "github"]
 _MISC_KINDS = ["bilibili", "ip"]
 
 
-def _dispatch(tool: str, kwargs: dict) -> ToolResult:
+def _run_tool(tool: str, kwargs: dict) -> ToolResult:
+    """按工具名分发到底层实现（名字由各 impl 包装硬编码，不依赖 tool_ctx）。"""
     try:
         if tool == "finance_live":
             kind = (kwargs.get("kind") or "").strip()
@@ -646,13 +647,29 @@ def _dispatch(tool: str, kwargs: dict) -> ToolResult:
         return ToolResult(False, error=f"live_data 内部异常：{type(e).__name__}: {e}")
 
 
-def _make_impl(tool_name: str):
-    """闭包绑定工具名。宿主 tool_ctx 是 dict 且无工具名字段，
-    共用 impl 无法从入参推断自身身份，必须注册时各自绑定。"""
-    def _run(tool_ctx=None, **kwargs):
-        return _dispatch(tool_name, kwargs)
-    return _run
-
+# 宿主以 impl(tool_ctx=ctx, **args) 调用：tool_ctx 是 dict 且不含工具名，
+# 共享 impl 无法得知自身工具名（回归：tests/plugins/test_live_data_dispatch.py）。
+# 故每个工具注册独立包装、硬编码名字。
+def _finance_live_impl(tool_ctx=None, **kwargs):
+    return _run_tool("finance_live", kwargs)
+
+
+def _dev_live_impl(tool_ctx=None, **kwargs):
+    return _run_tool("dev_live", kwargs)
+
+
+def _weather_live_impl(tool_ctx=None, **kwargs):
+    return _run_tool("weather_live", kwargs)
+
+
+def _misc_live_impl(tool_ctx=None, **kwargs):
+    return _run_tool("misc_live", kwargs)
+
+
+_SCHEMA_COMMON_HEAD = {
+    "type": "object",
+    "additionalProperties": False,
+}
 
 
 def _schema(name: str, desc: str, props: dict, required: list) -> dict:
@@ -747,28 +764,28 @@ _MISC_SCHEMA = _schema(
 def register(registry):
     """工具插件化注册入口（PluginToolLoader 调用）"""
     registry.register(
-        "finance_live", _FINANCE_SCHEMA, impl=_make_impl("finance_live"),
+        "finance_live", _FINANCE_SCHEMA, impl=_finance_live_impl,
         danger="safe", icon="live_finance", cn_name="金融实时数据",
         group="实时数据",
         description="汇率/A股/大盘指数/国际金价实时查询（免密钥）",
         aliases=["FinanceLive"],
     )
     registry.register(
-        "dev_live", _DEV_SCHEMA, impl=_make_impl("dev_live"),
+        "dev_live", _DEV_SCHEMA, impl=_dev_live_impl,
         danger="safe", icon="live_dev", cn_name="开发包实时数据",
         group="实时数据",
         description="npm/PyPI/GitHub 包与仓库实时信息（免密钥）",
         aliases=["DevLive"],
     )
     registry.register(
-        "weather_live", _WEATHER_SCHEMA, impl=_make_impl("weather_live"),
+        "weather_live", _WEATHER_SCHEMA, impl=_weather_live_impl,
         danger="safe", icon="live_weather", cn_name="天气实况查询",
         group="实时数据",
         description="城市实时天气与 3 天预报（Open-Meteo，免密钥）",
         aliases=["WeatherLive"],
     )
     registry.register(
-        "misc_live", _MISC_SCHEMA, impl=_make_impl("misc_live"),
+        "misc_live", _MISC_SCHEMA, impl=_misc_live_impl,
         danger="safe", icon="live_misc", cn_name="杂项实时数据",
         group="实时数据",
         description="B站视频数据与 IP 归属地查询（免密钥）",
