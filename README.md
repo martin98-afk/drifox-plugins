@@ -180,6 +180,21 @@ python tools/validate_plugins.py
 
 > 开发者新增 / 修改插件后**无需手动跑 `generate_marketplace.py`**，CI 会自动帮你补上。
 
+### tarball 发布（自动）
+
+`.github/workflows/release-plugins.yml` 在 push 到 main 且改动涉及 `plugins/**` 或构建脚本时自动构建并发布单插件 tarball：
+
+1. **检测**：`tools/detect_plugin_changes.py` 扫描 `plugins/*/.drifox-plugin/plugin.json`（真源是清单目录，不是 `marketplace.json`），挑出「版本从未发布过」或「版本与已发布 tarball 不一致」的插件。**新插件首次推送同样自动发布**，无需人工跑 build + publish
+2. **构建**：`tools/build_plugin_tarballs.py --deps-source pip --strict-deps` 按平台拉取依赖并打包
+3. **冒烟门禁**：每个包构建完立即过 `tools/smoke_check_tarball.py`，未通过的包**不进索引、不发布**（宁可不发也不发残缺包）
+4. **发布**：`tools/publish_plugin_tarballs.py --replace` 上传到 GitHub Releases，随后重生成 `marketplace.json` 并提交
+
+冒烟检查项：依赖子模块存在性（AST 级）、平台归属（`.so`/`.pyd` 平台标签）、ABI 匹配（`cpython-3XX` 必须等于目标运行时）、包完整性。
+
+> **不会触发发布的情况**：清单版本号未变。semver 是人的决定，CI 不替人猜——改了代码或依赖但忘了升版本，不会自动重发。这是刻意的。
+>
+> **静态校验的边界**：`.so` 文件名不含 CPU 架构（mac arm64 与 x86_64 同名），架构错配无法静态判定；也不做真实 import（CI 是 py3.12，装不了 cp314 的二进制，插件代码还依赖宿主模块）。
+
 ## marketplace.json 生成
 
 `marketplace.json` 是插件市场清单，由脚本自动生成，**请勿手动编辑**：

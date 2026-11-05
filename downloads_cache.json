@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1793833305.51883,
+  "fetched_at": 1793848685.183982,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -54,7 +54,7 @@
     "dingtalk-docs": 1,
     "dingtalk-todo": 1,
     "doc-coauthoring": 1,
-    "docx-designer": 9,
+    "docx-designer": 11,
     "dropbox": 0,
     "dsh-plugin-migrator": 4,
     "dsh-presets": 1,

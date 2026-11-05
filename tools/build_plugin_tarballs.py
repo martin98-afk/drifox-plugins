@@ -327,6 +327,39 @@ def iter_files(root: Path, skip_deps_platforms: Optional[set] = None):
         yield p, "/".join(parts)
 
 
+def _run_smoke_checks(
+    name: str, entry: Dict[str, dict], out_dir: Path
+) -> Tuple[Dict[str, dict], List[str]]:
+    """对已构建的包做发布前冒烟检查，返回 (通过的 entry, 失败说明列表)。
+
+    失败的包从 entry 里剔除：宁可不发，也不能把装不上的包推到市场
+    （2026-11 bili-scroll 事故：包名写错导致三平台 tarball 全是坏包）。
+    """
+    if not entry:
+        return entry, []
+    try:
+        from smoke_check_tarball import smoke_check
+    except Exception as e:  # noqa: BLE001 - 工具缺失不应阻断构建
+        print(f"  [warn] {name} 冒烟模块导入失败（跳过检查）: {e}")
+        return entry, []
+
+    kept: Dict[str, dict] = {}
+    failures: List[str] = []
+    for plat, meta in entry.items():
+        fname = str(meta.get("url") or "").rsplit("/", 1)[-1]
+        tar_path = out_dir / fname
+        ok, errors, warnings = smoke_check(tar_path)
+        for w in warnings:
+            print(f"  [smoke warn] {name} {plat}: {w}")
+        if ok:
+            kept[plat] = meta
+        else:
+            for e in errors:
+                print(f"  [smoke err] {name} {plat}: {e}")
+            failures.append(f"{name}/{plat} 冒烟未通过（{errors[0] if errors else '未知'}）")
+    return kept, failures
+
+
 def build_tarball(
     plugin_dir: Path,
     deps_dir: Optional[Path],
@@ -452,7 +485,12 @@ def main() -> int:
                     total_bytes += size
                     print(f"  {fname:56s} {size/1048576:7.2f} MB")
                 print(f"  [pip] {name} 依赖由 pip 跳平台拉取（{', '.join(sorted(pip_deps))}）")
-                index[name] = {"version": version, "tarball": entry}
+                entry, smoke_fail = _run_smoke_checks(name, entry, out_dir)
+                strict_failures.extend(smoke_fail)
+                if entry:
+                    index[name] = {"version": version, "tarball": entry}
+                else:
+                    print(f"  [strict] {name} 全部包未通过冒烟检查，跳过发布")
                 continue
             print(f"  [warn] {name} pip 拉取失败，回退本地/备份/源码包")
             if args.strict_deps:
@@ -491,7 +529,12 @@ def main() -> int:
                 strict_failures.append(f"{name} 声明依赖但无任何 deps 来源")
         elif deps_dir is not None:
             print(f"  [{deps_src}] {name} deps={deps_dir}")
-        index[name] = {"version": version, "tarball": entry}
+        entry, smoke_fail = _run_smoke_checks(name, entry, out_dir)
+        strict_failures.extend(smoke_fail)
+        if entry:
+            index[name] = {"version": version, "tarball": entry}
+        else:
+            print(f"  [strict] {name} 全部包未通过冒烟检查，跳过发布")
 
     index_path = out_dir / "tarball_index.json"
     payload = {

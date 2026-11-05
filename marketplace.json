@@ -632,7 +632,7 @@
         {
             "name": "bili-scroll",
             "description": "每天替你刷一轮 B站：按关键词或推荐流搜视频、逐条读字幕判断、挑出值得的写成日报，特别值得的经你授权后自动评论 @你。扫码登录、峰谷时段自动跑、判重防打扰。",
-            "version": "0.2.2",
+            "version": "0.2.3",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -673,7 +673,7 @@
                         "apscheduler",
                         "attrs==26.1.0",
                         "beautifulsoup4>=4.12",
-                        "bilibili_api",
+                        "bilibili-api-python>=17.4.1,<18",
                         "brotli>=1.1",
                         "frozenlist",
                         "httpx>=0.27",
@@ -702,19 +702,19 @@
             },
             "tarball": {
                 "darwin": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.2.2/bili-scroll-0.2.2-darwin.tar.gz",
-                    "sha256": "5d19a71289b55971714a6da0bdbfde85b9b7773c0afad735632d5b92ec6fe4c8",
-                    "size": 18968993
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.2.3/bili-scroll-0.2.3-darwin.tar.gz",
+                    "sha256": "52bbf8a7d45c1eaf7a07efcb6547b2be812a024357edbc09c2626f9a15e95c2d",
+                    "size": 19213029
                 },
                 "linux": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.2.2/bili-scroll-0.2.2-linux.tar.gz",
-                    "sha256": "570a15fb105bca60345d6db0186702d28b7e2e1686c7e458317509fc6d6b84a1",
-                    "size": 20525500
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.2.3/bili-scroll-0.2.3-linux.tar.gz",
+                    "sha256": "264697d4e8bd2ddae188c8f399610b80f9e6882bebe12b95a0dec1775e73e4df",
+                    "size": 20770984
                 },
                 "win32": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.2.2/bili-scroll-0.2.2-win32.tar.gz",
-                    "sha256": "2c4c9a8847ff87bb056dbf342f9b1e2ca94eeb1026073aaf0365fb0f032eb132",
-                    "size": 14858482
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.2.3/bili-scroll-0.2.3-win32.tar.gz",
+                    "sha256": "e60469f886a00a4beecf9f63960488242d585ff79d2b1d3080e07d460759c936",
+                    "size": 15100695
                 }
             }
         },
@@ -793,7 +793,7 @@
         {
             "name": "browser",
             "description": "内置浏览器 — Chrome 体验多标签浏览 + 外部链接接管 + AI 智能体浏览控制（MCP）。",
-            "version": "1.6.1",
+            "version": "1.6.2",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -825,9 +825,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-browser-v1.6.1/browser-1.6.1-all.tar.gz",
-                    "sha256": "25c297352de674bcc789b4feb133f3f51417dfbf5873e87a4ae61046b643a624",
-                    "size": 83625
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-browser-v1.6.2/browser-1.6.2-all.tar.gz",
+                    "sha256": "50e34298a4cd28bbe454743b80e9a66012b2bc2715403ef993196b6d7fc125be",
+                    "size": 82061
                 }
             }
         },
@@ -2139,7 +2139,7 @@
                 "ui": true,
                 "tools": true
             },
-            "downloads": 9,
+            "downloads": 11,
             "keywords": [
                 "document",
                 "docx",

@@ -2,9 +2,8 @@
   "mcpServers": {
     "bili": {
       "type": "stdio",
-      "command": "py",
+      "command": "python3",
       "args": [
-        "-3",
         "${CLAUDE_PLUGIN_ROOT}/mcp/server.py"
       ],
       "env": {},
