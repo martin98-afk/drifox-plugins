@@ -3,7 +3,7 @@
 """
 publish_plugin_tarballs.py — 把 dist/ 里的插件包发布到 GitHub Releases
 
-前置：先跑 tools/build_plugin_tarballs.py 生成 dist/ 与 tarball_index.json。
+前置：先跑 tools/build_plugin_tarballs.py 生成 dist/<name>/ 与 tarball_index.json。
 
 发布模型（每插件一个 release，独立版本节奏）：
     tag:  plugin-<name>-v<version>
@@ -61,10 +61,11 @@ def parse_remote() -> Tuple[str, str, str]:
 
 def api(method: str, url: str, token: str, data: Optional[dict] = None, raw: Optional[bytes] = None):
     headers = {
-        "Authorization": f"token {token}",
         "Accept": "application/vnd.github+json",
         "User-Agent": "DriFox-plugin-publisher",
     }
+    if token:
+        headers["Authorization"] = f"token {token}"
     body = None
     if data is not None:
         body = json.dumps(data).encode("utf-8")
@@ -174,7 +175,7 @@ def main() -> int:
         for plat, meta in assets.items():
             url = str(meta.get("url") or "")
             fname = url.rsplit("/", 1)[-1]
-            fpath = DIST_DIR / fname
+            fpath = DIST_DIR / name / fname
             if not fpath.is_file():
                 print(f"  [skip] 缺文件: {fpath}")
                 continue
