@@ -337,14 +337,20 @@ def _missing_declared_modules(
         if not tl:
             continue  # 无 top_level.txt：跳过，避免误杀
         body = read_text(tl[0]) or ""
-        for line in body.splitlines():
-            mod = line.strip()
-            if not mod:
-                continue
-            # 顶层模块应有 deps/<mod>/__init__.py 或 deps/<mod>.py
-            if f"deps/{mod}/__init__.py" in paths or f"deps/{mod}.py" in paths:
-                continue
-            missing.add(mod)
+        mods = [line.strip() for line in body.splitlines() if line.strip()]
+        if not mods:
+            continue
+        # top_level.txt 可能列出多个顶层名，其中部分是可选的测试/工具包。
+        # 典型：pyobjc-core 声明 objc、PyObjCTest、PyObjCTools，但 wheel 只带
+        # objc，后两个只存在于源码树（实测第一次跑就误拒了含 objc 的好包）。
+        # 判据因此放宽为「至少一个声明模块落盘」—— 说明该依赖确实被打进来了。
+        landed = [
+            m
+            for m in mods
+            if f"deps/{m}/__init__.py" in paths or f"deps/{m}.py" in paths
+        ]
+        if not landed:
+            missing.add(pkg)
     return missing
 
 def _parse_name_version(tarball: Path) -> tuple[str, str]:

@@ -218,7 +218,7 @@ class TestDeclaredDepsPresent:
         smoke = _load_tool("smoke_check_tarball")
         ok, errors, _ = smoke.smoke_check(self._build(tmp_path, with_core=False))
         assert not ok, "manifest 声明了 pyobjc-core 但包内无 objc，必须拒绝"
-        assert any("objc" in e for e in errors), errors
+        assert any("pyobjc_core" in e or "pyobjc-core" in e for e in errors), errors
 
     def test_accepts_when_dep_present(self, tmp_path):
         smoke = _load_tool("smoke_check_tarball")

@@ -1844,7 +1844,7 @@
         {
             "name": "desktop-automation",
             "description": "桌面自动化工具（mouse / keyboard / screenshot）—— 通过 pynput + mss 控制桌面，从 DriFox 主程序迁出（工具插件化）",
-            "version": "1.0.2",
+            "version": "1.0.3",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
