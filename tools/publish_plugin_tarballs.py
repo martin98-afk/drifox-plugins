@@ -155,7 +155,7 @@ def main() -> int:
         rel = ensure_release(owner, repo, tag, name, version, token)
         upload_url = rel.get("upload_url") or ""
         if not upload_url:
-            print(f"  [skip] 未取得 upload_url（release 可能已存在但无权限）")
+            print("  [skip] 未取得 upload_url（release 可能已存在但无权限）")
             continue
         existing = {a.get("name"): a for a in (rel.get("assets") or [])}
         for f in files:

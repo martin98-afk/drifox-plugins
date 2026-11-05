@@ -272,6 +272,54 @@ def _parse_mapping(lines: list[str], indent: int) -> tuple[dict, int]:
             sub_value, sub_consumed = _parse_block(sub_lines, indent + 2)
             result[key] = sub_value
             i += 1 + sub_consumed
+        elif rest[0] in ">|":
+            # 块标量（YAML block scalar）：`>` 折叠为空格，`|` 保留换行。
+            # 支持 chomping 修饰符 -/+，例如 `>-`、`|+`。
+            # 常见写法 description: > 换行缩进的多行描述，必须整体读出原文，
+            # 否则会被当成字面量 ">"，导致「description 过短」等误报。
+            style = rest[0]
+            chomp = rest[1:].strip()
+            body: list[str] = []
+            j = i + 1
+            block_indent: int | None = None
+            while j < len(lines):
+                nxt = lines[j]
+                if not nxt.strip():
+                    body.append("")
+                    j += 1
+                    continue
+                nxt_indent = len(nxt) - len(nxt.lstrip())
+                if nxt_indent <= indent:
+                    break
+                if block_indent is None:
+                    block_indent = nxt_indent
+                body.append(nxt[block_indent:])
+                j += 1
+
+            # 去掉尾部空行（除 `+` 保留全部）
+            while body and not body[-1].strip() and chomp != "+":
+                body.pop()
+
+            if style == ">":
+                # 折叠：相邻非空行拼成一行，空行转成换行段落
+                paragraphs: list[str] = []
+                buf: list[str] = []
+                for line in body:
+                    if line.strip():
+                        buf.append(line.strip())
+                    else:
+                        if buf:
+                            paragraphs.append(" ".join(buf))
+                            buf = []
+                        paragraphs.append("")
+                if buf:
+                    paragraphs.append(" ".join(buf))
+                text = "\n".join(paragraphs)
+            else:
+                text = "\n".join(body)
+
+            result[key] = text.strip() if chomp != "+" else text
+            i = j
         else:
             result[key] = _parse_scalar(rest)
             i += 1
@@ -904,6 +952,18 @@ def check_providers_dir(
             )
 
 
+def uses_hooks(plugin_dir: Path, manifest: dict) -> bool:
+    """插件是否以包内模块方式加载钩子（决定 __init__.py 是否必需）。
+
+    判据与 check_hooks_dir 保持一致：manifest 声明 components.hooks，
+    或目录里已有 hooks/hooks.json（历史插件如 superclaude 未在
+    manifest 里声明但实际带钩子配置）。
+    """
+    if manifest.get("components", {}).get("hooks"):
+        return True
+    return (plugin_dir / "hooks" / "hooks.json").is_file()
+
+
 def check_consistency(
     plugin_dir: Path, manifest: dict, errors: list[str], warnings: list[str]
 ) -> None:
@@ -915,7 +975,10 @@ def check_consistency(
     if not (plugin_dir / "README.md").exists():
         warnings.append("缺少 README.md")
 
-    if not (plugin_dir / "__init__.py").exists():
+    # 只有声明了 hooks（或有 hooks/ 目录）的插件才需要 __init__.py：
+    # 宿主的钩子模块以包内相对路径导入，缺 __init__.py 会让 hooks/*.py 导入失败。
+    # 纯 ui / commands / tools 等插件不加载包内模块，不该要求这个文件。
+    if uses_hooks(plugin_dir, manifest) and not (plugin_dir / "__init__.py").exists():
         warnings.append("缺少 __init__.py（影响钩子模块导入）")
 
 
