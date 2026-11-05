@@ -305,12 +305,23 @@ def _version_lt(a: str, b: str) -> bool:
     return pa < pb
 
 def _same_tarball(a: dict, b: dict) -> bool:
-    """两份 tarball 字段是否等价（按平台键比 url，不比键名顺序）。"""
+    """两份 tarball 字段是否等价（比 url + sha256：url 同但 sha 异视为两批不同构建）。
+
+    url 由插件名+版本拼出，本地重建永远产相同 url，只比 url 会漏掉
+    「同版本不同构建平台导致 sha 不同」的场景（2026-11 本机 Windows 构建
+    vs CI Linux 构建实测触发），指纹必须包含 sha256。
+    """
     if not isinstance(a, dict) or not isinstance(b, dict):
         return a == b
-    ka = {k: (v or {}).get("url") for k, v in a.items() if k != "mirrors" and isinstance(v, dict)}
-    kb = {k: (v or {}).get("url") for k, v in b.items() if k != "mirrors" and isinstance(v, dict)}
-    return ka == kb
+
+    def _fingerprint(t: dict) -> dict:
+        return {
+            k: (v.get("url"), v.get("sha256"))
+            for k, v in t.items()
+            if k != "mirrors" and isinstance(v, dict)
+        }
+
+    return _fingerprint(a) == _fingerprint(b)
 
 def generate_marketplace() -> dict:
     """扫描所有插件，生成完整的 marketplace.json 结构。"""
