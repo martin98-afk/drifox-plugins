@@ -654,7 +654,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 19,
+            "downloads": 21,
             "keywords": [
                 "bilibili",
                 "b站",
@@ -3233,7 +3233,7 @@
                 "ui": true,
                 "tools": true
             },
-            "downloads": 12,
+            "downloads": 6,
             "keywords": [
                 "document",
                 "docx",
@@ -3437,7 +3437,7 @@
                 "commands": true,
                 "skills": true
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "frontend",
                 "a11y",
@@ -7340,6 +7340,7 @@
                 "hooks": true,
                 "ui": true
             },
+            "downloads": 1,
             "keywords": [
                 "speak-up",
                 "initiative",
