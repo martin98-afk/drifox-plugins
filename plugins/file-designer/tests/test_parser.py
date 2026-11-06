@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """docx_parser 纯函数单测（无 Qt 依赖，系统 python + python-docx 直接跑）。
 
-Run: python -m pytest plugins/docx-designer/tests/test_parser.py -v
+Run: python -m pytest plugins/file-designer/tests/test_parser.py -v
 """
 import importlib.util
 import sys
@@ -21,7 +21,7 @@ def _load_module(mod_name, filename):
     return mod
 
 
-_docx_parser = _load_module("docx_designer_docx_parser", "docx_parser.py")
+_docx_parser = _load_module("file_designer_docx_parser", "docx_parser.py")
 parse_document = _docx_parser.parse_document
 
 DEMO_OMML = (

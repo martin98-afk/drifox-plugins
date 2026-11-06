@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """pptx 解析/渲染单测（无 Qt 依赖，系统 python + python-pptx 直接跑）。
 
-Run: python -m pytest plugins/docx-designer/tests/test_pptx.py -v
+Run: python -m pytest plugins/file-designer/tests/test_pptx.py -v
 """
 import importlib
 import sys

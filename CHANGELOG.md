@@ -1,6 +1,16 @@
 # Changelog
 
 ## Unreleased
+### ✨ docx-designer → file-designer v0.4.0：多格式文件设计
+- **改名与迁移**：插件目录 `plugins/docx-designer` → `plugins/file-designer`，浮卡 `plugin_name`/`card_id` 同步改名、title「文件设计」；注册时若 `plugin_data/file-designer/` 不存在而旧目录存在则整目录复制，历史 picks 截图与标注 JSON 沿用；`tools/docx_tools.py` → `tools/file_tools.py`，`open_file` 为主工具、`open_docx` 保留兼容别名；不保留 `/docx-designer` 命令别名
+- **新增 4 类格式**（统一 HTML 管线 + `ui/formats.py` 格式注册表）：xmind（content.json / content.xml 双形态 → 自绘 SVG 导图）、xlsx/xlsm（openpyxl 数据优先，合并单元格/列宽/多 sheet）、csv（utf-8-sig→utf-8→gb18030→latin-1 编码链 + Sniffer 探分隔符）、mermaid（`.mmd`/`.mermaid`，内联 `assets/mermaid.min.js` v10.9.1 渲染 SVG + 源码行列表）；四者共用 `_BOOT_JS/_PICK_JS/_ANNOTATE_JS` 与 note-box，元素挂 `data-anchor` 即自动具备拾取/标注/截图/回填
+- **锚点契约**：xmind `s{sheet}/n/{节点路径}`、xlsx `s{sheet}!B3`、csv `r{行}c{列}` / `table`、mermaid `L{行号}`；`pick_format.py` 按 mode 扩展描述头与锚点规则说明，lookup 回填层级路径/表头/整行/上下文
+- **注入语义不变**：只回填对话输入框（锚点+文本+上下文+截图），不写回源文件
+- **防护上限**：xlsx 2000 行 × 200 列、csv 5000 行 × 200 列、xmind 800 节点，超出截断并在状态栏提示
+- **依赖与资源**：manifest 加 `openpyxl>=3.1.0`；`assets/mermaid.min.js` 3.3MB 随插件打包，库缺失/初始化失败降级为源码视图
+- **验证**：插件单测 88 条全绿（`python -m pytest plugins/file-designer/tests/ -q --noconftest`）；按注册表真实分派 4 类通用格式验 parse→render→lookup→回填契约；Edge headless `--dump-dom --virtual-time-budget` 离屏确认 mermaid.min.js 渲染出 SVG 且节点挂 `L{行号}` 锚点（Qt5 WebEngine / Chromium 87 兼容性仍待宿主内实测）
+- **市场**：`marketplace.json` 条目改名、version 0.4.0、`downloads_cache.json` 的 `docx-designer: 12` 迁为 `file-designer: 12`；CI 按新名首次发布三平台 tarball。注意计数服务 key 按插件名生成（`drifox-plugins-<name>`），远端新 key 从 0 开始，本地缓存的 12 在下次 `fetch_downloads.py` 成功拉取后会被远端值覆盖
+
 ### 🚀 发布流程：新插件自动发布 + tarball 冒烟门禁
 - **新插件首次推送即自动发布**：`tools/detect_plugin_changes.py` 的真源从 `marketplace.json` 改为 `plugins/*/.drifox-plugin/plugin.json`。此前新插件因清单里还没有 tarball 字段而被跳过，必须人工跑 build + publish；现在按「版本未发布过 / 版本不一致」判定，新插件与改版插件走同一条自动链路
 - **新增 `tools/smoke_check_tarball.py`**：发布前逐包体检，`build_plugin_tarballs.py` 已接入（未通过的包从索引剔除、不发布）。检查项：

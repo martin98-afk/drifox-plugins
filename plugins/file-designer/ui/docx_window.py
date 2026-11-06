@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""文档设计窗口：工具栏（打开/拾取/标注/发送标注/缩放）+ 分页预览 + 状态栏。
+"""文件设计窗口：工具栏（打开/拾取/标注/发送标注/缩放）+ 分页预览 + 状态栏。
 
 拾取：页面内 JS 点击监听回传锚点与矩形，Python 裁剪截图并回填。
 标注：标注态点击元素弹注释框，角标编号；「发送标注」把全部注释一次性回填。
@@ -27,6 +27,7 @@ from PyQt5.QtWebChannel import QWebChannel
 
 from .docx_parser import docx_header_footer, docx_page_setup, parse_document
 from .external_open import open_in_system
+from .formats import spec_for, suffix_label
 from .html_renderer import render_html
 from .picker import DocxBridge, capture_view_rect, write_input
 from .pick_format import format_annotations, format_pick
@@ -40,7 +41,7 @@ def _get_current_card():
 
 
 class DocxWindowCard(QWidget):
-    """文档设计浮动卡片。widget 契约：__init__(parent=None) + show_card + set_context_provider。"""
+    """文件设计浮动卡片。widget 契约：__init__(parent=None) + show_card + set_context_provider。"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -50,6 +51,8 @@ class DocxWindowCard(QWidget):
         self._context_provider = None
         self._blocks = []
         self._pptx_model = None
+        self._generic_model = None
+        self._generic_mode = ""
         self._mode = "docx"
         self._current_path = ""
         self._pick_on = False
@@ -196,36 +199,38 @@ class DocxWindowCard(QWidget):
     # ── 打开文档 ──
 
     def _on_open_clicked(self):
-        path, _ = QFileDialog.getOpenFileName(self, "打开文档", "", "Word / PowerPoint (*.docx *.pptx)")
+        from .formats import SUPPORTED_SUFFIXES
+
+        patterns = " ".join("*" + s for s in SUPPORTED_SUFFIXES)
+        path, _ = QFileDialog.getOpenFileName(
+            self, "打开文件", "", f"支持的文件 ({patterns})"
+        )
         if path:
             self.open_path(path)
 
     def open_path(self, path):
-        """解析并渲染 docx/pptx。供工具侧调用；返回是否成功。"""
+        """解析并渲染受支持格式。供工具侧调用；返回是否成功。"""
         p = Path(path)
         if not p.is_file():
             self._set_status(f"文件不存在: {path}")
             return False
         suffix = p.suffix.lower()
+        spec = spec_for(suffix)
+        if spec is None:
+            self._set_status(f"仅支持 {suffix_label()} 文件")
+            return False
+        if spec["generic"]:
+            return self._open_generic(p, spec)
         if suffix == ".pptx":
             return self._open_pptx(p)
-        if suffix != ".docx":
-            self._set_status("仅支持 .docx / .pptx 文件")
-            return False
         try:
             blocks = parse_document(str(p))
         except Exception as e:
             self._set_status(f"解析失败: {e}")
             return False
-        self._mode = "docx"
-        self._pptx_model = None
+        self._reset_state("docx")
         self._blocks = blocks
         self._current_path = str(p)
-        self._count = 0
-        self._pick_on = False
-        self._annotate_on = False
-        self._btn_pick.setDown(False)
-        self._btn_annotate.setDown(False)
         restored = self._load_annotations()
         self._annotations = list(restored)
         html = render_html(
@@ -242,6 +247,51 @@ class DocxWindowCard(QWidget):
         self._set_status(f"已打开 {p.name}（{len(blocks)} 个块）{note}；「标注」读文档写注释，「发送标注」统一交给模型")
         return True
 
+    def _open_generic(self, p, spec):
+        """xmind / xlsx / csv / mermaid：注册表 parse → render → 复用拾取/标注桥。"""
+        try:
+            model = spec["parse"](str(p))
+        except ImportError as e:
+            self._set_status(f"格式支持不可用（缺依赖）: {e}")
+            return False
+        except Exception as e:
+            self._set_status(f"解析失败: {e}")
+            return False
+        self._reset_state(spec["mode"])
+        self._generic_model = model
+        self._generic_mode = spec["mode"]
+        self._current_path = str(p)
+        restored = self._load_annotations()
+        self._annotations = list(restored)
+        try:
+            html = spec["render"](
+                model, outer=self._outer_bg, accent=self._accent_hex, restored=restored
+            )
+        except Exception as e:
+            self._set_status(f"渲染失败: {e}")
+            return False
+        self._load_html(html)
+        self._name_label.setText(p.name)
+        note = f"，恢复 {len(restored)} 条历史标注" if restored else ""
+        warn = "（内容超上限已截断）" if model.get("truncated") else ""
+        self._set_status(
+            f"已打开 {p.name}（{spec['status']}）{note}{warn}；「拾取」取元素，「标注」写注释"
+        )
+        return True
+
+    def _reset_state(self, mode):
+        self._mode = mode
+        self._blocks = []
+        self._pptx_model = None
+        self._generic_model = None
+        self._generic_mode = "" if mode in ("docx", "pptx") else mode
+        self._current_path = ""
+        self._count = 0
+        self._pick_on = False
+        self._annotate_on = False
+        self._btn_pick.setDown(False)
+        self._btn_annotate.setDown(False)
+
     def _preview_file(self):
         """大 HTML 落盘文件（两个名字轮换，避免同 URL 缓存）。"""
         try:
@@ -249,10 +299,10 @@ class DocxWindowCard(QWidget):
 
             # 必须 resolve：开发宿主 get_app_data_dir() 返回相对路径 .drifox，
             # 相对路径进 QUrl.fromLocalFile 生成 file:.drifox/... 畸形 URL → ERR_FILE_NOT_FOUND
-            root = Path(str(caps_for("storage.data_dir", plugin="docx-designer", surface="ui"))).resolve()
+            root = Path(str(caps_for("storage.data_dir", plugin="file-designer", surface="ui"))).resolve()
         except Exception:
             root = Path.home() / ".drifox"
-        d = root / "plugin_data" / "docx-designer"
+        d = root / "plugin_data" / "file-designer"
         d.mkdir(parents=True, exist_ok=True)
         self._pv_flip = not getattr(self, "_pv_flip", False)
         return d / ("preview_a.html" if self._pv_flip else "preview_b.html")
@@ -281,13 +331,13 @@ class DocxWindowCard(QWidget):
         except Exception:
             size = len(payload)
         if size <= 1_500_000:
-            self._view.setHtml(payload, QUrl("http://docx-designer.local/"))
+            self._view.setHtml(payload, QUrl("http://file-designer.local/"))
             return
         f = self._preview_file()
         try:
             f.write_text(payload, encoding="utf-8")
         except Exception:
-            self._view.setHtml(payload, QUrl("http://docx-designer.local/"))
+            self._view.setHtml(payload, QUrl("http://file-designer.local/"))
             return
         self._view.load(QUrl.fromLocalFile(str(f)))
 
@@ -304,15 +354,9 @@ class DocxWindowCard(QWidget):
         except Exception as e:
             self._set_status(f"解析失败: {e}")
             return False
-        self._mode = "pptx"
+        self._reset_state("pptx")
         self._pptx_model = model
-        self._blocks = []
         self._current_path = str(p)
-        self._count = 0
-        self._pick_on = False
-        self._annotate_on = False
-        self._btn_pick.setDown(False)
-        self._btn_annotate.setDown(False)
         restored = self._load_annotations()
         self._annotations = list(restored)
         html = render_pptx_html(
@@ -451,11 +495,11 @@ class DocxWindowCard(QWidget):
         try:
             from app.plugins.sdk import caps_for
 
-            root = Path(str(caps_for("storage.data_dir", plugin="docx-designer", surface="ui")))
+            root = Path(str(caps_for("storage.data_dir", plugin="file-designer", surface="ui")))
         except Exception:
             root = Path.home() / ".drifox"
         key = hashlib.md5(self._current_path.encode("utf-8")).hexdigest()[:12]
-        d = root / "plugin_data" / "docx-designer" / "annotations"
+        d = root / "plugin_data" / "file-designer" / "annotations"
         d.mkdir(parents=True, exist_ok=True)
         return d / f"{key}.json"
 
@@ -480,7 +524,9 @@ class DocxWindowCard(QWidget):
         if not self._annotations:
             self._set_status("没有可发送的标注（先进入「标注」模式写注释）")
             return
-        text = format_annotations(self._current_path or "?", self._annotations)
+        text = format_annotations(
+            self._current_path or "?", self._annotations, mode=self._mode
+        )
         if write_input(text, count=2):
             self._set_status(f"已发送 {len(self._annotations)} 条标注到输入框")
         else:
@@ -497,6 +543,7 @@ class DocxWindowCard(QWidget):
             preview,
             str(shot) if shot else None,
             include_guide=(self._count == 1),
+            mode=self._mode,
         )
         if write_input(text, self._count):
             self._set_status(f"已回填第 {self._count} 个元素（Esc 退出）")
@@ -507,6 +554,11 @@ class DocxWindowCard(QWidget):
         """锚点 → 所在块（单元格锚点返回其表格块）；找不到返回 None。"""
         if self._mode == "pptx":
             return self._lookup_pptx_shape(anchor)
+        if self._generic_model is not None:
+            try:
+                return self._generic_model["lookup"](anchor)
+            except Exception:
+                return None
         idx_s = anchor.split(":", 1)[0]
         for b in self._blocks:
             if b["anchor"] == idx_s:
@@ -537,6 +589,13 @@ class DocxWindowCard(QWidget):
 
     def _zoom(self, delta):
         self._fs = max(11, min(24, self._fs + delta))
+        if self._generic_model is not None:
+            zoom = round(self._fs / 15.0, 2)
+            self._view.page().runJavaScript(
+                f"document.body.style.zoom='{zoom}';"
+            )
+            self._set_status(f"缩放 {int(zoom * 100)}%")
+            return
         if self._mode == "pptx":
             zoom = round(self._fs / 15.0, 2)
             self._view.page().runJavaScript(
@@ -563,12 +622,14 @@ class DocxWindowCard(QWidget):
         event.acceptProposedAction()
 
     def dropEvent(self, event):
+        from .formats import SUPPORTED_SUFFIXES
+
         opened = False
         for url in event.mimeData().urls():
             p = url.toLocalFile()
-            if p.lower().endswith((".docx", ".pptx")):
+            if p.lower().endswith(tuple(SUPPORTED_SUFFIXES)):
                 self.open_path(p)
                 opened = True
                 break
         if not opened:
-            self._set_status("仅支持 .docx / .pptx 文件")
+            self._set_status(f"仅支持 {suffix_label()} 文件")

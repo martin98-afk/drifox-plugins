@@ -44,10 +44,10 @@ def make_picks_dir():
     try:
         from app.plugins.sdk import caps_for
 
-        root = Path(str(caps_for("storage.data_dir", plugin="docx-designer", surface="ui")))
-        root = root / "plugin_data" / "docx-designer" / "picks"
+        root = Path(str(caps_for("storage.data_dir", plugin="file-designer", surface="ui")))
+        root = root / "plugin_data" / "file-designer" / "picks"
     except Exception:
-        root = Path.home() / ".drifox" / "plugin_data" / "docx-designer" / "picks"
+        root = Path.home() / ".drifox" / "plugin_data" / "file-designer" / "picks"
     root.mkdir(parents=True, exist_ok=True)
     return root
 
@@ -57,7 +57,7 @@ def write_input(text, count):
     try:
         from app.plugins.sdk import caps_for
 
-        write = caps_for("input.write", plugin="docx-designer", surface="ui")
+        write = caps_for("input.write", plugin="file-designer", surface="ui")
     except Exception:
         write = None
     if write is None:

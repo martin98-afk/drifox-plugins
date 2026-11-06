@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """pick_format 回填格式化单测（无 Qt 依赖）。
 
-Run: python -m pytest plugins/docx-designer/tests/test_pick_format.py -v
+Run: python -m pytest plugins/file-designer/tests/test_pick_format.py -v
 """
 import importlib.util
 import sys
@@ -18,7 +18,7 @@ def _load_module(mod_name, filename):
     return mod
 
 
-pf = _load_module("docx_designer_pick_format", "pick_format.py")
+pf = _load_module("file_designer_pick_format", "pick_format.py")
 format_pick = pf.format_pick
 format_table_text = pf.format_table_text
 

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """html_renderer 纯函数单测。
 
-Run: python -m pytest plugins/docx-designer/tests/test_renderer.py -v
+Run: python -m pytest plugins/file-designer/tests/test_renderer.py -v
 """
 import importlib.util
 import sys
@@ -19,7 +19,7 @@ def _load_module(mod_name, filename):
     return mod
 
 
-render_html = _load_module("docx_designer_html_renderer", "html_renderer.py").render_html
+render_html = _load_module("file_designer_html_renderer", "html_renderer.py").render_html
 
 
 def _para(idx, text, **kw):
@@ -81,7 +81,7 @@ def test_math_html_frac_sub_sup():
     from lxml import etree
 
     omml_to_html = _load_module(
-        "docx_designer_html_renderer", "html_renderer.py"
+        "file_designer_html_renderer", "html_renderer.py"
     ).omml_to_html
 
     M = "http://schemas.openxmlformats.org/officeDocument/2006/math"

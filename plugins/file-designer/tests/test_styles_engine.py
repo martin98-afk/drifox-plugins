@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """样式引擎保真渲染单测（样式链/编号/段落属性/表格列宽）。
 
-Run: python -m pytest plugins/docx-designer/tests/test_styles_engine.py -v
+Run: python -m pytest plugins/file-designer/tests/test_styles_engine.py -v
 """
 import importlib.util
 import sys
@@ -21,8 +21,8 @@ def _load_module(mod_name, filename):
     return mod
 
 
-dp = _load_module("docx_designer_docx_parser2", "docx_parser.py")
-hr = _load_module("docx_designer_html_renderer2", "html_renderer.py")
+dp = _load_module("file_designer_docx_parser2", "docx_parser.py")
+hr = _load_module("file_designer_html_renderer2", "html_renderer.py")
 
 
 def _w(tag, **attrs):
