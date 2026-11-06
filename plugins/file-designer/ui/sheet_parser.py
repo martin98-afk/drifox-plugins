@@ -14,6 +14,7 @@ cell = {"text", "anchor"}；lookup 返回 sheet_cell / sheet_table 结构（见 
 """
 
 import csv
+import datetime as _dt
 import io
 from pathlib import Path
 
@@ -37,6 +38,15 @@ def _col_letter(n):
 def _text(v):
     if v is None:
         return ""
+    if isinstance(v, _dt.datetime):
+        # 零点时刻只显示日期（Excel 日期列存 datetime，避免「00:00:00」换行噪音）
+        if (v.hour, v.minute, v.second, v.microsecond) == (0, 0, 0, 0):
+            return v.strftime("%Y-%m-%d")
+        return v.strftime("%Y-%m-%d %H:%M")
+    if isinstance(v, _dt.date):
+        return v.strftime("%Y-%m-%d")
+    if isinstance(v, _dt.time):
+        return v.strftime("%H:%M:%S") if (v.second, v.microsecond) != (0, 0) else v.strftime("%H:%M")
     if isinstance(v, float) and v.is_integer():
         return str(int(v))
     return str(v).strip()

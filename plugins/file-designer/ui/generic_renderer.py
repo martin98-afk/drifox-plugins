@@ -24,7 +24,7 @@ _BASE_CSS = (
     ".amark { display: inline-block; min-width: 1.3em; margin-right: 0.3em; "
     "padding: 0 0.25em; border-radius: 3px; background: #e6a23c; color: #fff; "
     "font-size: 0.72em; text-align: center; font-weight: bold; vertical-align: 0.25em; } "
-    "#note-box { position: absolute; z-index: 99; background: #fffbe6; border: 1px solid #e6a23c; "
+    "#note-box { position: fixed; z-index: 99; background: #fffbe6; border: 1px solid #e6a23c; "
     "border-radius: 6px; padding: 8px; box-shadow: 0 3px 10px rgba(0,0,0,0.3); width: 280px; } "
     "#note-box textarea { width: 100%%; height: 54px; box-sizing: border-box; border: 1px solid #d9d9d9; "
     "border-radius: 4px; font-size: 12px; padding: 4px; resize: vertical; } "
@@ -70,3 +70,41 @@ def wrap_html(body_html, *, outer="#1d2533", accent="#66c6ff", restored=None,
 
 def e(s):
     return escape(str(s if s is not None else ""), quote=True)
+
+
+def ink_for(bg, dark="#d7e2f0", light="#3d4d63"):
+    """按背景亮度选前景色；解析失败按深色处理（沿用旧默认）。"""
+    h = str(bg or "").strip()
+    if h.startswith("#") and len(h) == 7:
+        try:
+            r, g, b = int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16)
+        except ValueError:
+            return dark
+        return dark if (r * 299 + g * 587 + b * 114) // 1000 < 128 else light
+    return dark
+
+# 视图工具：滚动容器按住拖拽平移（拾取/标注态自动让位，不干扰点击语义）
+_VIEW_JS = (
+    "window.__enableDrag = function(el){"
+    " if (!el || el.__dragOn) return;"
+    " el.__dragOn = true;"
+    " var down = false, sx = 0, sy = 0, sl = 0, st = 0, moved = false;"
+    " el.addEventListener('mousedown', function(ev){"
+    "  if (ev.button !== 0) return;"
+    "  if (document.body.classList.contains('pick') ||"
+    "      document.body.classList.contains('annotate')) return;"
+    "  if (ev.target.closest && ev.target.closest('#note-box')) return;"
+    "  down = true; moved = false;"
+    "  sx = ev.clientX; sy = ev.clientY; sl = el.scrollLeft; st = el.scrollTop; });"
+    " window.addEventListener('mousemove', function(ev){"
+    "  if (!down) return;"
+    "  var dx = ev.clientX - sx, dy = ev.clientY - sy;"
+    "  if (!moved && Math.abs(dx) + Math.abs(dy) > 4){"
+    "   moved = true; el.style.cursor = 'grabbing';"
+    "   var sel = window.getSelection && window.getSelection();"
+    "   if (sel && sel.removeAllRanges) sel.removeAllRanges(); }"
+    "  if (moved){ el.scrollLeft = sl - dx; el.scrollTop = st - dy; } });"
+    " window.addEventListener('mouseup', function(){"
+    "  if (down){ down = false; el.style.cursor = 'grab'; } });"
+    " el.style.cursor = 'grab'; };"
+)

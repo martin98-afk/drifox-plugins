@@ -115,6 +115,28 @@ def test_limits_flag_truncated(tmp_path):
     wb.save(str(q))
     assert sp.parse_xlsx(str(q))["truncated"] is True
 
+def test_xlsx_datetime_and_time_formats(tmp_path):
+    import datetime as dt
+
+    sp = _mod("sheet_parser")
+    from openpyxl import Workbook
+    p = tmp_path / "dt.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.append(["日期", "时间", "时刻"])
+    ws.append([dt.datetime(2026, 1, 15), dt.time(9, 30), dt.datetime(2026, 3, 2, 14, 5)])
+    ws.append([dt.date(2026, 2, 3), dt.time(9, 30, 15), "x"])
+    wb.save(str(p))
+    m = sp.parse_xlsx(str(p))
+    rows = m["sheets"][0]["rows"]
+    assert rows[1][0]["text"] == "2026-01-15"          # 零点 datetime 只显示日期
+    assert rows[1][1]["text"] == "09:30"
+    assert rows[1][2]["text"] == "2026-03-02 14:05"    # 非零点带时分
+    assert rows[2][0]["text"] == "2026-02-03"          # date 只显示日期
+    assert rows[2][1]["text"] == "09:30:15"
+    b = m["lookup"]("s0!A2")
+    assert b["text"] == "2026-01-15"                   # lookup 回填同一格式
+
 def test_renderer_html_contract(tmp_path):
     sp, sr = _mod("sheet_parser"), _mod("sheet_renderer")
     hr = _mod("html_renderer")

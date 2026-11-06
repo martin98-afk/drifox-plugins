@@ -5,7 +5,7 @@
 不还原原文件配色与自由布局，按深度给统一色阶。
 """
 
-from .generic_renderer import e, wrap_html
+from .generic_renderer import _VIEW_JS, e, ink_for, wrap_html
 
 _PAD = 40
 _NODE_W_BASE = 96
@@ -21,15 +21,16 @@ _DEPTH_COLORS = [
 
 
 def _char_width(ch):
-    return 12.0 if ord(ch) > 0x2E80 else 7.2
+    # 14px 字号下实测：中文全角 ≈14px，估算偏低会溢出节点边框，估偏高只多留白
+    return 14.2 if ord(ch) > 0x2E80 else 7.8
 
 
-def _wrap_lines(text, max_chars=28, max_lines=3):
-    """按显示宽度折行（中文 12px / 英文 7.2px，基准 14px 字号）。"""
+def _wrap_lines(text, max_width=236, max_lines=3):
+    """按显示宽度折行（像素阈值），超出截断。"""
     lines, cur, width = [], "", 0.0
     for ch in str(text or ""):
         cw = _char_width(ch)
-        if width + cw > max_chars * 8.4 and cur:
+        if width + cw > max_width and cur:
             lines.append(cur)
             cur, width = ch, cw
         else:
@@ -44,13 +45,17 @@ def _wrap_lines(text, max_chars=28, max_lines=3):
     consumed = sum(len(x) for x in lines)
     if consumed < len(str(text or "")) and lines:
         lines[-1] = lines[-1][:-1] + "…"
+    # 孤字平衡：末行只剩 1~2 字时从前一行借字，避免「…上线」折出单字行
+    if len(lines) >= 2 and len(lines[-1]) <= 2 and len(lines[-2]) > 6:
+        lines[-1] = lines[-2][-2:] + lines[-1]
+        lines[-2] = lines[-2][:-2]
     return lines
 
 
 def _node_w(node):
     lines = _wrap_lines(node["title"])
     longest = max(sum(_char_width(c) for c in ln) for ln in lines)
-    return max(_NODE_W_BASE, min(260, int(longest + 24)))
+    return max(_NODE_W_BASE, min(320, int(longest + 24)))
 
 
 def _node_h(node):
@@ -147,15 +152,58 @@ def _render_sheet_svg(sheet):
 
 
 _CSS = (
-    ".wrap { padding: 16px 20px 30px; } "
-    ".sheet-title { color: #d7e2f0; font-size: 15px; margin: 4px 0 12px; "
+    "html, body { height: 100%%; } "
+    ".wrap { height: 100%%; box-sizing: border-box; padding: 10px 12px 12px; "
+    "display: flex; flex-direction: column; } "
+    ".sheet-title { flex: 0 0 auto; color: %(ink)s; font-size: 15px; margin: 4px 0 8px; "
     "padding-left: 8px; border-left: 3px solid var(--accent); } "
-    ".sheet-box { background: #ffffff; border-radius: 8px; margin-bottom: 20px; "
-    "padding: 14px; overflow: auto; box-shadow: 0 2px 12px rgba(0,0,0,0.35); } "
+    ".sheet-box { flex: 1 1 0; min-height: 120px; background: #ffffff; border-radius: 8px; "
+    "margin-bottom: 10px; padding: 10px; overflow: auto; "
+    "box-shadow: 0 2px 12px rgba(0,0,0,0.35); } "
     "svg.mind { display: block; margin: 0 auto; } "
     ".mnode[data-anchor] { cursor: pointer; } "
     ".mnode text { pointer-events: none; user-select: none; } "
-    ".warn { color: #ffd37a; margin: 8px 0 14px; font-size: 13px; } "
+    ".warn { flex: 0 0 auto; color: %(warn)s; margin: 4px 0 8px; font-size: 13px; } "
+)
+
+_JS = (
+    "window.__zoomBase = 1;"
+    "window.__fitMind = function(){"
+    " document.querySelectorAll('svg.mind').forEach(function(svg){"
+    "  var box = svg.closest('.sheet-box');"
+    "  var vb = svg.viewBox && svg.viewBox.baseVal;"
+    "  if (!box || !vb || !vb.width || !vb.height) return;"
+    "  var aw = box.clientWidth - 20, ah = box.clientHeight - 20;"
+    "  if (aw <= 0 || ah <= 0) return;"
+    "  var s = Math.min(aw / vb.width, ah / vb.height) * window.__zoomBase;"
+    "  s = Math.max(0.04, Math.min(3, s));"
+    "  svg.setAttribute('width', (vb.width * s).toFixed(1));"
+    "  svg.setAttribute('height', (vb.height * s).toFixed(1));"
+    "  svg.__scale = s; }); };"
+    "window.__setZoom = function(z){"
+    " window.__zoomBase = Math.max(0.5, Math.min(2.4, z));"
+    " window.__fitMind(); };"
+    "document.querySelectorAll('.sheet-box').forEach(function(box){"
+    " window.__enableDrag(box);"
+    " box.addEventListener('wheel', function(ev){"
+    "  var svg = box.querySelector('svg.mind');"
+    "  var vb = svg && svg.viewBox && svg.viewBox.baseVal;"
+    "  if (!svg || !vb || !vb.width || !vb.height) return;"
+    "  ev.preventDefault();"
+    "  var old = svg.__scale || 1;"
+    "  var ns = Math.max(0.04, Math.min(6, old * (ev.deltaY < 0 ? 1.18 : 1 / 1.18)));"
+    "  var factor = ns / old;"
+    "  svg.setAttribute('width', (vb.width * ns).toFixed(1));"
+    "  svg.setAttribute('height', (vb.height * ns).toFixed(1));"
+    "  svg.__scale = ns;"
+    "  var r = box.getBoundingClientRect();"
+    "  var mx = ev.clientX - r.left, my = ev.clientY - r.top;"
+    "  box.scrollLeft = (box.scrollLeft + mx) * factor - mx;"
+    "  box.scrollTop = (box.scrollTop + my) * factor - my;"
+    " }, {passive: false}); });"
+    "window.__fitMind();"
+    "window.addEventListener('load', window.__fitMind);"
+    "window.addEventListener('resize', window.__fitMind);"
 )
 
 
@@ -166,7 +214,9 @@ def render_xmind_html(model, *, outer="#1d2533", accent="#66c6ff", restored=None
     for i, sh in enumerate(model.get("sheets") or []):
         parts.append(f'<div class="sheet-title">工作表 {i + 1}：{e(sh.get("name"))}</div>')
         parts.append(f'<div class="sheet-box">{_render_sheet_svg(sh)}</div>')
+    css = _CSS % {"ink": ink_for(outer), "warn": ink_for(outer, "#ffd37a", "#a8700a")}
     return wrap_html(
         f'<div class="wrap">{"".join(parts)}</div>',
-        outer=outer, accent=accent, restored=restored, extra_css=_CSS,
+        outer=outer, accent=accent, restored=restored,
+        extra_css=css, extra_js=_VIEW_JS + _JS,
     )

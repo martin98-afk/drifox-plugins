@@ -8,13 +8,13 @@
 import json
 from pathlib import Path
 
-from .generic_renderer import e, wrap_html
+from .generic_renderer import e, ink_for, wrap_html
 
 _ASSET = Path(__file__).resolve().parent.parent / "assets" / "mermaid.min.js"
 
 _CSS = (
     ".wrap { padding: 14px 18px 32px; } "
-    ".meta { color: #d7e2f0; font-size: 13px; margin: 0 0 10px; } "
+    ".meta { color: %(ink)s; font-size: 13px; margin: 0 0 10px; } "
     ".diagram { background: #ffffff; border-radius: 8px; padding: 18px; "
     "overflow: auto; box-shadow: 0 2px 12px rgba(0,0,0,0.35); margin-bottom: 18px; } "
     ".diagram svg { max-width: 100%%; height: auto; } "
@@ -27,7 +27,7 @@ _CSS = (
     ".srow:hover { background: rgba(0,120,212,0.06); } "
     ".ln { flex: 0 0 46px; color: #9aa7b6; text-align: right; padding-right: 12px; "
     "user-select: none; } "
-    ".warn { color: #ffd37a; margin: 8px 0 12px; font-size: 13px; } "
+    ".warn { color: %(warn)s; margin: 8px 0 12px; font-size: 13px; } "
 )
 
 _INIT_JS = (
@@ -96,8 +96,9 @@ def render_mermaid_html(model, *, outer="#1d2533", accent="#66c6ff", restored=No
     if not lib:
         parts.append('<div class="warn">assets/mermaid.min.js 缺失，已降级为源码视图</div>')
     parts.append(f'<div class="src">{rows}</div>')
+    css = _CSS % {"ink": ink_for(outer), "warn": ink_for(outer, "#ffd37a", "#a8700a")}
     return wrap_html(
         f'<div class="wrap">{"".join(parts)}</div>',
         outer=outer, accent=accent, restored=restored,
-        extra_css=_CSS, extra_js=_INIT_JS, head_html=head,
+        extra_css=css, extra_js=_INIT_JS, head_html=head,
     )

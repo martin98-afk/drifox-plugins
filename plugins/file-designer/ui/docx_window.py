@@ -99,8 +99,10 @@ class DocxWindowCard(QWidget):
         self._btn_open = QPushButton("打开")
         self._btn_open.clicked.connect(self._on_open_clicked)
         self._btn_pick = QPushButton("拾取")
+        self._btn_pick.setCheckable(True)
         self._btn_pick.clicked.connect(self.toggle_pick)
         self._btn_annotate = QPushButton("标注")
+        self._btn_annotate.setCheckable(True)
         self._btn_annotate.clicked.connect(self.toggle_annotate)
         self._btn_more = QPushButton("≡")
         more_menu = QMenu(self._btn_more)
@@ -186,7 +188,8 @@ class DocxWindowCard(QWidget):
             f" border-radius: 6px; color: {c['text']}; padding: 5px 14px;"
             f" font-family: '{c['ff']}'; font-size: {c['fs']}px; }}"
             f"QPushButton:hover {{ background: {c['hover']}; }}"
-            f"QPushButton:checked {{ border-color: {accent_hex}; }}"
+            f"QPushButton:checked {{ background: {accent_hex}; border-color: {accent_hex};"
+            f" color: {'#10202e' if c['is_dark'] else '#ffffff'}; }}"
             f"QPushButton::menu-indicator {{ image: none; width: 0px; }}"
             f"QMenu {{ background: {c['surface']}; color: {c['text']}; border: 1px solid {c['border']};"
             f" font-family: '{c['ff']}'; font-size: {c['fs']}px; }}"
@@ -289,8 +292,8 @@ class DocxWindowCard(QWidget):
         self._count = 0
         self._pick_on = False
         self._annotate_on = False
-        self._btn_pick.setDown(False)
-        self._btn_annotate.setDown(False)
+        self._btn_pick.setChecked(False)
+        self._btn_annotate.setChecked(False)
 
     def _preview_file(self):
         """大 HTML 落盘文件（两个名字轮换，避免同 URL 缓存）。"""
@@ -379,11 +382,11 @@ class DocxWindowCard(QWidget):
         self._pick_on = bool(on)
         if on:
             self._annotate_on = False
-            self._btn_annotate.setDown(False)
+            self._btn_annotate.setChecked(False)
             self._view.page().runJavaScript("document.body.classList.remove('annotate');")
         flag = "true" if on else "false"
         self._view.page().runJavaScript(f"document.body.classList.toggle('pick', {flag});")
-        self._btn_pick.setDown(on)
+        self._btn_pick.setChecked(on)
         if on:
             self._set_status("拾取模式：点击文档元素回填输入框（Esc 退出）")
         else:
@@ -398,11 +401,11 @@ class DocxWindowCard(QWidget):
         self._annotate_on = bool(on)
         if on:
             self._pick_on = False
-            self._btn_pick.setDown(False)
+            self._btn_pick.setChecked(False)
             self._view.page().runJavaScript("document.body.classList.remove('pick');")
         flag = "true" if on else "false"
         self._view.page().runJavaScript(f"document.body.classList.toggle('annotate', {flag});")
-        self._btn_annotate.setDown(on)
+        self._btn_annotate.setChecked(on)
         if on:
             self._set_status("标注模式：点击元素写注释，通读完点「发送标注」统一交给模型（Esc 退出）")
         else:
@@ -591,9 +594,15 @@ class DocxWindowCard(QWidget):
         self._fs = max(11, min(24, self._fs + delta))
         if self._generic_model is not None:
             zoom = round(self._fs / 15.0, 2)
-            self._view.page().runJavaScript(
-                f"document.body.style.zoom='{zoom}';"
-            )
+            if self._generic_mode in ("xmind", "xlsx", "csv"):
+                # 铺满布局下 body.zoom 会破坏 100vh 测量，改走页面内缩放入口
+                self._view.page().runJavaScript(
+                    f"window.__setZoom && window.__setZoom({zoom});"
+                )
+            else:
+                self._view.page().runJavaScript(
+                    f"document.body.style.zoom='{zoom}';"
+                )
             self._set_status(f"缩放 {int(zoom * 100)}%")
             return
         if self._mode == "pptx":
