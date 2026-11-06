@@ -3428,9 +3428,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-frontend-pro-v1.2.0/frontend-pro-1.2.0-all.tar.gz",
-                    "sha256": "5fad5af4c5004fed6e71fb786e3306004f11f77326014692621c98f94a1ddeba",
-                    "size": 125948
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-frontend-pro-v1.2.1/frontend-pro-1.2.1-all.tar.gz",
+                    "sha256": "b9dd2ea371b6219814a4e716e8a2ce360a7698c6dd79f2e021ed39d1a6c5ba09",
+                    "size": 125387
                 }
             }
         },
