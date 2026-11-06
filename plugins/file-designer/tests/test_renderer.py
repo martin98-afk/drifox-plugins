@@ -175,3 +175,11 @@ def test_marquee_js_in_generic_wrap():
     spec.loader.exec_module(mod)
     html = mod.wrap_html('<p data-anchor="0">x</p>')
     assert "__marqueeInstalled" in html
+
+def test_annotate_js_group_support():
+    """标注 JS 必须按 anchors 数组工作，note-box 按 seq 定位。"""
+    html = render_html([_para(0, "x")])
+    assert "__anchorsOf" in html
+    assert "__findBySeq" in html
+    assert "__openNoteMulti" in html
+    assert "JSON.stringify(anchors)" in html
