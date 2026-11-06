@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+### ✨ file-designer v0.6.0：拾取/标注支持框选多元素
+- **变更**：拾取/标注态左键拖拽框选（位移 >4px 出选框，矩形相交收集命中，六格式共用一套 JS，单击选单个行为不变）；拾取多元素一张选框合并截图 + 逐元素连号回填（新桥槽 `pick_many`，截图仅首条携带）；标注组合化——框选多元素一条注释挂整组（数据条目 `anchor` → `anchors[]`，note-box 按 seq 定位编辑/更新/删除，存量单 anchor JSON 读取时归一化兼容，重开恢复不受影响）
+- **验证**：插件单测 104 passed（新增归一化/组合标注/批量拾取/marquee 注入 12 例）+ ruff 清零
+
 ### 🔧 file-designer v0.5.2：移除 open_docx 旧名工具
 - **变更**：删 `_LEGACY_SCHEMA` 与 `open_docx` 注册，工具清单只留 `open_file`（v0.4.0 起的兼容别名退役）；测试补「注册清单只含 open_file」断言锁定接口面
 - **验证**：插件单测 94 passed
