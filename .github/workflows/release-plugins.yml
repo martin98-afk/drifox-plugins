@@ -19,6 +19,7 @@ on:
       - "tools/build_plugin_tarballs.py"
       - "tools/publish_plugin_tarballs.py"
       - "tools/detect_plugin_changes.py"
+      - "tools/smoke_check_tarball.py"
   workflow_dispatch:
     inputs:
       force:
