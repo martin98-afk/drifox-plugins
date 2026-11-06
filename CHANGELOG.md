@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+### 🔧 file-designer v0.5.2：移除 open_docx 旧名工具
+- **变更**：删 `_LEGACY_SCHEMA` 与 `open_docx` 注册，工具清单只留 `open_file`（v0.4.0 起的兼容别名退役）；测试补「注册清单只含 open_file」断言锁定接口面
+- **验证**：插件单测 94 passed
+
 ### 🔧 file-designer v0.5.1：tools 相对导入致工具从未注册，改动态加载 formats
 - **症状**：热重载日志反复报 `[PluginToolLoader] 插件 file-designer 新模块加载失败，保留旧注册: attempted relative import with no known parent package`
 - **根因**：`tools/file_tools.py` 模块级 `from ..ui.formats import ...`。宿主 PluginToolLoader 以顶层模块名 exec tools/*.py（无父包，`__package__` 空），相对导入必炸；试加载失败走 last-known-good 保留旧注册。该 import 自 v0.4.0 引入，冷启动同样失败——open_file/open_docx 实际从未注册成功，仅表现为热重载警告

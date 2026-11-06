@@ -42,6 +42,21 @@ def test_load_without_parent_package():
     assert callable(mod._open_file_impl)
 
 
+def test_register_only_open_file():
+    """注册清单只含 open_file：旧名 open_docx 已移除（v0.5.2）。"""
+    registered = []
+
+
+    class _FakeRegistry:
+        def register(self, name, schema, **kw):
+            registered.append(name)
+            return True
+
+
+    mod.register(_FakeRegistry())
+    assert registered == ["open_file"]
+
+
 def test_load_formats_dynamic():
     """动态加载 formats 注册表：8 个后缀齐全。"""
     formats = mod._load_formats()

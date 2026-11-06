@@ -84,30 +84,10 @@ _SCHEMA = {
     },
 }
 
-_LEGACY_SCHEMA = {
-    "type": "function",
-    "function": {
-        "name": "open_docx",
-        "description": "打开多格式文件设计预览窗口（兼容旧名，等价于 open_file）。",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "path": {"type": "string", "description": "支持格式的文件绝对路径"},
-            },
-            "required": ["path"],
-        },
-    },
-}
-
 def register(registry):
     """PluginToolLoader 注册入口。"""
     registry.register(
         "open_file", _SCHEMA, impl=_open_file_impl,
         danger="safe", cn_name="打开文件预览",
         group="文档", description="打开多格式文件设计预览窗口（可拾取元素回填）",
-    )
-    registry.register(
-        "open_docx", _LEGACY_SCHEMA, impl=_open_file_impl,
-        danger="safe", cn_name="打开文档预览（旧名）",
-        group="文档", description="open_file 的兼容别名",
     )

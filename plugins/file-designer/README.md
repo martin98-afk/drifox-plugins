@@ -37,7 +37,7 @@
   - 连续拾取连续追加，Esc 退出，全程不抢输入框焦点
   - 首次回填附锚点规则说明
 - **标注**：「标注」态点击元素弹注释框，角标编号；按文件路径 hash 持久化 JSON，重开恢复；「≡ → 发送标注」把全部注释一次性回填，供模型逐条按锚点修改
-- **入口**：`/file-designer` 命令、`open_file(path)` 工具（`open_docx` 兼容旧名）、拖拽受支持格式到窗口、系统「打开」受支持后缀时拦截进预览
+- **入口**：`/file-designer` 命令、`open_file(path)` 工具、拖拽受支持格式到窗口、系统「打开」受支持后缀时拦截进预览
 - **迁移**：注册时 `plugin_data/file-designer/` 不存在且 `plugin_data/docx-designer/` 存在 → 整目录复制，旧 picks 截图与标注沿用
 
 ## 架构
@@ -58,7 +58,7 @@ ui/sheet_renderer.py 表格 model → HTML（多 sheet tab + data-anchor）
 ui/mermaid_parser.py mermaid 源码 → 行索引 model + lookup（纯函数）
 ui/mermaid_renderer.py mermaid model → HTML（mermaid.min.js + 源码行 data-anchor）
 ui/external_open.py  系统打开重定向 + 后缀白名单（从 formats 派生）
-tools/file_tools.py  open_file 工具 + open_docx 兼容别名
+tools/file_tools.py  open_file 工具
 assets/mermaid.min.js Mermaid UMD（v10.9.1，已验 Edge headless；Chromium 87 待宿主实测）
 ```
 
