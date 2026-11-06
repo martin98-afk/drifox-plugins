@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+### 🔧 tarball 冒烟门禁：识别编译扩展子模块，修 file-designer 三平台包误杀
+- **症状**：push `44e327b3` 后 CI Release Plugin Tarballs 失败，三平台包都已产出（14.76/13.73/12.54 MB）却被 strict-deps 全部拒绝发布
+- **根因**：`smoke_check_tarball._module_exists` 只按 `.py` / 包目录 / `__init__.py` 重导出判定子模块存在性。`lxml.etree` 落盘形态是 `etree.cpython-314-*.so` / `etree.cp314-win_amd64.pyd`，三种候选全不命中，于是报「lxml 已 vendored 但缺 etree」，对三平台各报 6 处，全部包被剔除
+- **修复**：新增 `_ext_module_names()`，用既有 `_EXT_RE` 剥掉 ABI/平台标签取模块名，作为第 5 条存在性候选。同名前缀、嵌套目录、其它包的扩展均不算命中
+- **顺带**：`TestSmokeGateFailClosed` 既有失败修好 —— `setattr(sys,'modules',{**sys.modules})` 换整个 dict 后 CPython import 仍读旧 dict，模拟的 `None` 不生效；改 `monkeypatch.setitem` 直接改原 dict
+- **CI 触发面**：`release-plugins.yml` 的 `push.paths` 补 `tools/smoke_check_tarball.py`，此前改门禁脚本不会重跑发布
+- **验证**：本地构造三平台 file-designer 形态包 `smoke_check` 全通过；`tests/test_tarball_pipeline.py` 15 passed、插件单测 88 passed、223 插件清单校验通过
+
 ### ✨ docx-designer → file-designer v0.4.0：多格式文件设计
 - **改名与迁移**：插件目录 `plugins/docx-designer` → `plugins/file-designer`，浮卡 `plugin_name`/`card_id` 同步改名、title「文件设计」；注册时若 `plugin_data/file-designer/` 不存在而旧目录存在则整目录复制，历史 picks 截图与标注 JSON 沿用；`tools/docx_tools.py` → `tools/file_tools.py`，`open_file` 为主工具、`open_docx` 保留兼容别名；不保留 `/docx-designer` 命令别名
 - **新增 4 类格式**（统一 HTML 管线 + `ui/formats.py` 格式注册表）：xmind（content.json / content.xml 双形态 → 自绘 SVG 导图）、xlsx/xlsm（openpyxl 数据优先，合并单元格/列宽/多 sheet）、csv（utf-8-sig→utf-8→gb18030→latin-1 编码链 + Sniffer 探分隔符）、mermaid（`.mmd`/`.mermaid`，内联 `assets/mermaid.min.js` v10.9.1 渲染 SVG + 源码行列表）；四者共用 `_BOOT_JS/_PICK_JS/_ANNOTATE_JS` 与 note-box，元素挂 `data-anchor` 即自动具备拾取/标注/截图/回填

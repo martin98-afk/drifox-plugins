@@ -29,7 +29,7 @@
   - 图表/媒体/动画降级为占位块（不渲染）
 - **预览（xmind）**：自绘 SVG，根居中、一级分支左右交替、贝塞尔连线、文本按宽度估算换行；不还原原文件配色与自由布局
 - **预览（xlsx / csv）**：统一 HTML 表格，多 sheet 页内 tab 切换、冻结首行、合并单元格、列宽按字符估算；数据优先，不还原颜色字体
-- **预览（mermaid）**：内嵌 `assets/mermaid.min.js` 客户端渲染 SVG，明暗主题跟随；渲染失败降级为源码 + 错误提示
+- **预览（mermaid）**：内嵌 `assets/mermaid.min.js`（v10.9.1 UMD，3.3MB）客户端渲染 SVG，明暗主题跟随；渲染失败降级为源码 + 错误提示。Edge 156 headless `--dump-dom --virtual-time-budget` 离屏实测渲染成功，SVG 节点挂 `L{行号}` 锚点；Qt5 WebEngine / Chromium 87 兼容性尚未在宿主内实测
 - **拾取**：点「拾取」进入拾取态（hover 高亮 + crosshair），点击元素即回填：
   - 文件绝对路径（模型可直接用工具重新打开）
   - 元素锚点 + 类型/样式描述 + 上下文文本
@@ -59,7 +59,7 @@ ui/mermaid_parser.py mermaid 源码 → 行索引 model + lookup（纯函数）
 ui/mermaid_renderer.py mermaid model → HTML（mermaid.min.js + 源码行 data-anchor）
 ui/external_open.py  系统打开重定向 + 后缀白名单（从 formats 派生）
 tools/file_tools.py  open_file 工具 + open_docx 兼容别名
-assets/mermaid.min.js Mermaid UMD（v10.9.1，兼容 Qt5 WebEngine / Chromium 87）
+assets/mermaid.min.js Mermaid UMD（v10.9.1，已验 Edge headless；Chromium 87 待宿主实测）
 ```
 
 共享契约（`ui/formats.py`）：通用格式 `parse(str(path)) -> model`，model 含 `mode` 与 `lookup(anchor) -> dict|None`；`render(model, *, outer, accent, restored) -> HTML`。HTML 必须内联 `<script src="qrc:///qtwebchannel/qwebchannel.js"></script>` + `html_renderer._BOOT_JS/_PICK_JS/_ANNOTATE_JS` + note-box DOM，可拾取元素带 `data-anchor`。docx / pptx 保留历史专用分支（`parse=None`）。
@@ -82,7 +82,7 @@ python -m pytest plugins/file-designer/tests/ -q --noconftest
 - 注入只回填对话输入框，不提供任何写回文件工具
 - xmind 不还原原文件配色 / 自由布局 / 关系线 / 标记，超 800 节点截断
 - xlsx / csv 数据优先，不还原颜色字体与公式（公式取缓存值），超上限截断
-- mermaid 只建行号索引，不做完整 AST；点击节点反查首次出现行；`mermaid.min.js` 在 Chromium 87 上按锁定版本运行，个别新语法可能不支持
+- mermaid 只建行号索引，不做完整 AST；点击节点反查首次出现行；v10.9.1 含 ES2020+ 语法，Chromium 87 若不支持需降级到 v9.4.3，库缺失或初始化失败时自动显示源码视图
 - docx run 级样式只读直接 rPr，不做样式表继承推断；嵌套表格内容降级忽略
 - pptx 主题色/渐变/阴影只取纯色，图表与媒体不渲染（占位提示）；母版/版式占位符只用于几何与字号回退；动画与切换效果不呈现
 - 工具侧打开窗口若遇非主线程调度需改主线程派发
