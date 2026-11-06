@@ -153,3 +153,25 @@ def test_pick_js_and_channel_script():
     assert "qwebchannel.js" in html
     assert "docxbridge" in html
     assert "classList.contains('pick')" in html
+
+def test_marquee_js_installed():
+    """框选层必须挂进 docx 渲染路径（选框安装标志/pick_many 回传/单击抑制）。"""
+    html = render_html([_para(0, "x")])
+    assert "__marqueeInstalled" in html
+    assert "pick_many" in html
+    assert "__marqueeJustEnded" in html
+
+def test_marquee_js_in_generic_wrap():
+    """generic wrap_html（xlsx/xmind/mermaid 等共用骨架）同样注入框选层。"""
+    import types
+    pkg = types.ModuleType("fd_probe")
+    pkg.__path__ = [str(PLUGIN / "ui")]
+    sys.modules["fd_probe"] = pkg
+    sys.modules["fd_probe.html_renderer"] = sys.modules["file_designer_html_renderer"]
+    spec = importlib.util.spec_from_file_location(
+        "fd_probe.generic_renderer", PLUGIN / "ui" / "generic_renderer.py")
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules["fd_probe.generic_renderer"] = mod
+    spec.loader.exec_module(mod)
+    html = mod.wrap_html('<p data-anchor="0">x</p>')
+    assert "__marqueeInstalled" in html

@@ -8,7 +8,7 @@
 import json
 from html import escape
 
-from .html_renderer import _ANNOTATE_JS, _BOOT_JS, _PICK_JS
+from .html_renderer import _ANNOTATE_JS, _BOOT_JS, _MARQUEE_JS, _PICK_JS
 
 _BASE_CSS = (
     ":root { --accent: %(accent)s; } "
@@ -64,6 +64,7 @@ def wrap_html(body_html, *, outer="#1d2533", accent="#66c6ff", restored=None,
         f"{_NOTE_BOX}"
         f"<script>{extra_js}</script>"
         f"<script>{_ANNOTATE_JS}</script>"
+        f"<script>{_MARQUEE_JS}</script>"
         f"<script>{_PICK_JS}</script></body></html>"
     )
 
