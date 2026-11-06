@@ -50,7 +50,10 @@ jobs:
       - name: 设置 Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          # 必须与宿主运行时对齐（PIP_PY_VERSION=3.14）：stdlib shim 副本
+          # （xml/optparse）取自构建解释器的 Lib/，版本错位会把 3.12 语义
+          # 的 stdlib 打进 3.14 宿主的包
+          python-version: "3.14"
 
       - name: 检测版本变更
         id: detect

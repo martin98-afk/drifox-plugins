@@ -45,6 +45,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+# shim 清单单一事实源在 smoke_check_tarball（门禁与构建共用同一份，防漂移）
+from smoke_check_tarball import STDLIB_SHIM_PLUGINS
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PLUGINS_DIR = REPO_ROOT / "plugins"
 DEFAULT_OUT = REPO_ROOT / "dist"
@@ -364,11 +367,51 @@ def _run_smoke_checks(
     return kept, failures
 
 
+def generate_stdlib_shim(shim_dir: Path) -> Optional[Path]:
+    """从当前 CPython 3.14 的 stdlib 生成宿主缺失模块副本，返回副本根目录。
+
+    材料 = 解释器自带 Lib/（xml/optparse 纯 Python，三平台一致，无需按平台
+    分包）。解释器版本必须与宿主 ABI 对齐（PIP_PY_VERSION）；非 3.14 环境
+    返回 None（CI 由 setup-python 保证，本地非 3.14 跳过并告警）。
+    清单见 smoke_check_tarball.STDLIB_SHIM_PLUGINS（与门禁同一份，防漂移）。
+    """
+    if f"{sys.version_info.major}{sys.version_info.minor:02d}" != PIP_PY_VERSION.replace(".", ""):
+        print(
+            f"[warn] 构建解释器 {sys.version_info.major}.{sys.version_info.minor} 非 {PIP_PY_VERSION}，"
+            "跳过 stdlib shim 生成（清单内插件将被门禁拒绝，CI 需 setup-python 3.14）"
+        )
+        return None
+    lib = Path(sys.base_prefix) / "Lib"
+    # 幂等：清掉上次构建的残留再生成，避免旧文件混入新包
+    if shim_dir.exists():
+        shutil.rmtree(shim_dir)
+    root = shim_dir / "_pystdlib_xml"
+    copied = 0
+    names = sorted({p.split("/")[1] for paths in STDLIB_SHIM_PLUGINS.values() for p in paths})
+    for n in names:
+        src = lib / n
+        if not src.exists():
+            print(f"[warn] 构建机 stdlib 无 {n}，shim 不完整")
+            continue
+        dst = root / n
+        if src.is_dir():
+            shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__"))
+        else:
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+        copied += 1
+    if copied != len(names):
+        print(f"[warn] stdlib shim 不完整（{copied}/{len(names)}），请核对 STDLIB_SHIM_PLUGINS")
+    # 返回 shim_dir（_pystdlib_xml 的父）：iter_files 以它为根，rel 首段即
+    # _pystdlib_xml，arcname 拼 deps/ 前缀后正好是 deps/_pystdlib_xml/...
+    return shim_dir if copied else None
+
 def build_tarball(
     plugin_dir: Path,
     deps_dir: Optional[Path],
     out_path: Path,
     keep_platforms: Optional[set],
+    shim_dir: Optional[Path] = None,
 ) -> Tuple[str, int]:
     """打包插件源码 + deps，返回 (sha256, size)
 
@@ -396,6 +439,16 @@ def build_tarball(
                 # 2) deps（按平台过滤）
                 if deps_dir is not None and deps_dir.is_dir():
                     for abs_path, rel in iter_files(deps_dir, skip_deps_platforms=keep_platforms):
+                        arcname = f"deps/{rel}"
+                        info = tf.gettarinfo(str(abs_path), arcname=arcname)
+                        info.uid = info.gid = 0
+                        info.uname = info.gname = ""
+                        info.mtime = 0
+                        with open(abs_path, "rb") as fh:
+                            tf.addfile(info, fh)
+                # 3) 宿主缺失 stdlib 副本（shim，平台无关，公共 deps 区）
+                if shim_dir is not None and shim_dir.is_dir():
+                    for abs_path, rel in iter_files(shim_dir):
                         arcname = f"deps/{rel}"
                         info = tf.gettarinfo(str(abs_path), arcname=arcname)
                         info.uid = info.gid = 0
@@ -465,6 +518,15 @@ def main() -> int:
         deps_dir, deps_src = resolve_deps_dir(plugin_dir, backup_root)
         declared = (manifest.get("dependencies") or {}).get("pip") or {}
 
+        # 宿主缺失 stdlib shim：仅为清单内插件生成（需 3.14 构建解释器，CI 已对齐）
+        shim_dir = None
+        if name in STDLIB_SHIM_PLUGINS:
+            shim_dir = generate_stdlib_shim(out_dir / ".shim" / name)
+            if shim_dir is None and args.strict_deps:
+                strict_failures.append(
+                    f"{name} stdlib shim 生成失败（构建环境非 3.14 或缺 stdlib），拒绝发布"
+                )
+
         entry: Dict[str, object] = {}
 
         # pip 通道：CI 无本地 deps 时的依赖来源；--deps-source pip 强制走
@@ -489,7 +551,7 @@ def main() -> int:
                 for plat, d in sorted(pip_deps.items()):
                     suffix = "default" if plat == "default" else plat
                     fname = f"{name}-{version}-{suffix}.tar.gz"
-                    sha, size = build_tarball(plugin_dir, d, out_dir / name / fname, keep_platforms=None)
+                    sha, size = build_tarball(plugin_dir, d, out_dir / name / fname, keep_platforms=None, shim_dir=shim_dir)
                     entry[suffix] = {
                         "url": release_url(name, version, fname),
                         "sha256": sha,
@@ -516,7 +578,7 @@ def main() -> int:
             wanted = [p for p in platforms if p in present]
             for plat in wanted:
                 fname = f"{name}-{version}-{plat}.tar.gz"
-                sha, size = build_tarball(plugin_dir, deps_dir, out_dir / name / fname, keep_platforms={plat})
+                sha, size = build_tarball(plugin_dir, deps_dir, out_dir / name / fname, keep_platforms={plat}, shim_dir=shim_dir)
                 entry[plat] = {
                     "url": release_url(name, version, fname),
                     "sha256": sha,
@@ -527,7 +589,7 @@ def main() -> int:
                 print(f"  {fname:56s} {size/1048576:7.2f} MB")
         else:
             fname = f"{name}-{version}-all.tar.gz"
-            sha, size = build_tarball(plugin_dir, deps_dir, out_dir / name / fname, keep_platforms=None)
+            sha, size = build_tarball(plugin_dir, deps_dir, out_dir / name / fname, keep_platforms=None, shim_dir=shim_dir)
             entry["default"] = {
                 "url": release_url(name, version, fname),
                 "sha256": sha,

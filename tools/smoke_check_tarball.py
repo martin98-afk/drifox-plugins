@@ -44,6 +44,21 @@ from typing import Iterable, Optional
 # 这些目录下的 .py 不参与 C 项检查（依赖自身、缓存、构建产物）
 _SKIP_DIR_PARTS = {"__pycache__", ".git", "deps", "vendor", "node_modules"}
 
+# 宿主缺失 stdlib 的 shim 清单（单一事实源，build_plugin_tarballs 引用同一份）：
+# 插件名 → 包内必须存在的 deps/ 相对路径锚点。宿主 PyInstaller 打包缺
+# xml.dom/optparse（base_library.zip 实测无），插件运行期靠 deps/_pystdlib_xml
+# 副本仲裁自愈（pil_arbiter.prefer_vendored_stdlib）。C 项对 stdlib 顶层名豁免，
+# 这里反向盯豁免区：清单内插件的包不带 shim = 装上必炸，一票拒绝。
+# 宿主补齐 hiddenimports 后清空此表。
+STDLIB_SHIM_PLUGINS = {
+    "bili-scroll": (
+        "_pystdlib_xml/xml/__init__.py",
+        "_pystdlib_xml/xml/dom/__init__.py",
+        "_pystdlib_xml/xml/dom/minidom.py",
+        "_pystdlib_xml/optparse.py",
+    ),
+}
+
 # 业界有「from 包 import 子模块」但子模块以动态/条件方式提供的场景。
 # 命中这些模块时不报错，避免误伤（宁可漏检也不要把好包拦下来）。
 _DYNAMIC_MODULE_HINTS = frozenset(
@@ -506,6 +521,17 @@ def smoke_check(tarball: Path) -> tuple[bool, list[str], list[str]]:
                 f"{plugin_name} 含平台专属依赖 {plat_specific}，但产物是 default 单包"
                 f"（平台专属依赖需按平台分包才会生效）"
             )
+
+        # E3. 宿主缺失 stdlib 副本（stdlib shim）必须真的在包内。
+        #     2026-11 bili-scroll 二次事故：CI pip 通道只装 manifest 内 PyPI 包，
+        #     _pystdlib_xml（非 PyPI 产物）整目录丢失，宿主缺 xml.dom 直接炸。
+        required_shim = STDLIB_SHIM_PLUGINS.get(plugin_name) or STDLIB_SHIM_PLUGINS.get(name_part)
+        if required_shim:
+            for rel in required_shim:
+                if f"deps/{rel}" not in paths:
+                    errors.append(
+                        f"宿主缺失 stdlib 副本未打进包：deps/{rel} 缺失（装上必炸，拒绝发布）"
+                    )
 
         # E. 平台结构：包内二进制是否属于该平台 / ABI 是否匹配
         platform_key = _platform_from_filename(tarball)
