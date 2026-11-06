@@ -2135,56 +2135,6 @@
             }
         },
         {
-            "name": "docx-designer",
-            "description": "docx / pptx 文档设计模式 — 独立窗口预览 Word 文档与 PowerPoint，页内拾取元素（段落/表格/公式/图片/文本框），锚点+文本+截图回填输入框，让模型精确修改。",
-            "version": "0.3.3",
-            "author": "DriFox Contributors",
-            "license": "GPL-3.0-or-later",
-            "categories": [
-                "ui",
-                "tool"
-            ],
-            "source": {
-                "type": "git-subdir",
-                "url": "https://github.com/martin98-afk/drifox-plugins",
-                "path": "plugins/docx-designer",
-                "ref": "main"
-            },
-            "components": {
-                "commands": false,
-                "ui": true,
-                "tools": true
-            },
-            "downloads": 12,
-            "keywords": [
-                "document",
-                "docx",
-                "powerpoint",
-                "pptx",
-                "preview",
-                "slide",
-                "word"
-            ],
-            "dependencies": {
-                "pip": {
-                    "default": [
-                        "lxml>=3.1.0",
-                        "pillow==13.0.0",
-                        "python-docx>=1.1.0",
-                        "python-pptx>=1.0.0",
-                        "typing_extensions==4.16.0",
-                        "xlsxwriter==3.3.1"
-                    ]
-                }
-            },
-            "min_host_version": "0.6.10",
-            "api_version": 2,
-            "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
-            }
-        },
-        {
             "name": "dropbox",
             "description": "Dropbox — 搜索和读取你 Dropbox 里的文件。",
             "version": "1.0.0",
@@ -3260,6 +3210,62 @@
                     "sha256": "603943706dd617d53c61405f966ea866900ff97480dee28cc970ea6abcbf6875",
                     "size": 7234
                 }
+            }
+        },
+        {
+            "name": "file-designer",
+            "description": "多格式文件设计模式 — 独立窗口预览 Word/PPT/Excel/CSV/XMind/Mermaid 流程图，页内拾取元素并标注，锚点+文本+截图回填输入框，让模型精确修改。",
+            "version": "0.4.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "ui",
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/file-designer",
+                "ref": "main"
+            },
+            "components": {
+                "commands": false,
+                "ui": true,
+                "tools": true
+            },
+            "downloads": 12,
+            "keywords": [
+                "document",
+                "docx",
+                "powerpoint",
+                "pptx",
+                "excel",
+                "xlsx",
+                "csv",
+                "xmind",
+                "mermaid",
+                "preview",
+                "pick",
+                "word"
+            ],
+            "dependencies": {
+                "pip": {
+                    "default": [
+                        "lxml>=3.1.0",
+                        "openpyxl>=3.1.0",
+                        "pillow==13.0.0",
+                        "python-docx>=1.1.0",
+                        "python-pptx>=1.0.0",
+                        "typing_extensions==4.16.0",
+                        "xlsxwriter==3.3.1"
+                    ]
+                }
+            },
+            "min_host_version": "0.6.10",
+            "api_version": 2,
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
