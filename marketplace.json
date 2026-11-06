@@ -654,7 +654,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 21,
+            "downloads": 22,
             "keywords": [
                 "bilibili",
                 "b站",
@@ -1059,7 +1059,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 10,
+            "downloads": 11,
             "keywords": [
                 "chinese",
                 "evolved",
@@ -1814,6 +1814,7 @@
             "components": {
                 "themes": true
             },
+            "downloads": 1,
             "keywords": [
                 "theme",
                 "crema",
@@ -1902,6 +1903,7 @@
             "components": {
                 "themes": true
             },
+            "downloads": 3,
             "keywords": [
                 "theme",
                 "cyberpunk",
@@ -2785,7 +2787,7 @@
             "components": {
                 "agents": true
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "agents",
                 "experts",
@@ -3319,7 +3321,7 @@
                 "ui": true,
                 "tools": true
             },
-            "downloads": 6,
+            "downloads": 8,
             "keywords": [
                 "document",
                 "docx",
