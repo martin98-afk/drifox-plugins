@@ -108,7 +108,7 @@ def _desc_for(mode, anchor, block=None):
     if mode == "xlsx":
         return f"[单元格 {anchor}]"
     if mode == "csv":
-        return f"[整表]" if anchor == "table" else f"[单元格 {anchor}]"
+        return "[整表]" if anchor == "table" else f"[单元格 {anchor}]"
     if mode == "mermaid":
         return f"[源码 {anchor}]"
     return f"[元素 #{anchor}]"
