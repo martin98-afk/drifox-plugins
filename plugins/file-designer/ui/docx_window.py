@@ -30,7 +30,12 @@ from .external_open import open_in_system
 from .formats import spec_for, suffix_label
 from .html_renderer import render_html
 from .picker import DocxBridge, capture_view_rect, write_input
-from .pick_format import format_annotations, format_pick
+from .pick_format import (
+    format_annotations,
+    format_batch_pick,
+    format_pick,
+    normalize_annotations,
+)
 from .theme import theme_colors
 
 _CURRENT_CARD = None
@@ -411,25 +416,29 @@ class DocxWindowCard(QWidget):
         else:
             self._set_status("标注模式已退出")
 
-    def on_annotation_added(self, anchor, comment, seq, snippet, x, y, w, h):
+    def on_annotation_added(self, anchors_json, comment, seq, snippet, x, y, w, h):
         shot = capture_view_rect(self._view, x, y, w, h)
+        try:
+            anchors = json.loads(anchors_json)
+        except (ValueError, TypeError):
+            anchors = []
         self._annotations.append(
-            {"anchor": anchor, "comment": comment, "seq": seq, "snippet": snippet,
-             "shot": str(shot) if shot else None}
+            {"anchors": anchors or ["?"], "comment": comment, "seq": seq,
+             "snippet": snippet, "shot": str(shot) if shot else None}
         )
         self._save_annotations()
         self._set_status(f"已保存第 {seq} 条标注（共 {len(self._annotations)} 条，Esc 退出）")
 
-    def on_annotation_updated(self, anchor, comment):
+    def on_annotation_updated(self, seq, comment):
         for a in self._annotations:
-            if a["anchor"] == anchor:
+            if str(a.get("seq")) == str(seq):
                 a["comment"] = comment
         self._save_annotations()
-        self._set_status(f"标注 [{anchor}] 已更新")
+        self._set_status(f"标注 #{seq} 已更新")
 
-    def on_annotation_deleted(self, anchor):
+    def on_annotation_deleted(self, seq):
         before = len(self._annotations)
-        self._annotations = [a for a in self._annotations if a.get("anchor") != anchor]
+        self._annotations = [a for a in self._annotations if str(a.get("seq")) != str(seq)]
         if len(self._annotations) == before:
             return
         for i, a in enumerate(self._annotations, 1):
@@ -518,7 +527,7 @@ class DocxWindowCard(QWidget):
         try:
             f = self._annotations_path()
             if f.is_file():
-                return json.loads(f.read_text(encoding="utf-8"))
+                return normalize_annotations(json.loads(f.read_text(encoding="utf-8")))
         except Exception:
             pass
         return []
@@ -550,6 +559,29 @@ class DocxWindowCard(QWidget):
         )
         if write_input(text, self._count):
             self._set_status(f"已回填第 {self._count} 个元素（Esc 退出）")
+        else:
+            self._set_status("已拾取，但输入框写入失败（能力 input.write 不可用）")
+
+    def on_elements_picked(self, items_json, x, y, w, h):
+        """框选批量拾取：一张选框截图 + 逐元素连号回填（截图仅首条携带）。"""
+        try:
+            items = json.loads(items_json)
+        except (ValueError, TypeError):
+            return
+        items = [it for it in items if isinstance(it, dict) and it.get("anchor")]
+        if not items:
+            return
+        append = self._count > 0
+        shot = capture_view_rect(self._view, x, y, w, h)
+        blocks = {it["anchor"]: self._lookup_block(it["anchor"]) for it in items}
+        text = format_batch_pick(
+            self._count, self._current_path or "?", items, blocks,
+            str(shot) if shot else None, mode=self._mode,
+            first_guide=(self._count == 0),
+        )
+        self._count += len(items)
+        if write_input(text, self._count, append=append):
+            self._set_status(f"框选拾取 {len(items)} 个元素（Esc 退出）")
         else:
             self._set_status("已拾取，但输入框写入失败（能力 input.write 不可用）")
 

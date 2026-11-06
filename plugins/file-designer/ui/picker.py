@@ -21,17 +21,21 @@ class DocxBridge(QObject):
     def pick(self, anchor, x, y, w, h, preview):
         self._window.on_element_picked(anchor, x, y, w, h, preview)
 
+    @pyqtSlot(str, float, float, float, float)
+    def pick_many(self, items_json, x, y, w, h):
+        self._window.on_elements_picked(items_json, x, y, w, h)
+
     @pyqtSlot(str, str, int, str, float, float, float, float)
-    def annotate_added(self, anchor, comment, seq, snippet, x, y, w, h):
-        self._window.on_annotation_added(anchor, comment, seq, snippet, x, y, w, h)
+    def annotate_added(self, anchors_json, comment, seq, snippet, x, y, w, h):
+        self._window.on_annotation_added(anchors_json, comment, seq, snippet, x, y, w, h)
 
     @pyqtSlot(str, str)
-    def annotate_updated(self, anchor, comment):
-        self._window.on_annotation_updated(anchor, comment)
+    def annotate_updated(self, seq, comment):
+        self._window.on_annotation_updated(seq, comment)
 
     @pyqtSlot(str)
-    def annotate_deleted(self, anchor):
-        self._window.on_annotation_deleted(anchor)
+    def annotate_deleted(self, seq):
+        self._window.on_annotation_deleted(seq)
 
     @pyqtSlot()
     def escape(self):
@@ -52,8 +56,8 @@ def make_picks_dir():
     return root
 
 
-def write_input(text, count):
-    """经能力池写输入框。首条覆盖，后续追加，全程不抢焦点。"""
+def write_input(text, count, append=None):
+    """经能力池写输入框。append=None 时按 count>1 推断（首条覆盖，后续追加）。"""
     try:
         from app.plugins.sdk import caps_for
 
@@ -63,7 +67,8 @@ def write_input(text, count):
     if write is None:
         return False
     try:
-        write(text, append=count > 1, focus=False)
+        flag = count > 1 if append is None else bool(append)
+        write(text, append=flag, focus=False)
         return True
     except Exception:
         return False
