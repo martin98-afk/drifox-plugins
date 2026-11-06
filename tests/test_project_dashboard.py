@@ -195,6 +195,7 @@ def test_render_survives_module_name_collision(pdpkg, tmp_path):
 
 @pytest.fixture(scope="module")
 def collector_mod(pdpkg):
+    pytest.importorskip("PyQt5.QtCore")
     return importlib.import_module("ui_plugin_project_dashboard.collector")
 
 

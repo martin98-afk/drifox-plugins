@@ -20,6 +20,7 @@ _PLUGIN_UI = Path(__file__).resolve().parent.parent / "plugins" / "voice-input" 
 
 @pytest.fixture(scope="module")
 def cr():
+    pytest.importorskip("PyQt5.QtCore")  # cloud_recognizer 顶层依赖 Qt 信号
     spec = importlib.util.spec_from_file_location(
         "voice_input_cloud_recognizer", _PLUGIN_UI / "cloud_recognizer.py"
     )

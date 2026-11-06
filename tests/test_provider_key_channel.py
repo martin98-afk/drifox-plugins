@@ -115,6 +115,7 @@ def _make_host():
 @pytest.fixture()
 def pe(tmp_path, monkeypatch):
     """prompt-enhancer：加载模块，并让「磁盘 app.config」指向一份密文配置"""
+    pytest.importorskip("PyQt5.QtCore")  # prompt-enhancer ui/__init__ 顶层依赖 Qt
     mod = _load("_pe_key_probe", _PE_UI, _stubs())
     fake_cfg = tmp_path / "app.config"
     fake_cfg.write_text(
