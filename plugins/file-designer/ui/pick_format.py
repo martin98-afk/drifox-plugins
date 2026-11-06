@@ -113,19 +113,57 @@ def _desc_for(mode, anchor, block=None):
         return f"[源码 {anchor}]"
     return f"[元素 #{anchor}]"
 
+def normalize_annotations(annotations):
+    """旧条目 {anchor: x} → {anchors: [x]}；返回新列表，不修改输入。"""
+    out = []
+    for a in annotations or []:
+        item = dict(a or {})
+        anchors = item.get("anchors")
+        if not isinstance(anchors, list) or not anchors:
+            old = item.pop("anchor", None)
+            anchors = [old] if old else ["?"]
+        item["anchors"] = list(anchors)
+        item.pop("anchor", None)
+        out.append(item)
+    return out
+
+def _anchors_desc(mode, anchors):
+    descs = [_desc_for(mode, a) for a in anchors]
+    if len(descs) > 3:
+        return "、".join(descs[:3]) + f" 等 {len(descs)} 处"
+    return "、".join(descs)
+
 def format_annotations(path_display, annotations, mode=None):
-    """标注统一发送文本：模型逐条按注释修改。"""
+    """标注统一发送文本：模型逐条按注释修改。组合条目一条注释挂多个锚点。"""
     mode = mode or _mode_of(path_display, None)
     label = _MODE_LABEL.get(mode, mode)
+    annotations = normalize_annotations(annotations)
     lines = [f"📝 {label} 标注 共 {len(annotations)} 条 [{path_display}]"]
     for a in annotations:
-        anchor = a.get("anchor") or "?"
-        lines.append(f"{_circled(int(a.get('seq') or 0))}{_desc_for(mode, anchor)} \"{(a.get('snippet') or '').strip()}\"")
+        lines.append(
+            f"{_circled(int(a.get('seq') or 0))}"
+            f"{_anchors_desc(mode, a.get('anchors') or ['?'])} "
+            f"\"{(a.get('snippet') or '').strip()}\"")
         lines.append(f"  ↳ 注释：{a.get('comment') or ''}")
         if a.get("shot"):
             lines.append(f"  截图：{a['shot']}")
     lines.append(f"（锚点规则: {_GUIDE.get(mode, '见元素描述')};请逐条按注释修改对应元素）")
     return "\n".join(lines)
+
+def format_batch_pick(start_count, path_display, items, blocks_by_anchor,
+                      shot_path, mode, first_guide=False):
+    """框选批量拾取文本：逐元素 format_pick 连号拼接，截图仅首条携带。"""
+    texts = []
+    for i, it in enumerate(items):
+        texts.append(format_pick(
+            start_count + i, path_display, it.get("anchor", "?"),
+            blocks_by_anchor.get(it.get("anchor")),
+            it.get("preview") or "",
+            shot_path if i == 0 else None,
+            include_guide=bool(first_guide and i == 0),
+            mode=mode,
+        ))
+    return "\n".join(texts)
 
 def _generic_block_lines(mode, block, preview):
     """新格式 lookup 结构 → 回填正文行。"""

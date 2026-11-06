@@ -151,3 +151,56 @@ def test_annotations_desc_per_mode():
         t = pf.format_annotations(r"C:\d\f.bin", anns, mode=mode)
         assert marker in t, mode
         assert f"  截图：{SHOT}" in t
+
+def test_normalize_annotations_legacy():
+    old = [{"anchor": "52", "comment": "c", "seq": 1, "snippet": "s"}]
+    out = pf.normalize_annotations(old)
+    assert out[0]["anchors"] == ["52"]
+    assert "anchor" not in out[0]
+    assert old[0].get("anchor") == "52"  # 不修改输入
+
+def test_normalize_annotations_keeps_groups():
+    g = [{"anchors": ["a", "b"], "comment": "c", "seq": 2, "snippet": "s"}]
+    assert pf.normalize_annotations(g)[0]["anchors"] == ["a", "b"]
+
+def test_normalize_annotations_empty_and_bad():
+    assert pf.normalize_annotations([]) == []
+    assert pf.normalize_annotations(None) == []
+    assert pf.normalize_annotations([{"comment": "no-anchor"}])[0]["anchors"] == ["?"]
+
+def test_format_annotations_group_entries():
+    anns = [
+        {"anchors": ["52:r1c1", "52:r2c1"], "comment": "整组说明", "seq": 1, "snippet": "首元素"},
+        {"anchors": ["3", "4", "5", "6", "7", "8"], "comment": "多条", "seq": 2, "snippet": "x"},
+    ]
+    t = pf.format_annotations(r"C:\d\a.docx", anns, mode="docx")
+    assert "[表格 #52 单元格 r1c1]、[表格 #52 单元格 r2c1]" in t
+    assert "等 6 处" in t
+    assert "↳ 注释：整组说明" in t
+
+def test_format_annotations_single_compat():
+    """单锚点条目输出与旧版一致（回归）。"""
+    anns = [{"anchors": ["52"], "comment": "改标题", "seq": 1, "snippet": "章主题"}]
+    t = pf.format_annotations(r"C:\d\a.docx", anns, mode="docx")
+    assert "[元素 #52] \"章主题\"" in t
+
+def test_format_batch_pick():
+    items = [
+        {"anchor": "0", "preview": "第一段"},
+        {"anchor": "1", "preview": "第二段"},
+        {"anchor": "2", "preview": "第三段"},
+    ]
+    blocks = {"1": {"kind": "paragraph", "text": "第二段全文", "style": "Normal"}}
+    t = pf.format_batch_pick(3, r"C:\d\a.docx", items, blocks,
+                             SHOT, mode="docx", first_guide=False)
+    assert t.count("拾取 #") == 3
+    assert "#3" in t and "#4" in t and "#5" in t
+    assert t.count("截图：") == 1  # 截图仅首条携带
+    assert "第二段全文" in t  # block 上下文按锚点携带
+    assert "锚点规则" not in t  # first_guide=False 不附指引
+
+def test_format_batch_pick_first_guide():
+    items = [{"anchor": "0", "preview": "x"}]
+    t = pf.format_batch_pick(0, r"C:\d\a.docx", items, {}, None,
+                             mode="docx", first_guide=True)
+    assert "锚点规则" in t
