@@ -632,7 +632,7 @@
         {
             "name": "bili-scroll",
             "description": "每天替你刷一轮 B站：按关键词或推荐流搜视频、逐条读字幕判断、挑出值得的写成日报，特别值得的经你授权后自动评论 @你。扫码登录、峰谷时段自动跑、判重防打扰。",
-            "version": "0.2.4",
+            "version": "0.2.5",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -694,7 +694,7 @@
                     ]
                 }
             },
-            "min_host_version": "0.5.0",
+            "min_host_version": "0.6.15",
             "api_version": 2,
             "icon": {
                 "light": "icon.svg",
@@ -2134,73 +2134,6 @@
             }
         },
         {
-            "name": "docx-designer",
-            "description": "docx / pptx 文档设计模式 — 独立窗口预览 Word 文档与 PowerPoint，页内拾取元素（段落/表格/公式/图片/文本框），锚点+文本+截图回填输入框，让模型精确修改。",
-            "version": "0.3.3",
-            "author": "DriFox Contributors",
-            "license": "GPL-3.0-or-later",
-            "categories": [
-                "ui",
-                "tool"
-            ],
-            "source": {
-                "type": "git-subdir",
-                "url": "https://github.com/martin98-afk/drifox-plugins",
-                "path": "plugins/docx-designer",
-                "ref": "main"
-            },
-            "components": {
-                "commands": false,
-                "ui": true,
-                "tools": true
-            },
-            "downloads": 12,
-            "keywords": [
-                "document",
-                "docx",
-                "powerpoint",
-                "pptx",
-                "preview",
-                "slide",
-                "word"
-            ],
-            "dependencies": {
-                "pip": {
-                    "default": [
-                        "lxml>=3.1.0",
-                        "pillow==13.0.0",
-                        "python-docx>=1.1.0",
-                        "python-pptx>=1.0.0",
-                        "typing_extensions==4.16.0",
-                        "xlsxwriter==3.3.1"
-                    ]
-                }
-            },
-            "min_host_version": "0.6.10",
-            "api_version": 2,
-            "icon": {
-                "light": "icon.svg",
-                "dark": "icon_dark.svg"
-            },
-            "tarball": {
-                "darwin": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-docx-designer-v0.3.3/docx-designer-0.3.3-darwin.tar.gz",
-                    "sha256": "39470029c49d0ff411846dcae85f909553040a542b4c1dcc99fcc0ea86c2949a",
-                    "size": 14253168
-                },
-                "linux": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-docx-designer-v0.3.3/docx-designer-0.3.3-linux.tar.gz",
-                    "sha256": "86c6e54ff487c5a5edc15d9f59caf50eb5ce2816013e7bb6ffc676dcd4dd9755",
-                    "size": 13186306
-                },
-                "win32": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-docx-designer-v0.3.3/docx-designer-0.3.3-win32.tar.gz",
-                    "sha256": "708e49625514862ac5a2a61d6476ff63bb959206fc847cdd328caec656859dd3",
-                    "size": 11924967
-                }
-            }
-        },
-        {
             "name": "dropbox",
             "description": "Dropbox — 搜索和读取你 Dropbox 里的文件。",
             "version": "1.0.0",
@@ -3276,6 +3209,61 @@
                     "sha256": "603943706dd617d53c61405f966ea866900ff97480dee28cc970ea6abcbf6875",
                     "size": 7234
                 }
+            }
+        },
+        {
+            "name": "file-designer",
+            "description": "多格式文件设计模式 — 独立窗口预览 Word/PPT/Excel/CSV/XMind/Mermaid 流程图，页内拾取元素并标注，锚点+文本+截图回填输入框，让模型精确修改。",
+            "version": "0.4.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "ui",
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/file-designer",
+                "ref": "main"
+            },
+            "components": {
+                "commands": false,
+                "ui": true,
+                "tools": true
+            },
+            "keywords": [
+                "document",
+                "docx",
+                "powerpoint",
+                "pptx",
+                "excel",
+                "xlsx",
+                "csv",
+                "xmind",
+                "mermaid",
+                "preview",
+                "pick",
+                "word"
+            ],
+            "dependencies": {
+                "pip": {
+                    "default": [
+                        "lxml>=3.1.0",
+                        "openpyxl>=3.1.0",
+                        "pillow==13.0.0",
+                        "python-docx>=1.1.0",
+                        "python-pptx>=1.0.0",
+                        "typing_extensions==4.16.0",
+                        "xlsxwriter==3.3.1"
+                    ]
+                }
+            },
+            "min_host_version": "0.6.10",
+            "api_version": 2,
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
             }
         },
         {
