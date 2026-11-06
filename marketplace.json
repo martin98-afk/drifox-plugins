@@ -1829,6 +1829,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-crema-leaves-v1.0.0/crema-leaves-1.0.0-all.tar.gz",
+                    "sha256": "fc4bcc6462370a0842a328d3a458231c8432575c796c6d0bf7978385d747c7f8",
+                    "size": 2398116
+                }
             }
         },
         {
