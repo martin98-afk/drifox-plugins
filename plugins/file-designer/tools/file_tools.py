@@ -8,19 +8,40 @@ impl 通过 tool_ctx 获取上下文；UI 联动走 UIPluginRegistry（同 autol
 
 from pathlib import Path
 
+import importlib
+import importlib.util
+
 from app.tools.result import ToolResult
 
-from ..ui.formats import SUPPORTED_SUFFIXES, suffix_label
+
+def _load_formats():
+    """加载格式注册表 formats.py（tools/ui 共享契约）。
+
+    本模块由 PluginToolLoader 以顶层模块身份 exec（无父包），不能用相对导入：
+    优先复用 UI 侧已注册的 ui_plugin_file_designer.formats（单一状态源），
+    UI 未加载时按路径 exec 独立副本兜底（formats 为模块级静态注册表，副本内容恒等）。
+    """
+    try:
+        return importlib.import_module("ui_plugin_file_designer.formats")
+    except Exception:
+        pass
+    path = Path(__file__).resolve().parent.parent / "ui" / "formats.py"
+    spec = importlib.util.spec_from_file_location("_plugin_tool_file_designer_formats", path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
 
 def _open_file_impl(tool_ctx, **kwargs):
+    formats = _load_formats()
     path = (kwargs.get("path") or "").strip()
     if not path:
-        return ToolResult(False, content=f"缺少 path 参数（{suffix_label()} 文件绝对路径）")
+        return ToolResult(False, content=f"缺少 path 参数（{formats.suffix_label()} 文件绝对路径）")
     p = Path(path).expanduser()
     if not p.is_file():
         return ToolResult(False, content=f"文件不存在: {path}")
-    if p.suffix.lower() not in SUPPORTED_SUFFIXES:
-        return ToolResult(False, content=f"仅支持 {suffix_label()}，收到: {p.suffix}")
+    if p.suffix.lower() not in formats.SUPPORTED_SUFFIXES:
+        return ToolResult(False, content=f"仅支持 {formats.suffix_label()}，收到: {p.suffix}")
     try:
         from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
 

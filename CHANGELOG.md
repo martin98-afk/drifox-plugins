@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+### 🔧 file-designer v0.5.1：tools 相对导入致工具从未注册，改动态加载 formats
+- **症状**：热重载日志反复报 `[PluginToolLoader] 插件 file-designer 新模块加载失败，保留旧注册: attempted relative import with no known parent package`
+- **根因**：`tools/file_tools.py` 模块级 `from ..ui.formats import ...`。宿主 PluginToolLoader 以顶层模块名 exec tools/*.py（无父包，`__package__` 空），相对导入必炸；试加载失败走 last-known-good 保留旧注册。该 import 自 v0.4.0 引入，冷启动同样失败——open_file/open_docx 实际从未注册成功，仅表现为热重载警告
+- **修复**：删模块级相对导入，新增 `_load_formats()` 运行时加载：优先 `importlib.import_module("ui_plugin_file_designer.formats")` 复用 UI 侧已注册模块（单一状态源，UI 重载自动跟随），UI 未加载时按路径 spec_from_file_location 兜底独立副本（formats 为模块级静态注册表，副本内容恒等）
+- **验证**：宿主 `_load_module` 真函数全链路（AST guard→register→impl 后缀校验→状态源复用）4 项通过；插件单测 93 passed（含新增 `tests/test_file_tools.py` 4 例回归）
+
 ### 🔧 tarball 冒烟门禁：识别编译扩展子模块，修 file-designer 三平台包误杀
 - **症状**：push `44e327b3` 后 CI Release Plugin Tarballs 失败，三平台包都已产出（14.76/13.73/12.54 MB）却被 strict-deps 全部拒绝发布
 - **根因**：`smoke_check_tarball._module_exists` 只按 `.py` / 包目录 / `__init__.py` 重导出判定子模块存在性。`lxml.etree` 落盘形态是 `etree.cpython-314-*.so` / `etree.cp314-win_amd64.pyd`，三种候选全不命中，于是报「lxml 已 vendored 但缺 etree」，对三平台各报 6 处，全部包被剔除
