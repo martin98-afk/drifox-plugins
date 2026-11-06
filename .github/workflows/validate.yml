@@ -34,7 +34,7 @@ jobs:
           # ruff 必须锁版本：CI 不锁时，上游发新版新增的规则会静默打穿存量代码，
           # 表现为「昨天绿今天红」的假故障（2026-11 曾被 F541 新规则击中）。
           # 升级 ruff 是显式动作：本地跑通 tools/ 与 hooks/ 后再改这里的版本号。
-          pip install jsonschema ruff==0.15.20 pytest loguru psutil
+          pip install jsonschema ruff==0.15.20 pytest loguru psutil httpx
 
       - name: 校验插件 manifest 与组件完整性
         run: python tools/validate_plugins.py --strict
