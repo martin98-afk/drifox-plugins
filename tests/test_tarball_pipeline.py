@@ -169,6 +169,67 @@ class TestSmokeCheckRejectsBrokenPackage:
         ok, errors, _warnings = smoke.smoke_check(tar_path)
         assert not ok, "manifest 版本与文件名不一致必须拒绝"
 
+class TestCompiledExtensionSubmodule:
+    """编译扩展子模块（lxml.etree 等 .so/.pyd）不得被误判为缺子模块。
+
+    2026-11-06 file-designer CI 事故：三平台包都含 lxml/etree.cpython-314-*.so，
+    但门禁只按 .py / 包目录 / __init__ 重导出判定，全部判成「lxml 已 vendored
+    但缺 etree」，strict-deps 直接拒绝发布。
+    """
+
+    def _build(self, tmp_path: Path, members: dict[str, bytes], tag: str) -> Path:
+        tar_path = tmp_path / f"ext-1.0.0-{tag}.tar.gz"
+        with tarfile.open(tar_path, "w:gz") as tf:
+            for name, data in members.items():
+                info = tarfile.TarInfo(name)
+                info.size = len(data)
+                info.mtime = 0
+                tf.addfile(info, io.BytesIO(data))
+        return tar_path
+
+    @pytest.mark.parametrize("ext_name,plat", [
+        ("etree.cpython-314-x86_64-linux-gnu.so", "linux"),
+        ("etree.cpython-314-darwin.so", "darwin"),
+        ("etree.cp314-win_amd64.pyd", "win32"),
+        ("etree.abi3.so", "linux"),
+    ])
+    def test_accepts_compiled_extension(self, tmp_path, ext_name, plat):
+        smoke = _load_tool("smoke_check_tarball")
+        tar_path = self._build(tmp_path, {
+            ".drifox-plugin/plugin.json": b'{"name": "ext", "version": "1.0.0"}',
+            "main.py": b"from lxml import etree\n\nprint(etree)\n",
+            "deps/lxml/__init__.py": b"# lxml init, no explicit etree export\n",
+            "deps/lxml/" + ext_name: b"\x7fELF",
+        }, plat)
+        ok, errors, _ = smoke.smoke_check(tar_path)
+        assert ok, f"编译扩展被误杀: {errors}"
+
+    def test_rejects_when_extension_really_missing(self, tmp_path):
+        """真缺 etree 时仍必须拦住，不能因为放宽判定变成一律放行"""
+        smoke = _load_tool("smoke_check_tarball")
+        tar_path = self._build(tmp_path, {
+            ".drifox-plugin/plugin.json": b'{"name": "ext", "version": "1.0.0"}',
+            "main.py": b"from lxml import etree\n\nprint(etree)\n",
+            "deps/lxml/__init__.py": b"# empty shell\n",
+        }, "all")
+        ok, errors, _ = smoke.smoke_check(tar_path)
+        assert not ok, "真缺子模块的包必须被拒绝"
+        assert any("缺 etree" in e for e in errors)
+
+    def test_similar_extension_name_does_not_count(self, tmp_path):
+        """etree_extra.so 不能顶替 etree"""
+        smoke = _load_tool("smoke_check_tarball")
+        tar_path = self._build(tmp_path, {
+            ".drifox-plugin/plugin.json": b'{"name": "ext", "version": "1.0.0"}',
+            "main.py": b"from lxml import etree\n",
+            "deps/lxml/__init__.py": b"",
+            "deps/lxml/etree_extra.cpython-314-darwin.so": b"\x7fELF",
+        }, "all")
+        ok, errors, _ = smoke.smoke_check(tar_path)
+        assert not ok
+        assert any("缺 etree" in e for e in errors)
+
+
 class TestDeclaredDepsPresent:
     """声明的 pip 依赖必须真的在包内。
 
@@ -230,9 +291,11 @@ class TestSmokeGateFailClosed:
 
     def test_missing_smoke_module_blocks_release(self, tmp_path, monkeypatch):
         builder = _load_tool("build_plugin_tarballs")
-        # 模拟门禁模块不可用：让 import smoke_check_tarball 抛错
-        monkeypatch.setattr(sys, "modules", {**sys.modules})
-        sys.modules["smoke_check_tarball"] = None  # 触发 ImportError
+        # 模拟门禁模块不可用：直接改原 sys.modules 里的那一项。
+        # 不能用 setattr(sys, "modules", {**sys.modules}) 换整个 dict —— CPython
+        # 的 import 仍从旧 dict 取已缓存模块，写入新 dict 的 None 不生效，
+        # 用例会误走到 smoke_check 而不是门禁缺失分支（2026-11-06 实测）。
+        monkeypatch.setitem(sys.modules, "smoke_check_tarball", None)
 
         entry = {"default": {"url": "https://example.com/x.tar.gz", "sha256": "0" * 64}}
         kept, failures = builder._run_smoke_checks("demo", entry, tmp_path)

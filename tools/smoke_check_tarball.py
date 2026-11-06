@@ -245,6 +245,27 @@ def _all_member_paths(tf: tarfile.TarFile) -> set[str]:
     return {_norm(m.name) for m in tf.getmembers()}
 
 
+def _ext_module_names(paths: set[str], base: str) -> set[str]:
+    """<base>/ 下的编译扩展模块名（剥掉 ABI/平台标签）。
+
+    lxml.etree、numpy.core._multiarray_umath 等 C 扩展子模块落盘形态是
+    etree.cpython-314-darwin.so / _imaging.cp314-win_amd64.pyd，既不是 .py
+    也不是包目录；只按 .py 判定会把「扩展确实在包里」误报成缺子模块。
+    """
+    prefix = base.rstrip("/") + "/"
+    out: set[str] = set()
+    for path in paths:
+        if not path.startswith(prefix):
+            continue
+        rel = path[len(prefix):]
+        if "/" in rel:  # 只看直属这一层
+            continue
+        m = _EXT_RE.search(rel)
+        if m:
+            out.add(rel[: m.start()])
+    return out
+
+
 def _module_exists(
     paths: set[str],
     from_import: str,
@@ -263,6 +284,7 @@ def _module_exists(
       2. <root>/<module 剩余段>/<name>/__init__.py
       3. <root>/<module 剩余段>.py（name 是模块级符号）
       4. <root>/<module 剩余段>/__init__.py 里出现 name（重导出）
+      5. <root>/<module 剩余段>/ 下有 name 的编译扩展（.so/.pyd/.dylib）
 
     第 4 条必须做内容级校验，不能只看 __init__.py 存不存在：
     bilibili_api/__init__.py 是存在的，但里面没有 login_v2，那正是本次事故形态。
@@ -283,6 +305,8 @@ def _module_exists(
             body = init_sources.get(init_key, b"")
             if _mentions_symbol(body, name):
                 return True
+        if name in _ext_module_names(paths, base):
+            return True
     return False
 
 
