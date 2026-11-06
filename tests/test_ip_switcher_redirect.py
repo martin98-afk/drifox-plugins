@@ -4,6 +4,11 @@ import sys
 import types
 from unittest.mock import MagicMock, patch
 
+import pytest
+
+if "ip_switcher_redirect" not in sys.modules:
+    pytest.skip("conftest 未加载 ip_switcher_redirect（缺 PyQt5 等 CI 依赖）", allow_module_level=True)
+
 from ip_switcher_redirect import (
     _is_opencode_free,
     _is_rate_limit_error,

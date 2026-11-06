@@ -5,6 +5,13 @@
 无法用标准包路径导入，与 DriFox 实际插件加载方式一致）。
 """
 
+import sys
+
+import pytest
+
+if "ip_switcher_state" not in sys.modules:
+    pytest.skip("conftest 未加载 ip_switcher_state（缺 PyQt5 等 CI 依赖）", allow_module_level=True)
+
 from ip_switcher_state import reset_state_for_test
 
 

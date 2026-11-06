@@ -9,6 +9,10 @@ browser 插件的 ui_plugin_browser.* 前缀），测试同样走 importlib。
 - ip_switcher_config   → plugins/ip-switcher/ui/config.py
 - ip_switcher_state    → plugins/ip-switcher/ui/state.py
 - ip_switcher_proxy_pool → plugins/ip-switcher/ui/proxy_pool.py
+- ip_switcher_redirect → plugins/ip-switcher/ui/ip_redirect.py
+
+加载失败（CI 轻量环境缺 PyQt5 / 三方包）不打断收集：
+对应测试文件按「别名是否在 sys.modules」模块级 skip。
 """
 
 import importlib.util
@@ -16,7 +20,6 @@ import sys
 from pathlib import Path
 
 _UI_DIR = Path(__file__).resolve().parent.parent / "plugins" / "ip-switcher" / "ui"
-
 
 def _load_module(name: str, file_name: str):
     """从文件路径加载模块并注册到 sys.modules"""
@@ -31,18 +34,24 @@ def _load_module(name: str, file_name: str):
     spec.loader.exec_module(module)
     return module
 
+def _try_load(name: str, file_name: str) -> bool:
+    """加载失败（缺依赖）返回 False 而非抛错，保证 pytest 可收集其余测试"""
+    if name in sys.modules:
+        return True
+    try:
+        _load_module(name, file_name)
+        return True
+    except ImportError:
+        # 清掉 exec 半程留下的空壳模块，否则「别名存在但为空」会骗过守卫判断
+        sys.modules.pop(name, None)
+        return False
 
 # 加载插件模块（幂等：热加载时跳过已注册的）
-if "ip_switcher_config" not in sys.modules:
-    _load_module("ip_switcher_config", "config.py")
-if "ip_switcher_state" not in sys.modules:
-    _load_module("ip_switcher_state", "state.py")
+_try_load("ip_switcher_config", "config.py")
+_try_load("ip_switcher_state", "state.py")
 
 # ip_redirect.py 需要先加载 config/state/proxy_pool（同目录），把 ui 目录加入 sys.path
-if "ip_switcher_redirect" not in sys.modules:
-    # 确保同目录的 config/state/proxy_pool 可被绝对导入找到
-    if str(_UI_DIR) not in sys.path:
-        sys.path.insert(0, str(_UI_DIR))
-    _load_module("ip_switcher_redirect", "ip_redirect.py")
-if "ip_switcher_proxy_pool" not in sys.modules:
-    _load_module("ip_switcher_proxy_pool", "proxy_pool.py")
+if str(_UI_DIR) not in sys.path:
+    sys.path.insert(0, str(_UI_DIR))
+_try_load("ip_switcher_redirect", "ip_redirect.py")
+_try_load("ip_switcher_proxy_pool", "proxy_pool.py")

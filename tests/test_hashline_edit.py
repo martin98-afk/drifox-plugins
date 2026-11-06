@@ -31,9 +31,14 @@ _ANCHOR_LINE_RE = re.compile(r"^(\d+)#([ZPMQVRWSNKTXJBYH]{2,4}): (.*)$")
 
 
 def _make_app_stubs():
-    if "app" in sys.modules:
+    # 别的测试可能已注册自己的 app fake（如 gateway lifecycle），
+    # 不能整体早退：只看自己需要的子键，缺哪段补哪段，不覆盖他人注册
+    if "app.tools.registry" in sys.modules:
         return
-    app = types.ModuleType("app")
+    app = sys.modules.get("app")
+    if app is None:
+        app = types.ModuleType("app")
+        sys.modules["app"] = app
     tools = types.ModuleType("app.tools")
     result_mod = types.ModuleType("app.tools.result")
     registry_mod = types.ModuleType("app.tools.registry")

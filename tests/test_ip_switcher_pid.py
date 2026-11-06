@@ -7,6 +7,13 @@
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import sys
+
+import pytest
+
+if "ip_switcher_proxy_pool" not in sys.modules:
+    pytest.skip("conftest 未加载 ip_switcher_proxy_pool（CI 缺 httpx）", allow_module_level=True)
+
 from ip_switcher_proxy_pool import ProxyPoolManager
 
 

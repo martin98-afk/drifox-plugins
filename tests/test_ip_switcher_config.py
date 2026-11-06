@@ -6,6 +6,12 @@
 """
 
 import json
+import sys
+
+import pytest
+
+if "ip_switcher_config" not in sys.modules:
+    pytest.skip("conftest 未加载 ip_switcher_config（CI 轻量环境缺依赖）", allow_module_level=True)
 
 from ip_switcher_config import (
     ConfigStore,
