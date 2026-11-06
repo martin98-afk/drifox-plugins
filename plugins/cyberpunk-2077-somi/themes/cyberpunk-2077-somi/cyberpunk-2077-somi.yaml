@@ -1,0 +1,154 @@
+name: 赛博朋克·Somi 深
+id: cyberpunk-2077-somi
+mode: dark
+
+window:
+  gradient_start: rgba(10, 8, 14, 255)
+  gradient_end: rgba(20, 12, 18, 255)
+
+background:
+  window_bg:
+    image: :/icons/fox_bg.png
+    opacity: 0.03
+    enabled: true
+  chat_list:
+    image: :/icons/fox_bg.png
+    opacity: 0.03
+    enabled: true
+
+backgrounds:
+  # 主场景图：Cyberpunk 2077 红灯室（3962×1800 原图缩至 2560 宽）
+  scene:
+    image: ../../assets/bg.jpg
+    opacity: 1.0
+    dim: rgba(8, 6, 12, 0.42)
+    enabled: true
+
+  # 角色剪影（87% 透明的 PNG，锚在对话区底部居中，像站在对话内容后面）
+  decorations:
+    - id: somi-silhouette
+      image: ../../assets/somi-deco.png
+      anchor: scene_bottom
+      offset: [0, 40]
+      opacity: 0.55
+      fit_width: true
+      fit_height: true
+
+  # 红光流动覆盖层：本壁纸是 scene 类型（无 mp4），不挂 overlay。
+  # 想加动态光影时，在 shared/ 放一段视频并补 overlay.target + overlay.video 即可。
+
+  # 主题音乐：三首 Cyberpunk 2077 OST，跨主题共用
+  music:
+    tracks:
+      - ../../assets/01-never-fade-away.mp3
+      - ../../assets/02-the-rebel-path.mp3
+      - ../../assets/03-gate-k9.mp3
+    volume: 0.45
+    loop: true
+    fade_ms: 420
+    enabled: true
+
+colors:
+  card_bg: rgba(18, 14, 24, 232)
+  card_bg_solid: rgba(18, 14, 24, 248)
+  content_bg: '#120e18'
+  border: '#3a2240'
+  border_accent: '#ff2e63'
+  text_primary: '#e8e2f0'
+  text_secondary: rgba(232, 226, 240, 0.66)
+  text_muted: '#8a7fa0'
+  accent: '#ff2e63'
+  search_highlight: '#ff5c8a'
+  accent_warm: '#00e5ff'
+  hover_bg: rgba(255, 46, 99, 0.12)
+  selected_bg: rgba(255, 46, 99, 0.26)
+  capsule_bg: rgba(24, 18, 32, 190)
+  capsule_border: rgba(90, 60, 110, 210)
+
+  toolbar_bg: rgba(255, 46, 99, 0.06)
+  divider_color: rgba(255, 255, 255, 0.06)
+  hover_bg_strong: rgba(255, 46, 99, 0.16)
+  scrollbar_handle_bg: rgba(255, 255, 255, 0.14)
+  scrollbar_handle_hover_bg: rgba(255, 46, 99, 0.45)
+  card_placeholder_text: '#6e6480'
+
+  button_text_on_accent: '#ffffff'
+  status_info: '#00e5ff'
+  status_danger_bg: rgba(255, 46, 99, 0.85)
+  status_archive_bg: rgba(120, 80, 140, 0.8)
+  card_bg_dim: rgba(255, 46, 99, 0.05)
+  archived_card_bg: rgba(90, 60, 110, 0.12)
+  archived_card_border: rgba(255, 46, 99, 0.22)
+
+  syntax_step: '#00e5ff'
+  syntax_tool: '#ffb347'
+  syntax_success: '#3ddc97'
+  syntax_error: '#ff2e63'
+  syntax_result: '#c77dff'
+
+  tag_accent: '#ff2e63'
+  tag_accent_text: '#ff8fae'
+  tag_purple: '#c77dff'
+  tag_purple_text: '#e0b3ff'
+  tag_orange: '#ffb347'
+  tag_orange_text: '#ffd199'
+  user_card_bg: rgba(30, 20, 38, 180)
+  user_card_accent: '#ff2e63'
+  user_card_text: '#f0eaf8'
+  user_card_muted: '#948aa8'
+  assistant_card_bg: rgba(20, 16, 28, 185)
+  assistant_card_accent: '#00e5ff'
+  assistant_card_text: '#e4ddf0'
+  assistant_card_muted: '#877d99'
+  agent_btn_text: '#8a7fa0'
+  agent_btn_text_active: '#ff2e63'
+  agent_btn_bg_active: rgba(255, 46, 99, 0.16)
+  agent_btn_separator: rgba(90, 60, 110, 160)
+
+  input_bg_start: rgba(20, 15, 28, 185)
+  input_bg_end: rgba(28, 20, 36, 185)
+  input_focus_bg_start: rgba(24, 18, 32, 235)
+  input_focus_bg_end: rgba(34, 24, 44, 235)
+  input_text: '#e8e2f0'
+  input_focus_text: '#ffffff'
+  input_border: '#3a2240'
+  input_focus_border: '#ff2e63'
+  input_placeholder: rgba(232, 226, 240, 0.36)
+  glow_primary_alpha: 165
+  glow_primary_blur: 26
+  glow_ambient_alpha: 90
+  glow_ambient_blur: 34
+
+  toolbar_strip_bg: rgba(24, 18, 32, 215)
+  toolbar_strip_border: '#3a2240'
+  realtime_border: '#ff2e63'
+  realtime_accent: '#00e5ff'
+  realtime_accent_warm: '#ffb347'
+  realtime_success: '#3ddc97'
+  realtime_error: '#ff4d6d'
+  realtime_bg: rgba(20, 15, 28, 246)
+  realtime_text: '#e8e2f0'
+  realtime_text_secondary: rgba(232, 226, 240, 0.68)
+  realtime_tag_bg: rgba(255, 46, 99, 0.14)
+  realtime_tag_border: rgba(255, 46, 99, 0.30)
+  system_border: '#3a2240'
+  system_accent: '#ff2e63'
+  send_btn_start: '#ff2e63'
+  send_btn_end: '#c2185b'
+  send_btn_hover_start: '#ff5c8a'
+  send_btn_hover_end: '#ff2e63'
+  send_btn_radius: 17
+  timeline_node: '#5a3c6e'
+  timeline_node_hover: '#ff2e63'
+  timeline_node_visible: '#3ddc97'
+  timeline_node_selected: '#ffb347'
+  timeline_line: '#2a1c34'
+  timeline_line_progress: '#3ddc97'
+  ring_normal: '#ff2e63'
+  ring_warning: '#ffb347'
+  ring_danger: '#ff4d6d'
+  ring_compacted: '#c77dff'
+  branch_label_bg: rgba(255, 46, 99, 0.14)
+  branch_label_border: rgba(255, 46, 99, 0.30)
+  window_bg: rgba(255, 46, 99, 0.04)
+  input_glow_preset: "ember"
