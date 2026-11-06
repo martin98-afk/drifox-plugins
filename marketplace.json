@@ -1797,6 +1797,41 @@
             }
         },
         {
+            "name": "crema-leaves",
+            "description": "奶油树影主题 — 奶油黄浅色与暖褐深色两套主题，共享 HanaAgent 树影动态背景（LeavesOverlay），叶隙光影在对话区缓慢流动。",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "theme"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/crema-leaves",
+                "ref": "main"
+            },
+            "components": {
+                "themes": true
+            },
+            "keywords": [
+                "theme",
+                "crema",
+                "leaves",
+                "animated",
+                "light",
+                "dark",
+                "主题",
+                "动态背景"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://github.com/martin98-afk/drifox-plugins",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon_dark.png"
+            }
+        },
+        {
             "name": "cron-tasks",
             "description": "定时任务中心 — 可视化配置 UI 定时任务（单次/间隔/Cron），到期自动驱动对话执行 prompt，带运行历史与可配置 hook 参与面（参考 openhanako desk cron 设计）",
             "version": "0.5.8",

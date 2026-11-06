@@ -1,0 +1,127 @@
+name: 奶油树影·深
+id: crema-leaves-dark
+mode: dark
+window:
+  gradient_start: rgba(26, 19, 12, 255)
+  gradient_end: rgba(34, 25, 15, 255)
+background:
+  window_bg:
+    image: :/icons/fox_bg.png
+    opacity: 0.05
+    enabled: true
+  chat_list:
+    image: :/icons/fox_bg.png
+    opacity: 0.05
+    enabled: true
+backgrounds:
+  overlay:
+    # 与浅色版共享同一素材（HanaAgent LeavesOverlay，Apache-2.0）
+    # 深底下树影为暗上加暗，opacity 略降避免脏感；boost 换成极淡暖光
+    video: ../leaves-overlay.mp4
+    opacity: 0.24
+    brightness_boost: rgba(255, 226, 168, 0.05)
+    position: top
+    enabled: true
+colors:
+  card_bg: rgba(42, 32, 20, 236)
+  card_bg_solid: rgba(42, 32, 20, 250)
+  content_bg: '#2a2117'
+  border: '#5c4a2e'
+  border_accent: '#d9a12b'
+  text_primary: '#f5ead2'
+  text_secondary: rgba(245, 234, 210, 0.66)
+  text_muted: '#a8936e'
+  accent: '#d9a12b'
+  search_highlight: '#e8b13f'
+  accent_warm: '#e8a04a'
+  hover_bg: rgba(217, 161, 43, 0.12)
+  selected_bg: rgba(217, 161, 43, 0.26)
+  capsule_bg: rgba(46, 35, 22, 190)
+  capsule_border: rgba(120, 95, 60, 210)
+
+  toolbar_bg: rgba(255, 235, 190, 0.05)
+  divider_color: rgba(255, 240, 210, 0.06)
+  hover_bg_strong: rgba(255, 235, 190, 0.09)
+  scrollbar_handle_bg: rgba(255, 240, 210, 0.16)
+  scrollbar_handle_hover_bg: rgba(255, 240, 210, 0.26)
+  card_placeholder_text: '#8a795c'
+
+  button_text_on_accent: '#241a0d'
+  status_info: '#e8b13f'
+  status_danger_bg: rgba(200, 50, 50, 0.8)
+  status_archive_bg: rgba(160, 120, 40, 0.8)
+  card_bg_dim: rgba(255, 235, 190, 0.04)
+  archived_card_bg: rgba(232, 160, 74, 0.10)
+  archived_card_border: rgba(232, 160, 74, 0.20)
+
+  syntax_step: '#34d399'
+  syntax_tool: '#e5c07b'
+  syntax_success: '#7ec96a'
+  syntax_error: '#f05a5a'
+  syntax_result: '#c58fff'
+
+  tag_accent: '#e8b13f'
+  tag_accent_text: '#f5d78a'
+  tag_purple: '#b388ff'
+  tag_purple_text: '#d1b3ff'
+  tag_orange: '#ffb366'
+  tag_orange_text: '#ffc999'
+  user_card_bg: rgba(52, 40, 24, 180)
+  user_card_accent: '#e8b13f'
+  user_card_text: '#f5ead2'
+  user_card_muted: '#a8936e'
+  assistant_card_bg: rgba(40, 30, 18, 185)
+  assistant_card_accent: '#d9a12b'
+  assistant_card_text: '#f0e2c4'
+  assistant_card_muted: '#9c8a68'
+  agent_btn_text: '#a8936e'
+  agent_btn_text_active: '#e8b13f'
+  agent_btn_bg_active: rgba(217, 161, 43, 0.16)
+  agent_btn_separator: rgba(120, 95, 60, 160)
+  input_bg_start: rgba(36, 27, 17, 185)
+  input_bg_end: rgba(44, 33, 20, 185)
+  input_focus_bg_start: rgba(42, 32, 20, 235)
+  input_focus_bg_end: rgba(50, 38, 24, 235)
+  input_text: '#f0e4c8'
+  input_focus_text: '#faf2dd'
+  input_border: '#5c4a2e'
+  input_focus_border: '#d9a12b'
+  input_placeholder: rgba(240, 228, 200, 0.38)
+  glow_primary_alpha: 160
+  glow_primary_blur: 24
+  glow_ambient_alpha: 85
+  glow_ambient_blur: 32
+
+  toolbar_strip_bg: rgba(44, 33, 20, 215)
+  toolbar_strip_border: '#5c4a2e'
+  realtime_border: '#d9a12b'
+  realtime_accent: '#e8b13f'
+  realtime_accent_warm: '#f5a623'
+  realtime_success: '#34d399'
+  realtime_error: '#f87171'
+  realtime_bg: rgba(42, 32, 20, 246)
+  realtime_text: '#f5ead2'
+  realtime_text_secondary: rgba(245, 234, 210, 0.68)
+  realtime_tag_bg: rgba(217, 161, 43, 0.14)
+  realtime_tag_border: rgba(217, 161, 43, 0.28)
+  system_border: '#5c4a2e'
+  system_accent: '#d9a12b'
+  send_btn_start: '#d9a12b'
+  send_btn_end: '#b07a10'
+  send_btn_hover_start: '#e8b13f'
+  send_btn_hover_end: '#d9a12b'
+  send_btn_radius: 17
+  timeline_node: '#6b5a3e'
+  timeline_node_hover: '#d9a12b'
+  timeline_node_visible: '#34d399'
+  timeline_node_selected: '#f5a623'
+  timeline_line: '#3a2e1e'
+  timeline_line_progress: '#34d399'
+  ring_normal: '#d9a12b'
+  ring_warning: '#f5a623'
+  ring_danger: '#f05a5a'
+  ring_compacted: '#a78bfa'
+  branch_label_bg: rgba(217, 161, 43, 0.14)
+  branch_label_border: rgba(217, 161, 43, 0.28)
+  window_bg: rgba(217, 161, 43, 0.05)
+  input_glow_preset: "platinum"

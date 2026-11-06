@@ -1,0 +1,29 @@
+{
+    "name": "crema-leaves",
+    "description": "奶油树影主题 — 奶油黄浅色与暖褐深色两套主题，共享 HanaAgent 树影动态背景（LeavesOverlay），叶隙光影在对话区缓慢流动。",
+    "icon": {
+        "light": "icon.png",
+        "dark": "icon_dark.png"
+    },
+    "version": "1.0.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "homepage": "https://github.com/martin98-afk/drifox-plugins",
+    "license": "MIT",
+    "type": "user",
+    "keywords": [
+        "theme",
+        "crema",
+        "leaves",
+        "animated",
+        "light",
+        "dark",
+        "主题",
+        "动态背景"
+    ],
+    "components": {
+        "themes": true
+    },
+    "min_host_version": "0.5.0"
+}
