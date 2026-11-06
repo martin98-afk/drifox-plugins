@@ -140,6 +140,7 @@ def test_register_ui_does_not_touch_sys_path(pdpkg):
 
 def test_collector_and_dashboard_resolve_to_this_plugin(pdpkg):
     """本插件内部解析到的 collector / dashboard 必须指向自己的 ui 目录"""
+    pytest.importorskip("PyQt5.QtCore")  # collector 顶层依赖 Qt
     col = importlib.import_module("ui_plugin_project_dashboard.collector")
     dash = importlib.import_module("ui_plugin_project_dashboard.dashboard")
     assert Path(col.__file__).resolve() == (_UI / "collector.py").resolve()
