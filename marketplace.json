@@ -573,6 +573,7 @@
             "components": {
                 "mcp": true
             },
+            "downloads": 1,
             "keywords": [
                 "mcp",
                 "connector",
@@ -653,7 +654,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 17,
+            "downloads": 19,
             "keywords": [
                 "bilibili",
                 "b站",
@@ -924,7 +925,7 @@
             "components": {
                 "skills": true
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "design",
                 "canvas",
@@ -2633,7 +2634,7 @@
                 "gateways": false,
                 "engines": false
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "team",
                 "团队",
@@ -5069,7 +5070,7 @@
                 "lsp": false,
                 "themes": false
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "live-data",
                 "finance",
