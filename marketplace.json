@@ -1919,6 +1919,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-cyberpunk-2077-somi-v1.0.0/cyberpunk-2077-somi-1.0.0-all.tar.gz",
+                    "sha256": "a3fefda517a3a4ea2af5ab8829e81df58cbd6b118b5d1ab221388c53f10a967f",
+                    "size": 36624453
+                }
             }
         },
         {
