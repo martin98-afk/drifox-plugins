@@ -5,14 +5,14 @@
         "light": "icon.svg",
         "dark": "icon_dark.svg"
     },
-    "version": "0.2.4",
+    "version": "0.2.5",
     "author": {
         "name": "DriFox Contributors"
     },
     "repository": "https://github.com/c1overzz/dsh-bili-scroll",
     "license": "MIT",
     "type": "user",
-    "min_host_version": "0.5.0",
+    "min_host_version": "0.6.15",
     "api_version": 2,
     "capabilities": [
         "engine.session",
