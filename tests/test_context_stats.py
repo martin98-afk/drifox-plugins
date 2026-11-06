@@ -131,10 +131,12 @@ def test_fetch_stats_aggregation(mock_db):
     )
 
 
-def test_fetch_stats_cache_hit(mock_db):
-    """缓存命中：db mtime 不变时二次读取不重查"""
+def test_fetch_stats_cache_hit(mock_db, monkeypatch):
+    """缓存命中：db mtime 不变时二次读取不重查；mtime 变化且超 TTL 后重查"""
     _load_plugin_package()
     data_mod = sys.modules["ui_plugin_context_stats.data"]
+    # 实现行为：key 变化但 TTL 内返回旧数据（防切 tab 反复查询），此处置 0 验证失效路径
+    monkeypatch.setattr(data_mod, "_CACHE_TTL_SECONDS", 0.0)
 
     stats1 = data_mod.get_stats()
     stats2 = data_mod.get_stats()

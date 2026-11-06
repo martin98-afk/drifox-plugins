@@ -61,6 +61,7 @@ def _zstd_blob(payload: bytes) -> bytes:
 
 
 def test_decode_zstd_blob(data_mod):
+    pytest.importorskip("compression")  # py3.14 起才有 stdlib zstd；旧版本跳过
     msgs = [{"role": "assistant", "token_usage": {"input": 100, "output": 20}}]
     blob = _zstd_blob(json.dumps(msgs).encode("utf-8"))
     assert data_mod.decode_messages(blob) == msgs
@@ -94,7 +95,11 @@ def test_decode_non_list_returns_empty(data_mod):
 
 
 def _patch_db(monkeypatch, data_mod, sessions):
-    """把 find_db / sqlite3.connect 换成内存 sqlite，注入合成 sessions.messages"""
+    """把 find_db / sqlite3.connect 换成内存 sqlite，注入合成 sessions.messages
+
+    - schema 对齐宿主真实表：实现按 message_count + updated_at 做变更指纹（增量扫描）
+    - 摘要持久化路径必须指向 tmp：默认 _stats_path 会落到共享目录，测试间互相污染
+    """
     import sqlite3
     import tempfile
     from pathlib import Path
@@ -103,25 +108,29 @@ def _patch_db(monkeypatch, data_mod, sessions):
     db_path = tmpdir / "sessions.db"
     conn = sqlite3.connect(str(db_path))
     conn.execute(
-        "CREATE TABLE sessions (session_id TEXT, messages BLOB, project TEXT)"
+        "CREATE TABLE sessions ("
+        "session_id TEXT, messages BLOB, project TEXT, "
+        "message_count INTEGER, updated_at TEXT)"
     )
     for i, msgs in enumerate(sessions):
         conn.execute(
-            "INSERT INTO sessions VALUES (?, ?, ?)",
-            (f"s{i}", json.dumps(msgs).encode("utf-8"), "demo"),
+            "INSERT INTO sessions (session_id, messages, project, message_count, updated_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (f"s{i}", json.dumps(msgs).encode("utf-8"), "demo", len(msgs), "2026-10-10 10:00:00"),
         )
     conn.commit()
     conn.close()
 
     monkeypatch.setattr(data_mod, "_found_db_path", db_path, raising=False)
     monkeypatch.setattr(data_mod, "_host_db_path", lambda: db_path)
+    monkeypatch.setattr(data_mod, "_stats_path", lambda: tmpdir / "session_stats.json")
     return db_path
 
 
-def test_collect_uses_incremental_input(data_mod, monkeypatch):
-    """输入按增量扣基线；输出逐轮相加；请求数记全部条数
+def test_collect_sums_input_as_billed(data_mod, monkeypatch):
+    """输入按账单口径原样累加（2026-10-21 定稿，不扣增量）；输出逐轮相加；请求数记带 usage 条数
 
-    会话1 prompt 1000 → 5000：首轮全额 1000，次轮增量 4000，合计 5000
+    会话1 两轮 input 1000 + 5000 = 6000（不扣基线，与 API 计费一致）
     """
     sessions = [
         [
@@ -149,16 +158,12 @@ def test_collect_uses_incremental_input(data_mod, monkeypatch):
     result = data_mod.collect()
     assert result["error"] is None
     assert result["sessions"] == 2
-    assert result["daily"]["2026-10-10"] == [5000, 400, 2]
+    assert result["daily"]["2026-10-10"] == [6000, 400, 2]
     assert result["daily"]["2026-10-11"] == [200, 20, 1]
 
 
-def test_collect_incremental_baseline_is_per_session(data_mod, monkeypatch):
-    """增量基线按会话独立：每会话首轮都是全额，不跨会话相减
-
-    两个单轮会话：3000 与 1000。若基线跨会话共享，第二轮会算成
-    max(0, 1000-3000)=0，总数变 3000 而非 4000。
-    """
+def test_collect_sums_across_sessions_independently(data_mod, monkeypatch):
+    """多会话各自全额累加，不跨会话去重或相减：3000 + 1000 = 4000"""
     sessions = [
         [
             {
@@ -177,12 +182,12 @@ def test_collect_incremental_baseline_is_per_session(data_mod, monkeypatch):
     ]
     _patch_db(monkeypatch, data_mod, sessions)
     result = data_mod.collect()
-    # 两会话首轮都全额计：3000 + 1000，若跨会话相减会得到 3000
+    # 各会话独立全额计入：3000 + 1000
     assert result["daily"]["2026-10-10"] == [4000, 15, 2]
 
 
-def test_collect_prompt_shrink_counts_zero_not_negative(data_mod, monkeypatch):
-    """prompt 回退（上下文压缩后变小）时增量按 0 计，不产生负数"""
+def test_collect_prompt_shrink_still_counts_full(data_mod, monkeypatch):
+    """上下文压缩后 input 变小仍全额计入（原样累加，与账单一致）：50000 + 8000 = 58000"""
     sessions = [
         [
             {
@@ -199,8 +204,7 @@ def test_collect_prompt_shrink_counts_zero_not_negative(data_mod, monkeypatch):
     ]
     _patch_db(monkeypatch, data_mod, sessions)
     result = data_mod.collect()
-    # 首轮 50000 全额，第二轮压缩后 8000 → 增量 0（不是 -42000）
-    assert result["daily"]["2026-10-10"] == [50000, 20, 2]
+    assert result["daily"]["2026-10-10"] == [58000, 20, 2]
 
 
 def test_collect_skips_messages_without_timestamp(data_mod, monkeypatch):
@@ -591,12 +595,12 @@ def test_collect_cache_hit_survives_db_change(collector_mod, monkeypatch):
     assert collector_mod.get_cached() is not None
 
 
-def test_collect_cache_expires_by_ttl(collector_mod, monkeypatch):
-    """超过 TTL 即失效（避免长期展示陈旧数据）"""
+def test_collect_cache_no_ttl_normal_result(collector_mod, monkeypatch):
+    """正常结果不设 TTL：新鲜度由 _is_stale（db key）单独判，长时间后仍命中"""
     monkeypatch.setattr(collector_mod, "_cache", {"daily": {}, "sessions": 0})
     monkeypatch.setattr(collector_mod, "_cache_key", (1, "2026-01-01"))
     monkeypatch.setattr(collector_mod, "_cache_ts", time.monotonic() - 999)
-    assert collector_mod.get_cached() is None
+    assert collector_mod.get_cached() is not None
 
 
 def test_collect_cache_none_when_empty(collector_mod, monkeypatch):

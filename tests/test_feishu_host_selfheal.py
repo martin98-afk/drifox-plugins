@@ -165,7 +165,10 @@ def test_ca_default_ok_no_intervention(clean_env, monkeypatch):
 
 
 def test_ca_falls_back_to_certifi(clean_env, monkeypatch):
-    """打包环境 CA 失效 → 回退 certifi，路径真实可用。"""
+    """打包环境 CA 失效且无 truststore → 回退 certifi，路径真实可用。"""
+    # 实现分层兜底第 3 层是 truststore（可用即不写 SSL_CERT_FILE），
+    # 测 certifi 分支必须先屏蔽 truststore 的 import
+    monkeypatch.setitem(sys.modules, "truststore", None)
     real_ctx = ssl.create_default_context
     monkeypatch.setattr(ssl, "create_default_context", lambda *a, **kw: _EmptyCtx())
     clean_env._ensure_ca_bundle()

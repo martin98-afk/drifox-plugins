@@ -208,9 +208,15 @@ def test_impl_bad_image_reports_error(vd, tmp_path):
     assert "文件不存在" in r.error
 
 
-def test_impl_no_vision_config(vd, tmp_path):
-    """未配置视觉模型 → 明确报错，不静默串到当前（非视觉）模型。"""
+def test_impl_no_vision_config(vd, tmp_path, monkeypatch):
+    """未配置且扫不到任何视觉模型 → 明确报错，不静默串到当前（非视觉）模型。
+
+    实现已支持自动发现（provider.list → model.enumerate），stub 提供能力但
+    返回空服务商，走「发现失败」分支。
+    """
     vd._STORE.values = {}
+    pool = {"provider.list": lambda: [], "model.enumerate": lambda pid: []}
+    monkeypatch.setattr(vd, "_host_pool", lambda: pool)
     r = vd._impl({}, paths=[str(_png(tmp_path))])
     assert r.success is False
     assert "未配置视觉模型" in r.error

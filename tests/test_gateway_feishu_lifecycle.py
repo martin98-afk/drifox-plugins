@@ -99,10 +99,27 @@ def _install_fake_app_modules() -> None:
     sys.modules.setdefault("app.gateway", gateway)
     sys.modules["app.gateway.base"] = base
 
+def _install_fake_lark_modules() -> None:
+    """fake lark_oapi.ws.client：_run_feishu_client 运行时要设置其模块级 loop。
+    本机无 lark SDK（不在 deps 的机器）也能测生命周期，FakeWSClient 模拟其行为面。
+    """
+    if "lark_oapi" in sys.modules:
+        return
+    lark = types.ModuleType("lark_oapi")
+    ws = types.ModuleType("lark_oapi.ws")
+    client = types.ModuleType("lark_oapi.ws.client")
+    client.loop = None
+    lark.ws = ws
+    ws.client = client
+    sys.modules["lark_oapi"] = lark
+    sys.modules["lark_oapi.ws"] = ws
+    sys.modules["lark_oapi.ws.client"] = client
+
 
 # ── 从文件路径加载 feishu.py（与 conftest 的 ip-switcher 模式一致）──
 def _load_feishu_module():
     _install_fake_app_modules()
+    _install_fake_lark_modules()
     name = "feishu_gateway_adapter_under_test"
     if name in sys.modules:
         return sys.modules[name]

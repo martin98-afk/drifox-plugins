@@ -7,6 +7,7 @@ executor deleteLater ChatWorker → worker.py 兜底访问已删对象 RuntimeEr
 → _finish wait(1000) 超时仍 deleteLater → 销毁运行中 QThread → QtFatal abort
 """
 
+import importlib.util
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -14,15 +15,28 @@ from unittest.mock import MagicMock
 import pytest
 
 _PLUGIN_ROOT = Path(__file__).resolve().parent.parent / "plugins" / "autoloop"
-if str(_PLUGIN_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PLUGIN_ROOT))
 
 pytest.importorskip("PyQt5")
 
 
+def _load_controller_module():
+    """独立命名加载 ui.controller，避免与其它插件的顶层 ui 包名冲突（cron-tasks 同名）"""
+    mod_name = "autoloop_ui_controller_under_test"
+    if mod_name in sys.modules:
+        return sys.modules[mod_name]
+    spec = importlib.util.spec_from_file_location(mod_name, _PLUGIN_ROOT / "ui" / "controller.py")
+    assert spec is not None and spec.loader is not None, "无法加载 autoloop controller"
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[mod_name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def _make_controller_with_session(monkeypatch):
     """构造 controller + 单窗口会话（运行中 worker mock）"""
-    from ui.controller import AutoLoopController, _WindowSession  # noqa: F401
+    mod = _load_controller_module()
+    AutoLoopController = mod.AutoLoopController
+    _WindowSession = mod._WindowSession  # noqa: F401
 
     ctrl = AutoLoopController.__new__(AutoLoopController)
     ctrl._sessions = {}
