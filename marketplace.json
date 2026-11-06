@@ -3269,19 +3269,19 @@
             },
             "tarball": {
                 "darwin": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-file-designer-v0.5.2/file-designer-0.5.2-darwin.tar.gz",
-                    "sha256": "557c1bdceacca42d648503367a293e6e2d759d19019cc7c63a59b79624018585",
-                    "size": 15482273
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-file-designer-v0.6.0/file-designer-0.6.0-darwin.tar.gz",
+                    "sha256": "7a50500019dc67c8580eb8143f795d4a84c329660de3e28c885cc63cd50e3d65",
+                    "size": 15485479
                 },
                 "linux": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-file-designer-v0.5.2/file-designer-0.5.2-linux.tar.gz",
-                    "sha256": "0566182a3078eb54e6d1c13a8e4ac8d4ce0e4136da04b20d6c7877521e8f66a5",
-                    "size": 14400747
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-file-designer-v0.6.0/file-designer-0.6.0-linux.tar.gz",
+                    "sha256": "7c8ea758f55b51883e5c619c23e3e8b82518522bbe78d630d7d351a847929bc7",
+                    "size": 14402180
                 },
                 "win32": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-file-designer-v0.5.2/file-designer-0.5.2-win32.tar.gz",
-                    "sha256": "1a9305ae826a60423e605fb9ea12be827487550bdb5e577cf34da641cc43e7ea",
-                    "size": 13152947
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-file-designer-v0.6.0/file-designer-0.6.0-win32.tar.gz",
+                    "sha256": "501bf8ea05f85ad4d9e2832232dbe3710a4ddca7c62d67abac6e05dacb39d81f",
+                    "size": 13154095
                 }
             }
         },
