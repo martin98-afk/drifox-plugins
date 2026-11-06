@@ -13,14 +13,6 @@ parameters:
     param_type: positional
 mutex_groups:
   framework: ["react", "vue", "svelte", "vanilla"]
-
-### 参数说明
-
-- `--framework`：目标框架，决定生成的代码模板
-- `--style`：React 组件风格，仅对 React 生效（默认 functional）
-  - `functional`：函数组件（推荐）
-  - `hooks`：使用自定义 Hook 分离逻辑
-  - `class`：Class 组件（遗留代码迁移场景）
 prompt_sections:
   react: "react"
   vue: "vue"
@@ -44,6 +36,14 @@ hidden: false
 2. **确定框架**：默认 React functional 组件
 3. **生成组件**：遵循该框架的最佳实践
 4. **包含完整要素**：Props 类型定义、样式（如适用）、导出语句
+
+## 参数说明
+
+- `--framework`：目标框架，决定生成的代码模板
+- `--style`：React 组件风格，仅对 React 生效（默认 functional）
+  - `functional`：函数组件（推荐）
+  - `hooks`：使用自定义 Hook 分离逻辑
+  - `class`：Class 组件（遗留代码迁移场景）
 
 ## 组件设计原则
 
