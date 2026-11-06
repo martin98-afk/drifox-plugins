@@ -1,11 +1,11 @@
 {
     "name": "cyberpunk-2077-somi",
-    "description": "赛博朋克 2077 · Somi — 深色主题，Cyberpunk 2077 红灯室场景图 + 角色剪影装饰件，附三首官方 OST 背景音乐（Never Fade Away / The Rebel Path / Gate K9）。切主题自动放歌，失焦暂停。",
+    "description": "赛博朋克 2077 · Somi — 深色主题，Cyberpunk 2077 红灯室场景图 + 与背景同源的角色剪影前景层，附三首官方 OST 背景音乐（Never Fade Away / The Rebel Path / Gate K9）。切主题自动放歌，失焦暂停。",
     "icon": {
         "light": "icon.png",
         "dark": "icon_dark.png"
     },
-    "version": "1.0.0",
+    "version": "1.0.1",
     "author": {
         "name": "DriFox Contributors"
     },
@@ -27,5 +27,5 @@
     "components": {
         "themes": true
     },
-    "min_host_version": "0.6.15"
+    "min_host_version": "0.6.16"
 }

@@ -10,14 +10,13 @@ Cyberpunk 2077 红灯室主题，深色单主题。
 | 角色剪影 `assets/somi-deco.png` | 同项目的 `materials/Somi 2.tex`，内嵌 RGBA PNG，87% 透明区域，缩至 1600 宽 |
 | 背景音乐 | 同项目 `sounds/` 下三首 Cyberpunk 2077 OST |
 
-场景图与音乐由深色主题引用；角色剪影通过 `backgrounds.decorations` 锚在对话区底部。
+场景图与音乐由深色主题引用；角色剪影通过 `backgrounds.scene.foreground` 与背景共用同一矩形同一拉伸，还原壁纸原始构图。
 
 ## 主题能力演示
 
 这套主题同时用到三块 `backgrounds`：
 
-- `scene` — 主背景图 + `dim` 蒙版压暗，保证文字可读
-- `decorations` — 角色剪影按 `anchor: scene_bottom` 定位
+- `scene` — 主背景图 + `dim` 蒙版压暗，保证文字可读；`foreground` 叠同一画布的人物层
 - `music` — 三首 OST 循环播放，`fade_ms: 420`
 
 ## 音乐行为
