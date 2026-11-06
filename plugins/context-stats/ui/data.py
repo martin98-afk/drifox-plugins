@@ -216,12 +216,13 @@ def get_stats() -> dict:
     day_key = datetime.now().strftime("%Y-%m-%d")
     cache_key = (mtime_ns, day_key)
 
-    # 1) db 未变化 → 永远命中
-    if _cache["key"] == cache_key:
-        return _cache["data"]
+    # 1) db 未变化 → 永远命中（get 防御：缓存可能被测试/热重载置空）
+    if _cache.get("key") == cache_key:
+        return _cache.get("data")
     # 2) 变化但 TTL 内 → 旧数据兜底（防快速切 tab 反复查询）
-    if _cache["data"] is not None and time.monotonic() - _cache["ts"] < _CACHE_TTL_SECONDS:
-        return _cache["data"]
+    cached = _cache.get("data")
+    if cached is not None and time.monotonic() - _cache.get("ts", 0.0) < _CACHE_TTL_SECONDS:
+        return cached
 
     data = _fetch_stats()
     _cache = {"key": cache_key, "ts": time.monotonic(), "data": data}
