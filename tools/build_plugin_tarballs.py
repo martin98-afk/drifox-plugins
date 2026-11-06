@@ -39,6 +39,7 @@ import json
 import shutil
 import subprocess
 import sys
+import sysconfig
 import tarfile
 import zipfile
 from datetime import datetime, timezone
@@ -381,7 +382,9 @@ def generate_stdlib_shim(shim_dir: Path) -> Optional[Path]:
             "跳过 stdlib shim 生成（清单内插件将被门禁拒绝，CI 需 setup-python 3.14）"
         )
         return None
-    lib = Path(sys.base_prefix) / "Lib"
+    # 标准库路径用 sysconfig 拿：Windows 是 base_prefix/Lib，Linux 是
+    # base_prefix/lib，硬编码会在 CI（ubuntu）上静默找不到（2026-11 实测）
+    lib = Path(sysconfig.get_paths()["stdlib"])
     # 幂等：清掉上次构建的残留再生成，避免旧文件混入新包
     if shim_dir.exists():
         shutil.rmtree(shim_dir)
