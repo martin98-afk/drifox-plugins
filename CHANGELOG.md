@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+### 🔧 kling-ai-plugin v1.0.1：端点要求 OAuth，补授权声明修复连接失败
+- **症状**：启用后热连接失败，日志 ConnectError 与 401 Unauthorized 交替出现，设置卡红灯
+- **根因**：`kling.ai/mcp/plugin` 按 MCP 规范回 401 + `WWW-Authenticate: Bearer resource_metadata=...oauth-protected-resource/mcp/plugin`，要求 OAuth 授权码流程；插件 `.mcp.json` 缺 `auth` 声明，宿主不触发授权（README「无需密钥直连」沿用 WorkBuddy 市场宣传语，实测不成立）；ConnectError 另有系统代理瞬时抖动成分（httpx trust_env 读 WinINET 注册表代理，curl 不读）
+- **修复**：`.mcp.json` 补 `auth: {type: oauth, client_name: DriFox, scope: ""}`，宿主走 DCR+PKCE 浏览器授权，token 持久化自动刷新；README 认证段更正
+- **依赖**：宿主 OAuth 支持 v0.6.7 引入，`min_host_version` 0.5.0 → 0.6.7
+- **验证**：端点 401 头带 resource_metadata；授权服务器元数据齐全（registration_endpoint/token_endpoint/S256/refresh_token/public client）；端到端授权待宿主内点启用实测
 ### 🔧 cyberpunk-2077-somi v1.0.1：前景人物与背景构图对齐
 - **症状**：角色剪影与场景背景对不上，位置随窗口尺寸漂移，调 offset 也补不回来
 - **根因**：`decorations` 的 reference 是 `chat_scroll_area.viewport()` 且等比 fit，而 `scene` 是 `_chat_frame` 矩形 + `setScaledContents` 拉伸；同一张壁纸拆出的两层变换不同，错位量随窗口尺寸非线性变化

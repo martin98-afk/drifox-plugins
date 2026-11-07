@@ -5,14 +5,14 @@
     "light": "icon.png",
     "dark": "icon.png"
   },
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "可灵 AI",
     "url": "https://www.klingai.com"
   },
   "license": "GPL-3.0-or-later",
   "type": "user",
-  "min_host_version": "0.5.0",
+  "min_host_version": "0.6.7",
   "keywords": [
     "mcp",
     "connector",

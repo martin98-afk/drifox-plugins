@@ -3,7 +3,12 @@
     "kling-ai-plugin": {
       "type": "http",
       "url": "https://kling.ai/mcp/plugin",
-      "enabled": false
+      "enabled": false,
+      "auth": {
+        "type": "oauth",
+        "client_name": "DriFox",
+        "scope": ""
+      }
     }
   }
 }

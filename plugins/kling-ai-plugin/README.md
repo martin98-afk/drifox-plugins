@@ -8,7 +8,7 @@
 
 ## 认证
 
-无需预置密钥，启用后直连。可灵 AI 图像/视频生成，生成类工具按用量计费，首次使用可能需要可灵账号授权。
+端点要求 OAuth（首请求按 MCP 规范回 401 + `WWW-Authenticate: Bearer resource_metadata=...`，授权服务器 `https://kling.ai/auth`）。插件已声明 `auth.type=oauth`，宿主在连接时自动走授权码流程：首次启用会弹出浏览器登录可灵账号并确认授权，token 由宿主持久保存，过期自动刷新。生成类工具按用量计费。
 
 ## 上游
 
