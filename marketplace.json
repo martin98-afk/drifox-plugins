@@ -654,7 +654,7 @@
                 "ui": true,
                 "mcp": true
             },
-            "downloads": 22,
+            "downloads": 23,
             "keywords": [
                 "bilibili",
                 "b站",
@@ -1814,7 +1814,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 1,
+            "downloads": 6,
             "keywords": [
                 "theme",
                 "crema",
@@ -1903,7 +1903,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 3,
+            "downloads": 7,
             "keywords": [
                 "theme",
                 "cyberpunk",
@@ -1948,7 +1948,7 @@
             "components": {
                 "tools": true
             },
-            "downloads": 24,
+            "downloads": 25,
             "keywords": [
                 "desktop",
                 "automation",
@@ -3321,7 +3321,7 @@
                 "ui": true,
                 "tools": true
             },
-            "downloads": 9,
+            "downloads": 10,
             "keywords": [
                 "document",
                 "docx",
@@ -3525,7 +3525,7 @@
                 "commands": true,
                 "skills": true
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "frontend",
                 "a11y",
@@ -5541,7 +5541,7 @@
             "components": {
                 "themes": true
             },
-            "downloads": 10,
+            "downloads": 11,
             "keywords": [
                 "theme",
                 "dark",
@@ -8051,6 +8051,7 @@
             "components": {
                 "themes": true
             },
+            "downloads": 2,
             "keywords": [
                 "theme",
                 "the-last-of-us",
