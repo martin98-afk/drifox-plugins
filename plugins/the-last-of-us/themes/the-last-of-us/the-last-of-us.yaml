@@ -1,0 +1,56 @@
+name: '最后生还者 · 林间暮色'
+id: the-last-of-us
+mode: dark
+
+window:
+  gradient_start: rgba(14, 20, 13, 255)
+  gradient_end: rgba(24, 32, 21, 255)
+
+backgrounds:
+  window:
+    image: scene.png
+    opacity: 1.0
+    dim: rgba(10, 14, 10, 0.45)
+    enabled: true
+
+  sidebar:
+    color: rgba(14, 20, 13, 140)
+    enabled: true
+
+  scene:
+    color: rgba(0, 0, 0, 0)
+    enabled: true
+
+  music:
+    tracks:
+      - ../../assets/01-gustavo-santaolalla-the-path-a-new-begin.mp3
+      - ../../assets/02-gustavo-santaolalla-the-last-of-us.mp3
+      - ../../assets/03-gustavo-santaolalla-left-behind.mp3
+      - ../../assets/01-the-last-of-us-theme-song.mp3
+    volume: 0.45
+    loop: true
+    fade_ms: 420
+    enabled: true
+
+colors:
+  card_bg: rgba(26, 36, 26, 232)
+  card_bg_solid: rgba(26, 36, 26, 248)
+  assistant_card_bg: rgba(26, 36, 26, 215)
+  user_card_bg: rgba(32, 44, 32, 210)
+  content_bg: '#1a241a'
+  border: '#3a4a34'
+  border_accent: '#d4a95c'
+  text_primary: '#eceadf'
+  text_secondary: rgba(236, 234, 223, 0.66)
+  text_muted: '#8a9080'
+  accent: '#d4a95c'
+  accent_warm: '#7a9a4a'
+  hover_bg: rgba(212, 169, 92, 0.12)
+  selected_bg: rgba(212, 169, 92, 0.26)
+  input_bg_start: rgba(22, 30, 22, 200)
+  input_bg_end: rgba(30, 40, 30, 200)
+  input_text: '#eceadf'
+  input_border: '#3a4a34'
+  input_focus_border: '#d4a95c'
+  send_btn_start: '#d4a95c'
+  send_btn_end: '#a87f3e'
