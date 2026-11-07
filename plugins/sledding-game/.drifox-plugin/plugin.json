@@ -1,0 +1,30 @@
+{
+    "name": "sledding-game",
+    "description": "Sledding Game · 初雪坡 — 浅色动画主题，仓鼠与青蛙坐雪橇滑下雪坡的 4K 手绘动画整窗铺底（Wallpaper Engine 创意工坊 3531878415 转制动画 WebP），配色取自河蓝滑痕、杉林墨绿与主角橙。",
+    "icon": {
+        "light": "icon.png",
+        "dark": "icon_dark.png"
+    },
+    "version": "1.0.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "license": "MIT",
+    "type": "user",
+    "keywords": [
+        "theme",
+        "wallpaper-engine",
+        "migrated",
+        "sledding",
+        "snow",
+        "winter",
+        "animation",
+        "主题",
+        "雪景",
+        "动画"
+    ],
+    "components": {
+        "themes": true
+    },
+    "min_host_version": "0.6.15"
+}

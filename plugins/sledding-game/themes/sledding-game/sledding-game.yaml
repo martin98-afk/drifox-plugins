@@ -1,0 +1,139 @@
+# Sledding Game · 初雪坡（浅色）
+# colors 需覆盖宿主标准 token 全集（对齐 the-last-of-us-light 的浅色派生口径），
+# 否则 design_tokens.refresh() 不会重置缺失键，切换主题后残留上一主题配色。
+# 取色源：河蓝滑痕 #3e86ad / 主角橙 #c8783a / 天空浅青 / 雪白坡面
+name: 'Sledding Game · 初雪坡'
+id: sledding-game
+mode: light
+
+window:
+  gradient_start: rgba(228, 238, 240, 255)
+  gradient_end: rgba(216, 230, 233, 255)
+
+backgrounds:
+  window:
+    animation:
+      src: bg/chat.webp
+      canvas: shared
+      fps: 12
+      fit: cover
+      opacity: 0.95
+    enabled: true
+
+  sidebar:
+    color: rgba(224, 238, 240, 145)
+    enabled: true
+
+  scene:
+    color: rgba(240, 246, 247, 40)
+    enabled: true
+
+colors:
+  card_bg: rgba(240, 246, 247, 246)
+  card_bg_solid: rgba(240, 246, 247, 252)
+  content_bg: '#eef4f5'
+  border: '#b7c7ca'
+  border_accent: '#3e86ad'
+  text_primary: '#22333a'
+  text_secondary: rgba(34, 51, 58, 0.75)
+  text_muted: '#64797f'
+  accent: '#3e86ad'
+  search_highlight: '#2e7ba6'
+  accent_warm: '#c8783a'
+  hover_bg: rgba(62, 134, 173, 0.10)
+  selected_bg: rgba(62, 134, 173, 0.20)
+  capsule_bg: rgba(236, 244, 245, 220)
+  capsule_border: rgba(183, 199, 202, 210)
+
+  # ── 全局 UI 基底 ──────────────────────────────────
+  toolbar_bg: rgba(62, 134, 173, 0.06)
+  divider_color: rgba(34, 51, 58, 0.08)
+  hover_bg_strong: rgba(62, 134, 173, 0.12)
+  scrollbar_handle_bg: rgba(34, 51, 58, 0.15)
+  scrollbar_handle_hover_bg: rgba(62, 134, 173, 0.40)
+  card_placeholder_text: '#7d8f94'
+
+  # ── 卡片级语义色 ──────────────────────────────────
+  button_text_on_accent: '#f2f8fa'
+  status_info: '#2e7d8f'
+  status_danger_bg: rgba(180, 60, 50, 0.82)
+  status_archive_bg: rgba(150, 110, 50, 0.82)
+  card_bg_dim: rgba(62, 134, 173, 0.05)
+  archived_card_bg: rgba(100, 121, 127, 0.08)
+  archived_card_border: rgba(100, 121, 127, 0.20)
+
+  # ── 语法高亮色（浅底深字保证对比） ────────────────
+  syntax_step: '#2e7d5b'
+  syntax_tool: '#8a6428'
+  syntax_success: '#3e7a50'
+  syntax_error: '#a03d33'
+  syntax_result: '#4a6572'
+
+  # ── 标签色 ────────────────────────────────────────
+  tag_accent: '#3e86ad'
+  tag_accent_text: '#2a5f7d'
+  tag_purple: '#6b4fa0'
+  tag_purple_text: '#513a7d'
+  tag_orange: '#c8783a'
+  tag_orange_text: '#8a5424'
+  user_card_bg: rgba(228, 240, 242, 215)
+  user_card_accent: '#2e6b8f'
+  user_card_text: '#22333a'
+  user_card_muted: '#64797f'
+  assistant_card_bg: rgba(243, 249, 250, 160)
+  assistant_card_accent: '#3e7a5a'
+  assistant_card_text: '#2a3a40'
+  assistant_card_muted: '#64797f'
+  agent_btn_text: '#64797f'
+  agent_btn_text_active: '#3e86ad'
+  agent_btn_bg_active: rgba(62, 134, 173, 0.12)
+  agent_btn_separator: rgba(183, 199, 202, 160)
+
+  input_bg_start: rgba(244, 249, 250, 238)
+  input_bg_end: rgba(238, 245, 246, 238)
+  input_focus_bg_start: rgba(246, 251, 252, 244)
+  input_focus_bg_end: rgba(240, 247, 248, 244)
+  input_text: '#22333a'
+  input_focus_text: '#14232a'
+  input_border: '#b7c7ca'
+  input_focus_border: '#3e86ad'
+  input_placeholder: rgba(34, 51, 58, 0.35)
+  # 河蓝微光，显式 token 不写 preset（preset 会覆盖单键强度）
+  glow_primary_alpha: 120
+  glow_primary_blur: 22
+  glow_ambient_alpha: 60
+  glow_ambient_blur: 30
+
+  # 底部工具栏条
+  toolbar_strip_bg: rgba(236, 244, 245, 225)
+  toolbar_strip_border: '#b7c7ca'
+  realtime_border: '#3e86ad'
+  realtime_accent: '#3e86ad'
+  realtime_accent_warm: '#c8783a'
+  realtime_success: '#3e7a50'
+  realtime_error: '#a03d33'
+  realtime_bg: rgba(242, 248, 249, 250)
+  realtime_text: '#22333a'
+  realtime_text_secondary: rgba(34, 51, 58, 0.70)
+  realtime_tag_bg: rgba(62, 134, 173, 0.10)
+  realtime_tag_border: rgba(62, 134, 173, 0.24)
+  system_border: '#b7c7ca'
+  system_accent: '#3e86ad'
+  send_btn_start: '#3e86ad'
+  send_btn_end: '#2e6b8f'
+  send_btn_hover_start: '#4a94ba'
+  send_btn_hover_end: '#35799e'
+  send_btn_radius: 17
+  timeline_node: '#b9c9cc'
+  timeline_node_hover: '#3e86ad'
+  timeline_node_visible: '#3e86ad'
+  timeline_node_selected: '#2e6b8f'
+  timeline_line: '#ccd9db'
+  timeline_line_progress: '#3e86ad'
+  ring_normal: '#3e86ad'
+  ring_warning: '#c8783a'
+  ring_danger: '#a03d33'
+  ring_compacted: '#6b4fa0'
+  branch_label_bg: rgba(62, 134, 173, 0.10)
+  branch_label_border: rgba(62, 134, 173, 0.24)
+  window_bg: rgba(62, 134, 173, 0.04)
