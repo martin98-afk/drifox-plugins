@@ -6,15 +6,15 @@ id: the-last-of-us-light
 mode: light
 
 window:
-  gradient_start: rgba(233, 236, 224, 255)
-  gradient_end: rgba(214, 222, 200, 255)
+  gradient_start: rgba(223, 233, 208, 255)
+  gradient_end: rgba(203, 217, 184, 255)
 
 backgrounds:
   window:
     image: scene.png
     opacity: 0.55
     blur: 6
-    dim: rgba(238, 240, 228, 0.50)
+    dim: rgba(228, 238, 212, 0.42)
     enabled: true
 
   sidebar:
@@ -37,9 +37,9 @@ backgrounds:
     enabled: true
 
 colors:
-  card_bg: rgba(252, 252, 248, 246)
-  card_bg_solid: rgba(252, 252, 248, 252)
-  content_bg: '#f4f5ee'
+  card_bg: rgba(238, 246, 230, 246)
+  card_bg_solid: rgba(238, 246, 230, 252)
+  content_bg: '#eef4e2'
   border: '#a8b49a'
   border_accent: '#8a6428'
   text_primary: '#26301f'
@@ -50,7 +50,7 @@ colors:
   accent_warm: '#4a6e2e'
   hover_bg: rgba(156, 115, 38, 0.10)
   selected_bg: rgba(156, 115, 38, 0.20)
-  capsule_bg: rgba(248, 249, 240, 220)
+  capsule_bg: rgba(236, 245, 228, 220)
   capsule_border: rgba(168, 180, 154, 210)
 
   # ── 全局 UI 基底 ──────────────────────────────────
@@ -84,11 +84,11 @@ colors:
   tag_purple_text: '#513a7d'
   tag_orange: '#a0662a'
   tag_orange_text: '#7d4d1d'
-  user_card_bg: rgba(243, 246, 235, 215)
+  user_card_bg: rgba(230, 242, 216, 215)
   user_card_accent: '#9c7326'
   user_card_text: '#26301f'
   user_card_muted: '#5f6a52'
-  assistant_card_bg: rgba(252, 252, 248, 160)
+  assistant_card_bg: rgba(240, 247, 232, 160)
   assistant_card_accent: '#4a6e2e'
   assistant_card_text: '#2e3626'
   assistant_card_muted: '#5f6a52'
@@ -97,10 +97,10 @@ colors:
   agent_btn_bg_active: rgba(156, 115, 38, 0.12)
   agent_btn_separator: rgba(168, 180, 154, 160)
 
-  input_bg_start: rgba(255, 255, 252, 235)
-  input_bg_end: rgba(246, 248, 240, 235)
-  input_focus_bg_start: rgba(255, 255, 252, 242)
-  input_focus_bg_end: rgba(246, 248, 240, 242)
+  input_bg_start: rgba(244, 250, 238, 235)
+  input_bg_end: rgba(234, 244, 224, 235)
+  input_focus_bg_start: rgba(246, 252, 240, 242)
+  input_focus_bg_end: rgba(236, 246, 226, 242)
   input_text: '#26301f'
   input_focus_text: '#141a10'
   input_border: '#a8b49a'
@@ -113,14 +113,14 @@ colors:
   glow_ambient_blur: 30
 
   # 底部工具栏条
-  toolbar_strip_bg: rgba(246, 248, 240, 225)
+  toolbar_strip_bg: rgba(234, 244, 224, 225)
   toolbar_strip_border: '#a8b49a'
   realtime_border: '#9c7326'
   realtime_accent: '#5a8238'
   realtime_accent_warm: '#9c7326'
   realtime_success: '#4a6e2e'
   realtime_error: '#a03d33'
-  realtime_bg: rgba(250, 250, 244, 250)
+  realtime_bg: rgba(240, 246, 232, 250)
   realtime_text: '#26301f'
   realtime_text_secondary: rgba(38, 48, 31, 0.70)
   realtime_tag_bg: rgba(156, 115, 38, 0.10)
@@ -132,11 +132,11 @@ colors:
   send_btn_hover_start: '#b08630'
   send_btn_hover_end: '#8a6428'
   send_btn_radius: 17
-  timeline_node: '#b8c2a8'
+  timeline_node: '#b0bfa0'
   timeline_node_hover: '#9c7326'
   timeline_node_visible: '#4a6e2e'
   timeline_node_selected: '#9c7326'
-  timeline_line: '#ccd3bd'
+  timeline_line: '#c3cead'
   timeline_line_progress: '#4a6e2e'
   ring_normal: '#9c7326'
   ring_warning: '#a0662a'
