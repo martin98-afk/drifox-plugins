@@ -18,7 +18,7 @@ backgrounds:
     enabled: true
 
   sidebar:
-    color: rgba(250, 250, 244, 140)
+    color: rgba(222, 238, 202, 145)
     enabled: true
 
   scene:
