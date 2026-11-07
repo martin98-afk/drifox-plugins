@@ -7374,10 +7374,16 @@
                 "动画"
             ],
             "min_host_version": "0.6.15",
-            "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-sledding-game-v1.0.0/sledding-game-1.0.0-all.tar.gz",
+                    "sha256": "86d63517bdced2df068fed4be8b38e40ac3ec9ef2cc62309713a1eb6c296a6f5",
+                    "size": 906056
+                }
             }
         },
         {
