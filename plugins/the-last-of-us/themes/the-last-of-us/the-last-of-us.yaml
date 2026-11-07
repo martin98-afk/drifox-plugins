@@ -1,3 +1,6 @@
+# 最后生还者 · 林间暮色（深色）
+# colors 需覆盖宿主标准 token 全集（对齐 system-themes/midnight 的 97 键口径），
+# 否则 design_tokens.refresh() 不会重置缺失键，切换主题后残留上一主题配色。
 name: '最后生还者 · 林间暮色'
 id: the-last-of-us
 mode: dark
@@ -35,8 +38,6 @@ backgrounds:
 colors:
   card_bg: rgba(26, 36, 26, 232)
   card_bg_solid: rgba(26, 36, 26, 248)
-  assistant_card_bg: rgba(26, 36, 26, 215)
-  user_card_bg: rgba(32, 44, 32, 210)
   content_bg: '#1a241a'
   border: '#3a4a34'
   border_accent: '#d4a95c'
@@ -44,13 +45,102 @@ colors:
   text_secondary: rgba(236, 234, 223, 0.66)
   text_muted: '#8a9080'
   accent: '#d4a95c'
+  search_highlight: '#d4b95c'
   accent_warm: '#7a9a4a'
   hover_bg: rgba(212, 169, 92, 0.12)
   selected_bg: rgba(212, 169, 92, 0.26)
+  capsule_bg: rgba(22, 30, 22, 190)
+  capsule_border: rgba(58, 74, 52, 200)
+
+  # ── 全局 UI 基底 ──────────────────────────────────
+  toolbar_bg: rgba(236, 234, 223, 0.05)
+  divider_color: rgba(236, 234, 223, 0.08)
+  hover_bg_strong: rgba(212, 169, 92, 0.16)
+  scrollbar_handle_bg: rgba(236, 234, 223, 0.18)
+  scrollbar_handle_hover_bg: rgba(212, 169, 92, 0.45)
+  card_placeholder_text: '#9aa38e'
+
+  # ── 卡片级语义色 ──────────────────────────────────
+  button_text_on_accent: '#2a2317'
+  status_info: '#8fb8a8'
+  status_danger_bg: rgba(192, 86, 74, 0.82)
+  status_archive_bg: rgba(154, 134, 90, 0.82)
+  card_bg_dim: rgba(236, 234, 223, 0.04)
+  archived_card_bg: rgba(212, 169, 92, 0.07)
+  archived_card_border: rgba(212, 169, 92, 0.22)
+
+  # ── 语法高亮色（暖林系） ──────────────────────────
+  syntax_step: '#7fb069'
+  syntax_tool: '#d4b483'
+  syntax_success: '#8fb35a'
+  syntax_error: '#c0564a'
+  syntax_result: '#b08d57'
+
+  # ── 标签色 ────────────────────────────────────────
+  tag_accent: '#d4a95c'
+  tag_accent_text: '#f0dfae'
+  tag_purple: '#a48bc9'
+  tag_purple_text: '#cbb6e4'
+  tag_orange: '#d9a05b'
+  tag_orange_text: '#f0cf9e'
+  user_card_bg: rgba(32, 44, 32, 210)
+  user_card_accent: '#d4a95c'
+  user_card_text: '#eceadf'
+  user_card_muted: '#9aa38e'
+  assistant_card_bg: rgba(26, 36, 26, 215)
+  assistant_card_accent: '#7a9a4a'
+  assistant_card_text: '#e2e6d6'
+  assistant_card_muted: '#8a9080'
+  agent_btn_text: '#8a9080'
+  agent_btn_text_active: '#d4a95c'
+  agent_btn_bg_active: rgba(212, 169, 92, 0.16)
+  agent_btn_separator: rgba(58, 74, 52, 160)
+
   input_bg_start: rgba(22, 30, 22, 200)
   input_bg_end: rgba(30, 40, 30, 200)
+  input_focus_bg_start: rgba(22, 30, 22, 235)
+  input_focus_bg_end: rgba(30, 40, 30, 235)
   input_text: '#eceadf'
+  input_focus_text: '#ffffff'
   input_border: '#3a4a34'
   input_focus_border: '#d4a95c'
+  input_placeholder: rgba(236, 234, 223, 0.36)
+  # 金色微光，显式 token 不写 preset（preset 会覆盖单键强度）
+  glow_primary_alpha: 165
+  glow_primary_blur: 26
+  glow_ambient_alpha: 85
+  glow_ambient_blur: 34
+
+  # 底部工具栏条
+  toolbar_strip_bg: rgba(22, 30, 22, 215)
+  toolbar_strip_border: '#3a4a34'
+  realtime_border: '#d4a95c'
+  realtime_accent: '#a3c47c'
+  realtime_accent_warm: '#d4a95c'
+  realtime_success: '#8fb35a'
+  realtime_error: '#c0564a'
+  realtime_bg: rgba(20, 28, 20, 246)
+  realtime_text: '#eceadf'
+  realtime_text_secondary: rgba(236, 234, 223, 0.68)
+  realtime_tag_bg: rgba(212, 169, 92, 0.14)
+  realtime_tag_border: rgba(212, 169, 92, 0.30)
+  system_border: '#3a4a34'
+  system_accent: '#d4a95c'
   send_btn_start: '#d4a95c'
   send_btn_end: '#a87f3e'
+  send_btn_hover_start: '#e0bd74'
+  send_btn_hover_end: '#b98d48'
+  send_btn_radius: 17
+  timeline_node: '#5a6a4e'
+  timeline_node_hover: '#d4a95c'
+  timeline_node_visible: '#8fb35a'
+  timeline_node_selected: '#d4a95c'
+  timeline_line: '#2a3527'
+  timeline_line_progress: '#8fb35a'
+  ring_normal: '#d4a95c'
+  ring_warning: '#d9a05b'
+  ring_danger: '#c0564a'
+  ring_compacted: '#a48bc9'
+  branch_label_bg: rgba(212, 169, 92, 0.14)
+  branch_label_border: rgba(212, 169, 92, 0.30)
+  window_bg: rgba(212, 169, 92, 0.04)
