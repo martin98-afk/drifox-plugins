@@ -27,5 +27,5 @@
     "components": {
         "themes": true
     },
-    "min_host_version": "0.6.16"
+    "min_host_version": "0.6.15"
 }

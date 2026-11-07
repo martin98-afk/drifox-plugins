@@ -1916,7 +1916,7 @@
                 "赛博朋克",
                 "背景音乐"
             ],
-            "min_host_version": "0.6.16",
+            "min_host_version": "0.6.15",
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
                 "light": "icon.png",
@@ -8063,7 +8063,7 @@
                 "最后生还者",
                 "背景音乐"
             ],
-            "min_host_version": "0.6.16",
+            "min_host_version": "0.6.15",
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
                 "light": "icon.png",

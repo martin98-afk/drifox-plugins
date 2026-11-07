@@ -5,7 +5,7 @@
 - **症状**：角色剪影与场景背景对不上，位置随窗口尺寸漂移，调 offset 也补不回来
 - **根因**：`decorations` 的 reference 是 `chat_scroll_area.viewport()` 且等比 fit，而 `scene` 是 `_chat_frame` 矩形 + `setScaledContents` 拉伸；同一张壁纸拆出的两层变换不同，错位量随窗口尺寸非线性变化
 - **修复**：改用宿主的 `scene.foreground`（与背景同矩形、同拉伸，Z 序在 dim 之上不被压暗）；`opacity` 0.55 → 1.0 还原原壁纸观感
-- **依赖**：需要宿主 >= 0.6.16（SceneLayer foreground 支持）；旧宿主会忽略该字段、只显示背景，故提高 `min_host_version`
+- **依赖**：宿主 >= 0.6.15 即可安装；`scene.foreground` 为 0.6.16 新增，旧宿主忽略该字段、只显示背景（优雅降级）
 - **验证**：宿主 `tests/widgets` 28 条通过，离屏渲染与壁纸原图构图一致
 ### ✨ file-designer v0.6.0：拾取/标注支持框选多元素
 - **变更**：拾取/标注态左键拖拽框选（位移 >4px 出选框，矩形相交收集命中，六格式共用一套 JS，单击选单个行为不变）；拾取多元素一张选框合并截图 + 逐元素连号回填（新桥槽 `pick_many`，截图仅首条携带）；标注组合化——框选多元素一条注释挂整组（数据条目 `anchor` → `anchors[]`，note-box 按 seq 定位编辑/更新/删除，存量单 anchor JSON 读取时归一化兼容，重开恢复不受影响）
