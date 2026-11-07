@@ -14,14 +14,15 @@ background:
     opacity: 0.05
     enabled: true
 backgrounds:
-  overlay:
-    # 与浅色版共享同一素材（HanaAgent LeavesOverlay，Apache-2.0）
-    # 深底下树影为暗上加暗，opacity 略降避免脏感；boost 换成极淡暖光
-    video: ../leaves-overlay.mp4
-    opacity: 0.24
-    brightness_boost: rgba(255, 226, 168, 0.05)
-    position: top
-    enabled: true
+  chat:
+    # 素材同源（HanaAgent LeavesOverlay，Apache-2.0），已转成动画 WebP：
+    # Qt 内置解码，不依赖系统媒体栈；480x270 是低频光影，放大无损观感
+    animation:
+      src: ../leaves-overlay.webp
+      blend: overlay
+      position: top
+      fps: 12
+      opacity: 0.24
 colors:
   card_bg: rgba(42, 32, 20, 236)
   card_bg_solid: rgba(42, 32, 20, 250)
