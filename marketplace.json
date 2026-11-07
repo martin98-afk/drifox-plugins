@@ -8068,6 +8068,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-the-last-of-us-v1.0.0/the-last-of-us-1.0.0-all.tar.gz",
+                    "sha256": "958a5bfd68da34d4f8f53cfa4fa45dd5b290d2692e831100c8a0fb5af488ea4b",
+                    "size": 40716927
+                }
             }
         },
         {
