@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1794009189.2790453,
+  "fetched_at": 1794023134.6323426,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -84,7 +84,7 @@
     "fe-fw": 9,
     "feature-dev": 3,
     "figma": 2,
-    "file-designer": 8,
+    "file-designer": 9,
     "floating-chat": 0,
     "fosunwealth": 0,
     "frontend-design": 1,
@@ -201,6 +201,7 @@
     "tencent-map": 1,
     "test-scaffold": 0,
     "tetris": 3,
+    "the-last-of-us": 0,
     "theme-factory": 0,
     "tiktok": 0,
     "todoist": 0,
