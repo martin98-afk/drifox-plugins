@@ -5034,9 +5034,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-kling-ai-plugin-v1.0.0/kling-ai-plugin-1.0.0-all.tar.gz",
-                    "sha256": "4f92c8247ef6b86e2e761e7c98dc11ef4500e381fdd74f16ae25b1c77a05d670",
-                    "size": 36633
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-kling-ai-plugin-v1.0.1/kling-ai-plugin-1.0.1-all.tar.gz",
+                    "sha256": "8913229a674e3472ae8009fcebf2f313080199266d4ed200d4dba2fcbd9956fe",
+                    "size": 36617
                 }
             }
         },
