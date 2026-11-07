@@ -8036,7 +8036,7 @@
         {
             "name": "the-last-of-us",
             "description": "最后生还者 — 深浅双模式主题，Ellie 林间弹吉他场景整窗铺底（ Wallpaper Engine 创意工坊 1998201410 原图），附四首 Gustavo Santaolalla OST 背景音乐循环播放。深色林间暮色 / 浅色林间晨光，配色取自画面枯木与透光。",
-            "version": "1.0.1",
+            "version": "1.0.2",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -8072,9 +8072,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-the-last-of-us-v1.0.1/the-last-of-us-1.0.1-all.tar.gz",
-                    "sha256": "a8fac7b6c8512e2bb95846f882b903ea6d8d7beaace742ffde3b9cc64d6d30f9",
-                    "size": 40719467
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-the-last-of-us-v1.0.2/the-last-of-us-1.0.2-all.tar.gz",
+                    "sha256": "a0184fc1a20f2caf4664af6f57049c9e36165986feef72e22d486be1e689ee1b",
+                    "size": 40719488
                 }
             }
         },
