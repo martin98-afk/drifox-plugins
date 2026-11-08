@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1794096280.5184596,
+  "fetched_at": 1794119060.6075876,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -22,7 +22,7 @@
     "bili-summary": 1,
     "breakout": 6,
     "browser": 89,
-    "calendar": 27,
+    "calendar": 29,
     "canva": 1,
     "canvas-design": 2,
     "catppuccin-themes": 2,

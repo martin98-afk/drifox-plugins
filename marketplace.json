@@ -5,9 +5,6 @@
     "plugins": [
         {
             "name": "ai-image-gen",
-            "display_name": {
-                "zh": "AI 图片生成"
-            },
             "description": "AI 图片生成 — 主流文生图与图编辑模型统一封装（Gemini / DALL-E / Imagen / Midjourney / Stable Diffusion / FLUX），4K 输出。",
             "version": "1.0.0",
             "author": "inference.sh",
@@ -23,6 +20,9 @@
             },
             "components": {
                 "commands": true
+            },
+            "display_name": {
+                "zh": "AI 图片生成"
             },
             "downloads": 1,
             "keywords": [
@@ -46,9 +46,6 @@
         },
         {
             "name": "ai-video-gen",
-            "display_name": {
-                "zh": "AI 视频生成"
-            },
             "description": "AI 视频生成 — 40+ 视频模型统一封装（Veo / Wan / Grok / Sora / Runway / Pika / Kling / Luma / 可灵 / 即梦...），文本/图片转视频。",
             "version": "1.0.0",
             "author": "inference.sh",
@@ -64,6 +61,9 @@
             },
             "components": {
                 "commands": true
+            },
+            "display_name": {
+                "zh": "AI 视频生成"
             },
             "downloads": 1,
             "keywords": [
@@ -87,9 +87,6 @@
         },
         {
             "name": "algorithmic-art",
-            "display_name": {
-                "zh": "程序化艺术生成"
-            },
             "description": "程序化艺术生成 — p5.js 创意编码，种子随机 + 交互参数探索（流动场/粒子系统）。",
             "version": "1.0.0",
             "author": "Anthropic",
@@ -105,6 +102,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "程序化艺术生成"
             },
             "downloads": 1,
             "keywords": [
@@ -128,9 +128,6 @@
         },
         {
             "name": "amap",
-            "display_name": {
-                "zh": "高德地图"
-            },
             "description": "高德地图 — 地点搜索、路线规划、天气与周边查询。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -146,6 +143,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "高德地图"
             },
             "downloads": 1,
             "keywords": [
@@ -169,9 +169,6 @@
         },
         {
             "name": "anthropic",
-            "display_name": {
-                "zh": "Anthropic 服务商"
-            },
             "description": "Anthropic (Claude) 服务商插件 — 提供 Claude 系列模型接入，数据全部由本插件声明。",
             "version": "1.0.0",
             "author": "DriFox Contributors",
@@ -187,6 +184,9 @@
             },
             "components": {
                 "providers": true
+            },
+            "display_name": {
+                "zh": "Anthropic 服务商"
             },
             "downloads": 6,
             "keywords": [
@@ -207,9 +207,6 @@
         },
         {
             "name": "anthropic-oauth",
-            "display_name": {
-                "zh": "Anthropic OAuth 登录"
-            },
             "description": "Anthropic Claude 服务商（OAuth 登录制）— 用 claude.ai 账号浏览器授权登录，以 Pro/Max 订阅额度直连 Claude 系列模型，无需 API Key",
             "version": "0.1.0",
             "author": "DriFox Contributors",
@@ -225,6 +222,9 @@
             },
             "components": {
                 "providers": true
+            },
+            "display_name": {
+                "zh": "Anthropic OAuth 登录"
             },
             "downloads": 1,
             "keywords": [
@@ -249,9 +249,6 @@
         },
         {
             "name": "anything2explainer",
-            "display_name": {
-                "zh": "科普讲解视频"
-            },
             "description": "把任意主题做成一条黑底 MG 风格、有配音字幕与章节进度条的科普讲解视频（中文/英文，Remotion 代码动画）。含可编译模板、图元库、TTS/分镜/渲染工具、风格与动效规范、多 agent 分工协议与 QC 判据，以及《RAG 与知识库》完整样片作为质量标尺。",
             "version": "1.0.0",
             "author": "Vincentwei1021",
@@ -267,6 +264,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "科普讲解视频"
             },
             "downloads": 5,
             "keywords": [
@@ -292,9 +292,6 @@
         },
         {
             "name": "apify",
-            "display_name": {
-                "zh": "Apify 爬虫"
-            },
             "description": "Apify — 运行 Apify 上的爬虫与自动化 Actor，获取网页数据。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -310,6 +307,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Apify 爬虫"
             },
             "downloads": 1,
             "keywords": [
@@ -333,9 +333,6 @@
         },
         {
             "name": "archify",
-            "display_name": {
-                "zh": "架构图生成"
-            },
             "description": "把代码库/系统描述/纯语言需求/Mermaid 转成自包含交互式架构图 HTML（architecture/workflow/sequence/dataflow/lifecycle），内置 tt-a1i/archify 运行时，开箱即用。",
             "version": "0.1.0",
             "author": "马丁",
@@ -368,6 +365,9 @@
                 "gateways": false,
                 "engines": false
             },
+            "display_name": {
+                "zh": "架构图生成"
+            },
             "downloads": 4,
             "keywords": [
                 "archify"
@@ -387,9 +387,6 @@
         },
         {
             "name": "autoloop",
-            "display_name": {
-                "zh": "AutoLoop 自动循环"
-            },
             "description": "AutoLoop 自动循环模式 — 规划→执行→归档三阶段长任务自动执行（对话引擎插件化首例，经 UI 服务门面驱动自建 ConversationCore）",
             "version": "1.1.2",
             "author": "DriFox Contributors",
@@ -407,6 +404,9 @@
             "components": {
                 "ui": true,
                 "agents": true
+            },
+            "display_name": {
+                "zh": "AutoLoop 自动循环"
             },
             "downloads": 12,
             "keywords": [
@@ -438,9 +438,6 @@
         },
         {
             "name": "aws-knowledge",
-            "display_name": {
-                "zh": "AWS Knowledge 文档检索"
-            },
             "description": "AWS Knowledge — 检索 AWS 官方文档、最佳实践与区域可用性信息。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -456,6 +453,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "AWS Knowledge 文档检索"
             },
             "keywords": [
                 "mcp",
@@ -478,9 +478,6 @@
         },
         {
             "name": "baidu-ai-search",
-            "display_name": {
-                "zh": "百度 AI 搜索"
-            },
             "description": "百度 AI 搜索 — 用百度搜索全网实时信息。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -496,6 +493,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "百度 AI 搜索"
             },
             "keywords": [
                 "mcp",
@@ -518,9 +518,6 @@
         },
         {
             "name": "baidu-map",
-            "display_name": {
-                "zh": "百度地图"
-            },
             "description": "百度地图 — 地点检索、路线规划、实时路况与天气查询。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -536,6 +533,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "百度地图"
             },
             "downloads": 1,
             "keywords": [
@@ -559,9 +559,6 @@
         },
         {
             "name": "bailian-amap",
-            "display_name": {
-                "zh": "高德地图（百炼）"
-            },
             "description": "高德地图（百炼） — 地点搜索、路线规划、天气与周边查询，经阿里云百炼接入。安装后填入百炼 API Key。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -577,6 +574,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "高德地图（百炼）"
             },
             "keywords": [
                 "mcp",
@@ -599,9 +599,6 @@
         },
         {
             "name": "bailian-websearch",
-            "display_name": {
-                "zh": "百炼联网搜索"
-            },
             "description": "阿里云百炼 联网搜索 — 通过阿里云百炼进行实时联网搜索。安装后填入百炼 API Key。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -617,6 +614,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "百炼联网搜索"
             },
             "downloads": 1,
             "keywords": [
@@ -640,9 +640,6 @@
         },
         {
             "name": "beautiful-article-skills",
-            "display_name": {
-                "zh": "精美文章排版"
-            },
             "description": "精美文章技能——将任意素材（URL/PDF/DOCX/Markdown/文本/截图）编辑设计成美丽的单文件 HTML 网页文章。",
             "version": "1.0.0",
             "author": "ConardLi",
@@ -658,6 +655,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "精美文章排版"
             },
             "downloads": 3,
             "keywords": [
@@ -680,9 +680,6 @@
         },
         {
             "name": "bili-scroll",
-            "display_name": {
-                "zh": "B站日报"
-            },
             "description": "每天替你刷一轮 B站：按关键词或推荐流搜视频、逐条读字幕判断、挑出值得的写成日报，特别值得的经你授权后自动评论 @你。扫码登录、峰谷时段自动跑、判重防打扰。",
             "version": "0.2.5",
             "author": "DriFox Contributors",
@@ -704,6 +701,9 @@
                 "skills": true,
                 "ui": true,
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "B站日报"
             },
             "downloads": 23,
             "keywords": [
@@ -772,9 +772,6 @@
         },
         {
             "name": "bili-summary",
-            "display_name": {
-                "zh": "B站视频总结"
-            },
             "description": "B 站视频总结 — 通过弹幕、评论、官方 AI 总结与抽帧识别，概括一个视频到底讲了什么。",
             "version": "1.0.0",
             "author": "DriFox Contributor",
@@ -790,6 +787,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "B站视频总结"
             },
             "downloads": 1,
             "keywords": [
@@ -815,9 +815,6 @@
         },
         {
             "name": "breakout",
-            "display_name": {
-                "zh": "打砖块游戏"
-            },
             "description": "经典打砖块游戏——在 DriFox 中直接玩的浮动卡片",
             "version": "0.3.0",
             "author": "DriFox Contributor",
@@ -835,6 +832,9 @@
                 "commands": false,
                 "ui": true
             },
+            "display_name": {
+                "zh": "打砖块游戏"
+            },
             "downloads": 6,
             "icon": {
                 "light": "icon.png",
@@ -850,9 +850,6 @@
         },
         {
             "name": "browser",
-            "display_name": {
-                "zh": "内置浏览器"
-            },
             "description": "内置浏览器 — Chrome 体验多标签浏览 + 外部链接接管 + AI 智能体浏览控制（MCP）。",
             "version": "1.6.2",
             "author": "DriFox Contributors",
@@ -871,6 +868,9 @@
                 "commands": false,
                 "ui": true,
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "内置浏览器"
             },
             "downloads": 89,
             "keywords": [
@@ -894,9 +894,6 @@
         },
         {
             "name": "calendar",
-            "display_name": {
-                "zh": "日历"
-            },
             "description": "日历插件：在欢迎卡片注入日历 tab，支持上/下月切换、今天高亮与圆形时钟",
             "version": "1.1.3",
             "author": "DriFox Contributors",
@@ -913,7 +910,10 @@
             "components": {
                 "ui": true
             },
-            "downloads": 27,
+            "display_name": {
+                "zh": "日历"
+            },
+            "downloads": 29,
             "keywords": [
                 "calendar",
                 "date",
@@ -933,9 +933,6 @@
         },
         {
             "name": "canva",
-            "display_name": {
-                "zh": "Canva 设计"
-            },
             "description": "无缝调用Canva可画的设计能力。一句话生成海报、演示文稿、小红书封面等设计，通过文字描述调整尺寸、填充品牌模板及检索已有内容",
             "version": "1.0.0",
             "author": "Canva可画",
@@ -952,6 +949,9 @@
             "components": {
                 "mcp": true,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "Canva 设计"
             },
             "downloads": 1,
             "keywords": [
@@ -975,9 +975,6 @@
         },
         {
             "name": "canvas-design",
-            "display_name": {
-                "zh": "海报设计"
-            },
             "description": "设计感海报生成 — 用设计哲学将需求变成 PNG/PDF 视觉作品（构图/字体/色彩体系）。",
             "version": "1.0.0",
             "author": "Anthropic",
@@ -993,6 +990,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "海报设计"
             },
             "downloads": 2,
             "keywords": [
@@ -1017,9 +1017,6 @@
         },
         {
             "name": "catppuccin-themes",
-            "display_name": {
-                "zh": "Catppuccin 主题"
-            },
             "description": "Catppuccin 四套主题 — Latte / Frappé / Macchiato / Mocha，102 个颜色 token 全量映射，含窗口渐变与侧栏背景。",
             "version": "1.0.0",
             "author": "Catppuccin (palette) / DriFox 翻译",
@@ -1035,6 +1032,9 @@
             },
             "components": {
                 "themes": true
+            },
+            "display_name": {
+                "zh": "Catppuccin 主题"
             },
             "downloads": 2,
             "keywords": [
@@ -1060,9 +1060,6 @@
         },
         {
             "name": "caveman",
-            "display_name": {
-                "zh": "Caveman 极简输出"
-            },
             "description": "Ultra-compressed communication mode for AI agents. Cuts output tokens ~65% (measured) while keeping full technical accuracy. 含 caveman-compress 记忆文件压缩工具与 cavecrew 子智能体预设。",
             "version": "1.0.0",
             "author": "Julius Brussee",
@@ -1079,6 +1076,9 @@
             "components": {
                 "skills": true,
                 "agents": true
+            },
+            "display_name": {
+                "zh": "Caveman 极简输出"
             },
             "downloads": 7,
             "keywords": [
@@ -1102,9 +1102,6 @@
         },
         {
             "name": "chinese-chess",
-            "display_name": {
-                "zh": "中国象棋"
-            },
             "description": "中国象棋 — 与大模型对弈的浮动卡片游戏",
             "version": "0.4.2",
             "author": "马丁",
@@ -1137,6 +1134,9 @@
                 "gateways": false,
                 "engines": false
             },
+            "display_name": {
+                "zh": "中国象棋"
+            },
             "downloads": 11,
             "keywords": [
                 "chinese",
@@ -1156,9 +1156,6 @@
         },
         {
             "name": "chrome-classics",
-            "display_name": {
-                "zh": "Chrome 经典主题"
-            },
             "description": "Chrome 主题商店经典移植 — Slinky 中性灰 / AMOLED 纯黑 / Shaded Purple 紫雾 / Forest Sunset 森林日落，四套含背景图的 DriFox 主题。",
             "version": "1.0.0",
             "author": "DriFox Contributors",
@@ -1174,6 +1171,9 @@
             },
             "components": {
                 "themes": true
+            },
+            "display_name": {
+                "zh": "Chrome 经典主题"
             },
             "downloads": 4,
             "keywords": [
@@ -1198,9 +1198,6 @@
         },
         {
             "name": "claude-api",
-            "display_name": {
-                "zh": "Claude API 指南"
-            },
             "description": "Claude API 最佳实践 — SDK 用法、prompt caching、streaming、tool use、batch API、prompt 工程、token 优化。",
             "version": "1.0.0",
             "author": "Anthropic",
@@ -1217,6 +1214,9 @@
             "components": {
                 "commands": false,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "Claude API 指南"
             },
             "downloads": 2,
             "keywords": [
@@ -1240,9 +1240,6 @@
         },
         {
             "name": "clickup",
-            "display_name": {
-                "zh": "ClickUp 任务管理"
-            },
             "description": "ClickUp — 查看和管理 ClickUp 的任务、文档与空间。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -1258,6 +1255,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "ClickUp 任务管理"
             },
             "keywords": [
                 "mcp",
@@ -1280,9 +1280,6 @@
         },
         {
             "name": "cloudflare-bindings",
-            "display_name": {
-                "zh": "Cloudflare Workers 管理"
-            },
             "description": "Cloudflare Workers — 管理 Cloudflare Workers 与 KV、R2、D1 等存储资源。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -1298,6 +1295,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Cloudflare Workers 管理"
             },
             "keywords": [
                 "mcp",
@@ -1320,9 +1320,6 @@
         },
         {
             "name": "cloudflare-docs",
-            "display_name": {
-                "zh": "Cloudflare Docs 文档检索"
-            },
             "description": "Cloudflare Docs — 检索 Cloudflare 开发者文档。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -1338,6 +1335,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Cloudflare Docs 文档检索"
             },
             "keywords": [
                 "mcp",
@@ -1360,9 +1360,6 @@
         },
         {
             "name": "cloudflare-observability",
-            "display_name": {
-                "zh": "Cloudflare 可观测性"
-            },
             "description": "Cloudflare Observability — 查询 Cloudflare Workers 的日志与分析数据。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -1378,6 +1375,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Cloudflare 可观测性"
             },
             "keywords": [
                 "mcp",
@@ -1400,9 +1400,6 @@
         },
         {
             "name": "code-animation-styles",
-            "display_name": {
-                "zh": "代码动画风格库"
-            },
             "description": "代码动画风格提示词库：341 种风格（代码样片、动态风格、卡通画风、中国风、版式、奥斯卡 98 部等十大类，193 种带静帧），附离线挑选页与 AI 检索工具，Opus / DeepSeek 通用，用于把内容做成代码动画。",
             "version": "0.1.1",
             "author": "马丁",
@@ -1418,6 +1415,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "代码动画风格库"
             },
             "downloads": 2,
             "keywords": [
@@ -1443,9 +1443,6 @@
         },
         {
             "name": "code-reviewer",
-            "display_name": {
-                "zh": "代码审查"
-            },
             "description": "自动化代码审查 — 基于 checklist 的 PR 审查、代码质量评分、审查报告生成，提升代码质量保障效率。",
             "version": "1.0.0",
             "author": "DriFox Contributors",
@@ -1464,6 +1461,9 @@
                 "commands": true,
                 "agents": true,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "代码审查"
             },
             "downloads": 1,
             "keywords": [
@@ -1488,9 +1488,6 @@
         },
         {
             "name": "code-simplifier",
-            "display_name": {
-                "zh": "代码简化"
-            },
             "description": "代码简化重构智能体 — 在不改变功能的前提下简化、精炼代码，提升清晰度、一致性、可维护性。",
             "version": "1.0.0",
             "author": "Anthropic",
@@ -1506,6 +1503,9 @@
             },
             "components": {
                 "agents": true
+            },
+            "display_name": {
+                "zh": "代码简化"
             },
             "downloads": 1,
             "keywords": [
@@ -1531,9 +1531,6 @@
         },
         {
             "name": "code-video-showcase",
-            "display_name": {
-                "zh": "代码卡点视频"
-            },
             "description": "纯代码卡点视频制作技能：HTML/Canvas/SVG/Three.js 逐帧渲染画面 + numpy/scipy 合成 120BPM 配乐 + FFmpeg 合成 30-90 秒多风格展示短片，含 8 套主题配色、11 种风格配方、大字卡系统与质检模板，零视频/图像/音乐生成模型。做卡点/风格展示/程序化视频时使用。",
             "version": "1.1.0",
             "author": "Moessif",
@@ -1549,6 +1546,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "代码卡点视频"
             },
             "keywords": [
                 "video",
@@ -1572,9 +1572,6 @@
         },
         {
             "name": "codebuddy-intl",
-            "display_name": {
-                "zh": "CodeBuddy 国际版服务商"
-            },
             "description": "腾讯 CodeBuddy 国际版服务商（OAuth 登录制）— 浏览器授权登录，以订阅额度直连 www.codebuddy.ai 网关（craft 路由槽位 + 全表真实模型 ID 同选，槽位由网关按账号档位分配实际模型），无需 API Key",
             "version": "0.5.2",
             "author": "DriFox Contributors",
@@ -1590,6 +1587,9 @@
             },
             "components": {
                 "providers": true
+            },
+            "display_name": {
+                "zh": "CodeBuddy 国际版服务商"
             },
             "downloads": 19,
             "keywords": [
@@ -1617,9 +1617,6 @@
         },
         {
             "name": "codegraph-tools",
-            "display_name": {
-                "zh": "CodeGraph 代码智能"
-            },
             "description": "CodeGraph 语义级代码智能工具（codegraph_explore）：搜索/调用链/影响分析/索引管理，依赖 codegraph-py 库",
             "version": "1.0.0",
             "author": "DriFoxx Team",
@@ -1635,6 +1632,9 @@
             },
             "components": {
                 "tools": true
+            },
+            "display_name": {
+                "zh": "CodeGraph 代码智能"
             },
             "downloads": 9,
             "dependencies": {
@@ -1661,9 +1661,6 @@
         },
         {
             "name": "codex-oauth",
-            "display_name": {
-                "zh": "Codex OAuth 登录"
-            },
             "description": "OpenAI Codex 服务商（OAuth 登录制）— 用 ChatGPT 账号浏览器授权登录，以订阅额度直连 Codex Responses API（gpt-6.1-sol / gpt-6-luna 等），无需 API Key",
             "version": "0.2.0",
             "author": "DriFox Contributors",
@@ -1679,6 +1676,9 @@
             },
             "components": {
                 "providers": true
+            },
+            "display_name": {
+                "zh": "Codex OAuth 登录"
             },
             "downloads": 2,
             "keywords": [
@@ -1704,9 +1704,6 @@
         },
         {
             "name": "command-code",
-            "display_name": {
-                "zh": "Command Code 服务商"
-            },
             "description": "Command Code 服务商接入插件：聚合 Claude / GPT / Gemini / DeepSeek / Kimi / GLM / MiniMax 等主流模型，走 OpenAI 兼容协议（/provider/v1），Bearer 鉴权，按量付费无加价",
             "version": "0.1.0",
             "author": "self-evolver",
@@ -1739,6 +1736,9 @@
                 "gateways": false,
                 "engines": false
             },
+            "display_name": {
+                "zh": "Command Code 服务商"
+            },
             "downloads": 9,
             "keywords": [
                 "command-code",
@@ -1761,9 +1761,6 @@
         },
         {
             "name": "context-stats",
-            "display_name": {
-                "zh": "欢迎卡片用量统计"
-            },
             "description": "欢迎卡片用量统计 — 在欢迎卡片新增「📊 用量」tab，用 echarts 展示模型上下文（token）用量与消息量趋势",
             "version": "0.1.1",
             "author": "DriFox Contributors",
@@ -1780,6 +1777,9 @@
             },
             "components": {
                 "ui": true
+            },
+            "display_name": {
+                "zh": "欢迎卡片用量统计"
             },
             "downloads": 27,
             "keywords": [
@@ -1810,9 +1810,6 @@
         },
         {
             "name": "context-usage-stats",
-            "display_name": {
-                "zh": "上下文用量统计"
-            },
             "description": "对话上下文用量统计 — 展示最近对话的 token 用量、消息数量趋势、会话活跃度图表",
             "version": "0.2.0",
             "author": "DriFox Contributors",
@@ -1828,6 +1825,9 @@
             },
             "components": {
                 "ui": true
+            },
+            "display_name": {
+                "zh": "上下文用量统计"
             },
             "downloads": 5,
             "homepage": "https://github.com/martin98-afk/DriFox",
@@ -1845,9 +1845,6 @@
         },
         {
             "name": "context7",
-            "display_name": {
-                "zh": "Context7 文档检索"
-            },
             "description": "Context7 — 实时拉取任意库的最新 API 文档与代码示例，省去贴文档链接。",
             "version": "1.0.0",
             "author": "upstash",
@@ -1865,6 +1862,9 @@
                 "commands": true,
                 "skills": true,
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Context7 文档检索"
             },
             "downloads": 4,
             "keywords": [
@@ -1889,9 +1889,6 @@
         },
         {
             "name": "context7-remote",
-            "display_name": {
-                "zh": "Context7 远程文档"
-            },
             "description": "Context7 — 查询各类开源库与框架的最新文档和代码示例。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -1907,6 +1904,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Context7 远程文档"
             },
             "downloads": 1,
             "keywords": [
@@ -1930,9 +1930,6 @@
         },
         {
             "name": "crema-leaves",
-            "display_name": {
-                "zh": "奶油树影主题"
-            },
             "description": "奶油树影主题 — 奶油黄浅色与暖褐深色两套主题，共享 HanaAgent 树影动态背景（LeavesOverlay），叶隙光影在对话区缓慢流动。v1.1 起动态层改用动画 WebP（Qt 内置解码），不再依赖系统视频解码器。",
             "version": "1.1.0",
             "author": "DriFox Contributors",
@@ -1948,6 +1945,9 @@
             },
             "components": {
                 "themes": true
+            },
+            "display_name": {
+                "zh": "奶油树影主题"
             },
             "downloads": 7,
             "keywords": [
@@ -1976,9 +1976,6 @@
         },
         {
             "name": "cron-tasks",
-            "display_name": {
-                "zh": "定时任务中心"
-            },
             "description": "定时任务中心 — 可视化配置 UI 定时任务（单次/间隔/Cron），到期自动驱动对话执行 prompt，带运行历史与可配置 hook 参与面（参考 openhanako desk cron 设计）",
             "version": "0.5.8",
             "author": "DriFox Contributors",
@@ -1997,6 +1994,9 @@
                 "ui": true,
                 "tools": true,
                 "hook_policies": true
+            },
+            "display_name": {
+                "zh": "定时任务中心"
             },
             "downloads": 56,
             "keywords": [
@@ -2025,9 +2025,6 @@
         },
         {
             "name": "cyberpunk-2077-somi",
-            "display_name": {
-                "zh": "赛博朋克 2077 主题"
-            },
             "description": "赛博朋克 2077 · Somi — 深色主题，Cyberpunk 2077 红灯室场景图 + 与背景同源的角色剪影前景层，附三首官方 OST 背景音乐（Never Fade Away / The Rebel Path / Gate K9）。切主题自动放歌，失焦暂停。",
             "version": "1.0.1",
             "author": "DriFox Contributors",
@@ -2043,6 +2040,9 @@
             },
             "components": {
                 "themes": true
+            },
+            "display_name": {
+                "zh": "赛博朋克 2077 主题"
             },
             "downloads": 8,
             "keywords": [
@@ -2073,9 +2073,6 @@
         },
         {
             "name": "desktop-automation",
-            "display_name": {
-                "zh": "桌面自动化"
-            },
             "description": "桌面自动化工具（mouse / keyboard / screenshot）—— 通过 pynput + mss 控制桌面，从 DriFox 主程序迁出（工具插件化）",
             "version": "1.0.4",
             "author": "DriFox Contributors",
@@ -2091,6 +2088,9 @@
             },
             "components": {
                 "tools": true
+            },
+            "display_name": {
+                "zh": "桌面自动化"
             },
             "downloads": 25,
             "keywords": [
@@ -2139,9 +2139,6 @@
         },
         {
             "name": "dingtalk-ai-table",
-            "display_name": {
-                "zh": "钉钉 AI 表格"
-            },
             "description": "钉钉 AI 表格 — 读写钉钉 AI 表格中的数据。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -2157,6 +2154,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "钉钉 AI 表格"
             },
             "downloads": 2,
             "keywords": [
@@ -2180,9 +2180,6 @@
         },
         {
             "name": "dingtalk-calendar",
-            "display_name": {
-                "zh": "钉钉日历"
-            },
             "description": "钉钉日历 — 查看和创建钉钉日程。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -2198,6 +2195,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "钉钉日历"
             },
             "downloads": 1,
             "keywords": [
@@ -2221,9 +2221,6 @@
         },
         {
             "name": "dingtalk-contacts",
-            "display_name": {
-                "zh": "钉钉通讯录"
-            },
             "description": "钉钉通讯录 — 查询组织成员与部门。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -2239,6 +2236,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "钉钉通讯录"
             },
             "downloads": 2,
             "keywords": [
@@ -2262,9 +2262,6 @@
         },
         {
             "name": "dingtalk-docs",
-            "display_name": {
-                "zh": "钉钉文档"
-            },
             "description": "钉钉文档 — 搜索、阅读和编辑钉钉文档。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -2280,6 +2277,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "钉钉文档"
             },
             "downloads": 1,
             "keywords": [
@@ -2303,9 +2303,6 @@
         },
         {
             "name": "dingtalk-todo",
-            "display_name": {
-                "zh": "钉钉待办"
-            },
             "description": "钉钉待办 — 查看、创建和完成钉钉待办。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -2321,6 +2318,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "钉钉待办"
             },
             "downloads": 1,
             "keywords": [
@@ -2344,9 +2344,6 @@
         },
         {
             "name": "doc-coauthoring",
-            "display_name": {
-                "zh": "文档协作写作"
-            },
             "description": "文档协作写作助手 — 起草、迭代、定稿三阶段流程，结构化访谈、风格统一、决策追踪。",
             "version": "1.0.0",
             "author": "Anthropic",
@@ -2363,6 +2360,9 @@
             "components": {
                 "commands": false,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "文档协作写作"
             },
             "downloads": 1,
             "keywords": [
@@ -2386,9 +2386,6 @@
         },
         {
             "name": "dropbox",
-            "display_name": {
-                "zh": "Dropbox 文件读取"
-            },
             "description": "Dropbox — 搜索和读取你 Dropbox 里的文件。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -2404,6 +2401,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Dropbox 文件读取"
             },
             "keywords": [
                 "mcp",
@@ -2426,9 +2426,6 @@
         },
         {
             "name": "dsh-plugin-migrator",
-            "display_name": {
-                "zh": "DSH 插件迁移"
-            },
             "description": "把 DeepSeek Harness（dsh）插件迁移成 DriFox 插件 — 解析 package.json 的 dsh 声明与 cordis patch，产出能力清单，按七条通道落盘（skills/agents/commands/tools/hooks/mcp/ui），不可映射的部分标 MIGRATION_TODO 并列入报告。",
             "version": "1.0.0",
             "author": "DriFox Contributor",
@@ -2444,6 +2441,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "DSH 插件迁移"
             },
             "downloads": 4,
             "keywords": [
@@ -2469,9 +2469,6 @@
         },
         {
             "name": "dsh-presets",
-            "display_name": {
-                "zh": "DSH 预设适配"
-            },
             "description": "DeepSeek Harness 三种 agent preset（standard/code/cordis）的 DriFox 适配 — 三个 Agent + 模式路由 hook + 切换/状态命令。",
             "version": "1.0.0",
             "author": "DriFox 社区",
@@ -2490,6 +2487,9 @@
                 "hooks": true,
                 "skills": true,
                 "commands": true
+            },
+            "display_name": {
+                "zh": "DSH 预设适配"
             },
             "downloads": 1,
             "keywords": [
@@ -2510,9 +2510,6 @@
         },
         {
             "name": "dsh-router",
-            "display_name": {
-                "zh": "DSH 路由预设"
-            },
             "description": "dsh-routing-suite 路由预设的 DriFox 翻译版 — 确定性自动路由：关键词分类（build→react / fix→spec / 模糊→weak）+ persona 注入 + 每轮近场引导（实测 P1-P23 收敛提升）。",
             "version": "1.0.0",
             "author": "DriFox 社区",
@@ -2532,6 +2529,9 @@
                 "skills": true,
                 "hooks": true
             },
+            "display_name": {
+                "zh": "DSH 路由预设"
+            },
             "downloads": 1,
             "min_host_version": "0.5.0",
             "tarball": {
@@ -2544,9 +2544,6 @@
         },
         {
             "name": "dsh-super-injector",
-            "display_name": {
-                "zh": "DSH 会话审计"
-            },
             "description": "会话审计与插件状态管理（源自 dsh-super-injector 的 DriFox 重写版）— SessionStart/PostToolUse/PostAssistantMessage/Stop 审计落盘 memory/ + 插件状态查询/自检工具。",
             "version": "1.0.0",
             "author": "DriFox 社区",
@@ -2564,6 +2561,9 @@
                 "hooks": true,
                 "tools": true
             },
+            "display_name": {
+                "zh": "DSH 会话审计"
+            },
             "min_host_version": "0.5.0",
             "tarball": {
                 "default": {
@@ -2575,9 +2575,6 @@
         },
         {
             "name": "ecc",
-            "display_name": {
-                "zh": "ECC 工程工作流"
-            },
             "description": "Everything Claude Code (ECC) — 社区 25k★ 工程工作流全集：67 个专业智能体、284 个领域技能、94 个开发命令（TDD/代码审查/安全/架构等），适配 DriFox 提示词层。",
             "version": "2.2.1",
             "author": "Affaan Mustafa",
@@ -2597,6 +2594,9 @@
                 "skills": true,
                 "commands": true,
                 "hooks": true
+            },
+            "display_name": {
+                "zh": "ECC 工程工作流"
             },
             "downloads": 8,
             "keywords": [
@@ -2622,9 +2622,6 @@
         },
         {
             "name": "edgeone-pages",
-            "display_name": {
-                "zh": "EdgeOne Pages 部署"
-            },
             "description": "腾讯云 EdgeOne Pages — 把网页一键部署到 EdgeOne Pages，生成可公开访问的链接。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -2640,6 +2637,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "EdgeOne Pages 部署"
             },
             "keywords": [
                 "mcp",
@@ -2662,9 +2662,6 @@
         },
         {
             "name": "evolver",
-            "display_name": {
-                "zh": "Evolver 自进化"
-            },
             "description": "Evolver 自进化引擎集成插件 — 基于 GEP 协议的 AI Agent 进化能力。捕获会话经验，通过 Hook 自动触发进化循环，让 DriFox 越用越强。",
             "version": "1.0.0",
             "author": "EvoMap",
@@ -2683,6 +2680,9 @@
                 "hooks": true,
                 "skills": true
             },
+            "display_name": {
+                "zh": "Evolver 自进化"
+            },
             "downloads": 1,
             "min_host_version": "0.5.0",
             "homepage": "https://evomap.ai",
@@ -2700,9 +2700,6 @@
         },
         {
             "name": "exa",
-            "display_name": {
-                "zh": "Exa 网页搜索"
-            },
             "description": "Exa — 面向 AI 的网页搜索与网页内容抓取。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -2718,6 +2715,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Exa 网页搜索"
             },
             "keywords": [
                 "mcp",
@@ -2740,9 +2740,6 @@
         },
         {
             "name": "example-plugin",
-            "display_name": {
-                "zh": "示例插件"
-            },
             "description": "DriFox 插件的最小参考实现 — 展示全部 9 类组件（tools/commands/agents/skills/themes/hooks/mcp/lsp/ui）的标准写法。",
             "version": "1.0.0",
             "author": "DriFox Contributors",
@@ -2772,6 +2769,9 @@
                 "lsp": true,
                 "ui": true
             },
+            "display_name": {
+                "zh": "示例插件"
+            },
             "downloads": 3,
             "keywords": [
                 "example",
@@ -2793,9 +2793,6 @@
         },
         {
             "name": "excalidraw-diagram",
-            "display_name": {
-                "zh": "Excalidraw 图表"
-            },
             "description": "Excalidraw 手绘风格图表生成 — 流程图/时序图/ER 图/类图/思维导图，含视觉论证方法论与模板库。",
             "version": "1.0.0",
             "author": "GitHub Awesome Copilot Contributors",
@@ -2811,6 +2808,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "Excalidraw 图表"
             },
             "downloads": 1,
             "keywords": [
@@ -2834,9 +2834,6 @@
         },
         {
             "name": "expert-teams",
-            "display_name": {
-                "zh": "专家团模板包"
-            },
             "description": "场景化专家团模板包：缺陷狩猎、深度调研、重构小队、发布指挥、文档工坊五个预设团队，12 个专属职业智能体（追因师、修复匠、谋篇师、测绘师等），提示词设计借鉴 WorkBuddy 专家团规范（人格化职业、误派预检、快速失败、邮箱回传），/team --load 一键拉起。",
             "version": "0.2.0",
             "author": "马丁",
@@ -2870,6 +2867,9 @@
                 "gateways": false,
                 "engines": false
             },
+            "display_name": {
+                "zh": "专家团模板包"
+            },
             "downloads": 3,
             "keywords": [
                 "team",
@@ -2894,9 +2894,6 @@
         },
         {
             "name": "experts-consulting",
-            "display_name": {
-                "zh": "行业顾问专家包"
-            },
             "description": "行业顾问专家智能体包 — 6 个 @智能体（源自 WorkBuddy 专家市场）",
             "version": "1.0.0",
             "author": "WorkBuddy Expert Market",
@@ -2912,6 +2909,9 @@
             },
             "components": {
                 "agents": true
+            },
+            "display_name": {
+                "zh": "行业顾问专家包"
             },
             "keywords": [
                 "agents",
@@ -2934,9 +2934,6 @@
         },
         {
             "name": "experts-content",
-            "display_name": {
-                "zh": "内容创作专家包"
-            },
             "description": "内容创作专家智能体包 — 27 个 @智能体（源自 WorkBuddy 专家市场）",
             "version": "1.0.0",
             "author": "WorkBuddy Expert Market",
@@ -2953,6 +2950,9 @@
             "components": {
                 "agents": true,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "内容创作专家包"
             },
             "keywords": [
                 "agents",
@@ -2975,9 +2975,6 @@
         },
         {
             "name": "experts-data",
-            "display_name": {
-                "zh": "数据智能专家包"
-            },
             "description": "数据智能专家智能体包 — 20 个 @智能体（源自 WorkBuddy 专家市场）",
             "version": "1.0.0",
             "author": "WorkBuddy Expert Market",
@@ -2993,6 +2990,9 @@
             },
             "components": {
                 "agents": true
+            },
+            "display_name": {
+                "zh": "数据智能专家包"
             },
             "downloads": 3,
             "keywords": [
@@ -3016,9 +3016,6 @@
         },
         {
             "name": "experts-engineering",
-            "display_name": {
-                "zh": "技术工程专家包"
-            },
             "description": "技术工程专家智能体包 — 28 个 @智能体（源自 WorkBuddy 专家市场）",
             "version": "1.0.0",
             "author": "WorkBuddy Expert Market",
@@ -3034,6 +3031,9 @@
             },
             "components": {
                 "agents": true
+            },
+            "display_name": {
+                "zh": "技术工程专家包"
             },
             "downloads": 1,
             "keywords": [
@@ -3057,9 +3057,6 @@
         },
         {
             "name": "experts-finance",
-            "display_name": {
-                "zh": "金融投资专家包"
-            },
             "description": "金融投资专家智能体包 — 23 个 @智能体（源自 WorkBuddy 专家市场）",
             "version": "1.0.0",
             "author": "WorkBuddy Expert Market",
@@ -3075,6 +3072,9 @@
             },
             "components": {
                 "agents": true
+            },
+            "display_name": {
+                "zh": "金融投资专家包"
             },
             "keywords": [
                 "agents",
@@ -3097,9 +3097,6 @@
         },
         {
             "name": "experts-game",
-            "display_name": {
-                "zh": "游戏空间专家包"
-            },
             "description": "游戏空间专家智能体包 — 24 个 @智能体（源自 WorkBuddy 专家市场）",
             "version": "1.0.0",
             "author": "WorkBuddy Expert Market",
@@ -3115,6 +3112,9 @@
             },
             "components": {
                 "agents": true
+            },
+            "display_name": {
+                "zh": "游戏空间专家包"
             },
             "downloads": 1,
             "keywords": [
@@ -3138,9 +3138,6 @@
         },
         {
             "name": "experts-legal",
-            "display_name": {
-                "zh": "法务安全专家包"
-            },
             "description": "法务安全专家智能体包 — 14 个 @智能体（源自 WorkBuddy 专家市场）",
             "version": "1.0.0",
             "author": "WorkBuddy Expert Market",
@@ -3156,6 +3153,9 @@
             },
             "components": {
                 "agents": true
+            },
+            "display_name": {
+                "zh": "法务安全专家包"
             },
             "keywords": [
                 "agents",
@@ -3178,9 +3178,6 @@
         },
         {
             "name": "experts-marketing",
-            "display_name": {
-                "zh": "营销增长专家包"
-            },
             "description": "营销增长专家智能体包 — 29 个 @智能体（源自 WorkBuddy 专家市场）",
             "version": "1.0.0",
             "author": "WorkBuddy Expert Market",
@@ -3196,6 +3193,9 @@
             },
             "components": {
                 "agents": true
+            },
+            "display_name": {
+                "zh": "营销增长专家包"
             },
             "keywords": [
                 "agents",
@@ -3218,9 +3218,6 @@
         },
         {
             "name": "experts-ops",
-            "display_name": {
-                "zh": "运营人力专家包"
-            },
             "description": "运营人力专家智能体包 — 6 个 @智能体（源自 WorkBuddy 专家市场）",
             "version": "1.0.0",
             "author": "WorkBuddy Expert Market",
@@ -3236,6 +3233,9 @@
             },
             "components": {
                 "agents": true
+            },
+            "display_name": {
+                "zh": "运营人力专家包"
             },
             "keywords": [
                 "agents",
@@ -3258,9 +3258,6 @@
         },
         {
             "name": "experts-product",
-            "display_name": {
-                "zh": "产品设计专家包"
-            },
             "description": "产品设计专家智能体包 — 17 个 @智能体（源自 WorkBuddy 专家市场）",
             "version": "1.0.0",
             "author": "WorkBuddy Expert Market",
@@ -3276,6 +3273,9 @@
             },
             "components": {
                 "agents": true
+            },
+            "display_name": {
+                "zh": "产品设计专家包"
             },
             "keywords": [
                 "agents",
@@ -3298,9 +3298,6 @@
         },
         {
             "name": "experts-quality",
-            "display_name": {
-                "zh": "项目质量专家包"
-            },
             "description": "项目质量专家智能体包 — 22 个 @智能体（源自 WorkBuddy 专家市场）",
             "version": "1.0.0",
             "author": "WorkBuddy Expert Market",
@@ -3316,6 +3313,9 @@
             },
             "components": {
                 "agents": true
+            },
+            "display_name": {
+                "zh": "项目质量专家包"
             },
             "downloads": 2,
             "keywords": [
@@ -3339,9 +3339,6 @@
         },
         {
             "name": "experts-sales",
-            "display_name": {
-                "zh": "销售商务专家包"
-            },
             "description": "销售商务专家智能体包 — 10 个 @智能体（源自 WorkBuddy 专家市场）",
             "version": "1.0.0",
             "author": "WorkBuddy Expert Market",
@@ -3357,6 +3354,9 @@
             },
             "components": {
                 "agents": true
+            },
+            "display_name": {
+                "zh": "销售商务专家包"
             },
             "keywords": [
                 "agents",
@@ -3379,9 +3379,6 @@
         },
         {
             "name": "experts-tencent",
-            "display_name": {
-                "zh": "腾讯专区专家包"
-            },
             "description": "腾讯专区专家智能体包 — 17 个 @智能体（源自 WorkBuddy 专家市场）",
             "version": "1.0.0",
             "author": "WorkBuddy Expert Market",
@@ -3397,6 +3394,9 @@
             },
             "components": {
                 "agents": true
+            },
+            "display_name": {
+                "zh": "腾讯专区专家包"
             },
             "keywords": [
                 "agents",
@@ -3419,9 +3419,6 @@
         },
         {
             "name": "fe-fw",
-            "display_name": {
-                "zh": "银翼圣焰主题"
-            },
             "description": "银翼圣焰主题 — 火焰纹章 万缕千丝 灵感深色主题，火焰橙红 + 命运女神紫双色组合，银白救世主文字色。",
             "version": "1.0.0",
             "author": "DriFox Contributors",
@@ -3437,6 +3434,9 @@
             },
             "components": {
                 "themes": true
+            },
+            "display_name": {
+                "zh": "银翼圣焰主题"
             },
             "downloads": 9,
             "keywords": [
@@ -3463,9 +3463,6 @@
         },
         {
             "name": "feature-dev",
-            "display_name": {
-                "zh": "功能开发工作流"
-            },
             "description": "功能开发工作流 — 理解代码库、澄清需求、设计架构、实现与审查的完整流程，内置 code-explorer/code-architect/code-reviewer 三个专业智能体。",
             "version": "1.0.0",
             "author": "Anthropic",
@@ -3483,6 +3480,9 @@
             "components": {
                 "commands": true,
                 "agents": true
+            },
+            "display_name": {
+                "zh": "功能开发工作流"
             },
             "downloads": 3,
             "keywords": [
@@ -3507,9 +3507,6 @@
         },
         {
             "name": "figma",
-            "display_name": {
-                "zh": "Figma 设计稿读取"
-            },
             "description": "Figma — 读取 Figma 设计稿的结构、样式与变量。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -3525,6 +3522,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Figma 设计稿读取"
             },
             "downloads": 2,
             "keywords": [
@@ -3548,9 +3548,6 @@
         },
         {
             "name": "file-designer",
-            "display_name": {
-                "zh": "多格式文件设计"
-            },
             "description": "多格式文件设计模式 — 独立窗口预览 Word/PPT/Excel/CSV/XMind/Mermaid 流程图，页内拾取元素并标注，锚点+文本+截图回填输入框，让模型精确修改。",
             "version": "0.6.0",
             "author": "DriFox Contributors",
@@ -3569,6 +3566,9 @@
                 "commands": false,
                 "ui": true,
                 "tools": true
+            },
+            "display_name": {
+                "zh": "多格式文件设计"
             },
             "downloads": 10,
             "keywords": [
@@ -3624,9 +3624,6 @@
         },
         {
             "name": "floating-chat",
-            "display_name": {
-                "zh": "对话悬浮窗"
-            },
             "description": "随时呼出的对话悬浮窗：全局热键一键弹出，不打开主窗也能快速问大模型。独立会话不污染主对话，输入即问、流式作答、一键打开完整会话",
             "version": "0.1.0",
             "author": "DriFox Contributors",
@@ -3659,6 +3656,9 @@
                 "gateways": false,
                 "engines": false
             },
+            "display_name": {
+                "zh": "对话悬浮窗"
+            },
             "keywords": [
                 "chat",
                 "floating",
@@ -3683,9 +3683,6 @@
         },
         {
             "name": "fosunwealth",
-            "display_name": {
-                "zh": "复星财富洞察"
-            },
             "description": "从你关心的问题出发，获得更清晰的金融洞察。",
             "version": "1.0.0",
             "author": "星财富AI",
@@ -3702,6 +3699,9 @@
             "components": {
                 "mcp": true,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "复星财富洞察"
             },
             "keywords": [
                 "mcp",
@@ -3724,9 +3724,6 @@
         },
         {
             "name": "frontend-design",
-            "display_name": {
-                "zh": "前端设计"
-            },
             "description": "Anthropic 官方前端设计 — 创作有辨识度的网页 UI：大胆配色、刻意字体、意图动效、风格统一。helloianneo 必装 Top 10 第 1 名。",
             "version": "1.0.0",
             "author": "Anthropic",
@@ -3742,6 +3739,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "前端设计"
             },
             "downloads": 1,
             "keywords": [
@@ -3766,9 +3766,6 @@
         },
         {
             "name": "frontend-pro",
-            "display_name": {
-                "zh": "前端开发增强"
-            },
             "description": "前端开发增强 — 组件设计规范、无障碍(a11y)检查、性能最佳实践注入，让前端代码兼顾质量与体验。",
             "version": "1.2.1",
             "author": "DriFox Contributors",
@@ -3785,6 +3782,9 @@
             "components": {
                 "commands": true,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "前端开发增强"
             },
             "downloads": 6,
             "keywords": [
@@ -3809,9 +3809,6 @@
         },
         {
             "name": "futu-mcp",
-            "display_name": {
-                "zh": "富途牛牛行情交易"
-            },
             "description": "富途牛牛是股票交易与行情数据连接器。支持港股、美股、A股、新加坡、日本、加拿大等多市场行情查询与交易下单，提供K线、资金流向、期权链、财报、研报、机构持仓、经济日历等全方位金融数据服务。",
             "version": "1.0.0",
             "author": "富途牛牛",
@@ -3828,6 +3825,9 @@
             "components": {
                 "mcp": true,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "富途牛牛行情交易"
             },
             "keywords": [
                 "mcp",
@@ -3850,9 +3850,6 @@
         },
         {
             "name": "game2048",
-            "display_name": {
-                "zh": "2048 游戏"
-            },
             "description": "经典 2048 益智游戏——在 DriFox 中直接玩的浮動卡片",
             "version": "0.3.0",
             "author": "DriFox Contributor",
@@ -3870,6 +3867,9 @@
                 "commands": false,
                 "ui": true
             },
+            "display_name": {
+                "zh": "2048 游戏"
+            },
             "downloads": 8,
             "icon": {
                 "light": "icon.png",
@@ -3885,9 +3885,6 @@
         },
         {
             "name": "gateway-dingtalk",
-            "display_name": {
-                "zh": "钉钉网关"
-            },
             "description": "钉钉 (DingTalk) Stream 模式适配器（社区插件，万物即插件 Phase E）：实时消息收发，支持群/单聊/媒体；基于 dingtalk-stream SDK。",
             "version": "1.0.2",
             "author": "DriFoxx Team",
@@ -3901,6 +3898,9 @@
             },
             "components": {
                 "gateways": true
+            },
+            "display_name": {
+                "zh": "钉钉网关"
             },
             "downloads": 1,
             "platforms": [
@@ -3956,9 +3956,6 @@
         },
         {
             "name": "gateway-discord",
-            "display_name": {
-                "zh": "Discord 网关"
-            },
             "description": "Discord 机器人平台适配器（社区插件，万物即插件 Phase E）：频道/私聊/线程/Slash Command/媒体，基于 discord.py。",
             "version": "1.0.0",
             "author": "DriFoxx Team",
@@ -3972,6 +3969,9 @@
             },
             "components": {
                 "gateways": true
+            },
+            "display_name": {
+                "zh": "Discord 网关"
             },
             "downloads": 1,
             "platforms": [
@@ -4021,9 +4021,6 @@
         },
         {
             "name": "gateway-feishu",
-            "display_name": {
-                "zh": "飞书网关"
-            },
             "description": "飞书 (Feishu/Lark) WebSocket 模式适配器（社区插件，万物即插件 Phase E）：实时消息收发，基于 lark-oapi SDK。",
             "version": "1.2.3",
             "author": "DriFoxx Team",
@@ -4037,6 +4034,9 @@
             },
             "components": {
                 "gateways": true
+            },
+            "display_name": {
+                "zh": "飞书网关"
             },
             "downloads": 47,
             "platforms": [
@@ -4088,9 +4088,6 @@
         },
         {
             "name": "gateway-qq",
-            "display_name": {
-                "zh": "QQ 网关"
-            },
             "description": "QQ 机器人适配器（QQ 开放平台）：WebSocket 长连接收发群聊/单聊消息；不依赖第三方 SDK，复用宿主 aiohttp/httpx。",
             "version": "1.1.2",
             "author": "DriFoxx Team",
@@ -4104,6 +4101,9 @@
             },
             "components": {
                 "gateways": true
+            },
+            "display_name": {
+                "zh": "QQ 网关"
             },
             "downloads": 7,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
@@ -4121,9 +4121,6 @@
         },
         {
             "name": "gateway-slack",
-            "display_name": {
-                "zh": "Slack 网关"
-            },
             "description": "Slack 平台适配器（社区插件，万物即插件 Phase E）：使用 Slack Web API 收发消息，支持 Block Kit 格式、长消息分片；基于 slack-sdk。",
             "version": "1.0.1",
             "author": "DriFoxx Team",
@@ -4137,6 +4134,9 @@
             },
             "components": {
                 "gateways": true
+            },
+            "display_name": {
+                "zh": "Slack 网关"
             },
             "dependencies": {
                 "pip": {
@@ -4160,9 +4160,6 @@
         },
         {
             "name": "gateway-telegram",
-            "display_name": {
-                "zh": "Telegram 网关"
-            },
             "description": "Telegram 机器人平台适配器（社区插件，万物即插件 Phase E）：私聊/群组/论坛主题/媒体/命令，基于 python-telegram-bot 长轮询。",
             "version": "1.0.1",
             "author": "DriFoxx Team",
@@ -4176,6 +4173,9 @@
             },
             "components": {
                 "gateways": true
+            },
+            "display_name": {
+                "zh": "Telegram 网关"
             },
             "dependencies": {
                 "pip": {
@@ -4205,9 +4205,6 @@
         },
         {
             "name": "gateway-wechat",
-            "display_name": {
-                "zh": "微信网关"
-            },
             "description": "微信机器人适配器（iLink 官方接口）：设置卡扫码登录、长轮询收发单聊消息；无需公众号配置，复用宿主 httpx。",
             "version": "0.3.1",
             "author": "DriFoxx Team",
@@ -4224,6 +4221,9 @@
             "components": {
                 "gateways": true,
                 "ui": true
+            },
+            "display_name": {
+                "zh": "微信网关"
             },
             "downloads": 18,
             "dependencies": {
@@ -4249,9 +4249,6 @@
         },
         {
             "name": "gateway-wecom",
-            "display_name": {
-                "zh": "企业微信网关"
-            },
             "description": "企业微信 (WeCom) AI Bot 适配器（社区插件，万物即插件 Phase E）：通过 WebSocket 长连接与 AI Bot Gateway 通信；不依赖第三方 SDK，复用宿主 aiohttp/httpx。",
             "version": "1.0.2",
             "author": "DriFoxx Team",
@@ -4265,6 +4262,9 @@
             },
             "components": {
                 "gateways": true
+            },
+            "display_name": {
+                "zh": "企业微信网关"
             },
             "downloads": 2,
             "min_host_version": "0.6.10",
@@ -4284,9 +4284,6 @@
         },
         {
             "name": "git-dashboard",
-            "display_name": {
-                "zh": "Git 仪表盘"
-            },
             "description": "Git 仪表盘 — 提交日历热力图、最近提交、分支图可视化",
             "version": "0.1.3",
             "author": "DriFox Contributors",
@@ -4304,6 +4301,9 @@
             },
             "components": {
                 "ui": true
+            },
+            "display_name": {
+                "zh": "Git 仪表盘"
             },
             "downloads": 20,
             "keywords": [
@@ -4326,9 +4326,6 @@
         },
         {
             "name": "git-panel",
-            "display_name": {
-                "zh": "Git 控制面板"
-            },
             "description": "Git 控制面板 — 文件变更、暂存/取消暂存、提交、Stash、分支管理、提交历史、Diff 预览、AI 生成提交描述",
             "version": "2.3.2",
             "author": "DriFox Contributors",
@@ -4345,6 +4342,9 @@
             },
             "components": {
                 "ui": true
+            },
+            "display_name": {
+                "zh": "Git 控制面板"
             },
             "downloads": 95,
             "keywords": [
@@ -4371,9 +4371,6 @@
         },
         {
             "name": "git-status",
-            "display_name": {
-                "zh": "Git 状态注入"
-            },
             "description": "在每轮用户消息前注入当前 Git 仓库状态（分支/暂存/工作区/最近 commits），让 LLM 无需询问即可知道当前代码改动了什么",
             "version": "1.0.0",
             "author": "martin98-afk",
@@ -4390,6 +4387,9 @@
             "components": {
                 "hooks": true
             },
+            "display_name": {
+                "zh": "Git 状态注入"
+            },
             "downloads": 3,
             "icon": {
                 "light": "icon.png",
@@ -4405,9 +4405,6 @@
         },
         {
             "name": "git-workflow",
-            "display_name": {
-                "zh": "Git 工作流增强"
-            },
             "description": "Git 工作流增强 — 分支命名检查、提交规范验证、PR 模板生成，让团队 Git 实践自动化。",
             "version": "1.0.1",
             "author": "DriFox Contributors",
@@ -4425,6 +4422,9 @@
                 "commands": true,
                 "hooks": true,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "Git 工作流增强"
             },
             "downloads": 3,
             "keywords": [
@@ -4449,9 +4449,6 @@
         },
         {
             "name": "gitee",
-            "display_name": {
-                "zh": "Gitee 仓库管理"
-            },
             "description": "Gitee — 管理 Gitee 仓库、文件、Issue 与 PR。安装后填入私人令牌。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -4467,6 +4464,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Gitee 仓库管理"
             },
             "keywords": [
                 "mcp",
@@ -4489,9 +4489,6 @@
         },
         {
             "name": "github",
-            "display_name": {
-                "zh": "GitHub 仓库管理"
-            },
             "description": "GitHub — 管理 GitHub 仓库、Issue、PR 与 Actions。安装后填入个人访问令牌。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -4507,6 +4504,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "GitHub 仓库管理"
             },
             "downloads": 3,
             "keywords": [
@@ -4530,9 +4530,6 @@
         },
         {
             "name": "gitlab",
-            "display_name": {
-                "zh": "GitLab 项目管理"
-            },
             "description": "GitLab — 查看 GitLab.com 的项目、Issue、合并请求与流水线。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -4548,6 +4545,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "GitLab 项目管理"
             },
             "downloads": 1,
             "keywords": [
@@ -4571,9 +4571,6 @@
         },
         {
             "name": "gongwen",
-            "display_name": {
-                "zh": "中文公文处理"
-            },
             "description": "中文公文全流程处理 — 按 GB/T 9704 国家标准做格式检查与自动修复、Word 原生修订式内容优化、模板生成与样式学习、Markdown 转公文，覆盖 25 类公文。",
             "version": "1.0.0",
             "author": "Jose AI",
@@ -4590,6 +4587,9 @@
             "components": {
                 "skills": true,
                 "tools": true
+            },
+            "display_name": {
+                "zh": "中文公文处理"
             },
             "keywords": [
                 "gongwen",
@@ -4615,9 +4615,6 @@
         },
         {
             "name": "gpt-image-2",
-            "display_name": {
-                "zh": "GPT Image 2 生图"
-            },
             "description": "GPT Image 2 图像生成/编辑技能——18 大类 80+ 结构化模板，支持 Garden 本地生图/宿主委托/提示词顾问三种模式。",
             "version": "1.0.0",
             "author": "ConardLi",
@@ -4633,6 +4630,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "GPT Image 2 生图"
             },
             "downloads": 6,
             "keywords": [
@@ -4656,9 +4656,6 @@
         },
         {
             "name": "graphflow",
-            "display_name": {
-                "zh": "GraphFlow 代码手术"
-            },
             "description": "省 Token 的代码手术引擎技能。用 gf_read/gf_edit/gf_exec/gf_macro 四个 MCP 工具替代整文件读取与全量测试，六语言真 AST、爆炸半径守卫。",
             "version": "1.0.0",
             "author": "Roarpeng",
@@ -4674,6 +4671,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "GraphFlow 代码手术"
             },
             "keywords": [
                 "code-graph",
@@ -4697,9 +4697,6 @@
         },
         {
             "name": "grok-oauth",
-            "display_name": {
-                "zh": "Grok OAuth 登录"
-            },
             "description": "xAI Grok 服务商（OAuth 登录制）— 用 SuperGrok / X Premium+ 订阅账号浏览器授权登录，直连 Grok 系列模型，无需 API Key",
             "version": "0.1.0",
             "author": "DriFox Contributors",
@@ -4715,6 +4712,9 @@
             },
             "components": {
                 "providers": true
+            },
+            "display_name": {
+                "zh": "Grok OAuth 登录"
             },
             "downloads": 3,
             "keywords": [
@@ -4739,9 +4739,6 @@
         },
         {
             "name": "groq",
-            "display_name": {
-                "zh": "Groq 服务商"
-            },
             "description": "Groq 服务商插件 — 提供 Groq 高速推理模型接入。",
             "version": "1.0.0",
             "author": "DriFox Contributors",
@@ -4757,6 +4754,9 @@
             },
             "components": {
                 "providers": true
+            },
+            "display_name": {
+                "zh": "Groq 服务商"
             },
             "downloads": 5,
             "keywords": [
@@ -4777,9 +4777,6 @@
         },
         {
             "name": "guizang-ppt-skill",
-            "display_name": {
-                "zh": "网页 PPT 生成"
-            },
             "description": "生成横向翻页网页 PPT（单 HTML 文件），含 WebGL 背景、章节幕封、数据大字报、图片网格等模板 + MiniMax TTS 逐页语音配音。两种风格可选：① 电子杂志 × 电子墨水 ② 瑞士国际主义。当用户需要制作分享/演讲/发布会风格的网页 PPT 时使用。",
             "version": "2.0.0",
             "author": "歸藏",
@@ -4795,6 +4792,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "网页 PPT 生成"
             },
             "downloads": 7,
             "keywords": [
@@ -4819,9 +4819,6 @@
         },
         {
             "name": "hashline-edit",
-            "display_name": {
-                "zh": "Hashline 锚点编辑"
-            },
             "description": "pi 式 hashline 锚点编辑工具（覆盖 read/edit/multi_edit，纯锚点模式）—— 行号+上下文哈希定位，编辑行 N 只影响相邻锚点，支持链式编辑",
             "version": "0.1.0",
             "author": "DriFox Contributors",
@@ -4837,6 +4834,9 @@
             },
             "components": {
                 "tools": true
+            },
+            "display_name": {
+                "zh": "Hashline 锚点编辑"
             },
             "downloads": 7,
             "keywords": [
@@ -4861,9 +4861,6 @@
         },
         {
             "name": "hookify",
-            "display_name": {
-                "zh": "Hookify 钩子生成"
-            },
             "description": "Easily create hooks to prevent unwanted behaviors by analyzing conversation patterns",
             "version": "1.0.0",
             "author": "Anthropic",
@@ -4883,6 +4880,9 @@
                 "skills": true,
                 "hooks": true
             },
+            "display_name": {
+                "zh": "Hookify 钩子生成"
+            },
             "downloads": 2,
             "icon": {
                 "light": "icon.png",
@@ -4898,9 +4898,6 @@
         },
         {
             "name": "huggingface",
-            "display_name": {
-                "zh": "Hugging Face 检索"
-            },
             "description": "Hugging Face — 搜索 Hugging Face 上的模型、数据集、Space 与论文。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -4916,6 +4913,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Hugging Face 检索"
             },
             "downloads": 3,
             "keywords": [
@@ -4939,9 +4939,6 @@
         },
         {
             "name": "intercom",
-            "display_name": {
-                "zh": "Intercom 客服数据"
-            },
             "description": "Intercom — 查询 Intercom 的会话、联系人与客服数据。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -4957,6 +4954,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Intercom 客服数据"
             },
             "keywords": [
                 "mcp",
@@ -4979,9 +4979,6 @@
         },
         {
             "name": "internal-comms",
-            "display_name": {
-                "zh": "内部沟通模板"
-            },
             "description": "内部沟通模板 — 3P 沟通（进度/计划/问题）、状态报告、事件复盘、决策通知、产品更新、客户邮件。",
             "version": "1.0.0",
             "author": "Anthropic",
@@ -4998,6 +4995,9 @@
             "components": {
                 "commands": false,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "内部沟通模板"
             },
             "downloads": 2,
             "keywords": [
@@ -5021,9 +5021,6 @@
         },
         {
             "name": "ip-switcher",
-            "display_name": {
-                "zh": "IP 切换监控"
-            },
             "description": "IP 切换监控 — 免费模型限流自动换 IP（429 检测 + 代理池轮换 + 仪表盘）。",
             "version": "0.1.2",
             "author": "DriFox Contributors",
@@ -5039,6 +5036,9 @@
             },
             "components": {
                 "ui": true
+            },
+            "display_name": {
+                "zh": "IP 切换监控"
             },
             "downloads": 3,
             "keywords": [
@@ -5061,9 +5061,6 @@
         },
         {
             "name": "j-space",
-            "display_name": {
-                "zh": "J-Space 认知推理"
-            },
             "description": "J-Space 认知推理控制套件 — 将语言模型可访问的工作表征组织为可主动管理的工作空间，提供选择性工作集加载、广播枢纽、稠密轨、结论前桥接推理、元认知控制、经验逃逸与验证等推理时认知控制协议。模型不可知，不修改权重、不微调、无隐藏服务。",
             "version": "3.6.0",
             "author": "Tiger3807861189",
@@ -5087,6 +5084,9 @@
                 "mcp": false,
                 "lsp": false,
                 "ui": false
+            },
+            "display_name": {
+                "zh": "J-Space 认知推理"
             },
             "downloads": 3,
             "keywords": [
@@ -5112,9 +5112,6 @@
         },
         {
             "name": "jam",
-            "display_name": {
-                "zh": "Jam 缺陷报告"
-            },
             "description": "Jam — 读取 Jam 缺陷报告里的录屏、日志与网络请求。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -5130,6 +5127,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Jam 缺陷报告"
             },
             "keywords": [
                 "mcp",
@@ -5152,9 +5152,6 @@
         },
         {
             "name": "jimeng",
-            "display_name": {
-                "zh": "即梦生图生视频"
-            },
             "description": "即梦（Dreamina）生图/生视频 — 封装官方 dreamina CLI，8 个生成命令 + 会话/额度/登录管理，成品落盘并回传成果栏",
             "version": "1.2.0",
             "author": "DriFox Contributors",
@@ -5171,6 +5168,9 @@
             "components": {
                 "skills": true,
                 "tools": true
+            },
+            "display_name": {
+                "zh": "即梦生图生视频"
             },
             "downloads": 7,
             "keywords": [
@@ -5197,9 +5197,6 @@
         },
         {
             "name": "jina",
-            "display_name": {
-                "zh": "Jina AI 检索"
-            },
             "description": "Jina AI — 读取网页正文、网页搜索与学术检索。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -5215,6 +5212,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Jina AI 检索"
             },
             "keywords": [
                 "mcp",
@@ -5237,9 +5237,6 @@
         },
         {
             "name": "jsonl-storage",
-            "display_name": {
-                "zh": "JSONL 存储引擎"
-            },
             "description": "JSONL 存储引擎 — 会话以 jsonl 格式持久化（per-session 文件 + 辅助索引文件），行为对齐 system 的 sqlite 引擎，可作为并存可选引擎注册。",
             "version": "0.2.0",
             "author": "self-evolver",
@@ -5270,6 +5267,9 @@
                 "gateways": false,
                 "engines": false
             },
+            "display_name": {
+                "zh": "JSONL 存储引擎"
+            },
             "keywords": [
                 "jsonl",
                 "evolved"
@@ -5289,9 +5289,6 @@
         },
         {
             "name": "kdocs",
-            "display_name": {
-                "zh": "金山文档"
-            },
             "description": "金山文档官方 Skill。对话即操作——知识一键存入、碎片内容整理、接龙转表格、文档转 Markdown、表格美化、收发表生成，全在一句话内完成。",
             "version": "1.0.0",
             "author": "金山文档|WPS云文档",
@@ -5308,6 +5305,9 @@
             "components": {
                 "mcp": true,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "金山文档"
             },
             "keywords": [
                 "mcp",
@@ -5330,9 +5330,6 @@
         },
         {
             "name": "kim-service",
-            "display_name": {
-                "zh": "Kim Service 技能合集"
-            },
             "description": "Kim Service — AI Hook 与 Agent Skills 合集：HookPrompt 提示词自动优化 + 8 个 Skill（Agent Teams / Memory 3-Layer / Find Skill / GoalPro / Kim Decision / Meta Skill Creator / Semgrep / Xiaohongshu）。",
             "version": "0.1.0",
             "author": "KimYx0207",
@@ -5349,6 +5346,9 @@
             "components": {
                 "hooks": true,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "Kim Service 技能合集"
             },
             "downloads": 10,
             "keywords": [
@@ -5372,9 +5372,6 @@
         },
         {
             "name": "kling-ai-plugin",
-            "display_name": {
-                "zh": "可灵 AI 视频"
-            },
             "description": "一句话，让灵感从想法变成大片。可灵（Kling / Kling AI / 可灵AI）是面向创作者、设计师、视频制作人、电商卖家、广告营销和品牌团队的 AI 生图与 AI 生视频连接器，可在 WorkBuddy 中直接用自然语言完成图片生成和视频生成，包括文生图、图生图、文生视频、图生视频、参考图创作、单镜头与多分镜视频。适合制作海报、插画、人像、商品图、电商",
             "version": "1.0.1",
             "author": "可灵 AI",
@@ -5391,6 +5388,9 @@
             "components": {
                 "mcp": true,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "可灵 AI 视频"
             },
             "downloads": 1,
             "keywords": [
@@ -5414,9 +5414,6 @@
         },
         {
             "name": "knowledge-base-skills",
-            "display_name": {
-                "zh": "本地知识库检索"
-            },
             "description": "本地知识库检索技能——面向本地知识库目录的分层检索和问答助手，支持 Markdown/PDF/Excel 渐进式检索。",
             "version": "1.0.0",
             "author": "ConardLi",
@@ -5432,6 +5429,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "本地知识库检索"
             },
             "downloads": 2,
             "keywords": [
@@ -5456,9 +5456,6 @@
         },
         {
             "name": "laputa-fog",
-            "display_name": {
-                "zh": "浮岛·雾青主题"
-            },
             "description": "浮岛·雾青主题 — 宫崎骏《天空之城》灵感浅色主题，灰蓝主调、琥珀暖金点缀、呼吸感光晕。",
             "version": "1.0.0",
             "author": "DriFox Contributors",
@@ -5474,6 +5471,9 @@
             },
             "components": {
                 "themes": true
+            },
+            "display_name": {
+                "zh": "浮岛·雾青主题"
             },
             "downloads": 11,
             "keywords": [
@@ -5499,9 +5499,6 @@
         },
         {
             "name": "linear",
-            "display_name": {
-                "zh": "Linear 项目管理"
-            },
             "description": "Linear — 查看和管理 Linear 里的 Issue、项目与周期。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -5517,6 +5514,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Linear 项目管理"
             },
             "keywords": [
                 "mcp",
@@ -5539,9 +5539,6 @@
         },
         {
             "name": "live-data",
-            "display_name": {
-                "zh": "实时数据查询"
-            },
             "description": "实时数据查询 — 汇率、A股、大盘指数、金价、npm/PyPI/GitHub 包信息、天气、B站视频数据、IP 归属地，8 个免密钥公开接口聚合为 4 个工具。",
             "version": "0.1.1",
             "author": "black",
@@ -5564,6 +5561,9 @@
                 "mcp": false,
                 "lsp": false,
                 "themes": false
+            },
+            "display_name": {
+                "zh": "实时数据查询"
             },
             "downloads": 5,
             "keywords": [
@@ -5591,9 +5591,6 @@
         },
         {
             "name": "lunheng-article-pipeline",
-            "display_name": {
-                "zh": "论衡长文流水线"
-            },
             "description": "论衡深度长文流水线。9 个独立角色 T1-T9 加主控，三角验证、M 门、G 审计、修订回环，适用 2000 字以上证据可追溯的论文与行业分析。",
             "version": "1.0.0",
             "author": "zuoyunlai",
@@ -5609,6 +5606,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "论衡长文流水线"
             },
             "keywords": [
                 "writing",
@@ -5633,9 +5633,6 @@
         },
         {
             "name": "magpie",
-            "display_name": {
-                "zh": "magpie 网关"
-            },
             "description": "magpie 本地网关 — 接入聚合后的全部订阅账号与路由组，一键启动 magpie web（自动固定 key），内嵌网页界面直接管理模型与配额，并让 magpie 认得 DriFox（Agents 页有身份、Usage 按会话分组）",
             "version": "0.7.0",
             "author": "DriFox Contributors",
@@ -5653,6 +5650,9 @@
             "components": {
                 "providers": true,
                 "ui": true
+            },
+            "display_name": {
+                "zh": "magpie 网关"
             },
             "downloads": 14,
             "keywords": [
@@ -5680,9 +5680,6 @@
         },
         {
             "name": "mapbox",
-            "display_name": {
-                "zh": "Mapbox 地图"
-            },
             "description": "Mapbox — 地点搜索、路线规划、等时圈与静态地图。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -5698,6 +5695,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Mapbox 地图"
             },
             "keywords": [
                 "mcp",
@@ -5720,9 +5720,6 @@
         },
         {
             "name": "marketplace-recommend",
-            "display_name": {
-                "zh": "插件推荐"
-            },
             "description": "欢迎卡片插件推荐页签 — 随机推荐市场未安装热门插件，点击直接安装",
             "version": "0.2.4",
             "author": "self-evolver",
@@ -5755,6 +5752,9 @@
                 "gateways": false,
                 "engines": false
             },
+            "display_name": {
+                "zh": "插件推荐"
+            },
             "downloads": 2,
             "keywords": [
                 "marketplace",
@@ -5775,9 +5775,6 @@
         },
         {
             "name": "mattpocock-skills",
-            "display_name": {
-                "zh": "mattpocock 技能精选"
-            },
             "description": "mattpocock 工程技能中文版精选 11 个：TDD、代码审查、领域建模、缺陷诊断、原型、研究、写作等可直接调用的开发方法。",
             "version": "1.0.0",
             "author": "mattpocock / FeatherHunter (中文版)",
@@ -5793,6 +5790,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "mattpocock 技能精选"
             },
             "keywords": [
                 "skills",
@@ -5816,9 +5816,6 @@
         },
         {
             "name": "mcp-builder",
-            "display_name": {
-                "zh": "MCP 服务器构建"
-            },
             "description": "MCP 服务器构建助手 — 教用户从零创建 MCP（Model Context Protocol）服务器，连接任意工具/数据源到 DriFox / Claude Code / Cursor。",
             "version": "1.0.0",
             "author": "Anthropic",
@@ -5835,6 +5832,9 @@
             "components": {
                 "commands": false,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "MCP 服务器构建"
             },
             "downloads": 1,
             "keywords": [
@@ -5858,9 +5858,6 @@
         },
         {
             "name": "memory-match",
-            "display_name": {
-                "zh": "记忆翻牌游戏"
-            },
             "description": "经典记忆翻牌游戏——在 DriFox 中直接玩的浮動卡片",
             "version": "0.3.0",
             "author": "DriFox Contributor",
@@ -5878,6 +5875,9 @@
                 "commands": false,
                 "ui": true
             },
+            "display_name": {
+                "zh": "记忆翻牌游戏"
+            },
             "downloads": 4,
             "icon": {
                 "light": "icon.png",
@@ -5893,9 +5893,6 @@
         },
         {
             "name": "microsoft-learn",
-            "display_name": {
-                "zh": "Microsoft Learn 文档"
-            },
             "description": "Microsoft Learn — 检索微软官方技术文档与代码示例。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -5911,6 +5908,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Microsoft Learn 文档"
             },
             "keywords": [
                 "mcp",
@@ -5933,9 +5933,6 @@
         },
         {
             "name": "midnight-aurora",
-            "display_name": {
-                "zh": "午夜极光主题"
-            },
             "description": "午夜极光主题 — 深紫底色 + 青绿/粉橙双色 accent + 极光侧栏与场景图，给 DriFox 主窗口换上极地夜空氛围。",
             "version": "1.0.0",
             "author": "DriFox Contributors",
@@ -5951,6 +5948,9 @@
             },
             "components": {
                 "themes": true
+            },
+            "display_name": {
+                "zh": "午夜极光主题"
             },
             "downloads": 11,
             "keywords": [
@@ -5976,9 +5976,6 @@
         },
         {
             "name": "minesweeper",
-            "display_name": {
-                "zh": "扫雷游戏"
-            },
             "description": "经典扫雷游戏——在 DriFox 中直接玩的浮動卡片",
             "version": "0.1.0",
             "author": "DriFox Contributor",
@@ -5996,6 +5993,9 @@
                 "commands": false,
                 "ui": true
             },
+            "display_name": {
+                "zh": "扫雷游戏"
+            },
             "downloads": 8,
             "icon": {
                 "light": "icon.png",
@@ -6011,9 +6011,6 @@
         },
         {
             "name": "minimax-h3",
-            "display_name": {
-                "zh": "MiniMax H3 视频生成"
-            },
             "description": "MiniMax H3 全模态视频生成 — 文本/图片/视频/音频转带立体声音频的视频（768P/2K，4-15s），含 H3 提示词编写技能。",
             "version": "1.0.0",
             "author": "DriFox Contributors",
@@ -6030,6 +6027,9 @@
             "components": {
                 "commands": true,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "MiniMax H3 视频生成"
             },
             "downloads": 5,
             "keywords": [
@@ -6053,9 +6053,6 @@
         },
         {
             "name": "miro",
-            "display_name": {
-                "zh": "Miro 白板"
-            },
             "description": "Miro — 读取和创建 Miro 白板上的内容。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -6071,6 +6068,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Miro 白板"
             },
             "keywords": [
                 "mcp",
@@ -6093,9 +6093,6 @@
         },
         {
             "name": "modelscope",
-            "display_name": {
-                "zh": "魔搭 MCP"
-            },
             "description": "魔搭 MCP — 接入魔搭 MCP 广场上的托管服务。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -6111,6 +6108,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "魔搭 MCP"
             },
             "downloads": 1,
             "keywords": [
@@ -6134,9 +6134,6 @@
         },
         {
             "name": "modlens",
-            "display_name": {
-                "zh": "modlens 视觉桥"
-            },
             "description": "文本模型的视觉桥。把图片路径/URL 交给 modlens CLI，返回结构化 JSON 证据：逐字转写、版面区块、语义与视觉线索。",
             "version": "1.0.0",
             "author": "Leon Liu (liustack)",
@@ -6152,6 +6149,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "modlens 视觉桥"
             },
             "downloads": 1,
             "keywords": [
@@ -6176,9 +6176,6 @@
         },
         {
             "name": "modsearch",
-            "display_name": {
-                "zh": "modsearch 联网搜索桥"
-            },
             "description": "文本模型的联网搜索桥。返回结构化 JSON 证据：网页搜索、X(Twitter) 搜索、指定 URL 抓取，带来源链接。",
             "version": "1.0.0",
             "author": "Leon Liu (liustack)",
@@ -6194,6 +6191,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "modsearch 联网搜索桥"
             },
             "downloads": 1,
             "keywords": [
@@ -6218,9 +6218,6 @@
         },
         {
             "name": "monday",
-            "display_name": {
-                "zh": "monday.com 看板"
-            },
             "description": "monday.com — 查看和更新 monday.com 的看板、条目与更新。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -6236,6 +6233,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "monday.com 看板"
             },
             "keywords": [
                 "mcp",
@@ -6258,9 +6258,6 @@
         },
         {
             "name": "moomoo-mcp",
-            "display_name": {
-                "zh": "Moomoo 行情交易"
-            },
             "description": "Moomoo is a stock trading and market data connector. It supports multi-market (HK, US, CN, SG, JP, CA, etc.) quote queries and order execution, providing K-lines, capital flow, opt",
             "version": "1.0.0",
             "author": "Moomoo",
@@ -6277,6 +6274,9 @@
             "components": {
                 "mcp": true,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "Moomoo 行情交易"
             },
             "keywords": [
                 "mcp",
@@ -6299,9 +6299,6 @@
         },
         {
             "name": "moonshot",
-            "display_name": {
-                "zh": "Moonshot 服务商"
-            },
             "description": "Moonshot (Kimi) 服务商插件 — 提供 Kimi K3 / K2.7 Code / K2.6 系列模型接入，含账户余额查询。",
             "version": "1.0.0",
             "author": "DriFox Contributors",
@@ -6317,6 +6314,9 @@
             },
             "components": {
                 "providers": true
+            },
+            "display_name": {
+                "zh": "Moonshot 服务商"
             },
             "downloads": 1,
             "keywords": [
@@ -6339,9 +6339,6 @@
         },
         {
             "name": "neon",
-            "display_name": {
-                "zh": "Neon 数据库管理"
-            },
             "description": "Neon — 管理 Neon Postgres 项目、分支与数据库查询。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -6357,6 +6354,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Neon 数据库管理"
             },
             "keywords": [
                 "mcp",
@@ -6379,9 +6379,6 @@
         },
         {
             "name": "netlify",
-            "display_name": {
-                "zh": "Netlify 站点管理"
-            },
             "description": "Netlify — 创建、部署和管理 Netlify 站点。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -6397,6 +6394,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Netlify 站点管理"
             },
             "keywords": [
                 "mcp",
@@ -6419,9 +6419,6 @@
         },
         {
             "name": "notion",
-            "display_name": {
-                "zh": "Notion 页面管理"
-            },
             "description": "Notion — 搜索、阅读和编辑你的 Notion 页面与数据库。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -6437,6 +6434,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Notion 页面管理"
             },
             "downloads": 5,
             "keywords": [
@@ -6460,9 +6460,6 @@
         },
         {
             "name": "nuwa-skill",
-            "display_name": {
-                "zh": "女娲 Skill 造人术"
-            },
             "description": "女娲·Skill造人术——输入人名自动深度调研并提炼出可运行的人物思维Skill，附14个已蒸馏人物视角。",
             "version": "1.0.0",
             "author": "Huashu (花叔)",
@@ -6478,6 +6475,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "女娲 Skill 造人术"
             },
             "downloads": 12,
             "keywords": [
@@ -6501,9 +6501,6 @@
         },
         {
             "name": "office-docs",
-            "display_name": {
-                "zh": "Office 文档处理"
-            },
             "description": "Office 文档处理 — docx / pdf / pptx / xlsx 4 类文档读、写、转换、生成，Python 脚本 + LibreOffice 模板。",
             "version": "1.0.0",
             "author": "Anthropic",
@@ -6520,6 +6517,9 @@
             "components": {
                 "commands": false,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "Office 文档处理"
             },
             "downloads": 1,
             "keywords": [
@@ -6545,9 +6545,6 @@
         },
         {
             "name": "ollama",
-            "display_name": {
-                "zh": "Ollama 服务商"
-            },
             "description": "Ollama 服务商插件 — 提供本地推理模型接入（llama3 / qwen2.5 / mistral 等）。",
             "version": "1.0.0",
             "author": "DriFox Contributors",
@@ -6563,6 +6560,9 @@
             },
             "components": {
                 "providers": true
+            },
+            "display_name": {
+                "zh": "Ollama 服务商"
             },
             "downloads": 4,
             "keywords": [
@@ -6583,9 +6583,6 @@
         },
         {
             "name": "omml-docx",
-            "display_name": {
-                "zh": "OMML 公式生成"
-            },
             "description": "OMML 公式 docx 生成——用 Python 脚本生成规范 Word 数学公式并嵌入 .docx，附辅助函数库与结构验证，纯标准库零依赖。当用户需要在 Word 文档（专利交底书/论文/报告）插入数学公式或询问如何用 Python 写 Word 公式时使用。",
             "version": "1.2.0",
             "author": "马丁",
@@ -6601,6 +6598,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "OMML 公式生成"
             },
             "downloads": 12,
             "keywords": [
@@ -6630,9 +6630,6 @@
         },
         {
             "name": "openai",
-            "display_name": {
-                "zh": "OpenAI 服务商"
-            },
             "description": "OpenAI 服务商插件 — 提供 GPT / ChatGPT 系列模型接入，含 API 用量查询。",
             "version": "1.0.0",
             "author": "DriFox Contributors",
@@ -6648,6 +6645,9 @@
             },
             "components": {
                 "providers": true
+            },
+            "display_name": {
+                "zh": "OpenAI 服务商"
             },
             "downloads": 4,
             "keywords": [
@@ -6668,9 +6668,6 @@
         },
         {
             "name": "openhanako-adapter",
-            "display_name": {
-                "zh": "HanaAgent 能力适配"
-            },
             "description": "openhanako（HanaAgent）能力适配插件：内置技能、智能体人格、beautify HTML 美学、日记（/diary）、会话检索（/recall + sessions 工具）、会话转技能（/xing）、即梦 CLI 生图",
             "version": "0.4.0",
             "author": "mading",
@@ -6704,6 +6701,9 @@
                 "gateways": false,
                 "engines": false
             },
+            "display_name": {
+                "zh": "HanaAgent 能力适配"
+            },
             "downloads": 14,
             "keywords": [
                 "openhanako",
@@ -6726,9 +6726,6 @@
         },
         {
             "name": "openrouter-provider",
-            "display_name": {
-                "zh": "OpenRouter 服务商"
-            },
             "description": "OpenRouter 服务商接入插件：声明图标/API URL/模型列表/models.dev 映射/余额查询，走 OpenAI 兼容协议",
             "version": "0.1.1",
             "author": "self-evolver",
@@ -6761,6 +6758,9 @@
                 "gateways": false,
                 "engines": false
             },
+            "display_name": {
+                "zh": "OpenRouter 服务商"
+            },
             "downloads": 3,
             "keywords": [
                 "openrouter",
@@ -6781,9 +6781,6 @@
         },
         {
             "name": "paypal",
-            "display_name": {
-                "zh": "PayPal 交易管理"
-            },
             "description": "PayPal — 管理 PayPal 的发票、订单、交易与订阅。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -6799,6 +6796,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "PayPal 交易管理"
             },
             "keywords": [
                 "mcp",
@@ -6821,9 +6821,6 @@
         },
         {
             "name": "pixel-team-studio",
-            "display_name": {
-                "zh": "像素团队工作室"
-            },
             "description": "像素智能体团队工作室 — 实时可视化智能体团队与成员状态，拖拽像素小人组建团队，双击切窗口/右键直接给成员发消息",
             "version": "0.4.2",
             "author": "马丁",
@@ -6839,6 +6836,9 @@
             },
             "components": {
                 "ui": true
+            },
+            "display_name": {
+                "zh": "像素团队工作室"
             },
             "downloads": 25,
             "min_host_version": "0.6.2",
@@ -6857,9 +6857,6 @@
         },
         {
             "name": "playground",
-            "display_name": {
-                "zh": "HTML 练习场"
-            },
             "description": "交互式 HTML 练习场 — 单文件探索器：可视化控件 + 实时预览 + 提示词复制。",
             "version": "1.0.0",
             "author": "Anthropic",
@@ -6875,6 +6872,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "HTML 练习场"
             },
             "downloads": 3,
             "keywords": [
@@ -6898,9 +6898,6 @@
         },
         {
             "name": "ponytail",
-            "display_name": {
-                "zh": "Ponytail 最简开发"
-            },
             "description": "Lazy senior dev 模式 — YAGNI/stdlib/原生优先的最简实现哲学，6 个命令 + 6 个技能（适配 DriFox 提示词层）。",
             "version": "4.8.5",
             "author": "Dietrich Gebert",
@@ -6918,6 +6915,9 @@
                 "commands": true,
                 "skills": true,
                 "hooks": true
+            },
+            "display_name": {
+                "zh": "Ponytail 最简开发"
             },
             "downloads": 9,
             "keywords": [
@@ -6939,9 +6939,6 @@
         },
         {
             "name": "postman",
-            "display_name": {
-                "zh": "Postman API 管理"
-            },
             "description": "Postman — 管理 Postman 的工作区、集合、环境与 API。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -6957,6 +6954,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Postman API 管理"
             },
             "downloads": 1,
             "keywords": [
@@ -6980,9 +6980,6 @@
         },
         {
             "name": "ppt-deck",
-            "display_name": {
-                "zh": "演示文稿生成"
-            },
             "description": "演示文稿生成 — 一句话或一篇文档变成独立 HTML 网页放映加可编辑 PPTX，5 套视觉主题、页间转场与要点动画，中英双语，支持数据溯源与逐页 PNG/PDF 渲染。",
             "version": "1.0.0",
             "author": "dsh-ppt",
@@ -6999,6 +6996,9 @@
             "components": {
                 "skills": true,
                 "tools": true
+            },
+            "display_name": {
+                "zh": "演示文稿生成"
             },
             "keywords": [
                 "ppt",
@@ -7023,9 +7023,6 @@
         },
         {
             "name": "prisma",
-            "display_name": {
-                "zh": "Prisma 数据库管理"
-            },
             "description": "Prisma — 管理 Prisma Postgres 数据库、备份与连接。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -7041,6 +7038,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Prisma 数据库管理"
             },
             "keywords": [
                 "mcp",
@@ -7063,9 +7063,6 @@
         },
         {
             "name": "project-dashboard",
-            "display_name": {
-                "zh": "项目信息看板"
-            },
             "description": "项目信息看板 — 生成 commit 趋势/语言分布/贡献者/文件统计图表，欢迎卡片展示",
             "version": "0.2.4",
             "author": "DriFox Contributors",
@@ -7083,6 +7080,9 @@
             },
             "components": {
                 "ui": true
+            },
+            "display_name": {
+                "zh": "项目信息看板"
             },
             "downloads": 35,
             "keywords": [
@@ -7109,9 +7109,6 @@
         },
         {
             "name": "prompt-enhancer",
-            "display_name": {
-                "zh": "提示词增强"
-            },
             "description": "输入框按钮：一键用 LLM 优化当前输入框的提示词，增强指令可在系统配置中多行编辑。优化中按钮圆环转圈动画，复用主程序模型配置，「提示词增强模型」选择可持久化（关闭再打开保留），闭包实现（不修改主程序）。",
             "version": "0.5.3",
             "author": "DriFox Contributors",
@@ -7127,6 +7124,9 @@
             },
             "components": {
                 "ui": true
+            },
+            "display_name": {
+                "zh": "提示词增强"
             },
             "downloads": 80,
             "keywords": [
@@ -7152,9 +7152,6 @@
         },
         {
             "name": "python-pro",
-            "display_name": {
-                "zh": "Python 开发增强"
-            },
             "description": "Python 开发增强 — 注入 PEP 8 / 类型标注 / 异步最佳实践，PostToolUse 自动 lint 检查，让 Python 代码质量持续达标。",
             "version": "1.0.1",
             "author": "DriFox Contributors",
@@ -7171,6 +7168,9 @@
             "components": {
                 "skills": true,
                 "hooks": true
+            },
+            "display_name": {
+                "zh": "Python 开发增强"
             },
             "downloads": 2,
             "keywords": [
@@ -7193,9 +7193,6 @@
         },
         {
             "name": "quick-screenshot",
-            "display_name": {
-                "zh": "快速截图"
-            },
             "description": "输入框工具栏一键选区截图：左键点按钮拖框选取屏幕区域，松手自动复制到系统剪贴板，Ctrl+V 进输入框即可作为附件发送；右键按钮先隐藏 DriFox 主窗再截图，可截身后的画面",
             "version": "0.2.4",
             "author": "DriFox Contributors",
@@ -7228,6 +7225,9 @@
                 "gateways": false,
                 "engines": false
             },
+            "display_name": {
+                "zh": "快速截图"
+            },
             "downloads": 44,
             "keywords": [
                 "screenshot",
@@ -7252,9 +7252,6 @@
         },
         {
             "name": "rdr2",
-            "display_name": {
-                "zh": "荒野大镖客主题"
-            },
             "description": "荒野大镖客主题 — Red Dead Redemption 2 灵感深色主题，血红主调、荒漠暖金点缀。",
             "version": "1.0.0",
             "author": "DriFox Contributors",
@@ -7270,6 +7267,9 @@
             },
             "components": {
                 "themes": true
+            },
+            "display_name": {
+                "zh": "荒野大镖客主题"
             },
             "downloads": 7,
             "keywords": [
@@ -7295,9 +7295,6 @@
         },
         {
             "name": "react-pro",
-            "display_name": {
-                "zh": "React 性能优化"
-            },
             "description": "React / Next.js 性能优化与最佳实践 — 45 条 RSC 边界、Server Components、App Router、缓存策略、Streaming、Bundle 优化。",
             "version": "1.0.0",
             "author": "Vercel Labs",
@@ -7314,6 +7311,9 @@
             "components": {
                 "commands": true,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "React 性能优化"
             },
             "downloads": 2,
             "keywords": [
@@ -7337,9 +7337,6 @@
         },
         {
             "name": "security-guidance",
-            "display_name": {
-                "zh": "代码安全审查"
-            },
             "description": "AI 生成代码安全审查 — PostToolUse 静态模式检查，识别注入攻击、XSS、SQL 注入、硬编码密钥、不安全反序列化等 25+ 类漏洞风险。",
             "version": "2.0.6",
             "author": "David Dworken",
@@ -7355,6 +7352,9 @@
             },
             "components": {
                 "hooks": true
+            },
+            "display_name": {
+                "zh": "代码安全审查"
             },
             "downloads": 2,
             "keywords": [
@@ -7380,9 +7380,6 @@
         },
         {
             "name": "see-now",
-            "display_name": {
-                "zh": "看屏幕"
-            },
             "description": "看屏幕 — 按画面变化量给模型看屏幕：只把真正变了的几帧拼成一张宫格图，静止画面几乎不出图。动手自检、看用户在做什么都靠它。移植自 DSH dsh-see-now",
             "version": "0.2.0",
             "author": "DriFox Contributors",
@@ -7398,6 +7395,9 @@
             },
             "components": {
                 "tools": true
+            },
+            "display_name": {
+                "zh": "看屏幕"
             },
             "downloads": 3,
             "keywords": [
@@ -7432,9 +7432,6 @@
         },
         {
             "name": "self-evolver",
-            "display_name": {
-                "zh": "自进化工具集"
-            },
             "description": "DriFox 自进化工具集 — AI 可调用的 7 个工具：生成插件骨架、校验插件结构、扫描分析插件、管理 MCP 服务器配置（含 credential 凭据声明）、记录进化审计日志、查询系统日志诊断、发布到市场，配合技能引导实现自我开发/优化/修复插件。",
             "version": "0.10.0",
             "author": "black",
@@ -7451,6 +7448,9 @@
             "components": {
                 "tools": true,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "自进化工具集"
             },
             "downloads": 28,
             "keywords": [
@@ -7477,9 +7477,6 @@
         },
         {
             "name": "semgrep",
-            "display_name": {
-                "zh": "Semgrep 代码扫描"
-            },
             "description": "Semgrep — 扫描代码中的安全漏洞与问题。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -7495,6 +7492,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Semgrep 代码扫描"
             },
             "keywords": [
                 "mcp",
@@ -7517,9 +7517,6 @@
         },
         {
             "name": "sentry",
-            "display_name": {
-                "zh": "Sentry 错误监控"
-            },
             "description": "Sentry — 查看 Sentry 里的错误、性能问题与发布信息。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -7535,6 +7532,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Sentry 错误监控"
             },
             "keywords": [
                 "mcp",
@@ -7557,9 +7557,6 @@
         },
         {
             "name": "seo-audit",
-            "display_name": {
-                "zh": "SEO 审计"
-            },
             "description": "SEO 审计 + 落地页文案 — 五优先级 SEO 审查框架与高转化文案撰写方法论，覆盖主页/落地页/定价页。",
             "version": "1.1.0",
             "author": "Corey Haines",
@@ -7576,6 +7573,9 @@
             "components": {
                 "commands": true,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "SEO 审计"
             },
             "downloads": 1,
             "keywords": [
@@ -7600,9 +7600,6 @@
         },
         {
             "name": "session-tree",
-            "display_name": {
-                "zh": "会话树"
-            },
             "description": "会话树 — 左侧停靠面板，按时间分组展示当前项目的会话列表（类 Codex 桌面版）",
             "version": "0.1.0",
             "author": "Martin",
@@ -7618,6 +7615,9 @@
             },
             "components": {
                 "ui": true
+            },
+            "display_name": {
+                "zh": "会话树"
             },
             "downloads": 3,
             "keywords": [
@@ -7641,9 +7641,6 @@
         },
         {
             "name": "shidi",
-            "display_name": {
-                "zh": "科研师弟"
-            },
             "description": "科研「师弟」— 把一句话想法拆成可交付成果：文献调研与评分、实验方案设计、科研作图、论文精读、数据整理，Pro 深度与 Flash 快速双流程。",
             "version": "1.0.0",
             "author": "shidi-dsh-plugin",
@@ -7659,6 +7656,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "科研师弟"
             },
             "keywords": [
                 "research",
@@ -7683,9 +7683,6 @@
         },
         {
             "name": "showcase",
-            "display_name": {
-                "zh": "成果展示"
-            },
             "description": "成果展示 — 让模型把要交付的文件或图片推到消息卡片成果栏，图片带缩略图预览，其他条目可双击打开、拖拽导出",
             "version": "1.0.0",
             "author": "DriFox Contributors",
@@ -7701,6 +7698,9 @@
             },
             "components": {
                 "tools": true
+            },
+            "display_name": {
+                "zh": "成果展示"
             },
             "downloads": 1,
             "keywords": [
@@ -7727,9 +7727,6 @@
         },
         {
             "name": "skill-creator",
-            "display_name": {
-                "zh": "技能创作专家"
-            },
             "description": "技能创作专家 — 从零创建技能、修改优化既有技能、评测技能性能。含基准测试、描述优化、性能方差分析完整方法论。",
             "version": "1.0.0",
             "author": "Anthropic",
@@ -7745,6 +7742,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "技能创作专家"
             },
             "downloads": 2,
             "keywords": [
@@ -7768,9 +7768,6 @@
         },
         {
             "name": "skillhub",
-            "display_name": {
-                "zh": "SkillHub 技能工作流"
-            },
             "description": "SkillHub 技能工作流 — 内网技能注册中心（registry）的批量发布、搜索与安装。内置限流重试、断点续传与发布失败分类处理。",
             "version": "1.0.0",
             "author": "DriFox Contributors",
@@ -7786,6 +7783,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "SkillHub 技能工作流"
             },
             "downloads": 1,
             "keywords": [
@@ -7810,9 +7810,6 @@
         },
         {
             "name": "slack-gif-creator",
-            "display_name": {
-                "zh": "Slack GIF 生成"
-            },
             "description": "动画 GIF 生成 — 面向 Slack 尺寸的动图制作，含约束校验与动画概念工具。",
             "version": "1.0.0",
             "author": "Anthropic",
@@ -7828,6 +7825,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "Slack GIF 生成"
             },
             "downloads": 2,
             "keywords": [
@@ -7851,9 +7851,6 @@
         },
         {
             "name": "slack-mcp",
-            "display_name": {
-                "zh": "Slack 消息管理"
-            },
             "description": "跨频道和私信读写搜索 Slack 消息。用自然语言创建管理 Canvas 文档、定时发送消息、添加表情回应、查找用户信息。",
             "version": "1.0.0",
             "author": "Slack",
@@ -7869,6 +7866,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Slack 消息管理"
             },
             "keywords": [
                 "mcp",
@@ -7891,9 +7891,6 @@
         },
         {
             "name": "sledding-game",
-            "display_name": {
-                "zh": "初雪坡主题"
-            },
             "description": "Sledding Game · 初雪坡 — 浅色动画主题，仓鼠与青蛙坐雪橇滑下雪坡的 4K 手绘动画整窗铺底（Wallpaper Engine 创意工坊 3531878415 转制动画 WebP），配色取自河蓝滑痕、杉林墨绿与主角橙。",
             "version": "1.0.0",
             "author": "DriFox Contributors",
@@ -7909,6 +7906,9 @@
             },
             "components": {
                 "themes": true
+            },
+            "display_name": {
+                "zh": "初雪坡主题"
             },
             "downloads": 1,
             "keywords": [
@@ -7938,9 +7938,6 @@
         },
         {
             "name": "snake",
-            "display_name": {
-                "zh": "贪吃蛇游戏"
-            },
             "description": "经典贪吃蛇游戏——在 DriFox 中直接玩的浮動卡片",
             "version": "0.3.0",
             "author": "DriFox Contributor",
@@ -7958,6 +7955,9 @@
                 "commands": false,
                 "ui": true
             },
+            "display_name": {
+                "zh": "贪吃蛇游戏"
+            },
             "downloads": 6,
             "icon": {
                 "light": "icon.png",
@@ -7973,9 +7973,6 @@
         },
         {
             "name": "solitaire",
-            "display_name": {
-                "zh": "接龙纸牌游戏"
-            },
             "description": "经典接龙纸牌游戏（Klondike）——拖拽移动、双击自动收牌，在 DriFox 中直接玩",
             "version": "0.1.1",
             "author": "DriFox Contributor",
@@ -7993,6 +7990,9 @@
                 "commands": false,
                 "ui": true
             },
+            "display_name": {
+                "zh": "接龙纸牌游戏"
+            },
             "downloads": 1,
             "icon": {
                 "light": "icon.png",
@@ -8008,9 +8008,6 @@
         },
         {
             "name": "speak-up",
-            "display_name": {
-                "zh": "主动搭话"
-            },
             "description": "主动搭话 — 没人跟 AI 说话时，它自己按命中线掷骰决定要不要先开口。峰谷分时、安静时段、攒加成、冷却全套可调；默认演练模式只记账不真发。移植自 DSH dsh-speak-up",
             "version": "0.1.0",
             "author": "DriFox Contributors",
@@ -8029,6 +8026,9 @@
                 "tools": true,
                 "hooks": true,
                 "ui": true
+            },
+            "display_name": {
+                "zh": "主动搭话"
             },
             "downloads": 1,
             "keywords": [
@@ -8056,9 +8056,6 @@
         },
         {
             "name": "square",
-            "display_name": {
-                "zh": "Square 商户管理"
-            },
             "description": "Square — 管理 Square 的商品、订单、付款与客户。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -8074,6 +8071,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Square 商户管理"
             },
             "keywords": [
                 "mcp",
@@ -8096,9 +8096,6 @@
         },
         {
             "name": "ssh-toolkit",
-            "display_name": {
-                "zh": "SSH 远程工具包"
-            },
             "description": "SSH 远程工具包：连接管理（AI 工具 + 系统设置页）、命令执行、文件传输(SFTP)、端口转发、目录浏览，基于 paramiko 实现，AI 自动调用。",
             "version": "0.4.4",
             "author": "马丁",
@@ -8116,6 +8113,9 @@
             "components": {
                 "tools": true,
                 "ui": true
+            },
+            "display_name": {
+                "zh": "SSH 远程工具包"
             },
             "downloads": 31,
             "platforms": [
@@ -8160,9 +8160,6 @@
         },
         {
             "name": "stripe",
-            "display_name": {
-                "zh": "Stripe 支付管理"
-            },
             "description": "Stripe — 查询和管理 Stripe 的客户、付款、订阅与发票。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -8178,6 +8175,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Stripe 支付管理"
             },
             "keywords": [
                 "mcp",
@@ -8200,9 +8200,6 @@
         },
         {
             "name": "supabase",
-            "display_name": {
-                "zh": "Supabase 项目管理"
-            },
             "description": "Supabase — 管理 Supabase 项目、数据库、边缘函数与日志。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -8218,6 +8215,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Supabase 项目管理"
             },
             "keywords": [
                 "mcp",
@@ -8240,9 +8240,6 @@
         },
         {
             "name": "superclaude",
-            "display_name": {
-                "zh": "SuperClaude 开发框架"
-            },
             "description": "AI 增强开发框架 — 30 个命令、20 个智能体、7 种模式、置信度检查、并行执行与反思式学习（SuperClaude_Framework 适配 DriFox）。",
             "version": "4.3.0",
             "author": "SuperClaude Org",
@@ -8264,6 +8261,9 @@
                 "skills": true,
                 "mcp": true
             },
+            "display_name": {
+                "zh": "SuperClaude 开发框架"
+            },
             "downloads": 2,
             "keywords": [
                 "development",
@@ -8284,9 +8284,6 @@
         },
         {
             "name": "superpowers",
-            "display_name": {
-                "zh": "Superpowers 技能库"
-            },
             "description": "Superpowers 核心技能库 — TDD、调试、头脑风暴、写计划、代码审查、子智能体驱动开发等 14 个工程工作流技能，让 AI 遵循资深工程师流程。",
             "version": "6.2.0",
             "author": "Jesse Vincent",
@@ -8303,6 +8300,9 @@
             "components": {
                 "skills": true,
                 "hooks": true
+            },
+            "display_name": {
+                "zh": "Superpowers 技能库"
             },
             "downloads": 4,
             "keywords": [
@@ -8328,9 +8328,6 @@
         },
         {
             "name": "tailwind-pro",
-            "display_name": {
-                "zh": "Tailwind CSS 增强"
-            },
             "description": "Tailwind CSS v4 完整支持 — 类型/类名/任意值/设计系统/主题映射，配合 Tailwind LSP 实时校验。",
             "version": "1.0.0",
             "author": "hairyf",
@@ -8348,6 +8345,9 @@
                 "commands": true,
                 "skills": true,
                 "lsp": true
+            },
+            "display_name": {
+                "zh": "Tailwind CSS 增强"
             },
             "keywords": [
                 "tailwind",
@@ -8371,9 +8371,6 @@
         },
         {
             "name": "taskboard",
-            "display_name": {
-                "zh": "任务看板引擎"
-            },
             "description": "任务看板对话引擎 — todo/inprogress/review/done 四列流水线，每列绑定专属智能体并行处理任务，智能体自主决定任务去留",
             "version": "0.3.0",
             "author": "DriFox Contributors",
@@ -8391,6 +8388,9 @@
             "components": {
                 "ui": true,
                 "agents": true
+            },
+            "display_name": {
+                "zh": "任务看板引擎"
             },
             "downloads": 3,
             "keywords": [
@@ -8418,9 +8418,6 @@
         },
         {
             "name": "teach",
-            "display_name": {
-                "zh": "AI 私人教师"
-            },
             "description": "AI 私人教师技能——基于学习目标进行多轮交互式教学，跟踪学习进度，持续教会你任何知识。",
             "version": "1.0.0",
             "author": "DriFox Contributor",
@@ -8436,6 +8433,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "AI 私人教师"
             },
             "downloads": 1,
             "keywords": [
@@ -8460,9 +8460,6 @@
         },
         {
             "name": "tencent-docs",
-            "display_name": {
-                "zh": "腾讯文档"
-            },
             "description": "腾讯文档 — 创建、搜索、阅读和编辑腾讯文档，支持文档、表格、幻灯片与思维导图。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -8478,6 +8475,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "腾讯文档"
             },
             "downloads": 3,
             "keywords": [
@@ -8501,9 +8501,6 @@
         },
         {
             "name": "tencent-hunyuan",
-            "display_name": {
-                "zh": "腾讯混元服务商"
-            },
             "description": "腾讯混元 Hy 系列服务商接入插件：经腾讯云 TokenHub 开放，OpenAI 兼容协议（/v1/chat/completions），Bearer 鉴权，按量付费。Hy4 preview 当前在 WorkBuddy/CodeBuddy 限免两周（约 2026-09-11 止），Hy3 免费延至 2026-09-30。",
             "version": "0.1.0",
             "author": "self-evolver",
@@ -8536,6 +8533,9 @@
                 "gateways": false,
                 "engines": false
             },
+            "display_name": {
+                "zh": "腾讯混元服务商"
+            },
             "downloads": 2,
             "keywords": [
                 "tencent",
@@ -8561,9 +8561,6 @@
         },
         {
             "name": "tencent-map",
-            "display_name": {
-                "zh": "腾讯位置服务"
-            },
             "description": "腾讯位置服务 — 地点搜索、路线规划、周边与天气查询。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -8579,6 +8576,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "腾讯位置服务"
             },
             "downloads": 1,
             "keywords": [
@@ -8602,9 +8602,6 @@
         },
         {
             "name": "test-scaffold",
-            "display_name": {
-                "zh": "测试脚手架生成"
-            },
             "description": "测试脚手架生成 — 自动生成测试用例骨架、分析覆盖率缺口、推荐边界测试场景，加速测试编写。",
             "version": "1.0.0",
             "author": "DriFox Contributors",
@@ -8621,6 +8618,9 @@
             "components": {
                 "commands": true,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "测试脚手架生成"
             },
             "keywords": [
                 "test",
@@ -8644,9 +8644,6 @@
         },
         {
             "name": "tetris",
-            "display_name": {
-                "zh": "俄罗斯方块"
-            },
             "description": "经典俄罗斯方块——在 DriFox 中直接玩的浮動卡片",
             "version": "0.3.0",
             "author": "DriFox Contributor",
@@ -8664,6 +8661,9 @@
                 "commands": false,
                 "ui": true
             },
+            "display_name": {
+                "zh": "俄罗斯方块"
+            },
             "downloads": 3,
             "icon": {
                 "light": "icon.png",
@@ -8679,9 +8679,6 @@
         },
         {
             "name": "the-last-of-us",
-            "display_name": {
-                "zh": "最后生还者主题"
-            },
             "description": "最后生还者 — 深浅双模式主题，Ellie 林间弹吉他场景整窗铺底（ Wallpaper Engine 创意工坊 1998201410 原图），附四首 Gustavo Santaolalla OST 背景音乐循环播放。深色林间暮色 / 浅色林间晨光，配色取自画面枯木与透光。",
             "version": "1.0.3",
             "author": "DriFox Contributors",
@@ -8697,6 +8694,9 @@
             },
             "components": {
                 "themes": true
+            },
+            "display_name": {
+                "zh": "最后生还者主题"
             },
             "downloads": 6,
             "keywords": [
@@ -8727,9 +8727,6 @@
         },
         {
             "name": "theme-factory",
-            "display_name": {
-                "zh": "主题换肤工厂"
-            },
             "description": "主题换肤工厂 — 10 套预设主题 + 即时生成新主题，给任何 HTML artifact 换肤。",
             "version": "1.0.0",
             "author": "Anthropic",
@@ -8745,6 +8742,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "主题换肤工厂"
             },
             "keywords": [
                 "theme",
@@ -8767,9 +8767,6 @@
         },
         {
             "name": "tiktok",
-            "display_name": {
-                "zh": "TikTok 商业 MCP"
-            },
             "description": "TikTok for Business MCP Server 是基于模型上下文协议（MCP）搭建的标准化桥梁，助力开发者与广告主将 AI 智能代理直接对接 TikTok 广告平台。它将广告核心能力⸺广告活动管理、效果报表、受众配置以及创意运营，封装为一套稳定、可投入生产环境使用的工具。AI智能代理仅通过简洁结构化指令，即可完成 TikTok 广告的管理、优化",
             "version": "1.0.0",
             "author": "TikTok for Business",
@@ -8785,6 +8782,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "TikTok 商业 MCP"
             },
             "keywords": [
                 "mcp",
@@ -8807,9 +8807,6 @@
         },
         {
             "name": "todoist",
-            "display_name": {
-                "zh": "Todoist 任务管理"
-            },
             "description": "Todoist — 查看、添加和整理 Todoist 里的任务与项目。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -8825,6 +8822,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Todoist 任务管理"
             },
             "keywords": [
                 "mcp",
@@ -8847,9 +8847,6 @@
         },
         {
             "name": "token-usage",
-            "display_name": {
-                "zh": "Token 用量统计"
-            },
             "description": "欢迎卡片 Token 用量 — 30 天四指标 + GitHub 风格年度活动热力图，数据取自会话里的真实 API usage",
             "version": "0.1.6",
             "author": "DriFox Contributors",
@@ -8866,6 +8863,9 @@
             },
             "components": {
                 "ui": true
+            },
+            "display_name": {
+                "zh": "Token 用量统计"
             },
             "downloads": 25,
             "keywords": [
@@ -8898,9 +8898,6 @@
         },
         {
             "name": "tool-locator",
-            "display_name": {
-                "zh": "工具实现定位"
-            },
             "description": "开发期工具：查找可热重载工具插件的实现文件路径（tools/*.py），方便直接修改并热重载生效；工具不足时可加载 plugin-creator 技能自行开发新工具。",
             "version": "0.2.0",
             "author": "martin",
@@ -8916,6 +8913,9 @@
             },
             "components": {
                 "tools": true
+            },
+            "display_name": {
+                "zh": "工具实现定位"
             },
             "downloads": 7,
             "keywords": [
@@ -8939,9 +8939,6 @@
         },
         {
             "name": "tripo-3d",
-            "display_name": {
-                "zh": "Tripo 3D 生成"
-            },
             "description": "Generate textured, rig-ready 3D models from text or images; export GLB/FBX/OBJ/STL/USDZ/3MF.",
             "version": "1.0.0",
             "author": "Tripo 3D",
@@ -8958,6 +8955,9 @@
             "components": {
                 "mcp": true,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "Tripo 3D 生成"
             },
             "keywords": [
                 "mcp",
@@ -8980,9 +8980,6 @@
         },
         {
             "name": "twin-chat",
-            "display_name": {
-                "zh": "并发对话"
-            },
             "description": "并发对话 — 浮动卡片内嵌第二对话窗口实例（复制当前项目/模型配置、独立会话），与主对话并行生成互不阻塞",
             "version": "0.1.0",
             "author": "DriFox Contributors",
@@ -8998,6 +8995,9 @@
             },
             "components": {
                 "ui": true
+            },
+            "display_name": {
+                "zh": "并发对话"
             },
             "downloads": 10,
             "keywords": [
@@ -9026,9 +9026,6 @@
         },
         {
             "name": "ui-motion-skills",
-            "display_name": {
-                "zh": "UI 动效设计"
-            },
             "description": "UI 动效设计技能集——源自 emilkowalski/skills（Emil Kowalski，前 Vercel/Linear），覆盖动画从零构建、严格评审、全库审计、动画词汇、Apple 设计原则、UI 库选型、原型对比与 Sonner 指南，让 AI 的动效品味达到一线水准。",
             "version": "1.0.0",
             "author": "emilkowalski",
@@ -9044,6 +9041,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "UI 动效设计"
             },
             "downloads": 4,
             "keywords": [
@@ -9068,9 +9068,6 @@
         },
         {
             "name": "vercel",
-            "display_name": {
-                "zh": "Vercel 部署管理"
-            },
             "description": "Vercel — 查看 Vercel 项目、部署与日志，并检索 Vercel 文档。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -9086,6 +9083,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Vercel 部署管理"
             },
             "keywords": [
                 "mcp",
@@ -9108,9 +9108,6 @@
         },
         {
             "name": "video-pipeline",
-            "display_name": {
-                "zh": "视频制作流水线"
-            },
             "description": "短视频生产与多平台发布流水线 — 火山方舟生图生视频、中文 TTS 读音校正、素材合成与封面、抖音/B站/小红书/视频号自动化投稿，19 个原子技能可组合。",
             "version": "1.0.0",
             "author": "439436269-ctrl",
@@ -9126,6 +9123,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "视频制作流水线"
             },
             "downloads": 2,
             "keywords": [
@@ -9152,9 +9152,6 @@
         },
         {
             "name": "vision-proxy",
-            "display_name": {
-                "zh": "视觉代理"
-            },
             "description": "图片代理 — 当前模型不支持视觉时，把图片转发给配置的多模态模型，取回文字描述交给当前模型继续推理",
             "version": "0.2.2",
             "author": "DriFox Contributors",
@@ -9172,6 +9169,9 @@
             "components": {
                 "tools": true,
                 "ui": true
+            },
+            "display_name": {
+                "zh": "视觉代理"
             },
             "downloads": 4,
             "keywords": [
@@ -9198,9 +9198,6 @@
         },
         {
             "name": "voice-clone",
-            "display_name": {
-                "zh": "声音克隆"
-            },
             "description": "MiniMax 语音克隆 — 上传 10s+ 音频样本，克隆指定音色 voice_id，用克隆音色朗读任意文本（含试听与 TTS 合成）。",
             "version": "1.0.0",
             "author": "DriFox Contributors",
@@ -9217,6 +9214,9 @@
             "components": {
                 "commands": true,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "声音克隆"
             },
             "downloads": 1,
             "keywords": [
@@ -9242,9 +9242,6 @@
         },
         {
             "name": "voice-input",
-            "display_name": {
-                "zh": "语音输入"
-            },
             "description": "输入框工具栏语音听写按钮：点击开始录音，再次点击结束并把识别文字插入输入框光标处。纯云端识别：硅基流动（免费模型，默认）与 MiniMax 双引擎可配，云端失败自动互为备用",
             "version": "0.6.3",
             "author": "DriFox Contributors",
@@ -9277,6 +9274,9 @@
                 "gateways": false,
                 "engines": false
             },
+            "display_name": {
+                "zh": "语音输入"
+            },
             "downloads": 40,
             "keywords": [
                 "voice",
@@ -9305,9 +9305,6 @@
         },
         {
             "name": "voice-reply",
-            "display_name": {
-                "zh": "语音朗读"
-            },
             "description": "消息卡片页脚「朗读」按钮：点击播报本条 AI 回复。双引擎：本地系统语音（Windows SAPI5 / macOS say，免费零配置，默认）+ OpenAI 兼容在线 TTS API（默认预填硅基流动 CosyVoice2，可指向任意兼容服务）",
             "version": "1.7.2",
             "author": "DriFox",
@@ -9340,6 +9337,9 @@
                 "gateways": false,
                 "engines": false
             },
+            "display_name": {
+                "zh": "语音朗读"
+            },
             "downloads": 16,
             "keywords": [
                 "voice",
@@ -9369,9 +9369,6 @@
         },
         {
             "name": "web-artifacts-builder",
-            "display_name": {
-                "zh": "交互式 HTML 构建"
-            },
             "description": "复杂交互式 HTML 页面构建 — React + Tailwind + shadcn/ui，含状态管理/路由。",
             "version": "1.0.0",
             "author": "Anthropic",
@@ -9387,6 +9384,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "交互式 HTML 构建"
             },
             "downloads": 4,
             "keywords": [
@@ -9411,9 +9411,6 @@
         },
         {
             "name": "web-design-skills",
-            "display_name": {
-                "zh": "网页设计技能"
-            },
             "description": "网页设计技能——使用 HTML/CSS/JavaScript/React 构建和重新设计高质量的视觉网页作品。",
             "version": "1.3.0",
             "author": "ConardLi",
@@ -9429,6 +9426,9 @@
             },
             "components": {
                 "skills": true
+            },
+            "display_name": {
+                "zh": "网页设计技能"
             },
             "downloads": 3,
             "keywords": [
@@ -9453,9 +9453,6 @@
         },
         {
             "name": "webapp-testing",
-            "display_name": {
-                "zh": "Web 应用 E2E 测试"
-            },
             "description": "Web 应用 E2E 测试 — 浏览器自动化 + Playwright/Chrome DevTools MCP + 测试策略 + 截图验证 + 调试技巧。",
             "version": "1.0.0",
             "author": "Anthropic",
@@ -9472,6 +9469,9 @@
             "components": {
                 "commands": false,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "Web 应用 E2E 测试"
             },
             "downloads": 2,
             "keywords": [
@@ -9496,9 +9496,6 @@
         },
         {
             "name": "webdav-backup",
-            "display_name": {
-                "zh": "WebDAV 备份"
-            },
             "description": "WebDAV 备份 — 将 DriFox 数据（会话/配置/插件数据）全量备份到坚果云、Nextcloud 等 WebDAV 网盘，支持定时自动备份、可选 AES-256 加密、历史版本管理与一键恢复",
             "version": "0.8.3",
             "author": "DriFox Contributors",
@@ -9514,6 +9511,9 @@
             },
             "components": {
                 "ui": true
+            },
+            "display_name": {
+                "zh": "WebDAV 备份"
             },
             "downloads": 21,
             "keywords": [
@@ -9543,9 +9543,6 @@
         },
         {
             "name": "webflow",
-            "display_name": {
-                "zh": "Webflow 站点管理"
-            },
             "description": "Webflow — 管理 Webflow 站点、页面与 CMS 内容。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -9561,6 +9558,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Webflow 站点管理"
             },
             "keywords": [
                 "mcp",
@@ -9583,9 +9583,6 @@
         },
         {
             "name": "win-powershell",
-            "display_name": {
-                "zh": "PowerShell 工具"
-            },
             "description": "专用 Windows PowerShell 执行工具——强制走 PowerShell 原生入口运行 PS 脚本/命令（cmdlet、管道对象、ConvertTo-Json），自动处理 UTF-8 编码与超时，区别于通用 bash 工具。",
             "version": "1.0.8",
             "author": "马丁",
@@ -9601,6 +9598,9 @@
             },
             "components": {
                 "tools": true
+            },
+            "display_name": {
+                "zh": "PowerShell 工具"
             },
             "downloads": 41,
             "keywords": [
@@ -9624,9 +9624,6 @@
         },
         {
             "name": "wix",
-            "display_name": {
-                "zh": "Wix 站点管理"
-            },
             "description": "Wix — 管理 Wix 站点、商品、预约与内容。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -9642,6 +9639,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "Wix 站点管理"
             },
             "keywords": [
                 "mcp",
@@ -9664,9 +9664,6 @@
         },
         {
             "name": "workbuddy",
-            "display_name": {
-                "zh": "WorkBuddy 专家模式"
-            },
             "description": "把 WorkBuddy「专家全能模式」的问答体验完整搬进 DriFox：BuildSystemPrompt 钩子注入专家提示词；present_files 产物呈现 + Tab 式产物面板；Stop 钩子记忆更新提醒 + wb_memory 记忆读写工具，还原 WorkBuddy 的记忆与产物体验。",
             "version": "1.4.2",
             "author": "DriFox Contributors",
@@ -9686,6 +9683,9 @@
                 "hooks": true,
                 "ui": true,
                 "skills": true
+            },
+            "display_name": {
+                "zh": "WorkBuddy 专家模式"
             },
             "downloads": 10,
             "keywords": [
@@ -9712,9 +9712,6 @@
         },
         {
             "name": "workflow",
-            "display_name": {
-                "zh": "子智能体编排"
-            },
             "description": "受限 Python 脚本编排子智能体：条件/循环/并行扇出，默认后台立即返回 run_id，对话流实时卡片可见进度；支持 save/list/load/resume",
             "version": "0.2.0",
             "author": "DriFoxx Team",
@@ -9731,6 +9728,9 @@
             "components": {
                 "tools": true
             },
+            "display_name": {
+                "zh": "子智能体编排"
+            },
             "downloads": 3,
             "icon": {
                 "light": "icon.png",
@@ -9746,9 +9746,6 @@
         },
         {
             "name": "zhipu-webreader",
-            "display_name": {
-                "zh": "智谱网页读取"
-            },
             "description": "智谱 网页读取 — 抓取网页正文与结构化内容。安装后填入智谱 API Key。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -9764,6 +9761,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "智谱网页读取"
             },
             "downloads": 1,
             "keywords": [
@@ -9787,9 +9787,6 @@
         },
         {
             "name": "zhipu-websearch",
-            "display_name": {
-                "zh": "智谱联网搜索"
-            },
             "description": "智谱 联网搜索 — 通过智谱开放平台进行实时联网搜索。安装后填入智谱 API Key。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -9805,6 +9802,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "智谱联网搜索"
             },
             "downloads": 1,
             "keywords": [
@@ -9828,9 +9828,6 @@
         },
         {
             "name": "zhipu-zread",
-            "display_name": {
-                "zh": "智谱仓库阅读"
-            },
             "description": "智谱 开源仓库阅读 — 阅读 GitHub 开源仓库的文档、结构与代码。安装后填入智谱 API Key。",
             "version": "1.0.0",
             "author": "liliMozi",
@@ -9846,6 +9843,9 @@
             },
             "components": {
                 "mcp": true
+            },
+            "display_name": {
+                "zh": "智谱仓库阅读"
             },
             "downloads": 2,
             "keywords": [
