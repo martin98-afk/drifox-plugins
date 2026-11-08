@@ -28,7 +28,7 @@ var i,n=1;
 function add(num,extra){{var e=document.createElement('div');e.className='cal-cell'+(extra||'');e.textContent=num;g.appendChild(e)}}
 for(i=0;i<off;i++)add(pd-off+1+i,' cal-other');
 for(i=1;i<=days;i++){{if(i===TODAY_D&&y===TODAY_Y&&m===TODAY_M)add(i,' cal-today');else add(i,'')}}
-while((off+days+n-1)%7!==0){{add(n,' cal-other');n++}}
+while(g.children.length<42){{add(n,' cal-other');n++}}
 w.querySelector('.cal-title').textContent=y+' 年 '+m+' 月';
 }})(this,DELTA)"""
 
@@ -50,8 +50,9 @@ def _build_calendar_cells(year: int, month: int, day: int) -> str:
     for d in range(1, days_in_month + 1):
         cls = "cal-cell cal-today" if d == day else "cal-cell"
         cells.append(f'<div class="{cls}">{d}</div>')
+    # 补齐到 6 行（42 格），保证任意月份高度一致，右侧时钟可按固定高度对齐
     n = 1
-    while len(cells) % 7 != 0:
+    while len(cells) < 42:
         cells.append(f'<div class="cal-cell cal-other">{n}</div>')
         n += 1
     return "".join(cells)
@@ -68,11 +69,11 @@ def _build_clock_ticks_html() -> str:
         angle = i * 30
         if i % 3 == 0:
             ticks.append(
-                f'<div class="tick tick-major" style="transform:rotate({angle}deg) translateY(-70px)"></div>'
+                f'<div class="tick tick-major" style="transform:rotate({angle}deg) translateY(calc(var(--face) * 0.44 - 4px))"></div>'
             )
         else:
             ticks.append(
-                f'<div class="tick" style="transform:rotate({angle}deg) translateY(-74px)"></div>'
+                f'<div class="tick" style="transform:rotate({angle}deg) translateY(calc(var(--face) * 0.44 - 4px))"></div>'
             )
     return "".join(ticks)
 
@@ -141,8 +142,8 @@ def _render_calendar_html(ctx: dict | None = None) -> str:
 {_build_clock_html(now)}
 </div>
 <style>
-.cal-wrap {{ max-width: 760px; margin: 0 auto; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 44px; flex-wrap: wrap; }}
-.cal-main {{ flex: 1 1 300px; max-width: 480px; min-width: 280px; }}
+.cal-wrap {{ max-width: 980px; --face: clamp(184px, 26vw, 252px); margin: 0 auto; font-family: inherit; display: flex; align-items: center; justify-content: center; column-gap: 96px; row-gap: 28px; flex-wrap: wrap; }}
+.cal-main {{ flex: 1 1 300px; max-width: 448px; min-width: 280px; }}
 .cal-head {{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }}
 .cal-title {{ font-size: 15px; font-weight: 600; letter-spacing: 0.02em; }}
 .cal-nav {{
@@ -162,20 +163,20 @@ def _render_calendar_html(ctx: dict | None = None) -> str:
 .cal-today {{
   background: var(--cal-accent); color: #fff !important; font-weight: 700;
 }}
-.cal-clock {{ display: flex; flex-direction: column; align-items: center; gap: 10px; }}
+.cal-clock {{ flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 12px; }}
 .clock-face {{
-  position: relative; width: 160px; height: 160px; border-radius: 50%;
+  position: relative; width: var(--face); height: var(--face); border-radius: 50%;
   background: var(--cal-clock-bg); border: 1px solid var(--cal-border);
   box-shadow: inset 0 0 8px rgba(0,0,0,0.05);
 }}
-.tick {{ position: absolute; left: 50%; top: 50%; width: 2px; height: 8px; margin: -4px 0 0 -1px; border-radius: 1px; background: var(--cal-muted); }}
-.tick-major {{ height: 16px; margin-top: -8px; background: var(--cal-text); }}
+.tick {{ position: absolute; left: 50%; top: 50%; width: 2px; height: calc(var(--face) * 0.05); margin: calc(var(--face) * -0.025) 0 0 -1px; border-radius: 1px; background: var(--cal-muted); }}
+.tick-major {{ height: calc(var(--face) * 0.11); margin-top: calc(var(--face) * -0.055); background: var(--cal-text); }}
 @keyframes cal-spin {{ from {{ transform: rotate(0deg); }} to {{ transform: rotate(360deg); }} }}
 .hand {{ position: absolute; left: 50%; bottom: 50%; transform-origin: 50% 100%; border-radius: 3px 3px 1px 1px; }}
-.hand-hour {{ width: 5px; height: 34px; margin-left: -2.5px; background: var(--cal-hand); animation: cal-spin 43200s linear infinite; }}
-.hand-minute {{ width: 3px; height: 50px; margin-left: -1.5px; background: var(--cal-hand); animation: cal-spin 3600s linear infinite; }}
-.hand-second {{ width: 1.5px; height: 58px; margin-left: -0.75px; background: var(--cal-accent); animation: cal-spin 60s steps(60) infinite; }}
-.clock-dot {{ position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--cal-hand); border: 2px solid var(--cal-clock-bg); }}
+.hand-hour {{ width: 6px; height: 22%; margin-left: -3px; background: var(--cal-hand); animation: cal-spin 43200s linear infinite; }}
+.hand-minute {{ width: 3.5px; height: 31%; margin-left: -1.75px; background: var(--cal-hand); animation: cal-spin 3600s linear infinite; }}
+.hand-second {{ width: 1.5px; height: 36%; margin-left: -0.75px; background: var(--cal-accent); animation: cal-spin 60s steps(60) infinite; }}
+.clock-dot {{ position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--cal-hand); border: 2px solid var(--cal-clock-bg); }}
 .clock-date {{ font-size: 12px; color: var(--cal-muted); letter-spacing: 0.03em; }}
 :root {{
   {css_vars}
