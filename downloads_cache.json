@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1794119060.6075876,
+  "fetched_at": 1794145379.4834695,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -22,7 +22,7 @@
     "bili-summary": 1,
     "breakout": 6,
     "browser": 89,
-    "calendar": 29,
+    "calendar": 30,
     "canva": 1,
     "canvas-design": 2,
     "catppuccin-themes": 2,
@@ -202,7 +202,7 @@
     "tencent-map": 1,
     "test-scaffold": 0,
     "tetris": 3,
-    "the-last-of-us": 6,
+    "the-last-of-us": 7,
     "theme-factory": 0,
     "tiktok": 0,
     "todoist": 0,
