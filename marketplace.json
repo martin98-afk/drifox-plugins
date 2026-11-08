@@ -674,9 +674,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-baldurs-gate-3-v1.0.0/baldurs-gate-3-1.0.0-all.tar.gz",
-                    "sha256": "fa615546fa4b19a75169b696a4b7d374880d8a2dcd18b4772c1f58b2401f2e9e",
-                    "size": 15094875
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-baldurs-gate-3-v1.0.1/baldurs-gate-3-1.0.1-all.tar.gz",
+                    "sha256": "0d61c90430ebd18739e5dd80ec3259a4c7a9798add208ba7ed716423783cc493",
+                    "size": 15088028
                 }
             }
         },
@@ -716,9 +716,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-baldurs-gate-3-alt-v1.0.0/baldurs-gate-3-alt-1.0.0-all.tar.gz",
-                    "sha256": "db81fc3124b7aa131c6c580527a771e6f40dfda75d2c5ef6c28da99218342bc8",
-                    "size": 51263752
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-baldurs-gate-3-alt-v1.0.1/baldurs-gate-3-alt-1.0.1-all.tar.gz",
+                    "sha256": "d1a3d339ed285e72203639aa01b40fabec587571d452a5246c1a0409f49f8523",
+                    "size": 51186130
                 }
             }
         },
@@ -2048,9 +2048,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-cozy-campfire-v1.0.0/cozy-campfire-1.0.0-all.tar.gz",
-                    "sha256": "ec04b05ce5f3a2838d11ac4d1be7a43f13ff422b3f8dd2e6939d27f88dbbf48b",
-                    "size": 2871188
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-cozy-campfire-v1.0.1/cozy-campfire-1.0.1-all.tar.gz",
+                    "sha256": "4c549a22f119682b4ef47d739be9814e2291482a9a4654e0db6930688c6d2ab1",
+                    "size": 2872016
                 }
             }
         },
@@ -2228,9 +2228,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-dancing-frogs-v1.0.0/dancing-frogs-1.0.0-all.tar.gz",
-                    "sha256": "ffbf1dfab5aa798ddfb4ebae3177480b9374a9fcf55bdb7298d17c7d2c73462c",
-                    "size": 3313281
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-dancing-frogs-v1.0.1/dancing-frogs-1.0.1-all.tar.gz",
+                    "sha256": "9f12125d8207ce5bf79ef3d5e2bff5c6da55b8dfbbce9b0c4201889a5f1a0572",
+                    "size": 3311662
                 }
             }
         },
@@ -2270,9 +2270,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-darth-vader-v1.0.0/darth-vader-1.0.0-all.tar.gz",
-                    "sha256": "4ba681e54b7f760042ee601fae617012ed7a4dce2620b32970f99dc43d929794",
-                    "size": 8019430
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-darth-vader-v1.0.1/darth-vader-1.0.1-all.tar.gz",
+                    "sha256": "5ed85d6e3ac56b50d67239334c963517210afe55eccb82dc07d9130c2e8698e3",
+                    "size": 8012504
                 }
             }
         },
@@ -2312,9 +2312,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-deepseek-honeypot-v1.0.0/deepseek-honeypot-1.0.0-all.tar.gz",
-                    "sha256": "b29a00a4dee3676b11e0335b284c6299287b1049746d08f31717128285d1c69e",
-                    "size": 34414313
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-deepseek-honeypot-v1.0.1/deepseek-honeypot-1.0.1-all.tar.gz",
+                    "sha256": "e7ae6ff3ed44cd64c838c9e4a2f15bcef14065c83d369811e740119065cfa103",
+                    "size": 34413001
                 }
             }
         },
@@ -2667,9 +2667,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-dream-view-v1.0.0/dream-view-1.0.0-all.tar.gz",
-                    "sha256": "07d277c368b9eda63c763927dc69c50f6f5abb3164aaa2d109fb11cb31050c7e",
-                    "size": 19367432
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-dream-view-v1.0.1/dream-view-1.0.1-all.tar.gz",
+                    "sha256": "cf58c32d42974cefdf9585963cbf4576adea0b0e54c95213fa53af3dfbeed365",
+                    "size": 19365330
                 }
             }
         },
@@ -3742,9 +3742,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-farming-frogs-v1.0.0/farming-frogs-1.0.0-all.tar.gz",
-                    "sha256": "c50a86b73f008b17b2b72325dd4a27a4eb7e4492b0c995341009fd472e03c435",
-                    "size": 1111043
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-farming-frogs-v1.0.1/farming-frogs-1.0.1-all.tar.gz",
+                    "sha256": "32f5954330353b541c4f666f2340d2d027bb78497cf1f42ccad51370a5450b38",
+                    "size": 1110702
                 }
             }
         },
@@ -4089,9 +4089,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-frog-picnic-v1.0.0/frog-picnic-1.0.0-all.tar.gz",
-                    "sha256": "6ab28b556cc45d06135bd6d1b3daf9c0c922d8fa1c7dba42e3ebd088efa3e153",
-                    "size": 67372572
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-frog-picnic-v1.0.1/frog-picnic-1.0.1-all.tar.gz",
+                    "sha256": "e5fc8b81ca3486d5e99c1a300deed8db58139936005db04ab90be92fcf52aeca",
+                    "size": 67359944
                 }
             }
         },
@@ -5226,9 +5226,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-guts-berserk-v1.0.0/guts-berserk-1.0.0-all.tar.gz",
-                    "sha256": "91437188db2904b745c5274a20a833011bea3f40ee74792674c1d4376e2add13",
-                    "size": 60385294
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-guts-berserk-v1.0.1/guts-berserk-1.0.1-all.tar.gz",
+                    "sha256": "6be1d0ccae2a773e073d19d5b9dfdbe5e25d4f1f3f9c795536b7a151a4c82554",
+                    "size": 60392881
                 }
             }
         },
@@ -5268,9 +5268,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-hanabi-futari-v1.0.0/hanabi-futari-1.0.0-all.tar.gz",
-                    "sha256": "132baf7a2be54f3c050b980b1c5b68aee81163eea9e9b7cc205498a892ddf4ca",
-                    "size": 27598303
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-hanabi-futari-v1.0.1/hanabi-futari-1.0.1-all.tar.gz",
+                    "sha256": "469662a7d27415aa9c083b28df7dbb6112d520321fb3b256f55778d114fdd4fe",
+                    "size": 27556152
                 }
             }
         },
@@ -5352,9 +5352,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-healing-forest-v1.0.0/healing-forest-1.0.0-all.tar.gz",
-                    "sha256": "4b29dfa46b8a8bd8d32365cb48a1ed31f0796165fb3223c2a2019d06e5190401",
-                    "size": 38276544
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-healing-forest-v1.0.1/healing-forest-1.0.1-all.tar.gz",
+                    "sha256": "d0cf7b8b1f7f5d8c6824b6456de9247b3737cd7062a2a5ba92d58fde0339c8af",
+                    "size": 38275618
                 }
             }
         },
@@ -6124,9 +6124,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-lucy-edgerunner-v1.0.0/lucy-edgerunner-1.0.0-all.tar.gz",
-                    "sha256": "61faad9fcaa908d5ae22c9592fb742ad1f230b43cf30e4968e981c91502dd126",
-                    "size": 33897612
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-lucy-edgerunner-v1.0.1/lucy-edgerunner-1.0.1-all.tar.gz",
+                    "sha256": "5a25b17dac12cf1a1aa3c8767aa6fc04f225908e5bc179f3e3881c648aed2b85",
+                    "size": 33898404
                 }
             }
         },
@@ -6468,9 +6468,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-meteors-dawn-v1.0.0/meteors-dawn-1.0.0-all.tar.gz",
-                    "sha256": "e2c5539f373474cc42e32191642fc497e95fa128fcdf2718588422c0cc37b469",
-                    "size": 23862404
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-meteors-dawn-v1.0.1/meteors-dawn-1.0.1-all.tar.gz",
+                    "sha256": "9d3d9af78b551563266a1bec7ebc25850949f75740a0a40bbf7847b94596cf5e",
+                    "size": 23859269
                 }
             }
         },
@@ -6956,9 +6956,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-mystical-landscape-v1.0.0/mystical-landscape-1.0.0-all.tar.gz",
-                    "sha256": "301ef00802ee5df6a4b489497b2f9cab5b6b0a336113f57676a6328d0f4f7a9e",
-                    "size": 10073354
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-mystical-landscape-v1.0.1/mystical-landscape-1.0.1-all.tar.gz",
+                    "sha256": "8b23d1c782a7e579c3bc5e32826456cf6d83550df029fc33e13b8a676d36f31b",
+                    "size": 10067956
                 }
             }
         },
@@ -7160,9 +7160,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-ocean-full-moon-v1.0.0/ocean-full-moon-1.0.0-all.tar.gz",
-                    "sha256": "2838eb2067b31cf03856996ceb32cc9b027cb2ded3dde1d6b7ca51e0a376581f",
-                    "size": 58175512
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-ocean-full-moon-v1.0.1/ocean-full-moon-1.0.1-all.tar.gz",
+                    "sha256": "57d45710996bb8c11efe8bc36575b8ad419a728ed048679e4e7482234a3566be",
+                    "size": 58175428
                 }
             }
         },
@@ -7482,9 +7482,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-ori-de-silent-v1.0.0/ori-de-silent-1.0.0-all.tar.gz",
-                    "sha256": "45abdcdb35888fd30e759a54af0351df65e8b2e48f29fc43e3a9f6e8f4575944",
-                    "size": 17996066
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-ori-de-silent-v1.0.1/ori-de-silent-1.0.1-all.tar.gz",
+                    "sha256": "6ceadc315b79c02713ea3fdacff8485e6e1272c7fd2ec1d397dfb6c800e11b09",
+                    "size": 17995165
                 }
             }
         },
@@ -7682,9 +7682,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-post-apocalyptic-v1.0.0/post-apocalyptic-1.0.0-all.tar.gz",
-                    "sha256": "3bf479807e95357375cb6592c49f43488730baa6b3b2947d32805a4da2e30a9b",
-                    "size": 59015836
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-post-apocalyptic-v1.0.1/post-apocalyptic-1.0.1-all.tar.gz",
+                    "sha256": "71bdd999a348841fcd4da5d5e2fd140d6d5181445962dcb406e88e1a255067c3",
+                    "size": 59014220
                 }
             }
         },
@@ -8119,6 +8119,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-relaxing-robot-v1.0.1/relaxing-robot-1.0.1-all.tar.gz",
+                    "sha256": "91cbba4b94e1c3246d935bc6a78445a39f3810c1a592a44239651c3b5b7974e5",
+                    "size": 37120683
+                }
             }
         },
         {
@@ -8461,9 +8468,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-shadowheart-v1.0.0/shadowheart-1.0.0-all.tar.gz",
-                    "sha256": "cad8d701a54406dd22408c373d5c271062181391778b2eb3addf913c999de5a6",
-                    "size": 32166287
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-shadowheart-v1.0.1/shadowheart-1.0.1-all.tar.gz",
+                    "sha256": "1757b85474c181e42c6bc688355ac173893ca21674c823438d33968874da1d61",
+                    "size": 32169039
                 }
             }
         },
@@ -8589,9 +8596,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-silk-song-v1.0.0/silk-song-1.0.0-all.tar.gz",
-                    "sha256": "9594d395a76cf64407df03fa88c4c000bbfd0fd17e6f1e2d2ee7685310e93178",
-                    "size": 7466366
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-silk-song-v1.0.1/silk-song-1.0.1-all.tar.gz",
+                    "sha256": "946ffdbdf34de1a6d27530a495fb5393561311f23b4dc9aa2fa35d7e97989183",
+                    "size": 7466293
                 }
             }
         },
@@ -8912,9 +8919,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-sometimes-happy-v1.0.0/sometimes-happy-1.0.0-all.tar.gz",
-                    "sha256": "b78081db2268c70948b6bfb8b694d95344c1216eec07c5ee4500fca7717b663a",
-                    "size": 15903078
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-sometimes-happy-v1.0.1/sometimes-happy-1.0.1-all.tar.gz",
+                    "sha256": "6efcdf81448dab4f158876aa88d3e72c5f433ef3ec0bd71852e9c770a13ccc7a",
+                    "size": 15901457
                 }
             }
         },
@@ -9146,9 +9153,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-sunny-shores-v1.0.0/sunny-shores-1.0.0-all.tar.gz",
-                    "sha256": "d7f9fdc847c219ec42d8b19364d8533c04f5f35e07e12440221f6bb81eac5230",
-                    "size": 4022521
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-sunny-shores-v1.0.1/sunny-shores-1.0.1-all.tar.gz",
+                    "sha256": "7884ee81e3cc81d42e08cf3cb44ffbaff23d06c6f00c4bbe59037eb0f790fb80",
+                    "size": 4021874
                 }
             }
         },
@@ -9188,9 +9195,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-sunset-glow-v1.0.0/sunset-glow-1.0.0-all.tar.gz",
-                    "sha256": "795801736d63d0c7ce18292285e83fbe369c7cdfef0028491df6588ceadde63c",
-                    "size": 39771574
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-sunset-glow-v1.0.1/sunset-glow-1.0.1-all.tar.gz",
+                    "sha256": "26613bd7529010a81c5f4038d02d439efb8cec6ff150addac3c4aca51453dbc9",
+                    "size": 39772417
                 }
             }
         },
@@ -9837,9 +9844,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-tlou-hdr-v1.0.0/tlou-hdr-1.0.0-all.tar.gz",
-                    "sha256": "03fa9d0f0a00f5395ec5ceb2f95a302c724bb7253bdd93298129ca39787211bd",
-                    "size": 81425885
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-tlou-hdr-v1.0.1/tlou-hdr-1.0.1-all.tar.gz",
+                    "sha256": "d4336d2c2494b822a47dbf0d641627518d95ea3c810c75ae0b62022e55042649",
+                    "size": 81425608
                 }
             }
         },
@@ -10441,9 +10448,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-waterfall-frog-v1.0.0/waterfall-frog-1.0.0-all.tar.gz",
-                    "sha256": "c24db88e4da375d677f25e91c1148b8d4bbb2cb7e2745ec071aae2342f2bc98b",
-                    "size": 9034338
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-waterfall-frog-v1.0.1/waterfall-frog-1.0.1-all.tar.gz",
+                    "sha256": "cbb59041547c192b969293d60198e858516ec6bad415a2d611772e095f70d8ae",
+                    "size": 9032366
                 }
             }
         },
@@ -10697,9 +10704,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-wicked-grace-v1.0.0/wicked-grace-1.0.0-all.tar.gz",
-                    "sha256": "0ecdd27a6807fd33573f330cbade3ed73ccf6a222e05adae3bd01b0255b82b0f",
-                    "size": 11903647
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-wicked-grace-v1.0.1/wicked-grace-1.0.1-all.tar.gz",
+                    "sha256": "da48dee08324d53b7bbc87b8c6dad6646ad25eb0e4a19629c9f1b13f0ae8f537",
+                    "size": 11899960
                 }
             }
         },
@@ -10780,9 +10787,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-witcher3-menu-v1.0.0/witcher3-menu-1.0.0-all.tar.gz",
-                    "sha256": "03a280ecd47579e54d7f550d49db69d4c2948c860ad19d120d82d18a7b614156",
-                    "size": 70573765
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-witcher3-menu-v1.0.1/witcher3-menu-1.0.1-all.tar.gz",
+                    "sha256": "8065a4a22e8aee9d7e51ce66f269274f20164a33b4a9e21cd8daac0d339db2fe",
+                    "size": 70556938
                 }
             }
         },
@@ -10944,9 +10951,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-world-of-warships-v1.0.0/world-of-warships-1.0.0-all.tar.gz",
-                    "sha256": "f7da1a01c6620bc00329670a11c3dbb8e587a1e5446a5b2325a068070e48c91b",
-                    "size": 6186598
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-world-of-warships-v1.0.1/world-of-warships-1.0.1-all.tar.gz",
+                    "sha256": "f965c2b928eb337d666239b8a1961e987f5401a32a9b569b132126687fd8d90b",
+                    "size": 6184052
                 }
             }
         },
