@@ -142,7 +142,7 @@ def _render_calendar_html(ctx: dict | None = None) -> str:
 {_build_clock_html(now)}
 </div>
 <style>
-.cal-wrap {{ max-width: 980px; --face: clamp(184px, 26vw, 252px); margin: 0 auto; font-family: inherit; display: flex; align-items: center; justify-content: center; column-gap: 96px; row-gap: 28px; flex-wrap: wrap; }}
+.cal-wrap {{ max-width: 980px; --face: clamp(184px, 26vw, 252px); margin: 0 auto; font-family: inherit; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; }}
 .cal-main {{ flex: 1 1 300px; max-width: 448px; min-width: 280px; }}
 .cal-head {{ display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }}
 .cal-title {{ font-size: 15px; font-weight: 600; letter-spacing: 0.02em; }}
@@ -163,7 +163,7 @@ def _render_calendar_html(ctx: dict | None = None) -> str:
 .cal-today {{
   background: var(--cal-accent); color: #fff !important; font-weight: 700;
 }}
-.cal-clock {{ flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; gap: 12px; }}
+.cal-clock {{ flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; margin-left: 96px; }}
 .clock-face {{
   position: relative; width: var(--face); height: var(--face); border-radius: 50%;
   background: var(--cal-clock-bg); border: 1px solid var(--cal-border);
@@ -177,7 +177,7 @@ def _render_calendar_html(ctx: dict | None = None) -> str:
 .hand-minute {{ width: 3.5px; height: 31%; margin-left: -1.75px; background: var(--cal-hand); animation: cal-spin 3600s linear infinite; }}
 .hand-second {{ width: 1.5px; height: 36%; margin-left: -0.75px; background: var(--cal-accent); animation: cal-spin 60s steps(60) infinite; }}
 .clock-dot {{ position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: var(--cal-hand); border: 2px solid var(--cal-clock-bg); }}
-.clock-date {{ font-size: 12px; color: var(--cal-muted); letter-spacing: 0.03em; }}
+.clock-date {{ margin-top: 12px; font-size: 12px; color: var(--cal-muted); letter-spacing: 0.03em; }}
 :root {{
   {css_vars}
 }}
