@@ -835,7 +835,7 @@
         {
             "name": "calendar",
             "description": "日历插件：在欢迎卡片注入日历 tab，支持上/下月切换、今天高亮与圆形时钟",
-            "version": "1.1.1",
+            "version": "1.1.2",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -862,9 +862,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-calendar-v1.1.1/calendar-1.1.1-all.tar.gz",
-                    "sha256": "52352781893b54a2733ac2654af108264d5ac48c305e9d98ef61a14c54427a6c",
-                    "size": 5853
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-calendar-v1.1.2/calendar-1.1.2-all.tar.gz",
+                    "sha256": "e17250c8de032a93b66480fff48ae127d4d090e604611b9292e55032c4f1d9c1",
+                    "size": 5772
                 }
             }
         },
