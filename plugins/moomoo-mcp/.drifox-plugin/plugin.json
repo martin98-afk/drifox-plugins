@@ -1,5 +1,8 @@
 {
   "name": "moomoo-mcp",
+  "display_name": {
+      "zh": "Moomoo 行情交易"
+  },
   "description": "Moomoo is a stock trading and market data connector. It supports multi-market (HK, US, CN, SG, JP, CA, etc.) quote queries and order execution, providing K-lines, capital flow, opt",
   "icon": {
     "light": "icon.png",

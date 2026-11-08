@@ -1,5 +1,8 @@
 {
   "name": "monday",
+  "display_name": {
+      "zh": "monday.com 看板"
+  },
   "description": "monday.com — 查看和更新 monday.com 的看板、条目与更新。",
   "icon": {
     "light": "icon.png",

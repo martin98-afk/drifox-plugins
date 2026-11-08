@@ -1,5 +1,8 @@
 {
   "name": "jina",
+  "display_name": {
+      "zh": "Jina AI 检索"
+  },
   "description": "Jina AI — 读取网页正文、网页搜索与学术检索。",
   "icon": {
     "light": "icon.png",

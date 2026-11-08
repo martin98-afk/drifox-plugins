@@ -1,5 +1,8 @@
 {
   "name": "exa",
+  "display_name": {
+      "zh": "Exa 网页搜索"
+  },
   "description": "Exa — 面向 AI 的网页搜索与网页内容抓取。",
   "icon": {
     "light": "icon.png",

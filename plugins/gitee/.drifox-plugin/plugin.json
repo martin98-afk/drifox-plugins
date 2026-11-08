@@ -1,5 +1,8 @@
 {
   "name": "gitee",
+  "display_name": {
+      "zh": "Gitee 仓库管理"
+  },
   "description": "Gitee — 管理 Gitee 仓库、文件、Issue 与 PR。安装后填入私人令牌。",
   "icon": {
     "light": "icon.png",

@@ -1,5 +1,8 @@
 {
   "name": "baidu-ai-search",
+  "display_name": {
+      "zh": "百度 AI 搜索"
+  },
   "description": "百度 AI 搜索 — 用百度搜索全网实时信息。",
   "icon": {
     "light": "icon.png",

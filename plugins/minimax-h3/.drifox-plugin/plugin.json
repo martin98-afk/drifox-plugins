@@ -1,5 +1,8 @@
 {
     "name": "minimax-h3",
+    "display_name": {
+        "zh": "MiniMax H3 视频生成"
+    },
     "description": "MiniMax H3 全模态视频生成 — 文本/图片/视频/音频转带立体声音频的视频（768P/2K，4-15s），含 H3 提示词编写技能。",
     "icon": {
         "light": "icon.png",

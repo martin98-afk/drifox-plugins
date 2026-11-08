@@ -1,5 +1,8 @@
 {
   "name": "intercom",
+  "display_name": {
+      "zh": "Intercom 客服数据"
+  },
   "description": "Intercom — 查询 Intercom 的会话、联系人与客服数据。",
   "icon": {
     "light": "icon.png",

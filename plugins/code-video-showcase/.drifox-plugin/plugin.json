@@ -1,5 +1,8 @@
 {
     "name": "code-video-showcase",
+    "display_name": {
+        "zh": "代码卡点视频"
+    },
     "description": "纯代码卡点视频制作技能：HTML/Canvas/SVG/Three.js 逐帧渲染画面 + numpy/scipy 合成 120BPM 配乐 + FFmpeg 合成 30-90 秒多风格展示短片，含 8 套主题配色、11 种风格配方、大字卡系统与质检模板，零视频/图像/音乐生成模型。做卡点/风格展示/程序化视频时使用。",
     "version": "1.1.0",
     "author": {

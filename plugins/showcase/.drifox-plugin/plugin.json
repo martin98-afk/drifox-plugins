@@ -1,5 +1,8 @@
 {
     "name": "showcase",
+    "display_name": {
+        "zh": "成果展示"
+    },
     "description": "成果展示 — 让模型把要交付的文件或图片推到消息卡片成果栏，图片带缩略图预览，其他条目可双击打开、拖拽导出",
     "icon": {
         "light": "icon.svg",

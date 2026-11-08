@@ -1,5 +1,8 @@
 {
   "name": "experts-marketing",
+  "display_name": {
+      "zh": "营销增长专家包"
+  },
   "description": "营销增长专家智能体包 — 29 个 @智能体（源自 WorkBuddy 专家市场）",
   "icon": {
     "light": "icon.png",

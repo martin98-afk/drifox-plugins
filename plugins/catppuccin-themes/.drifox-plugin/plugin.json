@@ -1,5 +1,8 @@
 {
     "name": "catppuccin-themes",
+    "display_name": {
+        "zh": "Catppuccin 主题"
+    },
     "description": "Catppuccin 四套主题 — Latte / Frappé / Macchiato / Mocha，102 个颜色 token 全量映射，含窗口渐变与侧栏背景。",
     "icon": {
         "light": "icon.svg",

@@ -1,5 +1,8 @@
 {
     "name": "caveman",
+    "display_name": {
+        "zh": "Caveman 极简输出"
+    },
     "description": "Ultra-compressed communication mode for AI agents. Cuts output tokens ~65% (measured) while keeping full technical accuracy. 含 caveman-compress 记忆文件压缩工具与 cavecrew 子智能体预设。",
     "version": "1.0.0",
     "author": {

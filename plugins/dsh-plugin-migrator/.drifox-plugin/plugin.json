@@ -1,5 +1,8 @@
 {
     "name": "dsh-plugin-migrator",
+    "display_name": {
+        "zh": "DSH 插件迁移"
+    },
     "description": "把 DeepSeek Harness（dsh）插件迁移成 DriFox 插件 — 解析 package.json 的 dsh 声明与 cordis patch，产出能力清单，按七条通道落盘（skills/agents/commands/tools/hooks/mcp/ui），不可映射的部分标 MIGRATION_TODO 并列入报告。",
     "icon": {
         "light": "icon.png",

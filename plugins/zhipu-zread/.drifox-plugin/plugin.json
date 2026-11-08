@@ -1,5 +1,8 @@
 {
   "name": "zhipu-zread",
+  "display_name": {
+      "zh": "智谱仓库阅读"
+  },
   "description": "智谱 开源仓库阅读 — 阅读 GitHub 开源仓库的文档、结构与代码。安装后填入智谱 API Key。",
   "icon": {
     "light": "icon.png",

@@ -1,5 +1,8 @@
 {
     "name": "dsh-presets",
+    "display_name": {
+        "zh": "DSH 预设适配"
+    },
     "description": "DeepSeek Harness 三种 agent preset（standard/code/cordis）的 DriFox 适配 — 三个 Agent + 模式路由 hook + 切换/状态命令。",
     "version": "1.0.0",
     "author": {

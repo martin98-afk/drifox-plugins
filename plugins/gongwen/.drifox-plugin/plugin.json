@@ -1,5 +1,8 @@
 {
     "name": "gongwen",
+    "display_name": {
+        "zh": "中文公文处理"
+    },
     "description": "中文公文全流程处理 — 按 GB/T 9704 国家标准做格式检查与自动修复、Word 原生修订式内容优化、模板生成与样式学习、Markdown 转公文，覆盖 25 类公文。",
     "icon": {
         "light": "icon.svg",

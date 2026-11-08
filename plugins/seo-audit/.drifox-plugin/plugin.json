@@ -1,5 +1,8 @@
 {
     "name": "seo-audit",
+    "display_name": {
+        "zh": "SEO 审计"
+    },
     "description": "SEO 审计 + 落地页文案 — 五优先级 SEO 审查框架与高转化文案撰写方法论，覆盖主页/落地页/定价页。",
     "icon": {
         "light": "icon.png",

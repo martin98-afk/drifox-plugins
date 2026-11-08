@@ -1,5 +1,8 @@
 {
   "name": "dingtalk-todo",
+  "display_name": {
+      "zh": "钉钉待办"
+  },
   "description": "钉钉待办 — 查看、创建和完成钉钉待办。",
   "icon": {
     "light": "icon.png",

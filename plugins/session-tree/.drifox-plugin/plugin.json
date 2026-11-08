@@ -1,5 +1,8 @@
 {
     "name": "session-tree",
+    "display_name": {
+        "zh": "会话树"
+    },
     "description": "会话树 — 左侧停靠面板，按时间分组展示当前项目的会话列表（类 Codex 桌面版）",
     "icon": {
         "light": "icon.png",

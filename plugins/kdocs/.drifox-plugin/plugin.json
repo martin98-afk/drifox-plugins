@@ -1,5 +1,8 @@
 {
     "name": "kdocs",
+    "display_name": {
+        "zh": "金山文档"
+    },
     "description": "金山文档官方 Skill。对话即操作——知识一键存入、碎片内容整理、接龙转表格、文档转 Markdown、表格美化、收发表生成，全在一句话内完成。",
     "icon": {
         "light": "icon.png",

@@ -1,5 +1,8 @@
 {
     "name": "win-powershell",
+    "display_name": {
+        "zh": "PowerShell 工具"
+    },
     "description": "专用 Windows PowerShell 执行工具——强制走 PowerShell 原生入口运行 PS 脚本/命令（cmdlet、管道对象、ConvertTo-Json），自动处理 UTF-8 编码与超时，区别于通用 bash 工具。",
     "icon": {
         "light": "icon.svg",

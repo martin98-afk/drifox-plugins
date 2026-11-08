@@ -4,6 +4,9 @@
         "dark": "icon_dark.svg"
     },
     "name": "gateway-slack",
+    "display_name": {
+        "zh": "Slack 网关"
+    },
     "description": "Slack 平台适配器（社区插件，万物即插件 Phase E）：使用 Slack Web API 收发消息，支持 Block Kit 格式、长消息分片；基于 slack-sdk。",
     "version": "1.0.1",
     "author": {

@@ -1,5 +1,8 @@
 {
   "name": "aws-knowledge",
+  "display_name": {
+      "zh": "AWS Knowledge 文档检索"
+  },
   "description": "AWS Knowledge — 检索 AWS 官方文档、最佳实践与区域可用性信息。",
   "icon": {
     "light": "icon.png",

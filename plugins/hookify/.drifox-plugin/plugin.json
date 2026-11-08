@@ -1,5 +1,8 @@
 {
     "name": "hookify",
+    "display_name": {
+        "zh": "Hookify 钩子生成"
+    },
     "description": "Easily create hooks to prevent unwanted behaviors by analyzing conversation patterns",
     "icon": {
         "light": "icon.png",

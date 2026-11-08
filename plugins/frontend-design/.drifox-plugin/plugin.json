@@ -1,5 +1,8 @@
 {
     "name": "frontend-design",
+    "display_name": {
+        "zh": "前端设计"
+    },
     "description": "Anthropic 官方前端设计 — 创作有辨识度的网页 UI：大胆配色、刻意字体、意图动效、风格统一。helloianneo 必装 Top 10 第 1 名。",
     "icon": {
         "light": "icon.png",

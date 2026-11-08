@@ -1,5 +1,8 @@
 {
     "name": "superclaude",
+    "display_name": {
+        "zh": "SuperClaude 开发框架"
+    },
     "description": "AI 增强开发框架 — 30 个命令、20 个智能体、7 种模式、置信度检查、并行执行与反思式学习（SuperClaude_Framework 适配 DriFox）。",
     "version": "4.3.0",
     "author": {

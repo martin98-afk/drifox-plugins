@@ -1,5 +1,8 @@
 {
     "name": "ip-switcher",
+    "display_name": {
+        "zh": "IP 切换监控"
+    },
     "description": "IP 切换监控 — 免费模型限流自动换 IP（429 检测 + 代理池轮换 + 仪表盘）。",
     "icon": {
         "light": "icon.png",

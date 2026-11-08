@@ -1,5 +1,8 @@
 {
     "name": "modsearch",
+    "display_name": {
+        "zh": "modsearch 联网搜索桥"
+    },
     "description": "文本模型的联网搜索桥。返回结构化 JSON 证据：网页搜索、X(Twitter) 搜索、指定 URL 抓取，带来源链接。",
     "icon": {
         "light": "icon.svg",

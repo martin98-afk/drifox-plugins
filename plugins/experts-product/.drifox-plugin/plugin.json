@@ -1,5 +1,8 @@
 {
   "name": "experts-product",
+  "display_name": {
+      "zh": "产品设计专家包"
+  },
   "description": "产品设计专家智能体包 — 17 个 @智能体（源自 WorkBuddy 专家市场）",
   "icon": {
     "light": "icon.png",

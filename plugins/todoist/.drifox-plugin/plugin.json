@@ -1,5 +1,8 @@
 {
   "name": "todoist",
+  "display_name": {
+      "zh": "Todoist 任务管理"
+  },
   "description": "Todoist — 查看、添加和整理 Todoist 里的任务与项目。",
   "icon": {
     "light": "icon.png",

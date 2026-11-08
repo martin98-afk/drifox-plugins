@@ -233,6 +233,8 @@ def build_plugin_entry(plugin_dir: Path, manifest: dict, tarball_entry: dict | N
         },
         "components": manifest.get("components", {}),
     }
+    if manifest.get("display_name"):
+        entry["display_name"] = manifest["display_name"]
 
     # 下载量：从本地缓存读取（无缓存/未知插件则不写字段，保持向后兼容）
     downloads = _downloads_cache.get("downloads", {}).get(manifest["name"])
@@ -411,7 +413,7 @@ def check_consistency(generated: dict, existing: dict) -> list[str]:
         gen_p = gen_plugins[name]
         ex_p = ex_plugins[name]
 
-        for field in ("name", "description", "version", "author", "license", "components"):
+        for field in ("name", "description", "version", "author", "license", "components", "display_name"):
             if gen_p.get(field) != ex_p.get(field):
                 diffs.append(
                     f"插件 {name} 字段 {field} 不一致: "

@@ -1,5 +1,8 @@
 {
   "name": "experts-finance",
+  "display_name": {
+      "zh": "金融投资专家包"
+  },
   "description": "金融投资专家智能体包 — 23 个 @智能体（源自 WorkBuddy 专家市场）",
   "icon": {
     "light": "icon.png",

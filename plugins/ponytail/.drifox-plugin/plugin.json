@@ -1,5 +1,8 @@
 {
     "name": "ponytail",
+    "display_name": {
+        "zh": "Ponytail 最简开发"
+    },
     "description": "Lazy senior dev 模式 — YAGNI/stdlib/原生优先的最简实现哲学，6 个命令 + 6 个技能（适配 DriFox 提示词层）。",
     "version": "4.8.5",
     "author": {

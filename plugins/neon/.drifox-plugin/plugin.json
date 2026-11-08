@@ -1,5 +1,8 @@
 {
   "name": "neon",
+  "display_name": {
+      "zh": "Neon 数据库管理"
+  },
   "description": "Neon — 管理 Neon Postgres 项目、分支与数据库查询。",
   "icon": {
     "light": "icon.png",

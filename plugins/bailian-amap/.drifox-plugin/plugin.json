@@ -1,5 +1,8 @@
 {
   "name": "bailian-amap",
+  "display_name": {
+      "zh": "高德地图（百炼）"
+  },
   "description": "高德地图（百炼） — 地点搜索、路线规划、天气与周边查询，经阿里云百炼接入。安装后填入百炼 API Key。",
   "icon": {
     "light": "icon.png",

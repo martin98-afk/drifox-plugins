@@ -1,5 +1,8 @@
 {
   "name": "tripo-3d",
+  "display_name": {
+      "zh": "Tripo 3D 生成"
+  },
   "description": "Generate textured, rig-ready 3D models from text or images; export GLB/FBX/OBJ/STL/USDZ/3MF.",
   "icon": {
     "light": "icon.png",

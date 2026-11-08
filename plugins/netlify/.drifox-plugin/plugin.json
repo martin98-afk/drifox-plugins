@@ -1,5 +1,8 @@
 {
   "name": "netlify",
+  "display_name": {
+      "zh": "Netlify 站点管理"
+  },
   "description": "Netlify — 创建、部署和管理 Netlify 站点。",
   "icon": {
     "light": "icon.png",

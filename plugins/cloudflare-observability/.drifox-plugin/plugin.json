@@ -1,5 +1,8 @@
 {
   "name": "cloudflare-observability",
+  "display_name": {
+      "zh": "Cloudflare 可观测性"
+  },
   "description": "Cloudflare Observability — 查询 Cloudflare Workers 的日志与分析数据。",
   "icon": {
     "light": "icon.png",

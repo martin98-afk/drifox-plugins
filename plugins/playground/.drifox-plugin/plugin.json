@@ -1,5 +1,8 @@
 {
     "name": "playground",
+    "display_name": {
+        "zh": "HTML 练习场"
+    },
     "description": "交互式 HTML 练习场 — 单文件探索器：可视化控件 + 实时预览 + 提示词复制。",
     "icon": {
         "light": "icon.png",

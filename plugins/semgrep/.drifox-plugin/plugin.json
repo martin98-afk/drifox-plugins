@@ -1,5 +1,8 @@
 {
   "name": "semgrep",
+  "display_name": {
+      "zh": "Semgrep 代码扫描"
+  },
   "description": "Semgrep — 扫描代码中的安全漏洞与问题。",
   "icon": {
     "light": "icon.png",

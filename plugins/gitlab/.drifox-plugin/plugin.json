@@ -1,5 +1,8 @@
 {
   "name": "gitlab",
+  "display_name": {
+      "zh": "GitLab 项目管理"
+  },
   "description": "GitLab — 查看 GitLab.com 的项目、Issue、合并请求与流水线。",
   "icon": {
     "light": "icon.png",

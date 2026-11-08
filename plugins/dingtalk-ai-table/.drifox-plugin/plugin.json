@@ -1,5 +1,8 @@
 {
   "name": "dingtalk-ai-table",
+  "display_name": {
+      "zh": "钉钉 AI 表格"
+  },
   "description": "钉钉 AI 表格 — 读写钉钉 AI 表格中的数据。",
   "icon": {
     "light": "icon.png",

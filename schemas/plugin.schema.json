@@ -12,6 +12,12 @@
       "pattern": "^[a-z][a-z0-9-]{1,63}$",
       "description": "插件名，小写 kebab-case，必须与插件目录名一致"
     },
+    "display_name": {
+      "type": "object",
+      "description": "语言码→展示名映射（如 {\"zh\": \"插件市场\", \"en\": \"Plugin Marketplace\"}）。宿主按界面语言取值，缺失回退 name。name 仍是插件标识主键",
+      "additionalProperties": { "type": "string", "minLength": 1 },
+      "minProperties": 1
+    },
     "icon": {
       "oneOf": [
         {

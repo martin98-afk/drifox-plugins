@@ -1,5 +1,8 @@
 {
   "name": "dingtalk-calendar",
+  "display_name": {
+      "zh": "钉钉日历"
+  },
   "description": "钉钉日历 — 查看和创建钉钉日程。",
   "icon": {
     "light": "icon.png",

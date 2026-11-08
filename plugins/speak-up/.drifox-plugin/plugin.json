@@ -1,5 +1,8 @@
 {
     "name": "speak-up",
+    "display_name": {
+        "zh": "主动搭话"
+    },
     "description": "主动搭话 — 没人跟 AI 说话时，它自己按命中线掷骰决定要不要先开口。峰谷分时、安静时段、攒加成、冷却全套可调；默认演练模式只记账不真发。移植自 DSH dsh-speak-up",
     "icon": {
         "light": "icon.svg",

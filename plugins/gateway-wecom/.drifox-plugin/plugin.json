@@ -4,6 +4,9 @@
         "dark": "icon_dark.svg"
     },
     "name": "gateway-wecom",
+    "display_name": {
+        "zh": "企业微信网关"
+    },
     "description": "企业微信 (WeCom) AI Bot 适配器（社区插件，万物即插件 Phase E）：通过 WebSocket 长连接与 AI Bot Gateway 通信；不依赖第三方 SDK，复用宿主 aiohttp/httpx。",
     "version": "1.0.2",
     "author": {

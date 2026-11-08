@@ -1,5 +1,8 @@
 {
   "name": "experts-engineering",
+  "display_name": {
+      "zh": "技术工程专家包"
+  },
   "description": "技术工程专家智能体包 — 28 个 @智能体（源自 WorkBuddy 专家市场）",
   "icon": {
     "light": "icon.png",

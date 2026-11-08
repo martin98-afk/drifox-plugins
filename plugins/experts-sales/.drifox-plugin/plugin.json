@@ -1,5 +1,8 @@
 {
   "name": "experts-sales",
+  "display_name": {
+      "zh": "销售商务专家包"
+  },
   "description": "销售商务专家智能体包 — 10 个 @智能体（源自 WorkBuddy 专家市场）",
   "icon": {
     "light": "icon.png",

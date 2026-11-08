@@ -4,6 +4,9 @@
         "dark": "icon_dark.png"
     },
     "name": "snake",
+    "display_name": {
+        "zh": "贪吃蛇游戏"
+    },
     "description": "经典贪吃蛇游戏——在 DriFox 中直接玩的浮動卡片",
     "version": "0.3.0",
     "author": {

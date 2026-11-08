@@ -1,5 +1,8 @@
 {
   "name": "jam",
+  "display_name": {
+      "zh": "Jam 缺陷报告"
+  },
   "description": "Jam — 读取 Jam 缺陷报告里的录屏、日志与网络请求。",
   "icon": {
     "light": "icon.png",

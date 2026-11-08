@@ -1,5 +1,8 @@
 {
     "name": "superpowers",
+    "display_name": {
+        "zh": "Superpowers 技能库"
+    },
     "description": "Superpowers 核心技能库 — TDD、调试、头脑风暴、写计划、代码审查、子智能体驱动开发等 14 个工程工作流技能，让 AI 遵循资深工程师流程。",
     "version": "6.2.0",
     "type": "user",

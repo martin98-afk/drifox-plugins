@@ -1,5 +1,8 @@
 {
     "name": "mcp-builder",
+    "display_name": {
+        "zh": "MCP 服务器构建"
+    },
     "description": "MCP 服务器构建助手 — 教用户从零创建 MCP（Model Context Protocol）服务器，连接任意工具/数据源到 DriFox / Claude Code / Cursor。",
     "icon": {
         "light": "icon.svg",

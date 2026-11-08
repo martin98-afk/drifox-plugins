@@ -1,5 +1,8 @@
 {
   "name": "experts-content",
+  "display_name": {
+      "zh": "内容创作专家包"
+  },
   "description": "内容创作专家智能体包 — 27 个 @智能体（源自 WorkBuddy 专家市场）",
   "icon": {
     "light": "icon.png",

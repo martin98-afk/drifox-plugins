@@ -1,5 +1,8 @@
 {
     "name": "algorithmic-art",
+    "display_name": {
+        "zh": "程序化艺术生成"
+    },
     "description": "程序化艺术生成 — p5.js 创意编码，种子随机 + 交互参数探索（流动场/粒子系统）。",
     "icon": {
         "light": "icon.png",

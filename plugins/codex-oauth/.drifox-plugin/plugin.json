@@ -4,6 +4,9 @@
         "dark": "icon_dark.svg"
     },
     "name": "codex-oauth",
+    "display_name": {
+        "zh": "Codex OAuth 登录"
+    },
     "description": "OpenAI Codex 服务商（OAuth 登录制）— 用 ChatGPT 账号浏览器授权登录，以订阅额度直连 Codex Responses API（gpt-6.1-sol / gpt-6-luna 等），无需 API Key",
     "version": "0.2.0",
     "author": {

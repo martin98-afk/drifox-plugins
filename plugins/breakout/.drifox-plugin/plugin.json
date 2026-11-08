@@ -4,6 +4,9 @@
         "dark": "icon_dark.png"
     },
     "name": "breakout",
+    "display_name": {
+        "zh": "打砖块游戏"
+    },
     "description": "经典打砖块游戏——在 DriFox 中直接玩的浮动卡片",
     "version": "0.3.0",
     "author": {

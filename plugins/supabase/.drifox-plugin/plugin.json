@@ -1,5 +1,8 @@
 {
   "name": "supabase",
+  "display_name": {
+      "zh": "Supabase 项目管理"
+  },
   "description": "Supabase — 管理 Supabase 项目、数据库、边缘函数与日志。",
   "icon": {
     "light": "icon.png",

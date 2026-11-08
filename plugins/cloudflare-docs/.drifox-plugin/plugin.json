@@ -1,5 +1,8 @@
 {
   "name": "cloudflare-docs",
+  "display_name": {
+      "zh": "Cloudflare Docs 文档检索"
+  },
   "description": "Cloudflare Docs — 检索 Cloudflare 开发者文档。",
   "icon": {
     "light": "icon.png",

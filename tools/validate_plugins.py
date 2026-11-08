@@ -1048,7 +1048,7 @@ def check_marketplace_consistency(
         if mp_entry is None:
             continue
 
-        for field_name in ("description", "version", "license"):
+        for field_name in ("description", "version", "license", "display_name"):
             if (
                 manifest.get(field_name)
                 and mp_entry.get(field_name)

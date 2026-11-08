@@ -1,5 +1,8 @@
 {
     "name": "ai-image-gen",
+    "display_name": {
+        "zh": "AI 图片生成"
+    },
     "description": "AI 图片生成 — 主流文生图与图编辑模型统一封装（Gemini / DALL-E / Imagen / Midjourney / Stable Diffusion / FLUX），4K 输出。",
     "icon": {
         "light": "icon.png",

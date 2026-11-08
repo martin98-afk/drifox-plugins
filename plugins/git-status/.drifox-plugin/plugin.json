@@ -1,5 +1,8 @@
 {
     "name": "git-status",
+    "display_name": {
+        "zh": "Git 状态注入"
+    },
     "description": "在每轮用户消息前注入当前 Git 仓库状态（分支/暂存/工作区/最近 commits），让 LLM 无需询问即可知道当前代码改动了什么",
     "icon": {
         "light": "icon.png",

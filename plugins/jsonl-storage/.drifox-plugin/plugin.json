@@ -4,6 +4,9 @@
         "dark": "icon_dark.svg"
     },
     "name": "jsonl-storage",
+    "display_name": {
+        "zh": "JSONL 存储引擎"
+    },
     "description": "JSONL 存储引擎 — 会话以 jsonl 格式持久化（per-session 文件 + 辅助索引文件），行为对齐 system 的 sqlite 引擎，可作为并存可选引擎注册。",
     "version": "0.2.0",
     "author": {

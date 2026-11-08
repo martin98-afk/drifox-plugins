@@ -1,5 +1,8 @@
 {
     "name": "tailwind-pro",
+    "display_name": {
+        "zh": "Tailwind CSS 增强"
+    },
     "description": "Tailwind CSS v4 完整支持 — 类型/类名/任意值/设计系统/主题映射，配合 Tailwind LSP 实时校验。",
     "icon": {
         "light": "icon.svg",

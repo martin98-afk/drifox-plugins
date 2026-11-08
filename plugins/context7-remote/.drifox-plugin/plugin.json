@@ -1,5 +1,8 @@
 {
   "name": "context7-remote",
+  "display_name": {
+      "zh": "Context7 远程文档"
+  },
   "description": "Context7 — 查询各类开源库与框架的最新文档和代码示例。",
   "icon": {
     "light": "icon.png",

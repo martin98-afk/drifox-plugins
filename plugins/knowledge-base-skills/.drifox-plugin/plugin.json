@@ -1,5 +1,8 @@
 {
     "name": "knowledge-base-skills",
+    "display_name": {
+        "zh": "本地知识库检索"
+    },
     "description": "本地知识库检索技能——面向本地知识库目录的分层检索和问答助手，支持 Markdown/PDF/Excel 渐进式检索。",
     "icon": {
         "light": "icon.png",

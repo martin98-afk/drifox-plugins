@@ -1,5 +1,8 @@
 {
   "name": "cloudflare-bindings",
+  "display_name": {
+      "zh": "Cloudflare Workers 管理"
+  },
   "description": "Cloudflare Workers — 管理 Cloudflare Workers 与 KV、R2、D1 等存储资源。",
   "icon": {
     "light": "icon.png",

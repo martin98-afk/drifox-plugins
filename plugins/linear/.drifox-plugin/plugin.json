@@ -1,5 +1,8 @@
 {
   "name": "linear",
+  "display_name": {
+      "zh": "Linear 项目管理"
+  },
   "description": "Linear — 查看和管理 Linear 里的 Issue、项目与周期。",
   "icon": {
     "light": "icon.png",

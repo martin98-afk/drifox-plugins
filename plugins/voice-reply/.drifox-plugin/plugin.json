@@ -1,5 +1,8 @@
 {
     "name": "voice-reply",
+    "display_name": {
+        "zh": "语音朗读"
+    },
     "description": "消息卡片页脚「朗读」按钮：点击播报本条 AI 回复。双引擎：本地系统语音（Windows SAPI5 / macOS say，免费零配置，默认）+ OpenAI 兼容在线 TTS API（默认预填硅基流动 CosyVoice2，可指向任意兼容服务）",
     "icon": {
         "light": "icon.png",

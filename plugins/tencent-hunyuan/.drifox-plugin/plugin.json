@@ -1,5 +1,8 @@
 {
     "name": "tencent-hunyuan",
+    "display_name": {
+        "zh": "腾讯混元服务商"
+    },
     "description": "腾讯混元 Hy 系列服务商接入插件：经腾讯云 TokenHub 开放，OpenAI 兼容协议（/v1/chat/completions），Bearer 鉴权，按量付费。Hy4 preview 当前在 WorkBuddy/CodeBuddy 限免两周（约 2026-09-11 止），Hy3 免费延至 2026-09-30。",
     "version": "0.1.0",
     "icon": {

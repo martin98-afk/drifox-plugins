@@ -1,5 +1,8 @@
 {
     "name": "lunheng-article-pipeline",
+    "display_name": {
+        "zh": "论衡长文流水线"
+    },
     "description": "论衡深度长文流水线。9 个独立角色 T1-T9 加主控，三角验证、M 门、G 审计、修订回环，适用 2000 字以上证据可追溯的论文与行业分析。",
     "icon": {
         "light": "icon.svg",

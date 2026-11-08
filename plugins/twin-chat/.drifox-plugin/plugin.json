@@ -1,5 +1,8 @@
 {
     "name": "twin-chat",
+    "display_name": {
+        "zh": "并发对话"
+    },
     "description": "并发对话 — 浮动卡片内嵌第二对话窗口实例（复制当前项目/模型配置、独立会话），与主对话并行生成互不阻塞",
     "icon": {
         "light": "icon.svg",

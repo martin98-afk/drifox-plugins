@@ -1,5 +1,8 @@
 {
   "name": "postman",
+  "display_name": {
+      "zh": "Postman API 管理"
+  },
   "description": "Postman — 管理 Postman 的工作区、集合、环境与 API。",
   "icon": {
     "light": "icon.png",

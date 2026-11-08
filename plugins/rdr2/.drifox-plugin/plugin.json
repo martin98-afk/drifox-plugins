@@ -1,5 +1,8 @@
 {
     "name": "rdr2",
+    "display_name": {
+        "zh": "荒野大镖客主题"
+    },
     "description": "荒野大镖客主题 — Red Dead Redemption 2 灵感深色主题，血红主调、荒漠暖金点缀。",
     "icon": {
         "light": "icon.png",

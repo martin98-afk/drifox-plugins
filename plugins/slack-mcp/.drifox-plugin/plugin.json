@@ -1,5 +1,8 @@
 {
   "name": "slack-mcp",
+  "display_name": {
+      "zh": "Slack 消息管理"
+  },
   "description": "跨频道和私信读写搜索 Slack 消息。用自然语言创建管理 Canvas 文档、定时发送消息、添加表情回应、查找用户信息。",
   "icon": {
     "light": "icon.svg",

@@ -1,5 +1,8 @@
 {
     "name": "ai-video-gen",
+    "display_name": {
+        "zh": "AI 视频生成"
+    },
     "description": "AI 视频生成 — 40+ 视频模型统一封装（Veo / Wan / Grok / Sora / Runway / Pika / Kling / Luma / 可灵 / 即梦...），文本/图片转视频。",
     "icon": {
         "light": "icon.png",

@@ -1,5 +1,8 @@
 {
     "name": "web-design-skills",
+    "display_name": {
+        "zh": "网页设计技能"
+    },
     "description": "网页设计技能——使用 HTML/CSS/JavaScript/React 构建和重新设计高质量的视觉网页作品。",
     "icon": {
         "light": "icon.png",

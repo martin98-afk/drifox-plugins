@@ -1,5 +1,8 @@
 {
     "name": "workflow",
+    "display_name": {
+        "zh": "子智能体编排"
+    },
     "description": "受限 Python 脚本编排子智能体：条件/循环/并行扇出，默认后台立即返回 run_id，对话流实时卡片可见进度；支持 save/list/load/resume",
     "version": "0.2.0",
     "author": {

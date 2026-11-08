@@ -1,5 +1,8 @@
 {
     "name": "file-designer",
+    "display_name": {
+        "zh": "多格式文件设计"
+    },
     "description": "多格式文件设计模式 — 独立窗口预览 Word/PPT/Excel/CSV/XMind/Mermaid 流程图，页内拾取元素并标注，锚点+文本+截图回填输入框，让模型精确修改。",
     "icon": {
         "light": "icon.svg",

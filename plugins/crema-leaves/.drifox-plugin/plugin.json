@@ -1,5 +1,8 @@
 {
     "name": "crema-leaves",
+    "display_name": {
+        "zh": "奶油树影主题"
+    },
     "description": "奶油树影主题 — 奶油黄浅色与暖褐深色两套主题，共享 HanaAgent 树影动态背景（LeavesOverlay），叶隙光影在对话区缓慢流动。v1.1 起动态层改用动画 WebP（Qt 内置解码），不再依赖系统视频解码器。",
     "icon": {
         "light": "icon.png",

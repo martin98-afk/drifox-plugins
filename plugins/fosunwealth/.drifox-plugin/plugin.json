@@ -1,5 +1,8 @@
 {
   "name": "fosunwealth",
+  "display_name": {
+      "zh": "复星财富洞察"
+  },
   "description": "从你关心的问题出发，获得更清晰的金融洞察。",
   "icon": {
     "light": "icon.svg",

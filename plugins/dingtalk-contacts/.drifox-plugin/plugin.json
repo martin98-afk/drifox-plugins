@@ -1,5 +1,8 @@
 {
   "name": "dingtalk-contacts",
+  "display_name": {
+      "zh": "钉钉通讯录"
+  },
   "description": "钉钉通讯录 — 查询组织成员与部门。",
   "icon": {
     "light": "icon.png",

@@ -1,5 +1,8 @@
 {
   "name": "square",
+  "display_name": {
+      "zh": "Square 商户管理"
+  },
   "description": "Square — 管理 Square 的商品、订单、付款与客户。",
   "icon": {
     "light": "icon.png",

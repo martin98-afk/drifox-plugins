@@ -1,5 +1,8 @@
 {
     "name": "shidi",
+    "display_name": {
+        "zh": "科研师弟"
+    },
     "description": "科研「师弟」— 把一句话想法拆成可交付成果：文献调研与评分、实验方案设计、科研作图、论文精读、数据整理，Pro 深度与 Flash 快速双流程。",
     "icon": {
         "light": "icon.svg",

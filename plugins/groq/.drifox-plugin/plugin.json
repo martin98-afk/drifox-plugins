@@ -1,5 +1,8 @@
 {
     "name": "groq",
+    "display_name": {
+        "zh": "Groq 服务商"
+    },
     "description": "Groq 服务商插件 — 提供 Groq 高速推理模型接入。",
     "icon": {
         "light": "providers/icons_light/groq.svg",

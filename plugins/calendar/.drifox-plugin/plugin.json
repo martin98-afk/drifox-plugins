@@ -1,5 +1,8 @@
 {
     "name": "calendar",
+    "display_name": {
+        "zh": "日历"
+    },
     "description": "日历插件：在欢迎卡片注入日历 tab，支持上/下月切换、今天高亮与圆形时钟",
     "icon": {
         "light": "icon.svg",

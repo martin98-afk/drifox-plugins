@@ -1,5 +1,8 @@
 {
     "name": "fe-fw",
+    "display_name": {
+        "zh": "银翼圣焰主题"
+    },
     "description": "银翼圣焰主题 — 火焰纹章 万缕千丝 灵感深色主题，火焰橙红 + 命运女神紫双色组合，银白救世主文字色。",
     "icon": {
         "light": "icon.png",

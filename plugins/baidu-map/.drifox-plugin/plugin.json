@@ -1,5 +1,8 @@
 {
   "name": "baidu-map",
+  "display_name": {
+      "zh": "百度地图"
+  },
   "description": "百度地图 — 地点检索、路线规划、实时路况与天气查询。",
   "icon": {
     "light": "icon.png",

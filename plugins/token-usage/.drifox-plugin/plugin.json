@@ -1,5 +1,8 @@
 {
     "name": "token-usage",
+    "display_name": {
+        "zh": "Token 用量统计"
+    },
     "description": "欢迎卡片 Token 用量 — 30 天四指标 + GitHub 风格年度活动热力图，数据取自会话里的真实 API usage",
     "icon": {
         "light": "icon.png",

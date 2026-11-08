@@ -1,5 +1,8 @@
 {
     "name": "claude-api",
+    "display_name": {
+        "zh": "Claude API 指南"
+    },
     "description": "Claude API 最佳实践 — SDK 用法、prompt caching、streaming、tool use、batch API、prompt 工程、token 优化。",
     "icon": {
         "light": "icon.png",

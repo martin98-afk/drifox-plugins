@@ -1,5 +1,8 @@
 {
   "name": "paypal",
+  "display_name": {
+      "zh": "PayPal 交易管理"
+  },
   "description": "PayPal — 管理 PayPal 的发票、订单、交易与订阅。",
   "icon": {
     "light": "icon.png",

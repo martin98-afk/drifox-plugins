@@ -1,5 +1,8 @@
 {
   "name": "stripe",
+  "display_name": {
+      "zh": "Stripe 支付管理"
+  },
   "description": "Stripe — 查询和管理 Stripe 的客户、付款、订阅与发票。",
   "icon": {
     "light": "icon.png",

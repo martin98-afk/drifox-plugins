@@ -1,5 +1,8 @@
 {
     "name": "ssh-toolkit",
+    "display_name": {
+        "zh": "SSH 远程工具包"
+    },
     "description": "SSH 远程工具包：连接管理（AI 工具 + 系统设置页）、命令执行、文件传输(SFTP)、端口转发、目录浏览，基于 paramiko 实现，AI 自动调用。",
     "icon": {
         "light": "icon.svg",

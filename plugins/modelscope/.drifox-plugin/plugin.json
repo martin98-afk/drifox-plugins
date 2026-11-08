@@ -1,5 +1,8 @@
 {
   "name": "modelscope",
+  "display_name": {
+      "zh": "魔搭 MCP"
+  },
   "description": "魔搭 MCP — 接入魔搭 MCP 广场上的托管服务。",
   "icon": {
     "light": "icon.png",

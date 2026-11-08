@@ -4,6 +4,9 @@
         "dark": "icon_dark.png"
     },
     "name": "tetris",
+    "display_name": {
+        "zh": "俄罗斯方块"
+    },
     "description": "经典俄罗斯方块——在 DriFox 中直接玩的浮動卡片",
     "version": "0.3.0",
     "author": {

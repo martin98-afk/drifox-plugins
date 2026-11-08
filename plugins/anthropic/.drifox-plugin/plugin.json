@@ -1,5 +1,8 @@
 {
     "name": "anthropic",
+    "display_name": {
+        "zh": "Anthropic 服务商"
+    },
     "description": "Anthropic (Claude) 服务商插件 — 提供 Claude 系列模型接入，数据全部由本插件声明。",
     "icon": {
         "light": "providers/icons_light/Anthropic.svg",

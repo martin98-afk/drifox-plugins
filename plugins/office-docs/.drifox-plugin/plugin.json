@@ -1,5 +1,8 @@
 {
     "name": "office-docs",
+    "display_name": {
+        "zh": "Office 文档处理"
+    },
     "description": "Office 文档处理 — docx / pdf / pptx / xlsx 4 类文档读、写、转换、生成，Python 脚本 + LibreOffice 模板。",
     "icon": {
         "light": "icon.png",

@@ -1,5 +1,8 @@
 {
     "name": "mattpocock-skills",
+    "display_name": {
+        "zh": "mattpocock 技能精选"
+    },
     "description": "mattpocock 工程技能中文版精选 11 个：TDD、代码审查、领域建模、缺陷诊断、原型、研究、写作等可直接调用的开发方法。",
     "icon": {
         "light": "icon.svg",

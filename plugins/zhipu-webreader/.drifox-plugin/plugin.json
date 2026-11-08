@@ -1,5 +1,8 @@
 {
   "name": "zhipu-webreader",
+  "display_name": {
+      "zh": "智谱网页读取"
+  },
   "description": "智谱 网页读取 — 抓取网页正文与结构化内容。安装后填入智谱 API Key。",
   "icon": {
     "light": "icon.png",

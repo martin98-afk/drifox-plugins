@@ -1,5 +1,8 @@
 {
   "name": "huggingface",
+  "display_name": {
+      "zh": "Hugging Face 检索"
+  },
   "description": "Hugging Face — 搜索 Hugging Face 上的模型、数据集、Space 与论文。",
   "icon": {
     "light": "icon.png",

@@ -1,5 +1,8 @@
 {
   "name": "edgeone-pages",
+  "display_name": {
+      "zh": "EdgeOne Pages 部署"
+  },
   "description": "腾讯云 EdgeOne Pages — 把网页一键部署到 EdgeOne Pages，生成可公开访问的链接。",
   "icon": {
     "light": "icon.png",

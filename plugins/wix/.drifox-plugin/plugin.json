@@ -1,5 +1,8 @@
 {
   "name": "wix",
+  "display_name": {
+      "zh": "Wix 站点管理"
+  },
   "description": "Wix — 管理 Wix 站点、商品、预约与内容。",
   "icon": {
     "light": "icon.png",

@@ -1,5 +1,8 @@
 {
   "name": "bailian-websearch",
+  "display_name": {
+      "zh": "百炼联网搜索"
+  },
   "description": "阿里云百炼 联网搜索 — 通过阿里云百炼进行实时联网搜索。安装后填入百炼 API Key。",
   "icon": {
     "light": "icon.png",

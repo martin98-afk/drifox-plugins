@@ -1,5 +1,8 @@
 {
     "name": "git-workflow",
+    "display_name": {
+        "zh": "Git 工作流增强"
+    },
     "description": "Git 工作流增强 — 分支命名检查、提交规范验证、PR 模板生成，让团队 Git 实践自动化。",
     "icon": {
         "light": "icon.png",

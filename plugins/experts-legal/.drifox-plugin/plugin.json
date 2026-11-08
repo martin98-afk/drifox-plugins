@@ -1,5 +1,8 @@
 {
   "name": "experts-legal",
+  "display_name": {
+      "zh": "法务安全专家包"
+  },
   "description": "法务安全专家智能体包 — 14 个 @智能体（源自 WorkBuddy 专家市场）",
   "icon": {
     "light": "icon.png",

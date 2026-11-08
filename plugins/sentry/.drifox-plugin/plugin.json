@@ -1,5 +1,8 @@
 {
   "name": "sentry",
+  "display_name": {
+      "zh": "Sentry 错误监控"
+  },
   "description": "Sentry — 查看 Sentry 里的错误、性能问题与发布信息。",
   "icon": {
     "light": "icon.png",

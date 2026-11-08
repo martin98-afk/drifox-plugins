@@ -1,5 +1,8 @@
 {
     "name": "moonshot",
+    "display_name": {
+        "zh": "Moonshot 服务商"
+    },
     "description": "Moonshot (Kimi) 服务商插件 — 提供 Kimi K3 / K2.7 Code / K2.6 系列模型接入，含账户余额查询。",
     "icon": {
         "light": "providers/icons_light/moonshot.svg",

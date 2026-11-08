@@ -1,5 +1,8 @@
 {
     "name": "openai",
+    "display_name": {
+        "zh": "OpenAI 服务商"
+    },
     "description": "OpenAI 服务商插件 — 提供 GPT / ChatGPT 系列模型接入，含 API 用量查询。",
     "icon": {
         "light": "providers/icons_light/大模型.svg",

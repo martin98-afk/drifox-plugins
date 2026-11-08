@@ -1,5 +1,8 @@
 {
   "name": "experts-data",
+  "display_name": {
+      "zh": "数据智能专家包"
+  },
   "description": "数据智能专家智能体包 — 20 个 @智能体（源自 WorkBuddy 专家市场）",
   "icon": {
     "light": "icon.png",

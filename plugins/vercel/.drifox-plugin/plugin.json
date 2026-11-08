@@ -1,5 +1,8 @@
 {
   "name": "vercel",
+  "display_name": {
+      "zh": "Vercel 部署管理"
+  },
   "description": "Vercel — 查看 Vercel 项目、部署与日志，并检索 Vercel 文档。",
   "icon": {
     "light": "icon.png",

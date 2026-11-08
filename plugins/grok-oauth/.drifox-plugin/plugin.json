@@ -4,6 +4,9 @@
         "dark": "icon_dark.svg"
     },
     "name": "grok-oauth",
+    "display_name": {
+        "zh": "Grok OAuth 登录"
+    },
     "description": "xAI Grok 服务商（OAuth 登录制）— 用 SuperGrok / X Premium+ 订阅账号浏览器授权登录，直连 Grok 系列模型，无需 API Key",
     "version": "0.1.0",
     "author": {

@@ -1,5 +1,8 @@
 {
   "name": "github",
+  "display_name": {
+      "zh": "GitHub 仓库管理"
+  },
   "description": "GitHub — 管理 GitHub 仓库、Issue、PR 与 Actions。安装后填入个人访问令牌。",
   "icon": {
     "light": "icon.png",

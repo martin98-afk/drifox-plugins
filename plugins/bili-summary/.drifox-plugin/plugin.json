@@ -1,5 +1,8 @@
 {
     "name": "bili-summary",
+    "display_name": {
+        "zh": "B站视频总结"
+    },
     "description": "B 站视频总结 — 通过弹幕、评论、官方 AI 总结与抽帧识别，概括一个视频到底讲了什么。",
     "icon": {
         "light": "icon.svg",

@@ -1,5 +1,8 @@
 {
   "name": "dingtalk-docs",
+  "display_name": {
+      "zh": "钉钉文档"
+  },
   "description": "钉钉文档 — 搜索、阅读和编辑钉钉文档。",
   "icon": {
     "light": "icon.png",

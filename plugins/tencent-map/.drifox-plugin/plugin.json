@@ -1,5 +1,8 @@
 {
   "name": "tencent-map",
+  "display_name": {
+      "zh": "腾讯位置服务"
+  },
   "description": "腾讯位置服务 — 地点搜索、路线规划、周边与天气查询。",
   "icon": {
     "light": "icon.png",

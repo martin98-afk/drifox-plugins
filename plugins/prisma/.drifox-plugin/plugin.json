@@ -1,5 +1,8 @@
 {
   "name": "prisma",
+  "display_name": {
+      "zh": "Prisma 数据库管理"
+  },
   "description": "Prisma — 管理 Prisma Postgres 数据库、备份与连接。",
   "icon": {
     "light": "icon.png",

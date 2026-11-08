@@ -1,5 +1,8 @@
 {
     "name": "see-now",
+    "display_name": {
+        "zh": "看屏幕"
+    },
     "description": "看屏幕 — 按画面变化量给模型看屏幕：只把真正变了的几帧拼成一张宫格图，静止画面几乎不出图。动手自检、看用户在做什么都靠它。移植自 DSH dsh-see-now",
     "icon": {
         "light": "icon.svg",

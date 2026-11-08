@@ -1,5 +1,8 @@
 {
   "name": "miro",
+  "display_name": {
+      "zh": "Miro 白板"
+  },
   "description": "Miro — 读取和创建 Miro 白板上的内容。",
   "icon": {
     "light": "icon.png",

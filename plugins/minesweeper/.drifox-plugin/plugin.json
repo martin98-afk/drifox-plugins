@@ -4,6 +4,9 @@
         "dark": "icon_dark.png"
     },
     "name": "minesweeper",
+    "display_name": {
+        "zh": "扫雷游戏"
+    },
     "description": "经典扫雷游戏——在 DriFox 中直接玩的浮動卡片",
     "version": "0.1.0",
     "author": {
