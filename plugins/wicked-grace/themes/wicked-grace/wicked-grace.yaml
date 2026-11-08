@@ -1,0 +1,133 @@
+# 邪恶恩典（深色）· Wallpaper Engine 3465281285 转制
+# 动画为完整一轮转制的动画 WebP，Qt 内置解码，不依赖系统媒体栈
+name: 邪恶恩典
+id: wicked-grace
+mode: dark
+
+window:
+  gradient_start: rgba(13, 13, 13, 255)
+  gradient_end: rgba(30, 27, 27, 255)
+
+backgrounds:
+  window:
+    animation:
+      src: ../../assets/chat.webp
+      canvas: shared
+      fps: 15
+      fit: cover
+      opacity: 1.0
+    enabled: true
+
+  sidebar:
+    color: rgba(69, 48, 48, 140)
+    enabled: true
+
+  scene:
+    color: rgba(0, 0, 0, 0)
+    enabled: true
+
+  music:
+    tracks:
+      - ../../assets/01-bgm.mp3
+    volume: 0.45
+    loop: true
+    fade_ms: 420
+    enabled: true
+
+colors:
+  card_bg: rgba(27, 24, 24, 232)
+  card_bg_solid: rgba(27, 24, 24, 248)
+  content_bg: '#131313'
+  border: '#3b2d2d'
+  border_accent: '#996d6d'
+  text_primary: '#ededed'
+  text_secondary: rgba(237, 237, 237, 168)
+  text_muted: '#9e9e9e'
+  accent: '#996b6b'
+  search_highlight: '#a57d7d'
+  accent_warm: '#9c9077'
+  hover_bg: rgba(153, 107, 107, 31)
+  selected_bg: rgba(153, 107, 107, 66)
+  capsule_bg: rgba(27, 24, 24, 190)
+  capsule_border: rgba(59, 45, 45, 210)
+  toolbar_bg: rgba(153, 107, 107, 15)
+  divider_color: rgba(255, 255, 255, 15)
+  hover_bg_strong: rgba(153, 107, 107, 41)
+  scrollbar_handle_bg: rgba(255, 255, 255, 36)
+  scrollbar_handle_hover_bg: rgba(153, 107, 107, 115)
+  card_placeholder_text: '#9e9e9e'
+  button_text_on_accent: '#ffffff'
+  status_info: '#3fcde0'
+  status_danger_bg: rgba(224, 68, 63, 217)
+  status_archive_bg: rgba(224, 145, 63, 204)
+  card_bg_dim: rgba(153, 107, 107, 13)
+  archived_card_bg: rgba(158, 158, 158, 31)
+  archived_card_border: rgba(158, 158, 158, 56)
+  syntax_step: '#3fcde0'
+  syntax_tool: '#e0913f'
+  syntax_success: '#3fe04f'
+  syntax_error: '#e0443f'
+  syntax_result: '#993fe0'
+  tag_accent: '#996b6b'
+  tag_accent_text: '#bd9f9f'
+  tag_purple: '#993fe0'
+  tag_purple_text: '#b879e9'
+  tag_orange: '#e0913f'
+  tag_orange_text: '#e9b279'
+  user_card_bg: rgba(47, 37, 37, 180)
+  user_card_accent: '#875e5e'
+  user_card_text: '#ededed'
+  user_card_muted: '#9e9e9e'
+  assistant_card_bg: rgba(32, 27, 27, 185)
+  assistant_card_accent: '#3fe04f'
+  assistant_card_text: '#eeeeee'
+  assistant_card_muted: '#9e9e9e'
+  agent_btn_text: '#9e9e9e'
+  agent_btn_text_active: '#996b6b'
+  agent_btn_bg_active: rgba(153, 107, 107, 41)
+  agent_btn_separator: rgba(59, 45, 45, 160)
+  input_bg_start: rgba(24, 22, 22, 185)
+  input_bg_end: rgba(27, 24, 24, 185)
+  input_focus_bg_start: rgba(37, 31, 31, 235)
+  input_focus_bg_end: rgba(32, 27, 27, 235)
+  input_text: '#ededed'
+  input_focus_text: '#efefef'
+  input_border: '#3b2d2d'
+  input_focus_border: '#996b6b'
+  input_placeholder: rgba(237, 237, 237, 92)
+  glow_primary_alpha: 165
+  glow_primary_blur: 26
+  glow_ambient_alpha: 90
+  glow_ambient_blur: 34
+  toolbar_strip_bg: rgba(25, 22, 22, 215)
+  toolbar_strip_border: '#3b2d2d'
+  realtime_border: '#996b6b'
+  realtime_accent: '#996b6b'
+  realtime_accent_warm: '#9c9077'
+  realtime_success: '#3fe04f'
+  realtime_error: '#e0443f'
+  realtime_bg: rgba(27, 24, 24, 246)
+  realtime_text: '#ededed'
+  realtime_text_secondary: rgba(237, 237, 237, 173)
+  realtime_tag_bg: rgba(153, 107, 107, 36)
+  realtime_tag_border: rgba(153, 107, 107, 76)
+  system_border: '#3b2d2d'
+  system_accent: '#996b6b'
+  send_btn_start: '#996b6b'
+  send_btn_end: '#775353'
+  send_btn_hover_start: '#a78080'
+  send_btn_hover_end: '#996b6b'
+  send_btn_radius: 17
+  timeline_node: '#5f5f5f'
+  timeline_node_hover: '#996b6b'
+  timeline_node_visible: '#3fe04f'
+  timeline_node_selected: '#9c9077'
+  timeline_line: '#3a3a3a'
+  timeline_line_progress: '#3fe04f'
+  ring_normal: '#996b6b'
+  ring_warning: '#e0913f'
+  ring_danger: '#e0443f'
+  ring_compacted: '#993fe0'
+  branch_label_bg: rgba(153, 107, 107, 36)
+  branch_label_border: rgba(153, 107, 107, 76)
+  window_bg: rgba(153, 107, 107, 10)

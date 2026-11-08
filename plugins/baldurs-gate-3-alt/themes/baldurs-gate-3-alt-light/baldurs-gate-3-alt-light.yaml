@@ -1,0 +1,137 @@
+# 博德之门 3 · 暗夜（浅色）· Wallpaper Engine 3005864018 转制
+# 动画为完整一轮转制的动画 WebP，Qt 内置解码，不依赖系统媒体栈
+name: '博德之门 3 · 暗夜 · 浅'
+id: baldurs-gate-3-alt-light
+mode: light
+
+window:
+  gradient_start: rgba(196, 228, 240, 255)
+  gradient_end: rgba(175, 212, 227, 255)
+
+backgrounds:
+  window:
+    animation:
+      src: ../../assets/chat.webp
+      canvas: shared
+      fps: 15
+      fit: cover
+      opacity: 1.0
+    enabled: true
+
+  sidebar:
+    color: rgba(203, 221, 231, 145)
+    enabled: true
+
+  scene:
+    color: rgba(0, 0, 0, 0)
+    enabled: true
+
+  music:
+    tracks:
+      - ../../assets/01-bgm.mp3
+      - ../../assets/02-bgm.mp3
+      - ../../assets/03-bgm.mp3
+      - ../../assets/04-bgm.mp3
+      - ../../assets/05-bgm.mp3
+    volume: 0.45
+    loop: true
+    fade_ms: 420
+    enabled: true
+
+colors:
+  card_bg: rgba(224, 243, 250, 246)
+  card_bg_solid: rgba(224, 243, 250, 252)
+  content_bg: '#bae4f4'
+  border: '#9fcde0'
+  border_accent: '#4587aa'
+  text_primary: '#181f2b'
+  text_secondary: rgba(24, 31, 43, 191)
+  text_muted: '#5c727f'
+  accent: '#4587aa'
+  search_highlight: '#3d7796'
+  accent_warm: '#535299'
+  hover_bg: rgba(69, 135, 170, 26)
+  selected_bg: rgba(69, 135, 170, 51)
+  capsule_bg: rgba(224, 243, 250, 220)
+  capsule_border: rgba(159, 205, 224, 210)
+  toolbar_bg: rgba(69, 135, 170, 15)
+  divider_color: rgba(24, 31, 43, 20)
+  hover_bg_strong: rgba(69, 135, 170, 31)
+  scrollbar_handle_bg: rgba(24, 31, 43, 38)
+  scrollbar_handle_hover_bg: rgba(69, 135, 170, 102)
+  card_placeholder_text: '#5c727f'
+  button_text_on_accent: '#f4f9fb'
+  status_info: '#1f5961'
+  status_danger_bg: rgba(97, 33, 31, 209)
+  status_archive_bg: rgba(97, 65, 31, 209)
+  card_bg_dim: rgba(69, 135, 170, 13)
+  archived_card_bg: rgba(92, 114, 127, 20)
+  archived_card_border: rgba(92, 114, 127, 51)
+  syntax_step: '#1f5961'
+  syntax_tool: '#61411f'
+  syntax_success: '#1f6126'
+  syntax_error: '#61211f'
+  syntax_result: '#441f61'
+  tag_accent: '#4587aa'
+  tag_accent_text: '#376c88'
+  tag_purple: '#441f61'
+  tag_purple_text: '#3a1a52'
+  tag_orange: '#61411f'
+  tag_orange_text: '#52371a'
+  user_card_bg: rgba(199, 226, 237, 215)
+  user_card_accent: '#3d7796'
+  user_card_text: '#181f2b'
+  user_card_muted: '#5c727f'
+  assistant_card_bg: rgba(218, 239, 247, 160)
+  assistant_card_accent: '#1f6126'
+  assistant_card_text: '#171d29'
+  assistant_card_muted: '#5c727f'
+  agent_btn_text: '#5c727f'
+  agent_btn_text_active: '#4587aa'
+  agent_btn_bg_active: rgba(69, 135, 170, 31)
+  agent_btn_separator: rgba(159, 205, 224, 160)
+  input_bg_start: rgba(209, 237, 248, 238)
+  input_bg_end: rgba(224, 243, 250, 238)
+  input_focus_bg_start: rgba(212, 234, 244, 244)
+  input_focus_bg_end: rgba(218, 239, 247, 244)
+  input_text: '#181f2b'
+  input_focus_text: '#161d28'
+  input_border: '#9fcde0'
+  input_focus_border: '#4587aa'
+  input_placeholder: rgba(24, 31, 43, 89)
+  glow_primary_alpha: 120
+  glow_primary_blur: 22
+  glow_ambient_alpha: 60
+  glow_ambient_blur: 30
+  toolbar_strip_bg: rgba(213, 238, 248, 225)
+  toolbar_strip_border: '#9fcde0'
+  realtime_border: '#4587aa'
+  realtime_accent: '#4587aa'
+  realtime_accent_warm: '#535299'
+  realtime_success: '#1f6126'
+  realtime_error: '#61211f'
+  realtime_bg: rgba(224, 243, 250, 250)
+  realtime_text: '#181f2b'
+  realtime_text_secondary: rgba(24, 31, 43, 178)
+  realtime_tag_bg: rgba(69, 135, 170, 26)
+  realtime_tag_border: rgba(69, 135, 170, 61)
+  system_border: '#9fcde0'
+  system_accent: '#4587aa'
+  send_btn_start: '#4587aa'
+  send_btn_end: '#366985'
+  send_btn_hover_start: '#5f98b6'
+  send_btn_hover_end: '#4587aa'
+  send_btn_radius: 17
+  timeline_node: '#819fae'
+  timeline_node_hover: '#4587aa'
+  timeline_node_visible: '#1f6126'
+  timeline_node_selected: '#535299'
+  timeline_line: '#9dc1d0'
+  timeline_line_progress: '#1f6126'
+  ring_normal: '#4587aa'
+  ring_warning: '#61411f'
+  ring_danger: '#61211f'
+  ring_compacted: '#441f61'
+  branch_label_bg: rgba(69, 135, 170, 26)
+  branch_label_border: rgba(69, 135, 170, 61)
+  window_bg: rgba(69, 135, 170, 10)

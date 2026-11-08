@@ -1,31 +1,26 @@
 {
     "name": "cyberpunk-2077-somi",
     "display_name": {
-        "zh": "赛博朋克 2077 主题"
+        "zh": "赛博朋克 · Somi"
     },
-    "description": "赛博朋克 2077 · Somi — 深色主题，Cyberpunk 2077 红灯室场景图 + 与背景同源的角色剪影前景层，附三首官方 OST 背景音乐（Never Fade Away / The Rebel Path / Gate K9）。切主题自动放歌，失焦暂停。",
+    "description": "赛博朋克 2077 · Somi — 深色动画主题，Wallpaper Engine 3244942566 全保真渲染转制动画 WebP 整窗铺底（雨丝/霓虹/人物层全保留），附三首官方 OST 背景音乐。切主题自动放歌，失焦暂停。",
     "icon": {
         "light": "icon.png",
         "dark": "icon_dark.png"
     },
-    "version": "1.0.1",
+    "version": "1.1.0",
     "author": {
         "name": "DriFox Contributors"
     },
-    "homepage": "https://github.com/martin98-afk/drifox-plugins",
     "license": "MIT",
     "type": "user",
     "keywords": [
         "theme",
-        "cyberpunk",
-        "2077",
-        "somi",
-        "neon",
-        "music",
-        "bgm",
+        "wallpaper-engine",
+        "migrated",
+        "animation",
         "主题",
-        "赛博朋克",
-        "背景音乐"
+        "动画"
     ],
     "components": {
         "themes": true

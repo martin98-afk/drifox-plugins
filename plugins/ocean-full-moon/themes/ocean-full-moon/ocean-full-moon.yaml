@@ -1,0 +1,133 @@
+# 海上明月（深色）· Wallpaper Engine 2956215523 转制
+# 动画为完整一轮转制的动画 WebP，Qt 内置解码，不依赖系统媒体栈
+name: 海上明月
+id: ocean-full-moon
+mode: dark
+
+window:
+  gradient_start: rgba(7, 11, 13, 255)
+  gradient_end: rgba(14, 22, 28, 255)
+
+backgrounds:
+  window:
+    animation:
+      src: ../../assets/chat.webp
+      canvas: shared
+      fps: 15
+      fit: cover
+      opacity: 1.0
+    enabled: true
+
+  sidebar:
+    color: rgba(14, 38, 52, 140)
+    enabled: true
+
+  scene:
+    color: rgba(0, 0, 0, 0)
+    enabled: true
+
+  music:
+    tracks:
+      - ../../assets/bgm.mp3
+    volume: 0.45
+    loop: true
+    fade_ms: 420
+    enabled: true
+
+colors:
+  card_bg: rgba(10, 19, 25, 232)
+  card_bg_solid: rgba(10, 19, 25, 248)
+  content_bg: '#090f13'
+  border: '#102430'
+  border_accent: '#235673'
+  text_primary: '#d1e5ed'
+  text_secondary: rgba(209, 229, 237, 168)
+  text_muted: '#85979e'
+  accent: '#1f5473'
+  search_highlight: '#3a6984'
+  accent_warm: '#343275'
+  hover_bg: rgba(31, 84, 115, 31)
+  selected_bg: rgba(31, 84, 115, 66)
+  capsule_bg: rgba(10, 19, 25, 190)
+  capsule_border: rgba(16, 36, 48, 210)
+  toolbar_bg: rgba(31, 84, 115, 15)
+  divider_color: rgba(255, 255, 255, 15)
+  hover_bg_strong: rgba(31, 84, 115, 41)
+  scrollbar_handle_bg: rgba(255, 255, 255, 36)
+  scrollbar_handle_hover_bg: rgba(31, 84, 115, 115)
+  card_placeholder_text: '#85979e'
+  button_text_on_accent: '#ffffff'
+  status_info: '#3fcde0'
+  status_danger_bg: rgba(224, 68, 63, 217)
+  status_archive_bg: rgba(224, 145, 63, 204)
+  card_bg_dim: rgba(31, 84, 115, 13)
+  archived_card_bg: rgba(133, 151, 158, 31)
+  archived_card_border: rgba(133, 151, 158, 56)
+  syntax_step: '#3fcde0'
+  syntax_tool: '#e0913f'
+  syntax_success: '#3fe04f'
+  syntax_error: '#e0443f'
+  syntax_result: '#993fe0'
+  tag_accent: '#1f5473'
+  tag_accent_text: '#6d90a4'
+  tag_purple: '#993fe0'
+  tag_purple_text: '#b879e9'
+  tag_orange: '#e0913f'
+  tag_orange_text: '#e9b279'
+  user_card_bg: rgba(13, 29, 39, 180)
+  user_card_accent: '#1b4a65'
+  user_card_text: '#d1e5ed'
+  user_card_muted: '#85979e'
+  assistant_card_bg: rgba(11, 22, 29, 185)
+  assistant_card_accent: '#3fe04f'
+  assistant_card_text: '#d4e7ee'
+  assistant_card_muted: '#85979e'
+  agent_btn_text: '#85979e'
+  agent_btn_text_active: '#1f5473'
+  agent_btn_bg_active: rgba(31, 84, 115, 41)
+  agent_btn_separator: rgba(16, 36, 48, 160)
+  input_bg_start: rgba(10, 17, 23, 185)
+  input_bg_end: rgba(10, 19, 25, 185)
+  input_focus_bg_start: rgba(12, 24, 32, 235)
+  input_focus_bg_end: rgba(11, 22, 29, 235)
+  input_text: '#d1e5ed'
+  input_focus_text: '#d6e8ef'
+  input_border: '#102430'
+  input_focus_border: '#1f5473'
+  input_placeholder: rgba(209, 229, 237, 92)
+  glow_primary_alpha: 165
+  glow_primary_blur: 26
+  glow_ambient_alpha: 90
+  glow_ambient_blur: 34
+  toolbar_strip_bg: rgba(10, 18, 23, 215)
+  toolbar_strip_border: '#102430'
+  realtime_border: '#1f5473'
+  realtime_accent: '#1f5473'
+  realtime_accent_warm: '#343275'
+  realtime_success: '#3fe04f'
+  realtime_error: '#e0443f'
+  realtime_bg: rgba(10, 19, 25, 246)
+  realtime_text: '#d1e5ed'
+  realtime_text_secondary: rgba(209, 229, 237, 173)
+  realtime_tag_bg: rgba(31, 84, 115, 36)
+  realtime_tag_border: rgba(31, 84, 115, 76)
+  system_border: '#102430'
+  system_accent: '#1f5473'
+  send_btn_start: '#1f5473'
+  send_btn_end: '#18425a'
+  send_btn_hover_start: '#3e6c87'
+  send_btn_hover_end: '#1f5473'
+  send_btn_radius: 17
+  timeline_node: '#4f5a5f'
+  timeline_node_hover: '#1f5473'
+  timeline_node_visible: '#3fe04f'
+  timeline_node_selected: '#343275'
+  timeline_line: '#2d363a'
+  timeline_line_progress: '#3fe04f'
+  ring_normal: '#1f5473'
+  ring_warning: '#e0913f'
+  ring_danger: '#e0443f'
+  ring_compacted: '#993fe0'
+  branch_label_bg: rgba(31, 84, 115, 36)
+  branch_label_border: rgba(31, 84, 115, 76)
+  window_bg: rgba(31, 84, 115, 10)

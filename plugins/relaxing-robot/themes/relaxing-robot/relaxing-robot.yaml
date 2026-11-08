@@ -1,0 +1,133 @@
+# 放松机器人（浅色）· Wallpaper Engine 3715230438 转制
+# 动画为完整一轮转制的动画 WebP，Qt 内置解码，不依赖系统媒体栈
+name: '放松机器人 · 浅'
+id: relaxing-robot
+mode: light
+
+window:
+  gradient_start: rgba(240, 240, 204, 255)
+  gradient_end: rgba(226, 227, 185, 255)
+
+backgrounds:
+  window:
+    animation:
+      src: ../../assets/chat.webp
+      canvas: shared
+      fps: 15
+      fit: cover
+      opacity: 1.0
+    enabled: true
+
+  sidebar:
+    color: rgba(227, 231, 203, 145)
+    enabled: true
+
+  scene:
+    color: rgba(0, 0, 0, 0)
+    enabled: true
+
+  music:
+    tracks:
+      - ../../assets/01-bgm.mp3
+    volume: 0.45
+    loop: true
+    fade_ms: 420
+    enabled: true
+
+colors:
+  card_bg: rgba(250, 250, 229, 246)
+  card_bg_solid: rgba(250, 250, 229, 252)
+  content_bg: '#f4f4c5'
+  border: '#dde0a8'
+  border_accent: '#9ba947'
+  text_primary: '#252b21'
+  text_secondary: rgba(37, 43, 33, 191)
+  text_muted: '#7c7f66'
+  accent: '#9ba947'
+  search_highlight: '#88953e'
+  accent_warm: '#619853'
+  hover_bg: rgba(155, 169, 71, 26)
+  selected_bg: rgba(155, 169, 71, 51)
+  capsule_bg: rgba(250, 250, 229, 220)
+  capsule_border: rgba(221, 224, 168, 210)
+  toolbar_bg: rgba(155, 169, 71, 15)
+  divider_color: rgba(37, 43, 33, 20)
+  hover_bg_strong: rgba(155, 169, 71, 31)
+  scrollbar_handle_bg: rgba(37, 43, 33, 38)
+  scrollbar_handle_hover_bg: rgba(155, 169, 71, 102)
+  card_placeholder_text: '#7c7f66'
+  button_text_on_accent: '#f4f9fb'
+  status_info: '#1f5961'
+  status_danger_bg: rgba(97, 33, 31, 209)
+  status_archive_bg: rgba(97, 65, 31, 209)
+  card_bg_dim: rgba(155, 169, 71, 13)
+  archived_card_bg: rgba(124, 127, 102, 20)
+  archived_card_border: rgba(124, 127, 102, 51)
+  syntax_step: '#1f5961'
+  syntax_tool: '#61411f'
+  syntax_success: '#1f6126'
+  syntax_error: '#61211f'
+  syntax_result: '#441f61'
+  tag_accent: '#9ba947'
+  tag_accent_text: '#7c8739'
+  tag_purple: '#441f61'
+  tag_purple_text: '#3a1a52'
+  tag_orange: '#61411f'
+  tag_orange_text: '#52371a'
+  user_card_bg: rgba(235, 237, 204, 215)
+  user_card_accent: '#88953e'
+  user_card_text: '#252b21'
+  user_card_muted: '#7c7f66'
+  assistant_card_bg: rgba(246, 247, 223, 160)
+  assistant_card_accent: '#1f6126'
+  assistant_card_text: '#23291f'
+  assistant_card_muted: '#7c7f66'
+  agent_btn_text: '#7c7f66'
+  agent_btn_text_active: '#9ba947'
+  agent_btn_bg_active: rgba(155, 169, 71, 31)
+  agent_btn_separator: rgba(221, 224, 168, 160)
+  input_bg_start: rgba(248, 248, 216, 238)
+  input_bg_end: rgba(250, 250, 229, 238)
+  input_focus_bg_start: rgba(242, 244, 216, 244)
+  input_focus_bg_end: rgba(246, 247, 223, 244)
+  input_text: '#252b21'
+  input_focus_text: '#22281e'
+  input_border: '#dde0a8'
+  input_focus_border: '#9ba947'
+  input_placeholder: rgba(37, 43, 33, 89)
+  glow_primary_alpha: 120
+  glow_primary_blur: 22
+  glow_ambient_alpha: 60
+  glow_ambient_blur: 30
+  toolbar_strip_bg: rgba(248, 248, 219, 225)
+  toolbar_strip_border: '#dde0a8'
+  realtime_border: '#9ba947'
+  realtime_accent: '#9ba947'
+  realtime_accent_warm: '#619853'
+  realtime_success: '#1f6126'
+  realtime_error: '#61211f'
+  realtime_bg: rgba(250, 250, 229, 250)
+  realtime_text: '#252b21'
+  realtime_text_secondary: rgba(37, 43, 33, 178)
+  realtime_tag_bg: rgba(155, 169, 71, 26)
+  realtime_tag_border: rgba(155, 169, 71, 61)
+  system_border: '#dde0a8'
+  system_accent: '#9ba947'
+  send_btn_start: '#9ba947'
+  send_btn_end: '#798437'
+  send_btn_hover_start: '#a9b561'
+  send_btn_hover_end: '#9ba947'
+  send_btn_radius: 17
+  timeline_node: '#acae8c'
+  timeline_node_hover: '#9ba947'
+  timeline_node_visible: '#1f6126'
+  timeline_node_selected: '#619853'
+  timeline_line: '#cfd0a7'
+  timeline_line_progress: '#1f6126'
+  ring_normal: '#9ba947'
+  ring_warning: '#61411f'
+  ring_danger: '#61211f'
+  ring_compacted: '#441f61'
+  branch_label_bg: rgba(155, 169, 71, 26)
+  branch_label_border: rgba(155, 169, 71, 61)
+  window_bg: rgba(155, 169, 71, 10)

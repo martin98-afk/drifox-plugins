@@ -1,0 +1,125 @@
+# 阳光海岸（浅色）· Wallpaper Engine 3276955573 转制
+# 动画为完整一轮转制的动画 WebP，Qt 内置解码，不依赖系统媒体栈
+name: '阳光海岸 · 浅'
+id: sunny-shores
+mode: light
+
+window:
+  gradient_start: rgba(240, 232, 224, 255)
+  gradient_end: rgba(224, 219, 210, 255)
+
+backgrounds:
+  window:
+    animation:
+      src: ../../assets/chat.webp
+      canvas: shared
+      fps: 15
+      fit: cover
+      opacity: 1.0
+    enabled: true
+
+  sidebar:
+    color: rgba(212, 235, 233, 145)
+    enabled: true
+
+  scene:
+    color: rgba(0, 0, 0, 0)
+    enabled: true
+
+colors:
+  card_bg: rgba(250, 245, 241, 246)
+  card_bg_solid: rgba(250, 245, 241, 252)
+  content_bg: '#f4e9df'
+  border: '#d2dad1'
+  border_accent: '#65b8af'
+  text_primary: '#262b2b'
+  text_secondary: rgba(38, 43, 43, 191)
+  text_muted: '#7d7b77'
+  accent: '#65b8af'
+  search_highlight: '#59a29a'
+  accent_warm: '#6b85a6'
+  hover_bg: rgba(101, 184, 175, 26)
+  selected_bg: rgba(101, 184, 175, 51)
+  capsule_bg: rgba(250, 245, 241, 220)
+  capsule_border: rgba(210, 218, 209, 210)
+  toolbar_bg: rgba(101, 184, 175, 15)
+  divider_color: rgba(38, 43, 43, 20)
+  hover_bg_strong: rgba(101, 184, 175, 31)
+  scrollbar_handle_bg: rgba(38, 43, 43, 38)
+  scrollbar_handle_hover_bg: rgba(101, 184, 175, 102)
+  card_placeholder_text: '#7d7b77'
+  button_text_on_accent: '#f4f9fb'
+  status_info: '#1f5961'
+  status_danger_bg: rgba(97, 33, 31, 209)
+  status_archive_bg: rgba(97, 65, 31, 209)
+  card_bg_dim: rgba(101, 184, 175, 13)
+  archived_card_bg: rgba(125, 123, 119, 20)
+  archived_card_border: rgba(125, 123, 119, 51)
+  syntax_step: '#1f5961'
+  syntax_tool: '#61411f'
+  syntax_success: '#1f6126'
+  syntax_error: '#61211f'
+  syntax_result: '#441f61'
+  tag_accent: '#65b8af'
+  tag_accent_text: '#51938c'
+  tag_purple: '#441f61'
+  tag_purple_text: '#3a1a52'
+  tag_orange: '#61411f'
+  tag_orange_text: '#52371a'
+  user_card_bg: rgba(226, 235, 230, 215)
+  user_card_accent: '#59a29a'
+  user_card_text: '#262b2b'
+  user_card_muted: '#7d7b77'
+  assistant_card_bg: rgba(244, 243, 238, 160)
+  assistant_card_accent: '#1f6126'
+  assistant_card_text: '#242929'
+  assistant_card_muted: '#7d7b77'
+  agent_btn_text: '#7d7b77'
+  agent_btn_text_active: '#65b8af'
+  agent_btn_bg_active: rgba(101, 184, 175, 31)
+  agent_btn_separator: rgba(210, 218, 209, 160)
+  input_bg_start: rgba(248, 240, 234, 238)
+  input_bg_end: rgba(250, 245, 241, 238)
+  input_focus_bg_start: rgba(238, 240, 236, 244)
+  input_focus_bg_end: rgba(244, 243, 238, 244)
+  input_text: '#262b2b'
+  input_focus_text: '#232828'
+  input_border: '#d2dad1'
+  input_focus_border: '#65b8af'
+  input_placeholder: rgba(38, 43, 43, 89)
+  glow_primary_alpha: 120
+  glow_primary_blur: 22
+  glow_ambient_alpha: 60
+  glow_ambient_blur: 30
+  toolbar_strip_bg: rgba(248, 241, 236, 225)
+  toolbar_strip_border: '#d2dad1'
+  realtime_border: '#65b8af'
+  realtime_accent: '#65b8af'
+  realtime_accent_warm: '#6b85a6'
+  realtime_success: '#1f6126'
+  realtime_error: '#61211f'
+  realtime_bg: rgba(250, 245, 241, 250)
+  realtime_text: '#262b2b'
+  realtime_text_secondary: rgba(38, 43, 43, 178)
+  realtime_tag_bg: rgba(101, 184, 175, 26)
+  realtime_tag_border: rgba(101, 184, 175, 61)
+  system_border: '#d2dad1'
+  system_accent: '#65b8af'
+  send_btn_start: '#65b8af'
+  send_btn_end: '#4f9088'
+  send_btn_hover_start: '#7bc2ba'
+  send_btn_hover_end: '#65b8af'
+  send_btn_radius: 17
+  timeline_node: '#aca6a0'
+  timeline_node_hover: '#65b8af'
+  timeline_node_visible: '#1f6126'
+  timeline_node_selected: '#6b85a6'
+  timeline_line: '#cfc7bf'
+  timeline_line_progress: '#1f6126'
+  ring_normal: '#65b8af'
+  ring_warning: '#61411f'
+  ring_danger: '#61211f'
+  ring_compacted: '#441f61'
+  branch_label_bg: rgba(101, 184, 175, 26)
+  branch_label_border: rgba(101, 184, 175, 61)
+  window_bg: rgba(101, 184, 175, 10)

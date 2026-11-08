@@ -1,0 +1,125 @@
+# 达斯·维达（深色）· Wallpaper Engine 3726523866 转制
+# 动画为完整一轮转制的动画 WebP，Qt 内置解码，不依赖系统媒体栈
+name: 达斯·维达
+id: darth-vader
+mode: dark
+
+window:
+  gradient_start: rgba(13, 7, 7, 255)
+  gradient_end: rgba(28, 12, 12, 255)
+
+backgrounds:
+  window:
+    animation:
+      src: ../../assets/chat.webp
+      canvas: shared
+      fps: 15
+      fit: cover
+      opacity: 1.0
+    enabled: true
+
+  sidebar:
+    color: rgba(52, 6, 7, 140)
+    enabled: true
+
+  scene:
+    color: rgba(0, 0, 0, 0)
+    enabled: true
+
+colors:
+  card_bg: rgba(25, 9, 9, 232)
+  card_bg_solid: rgba(25, 9, 9, 248)
+  content_bg: '#130909'
+  border: '#300a0b'
+  border_accent: '#731315'
+  text_primary: '#edd1d1'
+  text_secondary: rgba(237, 209, 209, 168)
+  text_muted: '#9e8282'
+  accent: '#730e10'
+  search_highlight: '#842b2d'
+  accent_warm: '#755825'
+  hover_bg: rgba(115, 14, 16, 31)
+  selected_bg: rgba(115, 14, 16, 66)
+  capsule_bg: rgba(25, 9, 9, 190)
+  capsule_border: rgba(48, 10, 11, 210)
+  toolbar_bg: rgba(115, 14, 16, 15)
+  divider_color: rgba(255, 255, 255, 15)
+  hover_bg_strong: rgba(115, 14, 16, 41)
+  scrollbar_handle_bg: rgba(255, 255, 255, 36)
+  scrollbar_handle_hover_bg: rgba(115, 14, 16, 115)
+  card_placeholder_text: '#9e8282'
+  button_text_on_accent: '#ffffff'
+  status_info: '#3fcde0'
+  status_danger_bg: rgba(224, 68, 63, 217)
+  status_archive_bg: rgba(224, 145, 63, 204)
+  card_bg_dim: rgba(115, 14, 16, 13)
+  archived_card_bg: rgba(158, 130, 130, 31)
+  archived_card_border: rgba(158, 130, 130, 56)
+  syntax_step: '#3fcde0'
+  syntax_tool: '#e0913f'
+  syntax_success: '#3fe04f'
+  syntax_error: '#e0443f'
+  syntax_result: '#993fe0'
+  tag_accent: '#730e10'
+  tag_accent_text: '#a46264'
+  tag_purple: '#993fe0'
+  tag_purple_text: '#b879e9'
+  tag_orange: '#e0913f'
+  tag_orange_text: '#e9b279'
+  user_card_bg: rgba(39, 10, 10, 180)
+  user_card_accent: '#650c0e'
+  user_card_text: '#edd1d1'
+  user_card_muted: '#9e8282'
+  assistant_card_bg: rgba(29, 9, 9, 185)
+  assistant_card_accent: '#3fe04f'
+  assistant_card_text: '#eed4d4'
+  assistant_card_muted: '#9e8282'
+  agent_btn_text: '#9e8282'
+  agent_btn_text_active: '#730e10'
+  agent_btn_bg_active: rgba(115, 14, 16, 41)
+  agent_btn_separator: rgba(48, 10, 11, 160)
+  input_bg_start: rgba(23, 9, 9, 185)
+  input_bg_end: rgba(25, 9, 9, 185)
+  input_focus_bg_start: rgba(32, 9, 10, 235)
+  input_focus_bg_end: rgba(29, 9, 9, 235)
+  input_text: '#edd1d1'
+  input_focus_text: '#efd6d6'
+  input_border: '#300a0b'
+  input_focus_border: '#730e10'
+  input_placeholder: rgba(237, 209, 209, 92)
+  glow_primary_alpha: 165
+  glow_primary_blur: 26
+  glow_ambient_alpha: 90
+  glow_ambient_blur: 34
+  toolbar_strip_bg: rgba(23, 9, 9, 215)
+  toolbar_strip_border: '#300a0b'
+  realtime_border: '#730e10'
+  realtime_accent: '#730e10'
+  realtime_accent_warm: '#755825'
+  realtime_success: '#3fe04f'
+  realtime_error: '#e0443f'
+  realtime_bg: rgba(25, 9, 9, 246)
+  realtime_text: '#edd1d1'
+  realtime_text_secondary: rgba(237, 209, 209, 173)
+  realtime_tag_bg: rgba(115, 14, 16, 36)
+  realtime_tag_border: rgba(115, 14, 16, 76)
+  system_border: '#300a0b'
+  system_accent: '#730e10'
+  send_btn_start: '#730e10'
+  send_btn_end: '#5a0b0c'
+  send_btn_hover_start: '#873031'
+  send_btn_hover_end: '#730e10'
+  send_btn_radius: 17
+  timeline_node: '#5f4f4f'
+  timeline_node_hover: '#730e10'
+  timeline_node_visible: '#3fe04f'
+  timeline_node_selected: '#755825'
+  timeline_line: '#3a2d2d'
+  timeline_line_progress: '#3fe04f'
+  ring_normal: '#730e10'
+  ring_warning: '#e0913f'
+  ring_danger: '#e0443f'
+  ring_compacted: '#993fe0'
+  branch_label_bg: rgba(115, 14, 16, 36)
+  branch_label_border: rgba(115, 14, 16, 76)
+  window_bg: rgba(115, 14, 16, 10)

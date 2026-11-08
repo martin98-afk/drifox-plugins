@@ -1,0 +1,125 @@
+# 有时我很快乐（浅色）· Wallpaper Engine 3824642124 转制
+# 动画为完整一轮转制的动画 WebP，Qt 内置解码，不依赖系统媒体栈
+name: '有时我很快乐 · 浅'
+id: sometimes-happy
+mode: light
+
+window:
+  gradient_start: rgba(187, 211, 240, 255)
+  gradient_end: rgba(167, 191, 225, 255)
+
+backgrounds:
+  window:
+    animation:
+      src: ../../assets/chat.webp
+      canvas: shared
+      fps: 15
+      fit: cover
+      opacity: 1.0
+    enabled: true
+
+  sidebar:
+    color: rgba(215, 205, 222, 145)
+    enabled: true
+
+  scene:
+    color: rgba(0, 0, 0, 0)
+    enabled: true
+
+colors:
+  card_bg: rgba(217, 232, 250, 246)
+  card_bg_solid: rgba(217, 232, 250, 252)
+  content_bg: '#aacbf4'
+  border: '#9badd9'
+  border_accent: '#714b88'
+  text_primary: '#28222b'
+  text_secondary: rgba(40, 34, 43, 191)
+  text_muted: '#5f697f'
+  accent: '#714b88'
+  search_highlight: '#634278'
+  accent_warm: '#7a506e'
+  hover_bg: rgba(113, 75, 136, 26)
+  selected_bg: rgba(113, 75, 136, 51)
+  capsule_bg: rgba(217, 232, 250, 220)
+  capsule_border: rgba(155, 173, 217, 210)
+  toolbar_bg: rgba(113, 75, 136, 15)
+  divider_color: rgba(40, 34, 43, 20)
+  hover_bg_strong: rgba(113, 75, 136, 31)
+  scrollbar_handle_bg: rgba(40, 34, 43, 38)
+  scrollbar_handle_hover_bg: rgba(113, 75, 136, 102)
+  card_placeholder_text: '#5f697f'
+  button_text_on_accent: '#f4f9fb'
+  status_info: '#1f5961'
+  status_danger_bg: rgba(97, 33, 31, 209)
+  status_archive_bg: rgba(97, 65, 31, 209)
+  card_bg_dim: rgba(113, 75, 136, 13)
+  archived_card_bg: rgba(95, 105, 127, 20)
+  archived_card_border: rgba(95, 105, 127, 51)
+  syntax_step: '#1f5961'
+  syntax_tool: '#61411f'
+  syntax_success: '#1f6126'
+  syntax_error: '#61211f'
+  syntax_result: '#441f61'
+  tag_accent: '#714b88'
+  tag_accent_text: '#5a3c6d'
+  tag_purple: '#441f61'
+  tag_purple_text: '#3a1a52'
+  tag_orange: '#61411f'
+  tag_orange_text: '#52371a'
+  user_card_bg: rgba(200, 207, 232, 215)
+  user_card_accent: '#634278'
+  user_card_text: '#28222b'
+  user_card_muted: '#5f697f'
+  assistant_card_bg: rgba(213, 226, 245, 160)
+  assistant_card_accent: '#1f6126'
+  assistant_card_text: '#262029'
+  assistant_card_muted: '#5f697f'
+  agent_btn_text: '#5f697f'
+  agent_btn_text_active: '#714b88'
+  agent_btn_bg_active: rgba(113, 75, 136, 31)
+  agent_btn_separator: rgba(155, 173, 217, 160)
+  input_bg_start: rgba(198, 220, 248, 238)
+  input_bg_end: rgba(217, 232, 250, 238)
+  input_focus_bg_start: rgba(209, 219, 241, 244)
+  input_focus_bg_end: rgba(213, 226, 245, 244)
+  input_text: '#28222b'
+  input_focus_text: '#251f28'
+  input_border: '#9badd9'
+  input_focus_border: '#714b88'
+  input_placeholder: rgba(40, 34, 43, 89)
+  glow_primary_alpha: 120
+  glow_primary_blur: 22
+  glow_ambient_alpha: 60
+  glow_ambient_blur: 30
+  toolbar_strip_bg: rgba(203, 223, 248, 225)
+  toolbar_strip_border: '#9badd9'
+  realtime_border: '#714b88'
+  realtime_accent: '#714b88'
+  realtime_accent_warm: '#7a506e'
+  realtime_success: '#1f6126'
+  realtime_error: '#61211f'
+  realtime_bg: rgba(217, 232, 250, 250)
+  realtime_text: '#28222b'
+  realtime_text_secondary: rgba(40, 34, 43, 178)
+  realtime_tag_bg: rgba(113, 75, 136, 26)
+  realtime_tag_border: rgba(113, 75, 136, 61)
+  system_border: '#9badd9'
+  system_accent: '#714b88'
+  send_btn_start: '#714b88'
+  send_btn_end: '#583a6a'
+  send_btn_hover_start: '#856499'
+  send_btn_hover_end: '#714b88'
+  send_btn_radius: 17
+  timeline_node: '#7c90ae'
+  timeline_node_hover: '#714b88'
+  timeline_node_visible: '#1f6126'
+  timeline_node_selected: '#7a506e'
+  timeline_line: '#93add0'
+  timeline_line_progress: '#1f6126'
+  ring_normal: '#714b88'
+  ring_warning: '#61411f'
+  ring_danger: '#61211f'
+  ring_compacted: '#441f61'
+  branch_label_bg: rgba(113, 75, 136, 26)
+  branch_label_border: rgba(113, 75, 136, 61)
+  window_bg: rgba(113, 75, 136, 10)

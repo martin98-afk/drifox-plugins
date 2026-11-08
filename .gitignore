@@ -78,3 +78,4 @@ $RECYCLE.BIN/
 # 网关插件用户配置（含 App Secret 等凭据，禁止入库）
 plugins/*/config.json
 .worktrees/ 
+.tmp_we_extract/ 

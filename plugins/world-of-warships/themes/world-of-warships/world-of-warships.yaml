@@ -1,0 +1,125 @@
+# 战舰世界（深色）· Wallpaper Engine 3614997336 转制
+# 动画为完整一轮转制的动画 WebP，Qt 内置解码，不依赖系统媒体栈
+name: 战舰世界
+id: world-of-warships
+mode: dark
+
+window:
+  gradient_start: rgba(7, 8, 13, 255)
+  gradient_end: rgba(15, 16, 28, 255)
+
+backgrounds:
+  window:
+    animation:
+      src: ../../assets/chat.webp
+      canvas: shared
+      fps: 15
+      fit: cover
+      opacity: 1.0
+    enabled: true
+
+  sidebar:
+    color: rgba(30, 24, 52, 140)
+    enabled: true
+
+  scene:
+    color: rgba(0, 0, 0, 0)
+    enabled: true
+
+colors:
+  card_bg: rgba(12, 13, 25, 232)
+  card_bg_solid: rgba(12, 13, 25, 248)
+  content_bg: '#090a13'
+  border: '#1a1730'
+  border_accent: '#453973'
+  text_primary: '#dfe4ed'
+  text_secondary: rgba(223, 228, 237, 168)
+  text_muted: '#93979e'
+  accent: '#433673'
+  search_highlight: '#5a4e84'
+  accent_warm: '#6f4575'
+  hover_bg: rgba(67, 54, 115, 31)
+  selected_bg: rgba(67, 54, 115, 66)
+  capsule_bg: rgba(12, 13, 25, 190)
+  capsule_border: rgba(26, 23, 48, 210)
+  toolbar_bg: rgba(67, 54, 115, 15)
+  divider_color: rgba(255, 255, 255, 15)
+  hover_bg_strong: rgba(67, 54, 115, 41)
+  scrollbar_handle_bg: rgba(255, 255, 255, 36)
+  scrollbar_handle_hover_bg: rgba(67, 54, 115, 115)
+  card_placeholder_text: '#93979e'
+  button_text_on_accent: '#ffffff'
+  status_info: '#3fcde0'
+  status_danger_bg: rgba(224, 68, 63, 217)
+  status_archive_bg: rgba(224, 145, 63, 204)
+  card_bg_dim: rgba(67, 54, 115, 13)
+  archived_card_bg: rgba(147, 151, 158, 31)
+  archived_card_border: rgba(147, 151, 158, 56)
+  syntax_step: '#3fcde0'
+  syntax_tool: '#e0913f'
+  syntax_success: '#3fe04f'
+  syntax_error: '#e0443f'
+  syntax_result: '#993fe0'
+  tag_accent: '#433673'
+  tag_accent_text: '#857ca4'
+  tag_purple: '#993fe0'
+  tag_purple_text: '#b879e9'
+  tag_orange: '#e0913f'
+  tag_orange_text: '#e9b279'
+  user_card_bg: rgba(21, 20, 39, 180)
+  user_card_accent: '#3b3065'
+  user_card_text: '#dfe4ed'
+  user_card_muted: '#93979e'
+  assistant_card_bg: rgba(14, 15, 29, 185)
+  assistant_card_accent: '#3fe04f'
+  assistant_card_text: '#e1e6ee'
+  assistant_card_muted: '#93979e'
+  agent_btn_text: '#93979e'
+  agent_btn_text_active: '#433673'
+  agent_btn_bg_active: rgba(67, 54, 115, 41)
+  agent_btn_separator: rgba(26, 23, 48, 160)
+  input_bg_start: rgba(11, 12, 23, 185)
+  input_bg_end: rgba(12, 13, 25, 185)
+  input_focus_bg_start: rgba(16, 16, 32, 235)
+  input_focus_bg_end: rgba(14, 15, 29, 235)
+  input_text: '#dfe4ed'
+  input_focus_text: '#e2e7ef'
+  input_border: '#1a1730'
+  input_focus_border: '#433673'
+  input_placeholder: rgba(223, 228, 237, 92)
+  glow_primary_alpha: 165
+  glow_primary_blur: 26
+  glow_ambient_alpha: 90
+  glow_ambient_blur: 34
+  toolbar_strip_bg: rgba(11, 12, 23, 215)
+  toolbar_strip_border: '#1a1730'
+  realtime_border: '#433673'
+  realtime_accent: '#433673'
+  realtime_accent_warm: '#6f4575'
+  realtime_success: '#3fe04f'
+  realtime_error: '#e0443f'
+  realtime_bg: rgba(12, 13, 25, 246)
+  realtime_text: '#dfe4ed'
+  realtime_text_secondary: rgba(223, 228, 237, 173)
+  realtime_tag_bg: rgba(67, 54, 115, 36)
+  realtime_tag_border: rgba(67, 54, 115, 76)
+  system_border: '#1a1730'
+  system_accent: '#433673'
+  send_btn_start: '#433673'
+  send_btn_end: '#342a5a'
+  send_btn_hover_start: '#5d5287'
+  send_btn_hover_end: '#433673'
+  send_btn_radius: 17
+  timeline_node: '#54565f'
+  timeline_node_hover: '#433673'
+  timeline_node_visible: '#3fe04f'
+  timeline_node_selected: '#6f4575'
+  timeline_line: '#30313a'
+  timeline_line_progress: '#3fe04f'
+  ring_normal: '#433673'
+  ring_warning: '#e0913f'
+  ring_danger: '#e0443f'
+  ring_compacted: '#993fe0'
+  branch_label_bg: rgba(67, 54, 115, 36)
+  branch_label_border: rgba(67, 54, 115, 76)
+  window_bg: rgba(67, 54, 115, 10)

@@ -1,0 +1,133 @@
+# 露西 · 夜之城（深色）· Wallpaper Engine 2963605825 转制
+# 动画为完整一轮转制的动画 WebP，Qt 内置解码，不依赖系统媒体栈
+name: '露西 · 夜之城'
+id: lucy-edgerunner-dark
+mode: dark
+
+window:
+  gradient_start: rgba(10, 10, 13, 255)
+  gradient_end: rgba(21, 23, 30, 255)
+
+backgrounds:
+  window:
+    animation:
+      src: ../../assets/chat.webp
+      canvas: shared
+      fps: 15
+      fit: cover
+      opacity: 1.0
+    enabled: true
+
+  sidebar:
+    color: rgba(39, 50, 72, 140)
+    enabled: true
+
+  scene:
+    color: rgba(0, 0, 0, 0)
+    enabled: true
+
+  music:
+    tracks:
+      - ../../assets/01-bgm.mp3
+    volume: 0.45
+    loop: true
+    fade_ms: 420
+    enabled: true
+
+colors:
+  card_bg: rgba(18, 21, 27, 232)
+  card_bg_solid: rgba(18, 21, 27, 248)
+  content_bg: '#0e0f13'
+  border: '#242c3d'
+  border_accent: '#5b719f'
+  text_primary: '#d4dced'
+  text_secondary: rgba(212, 220, 237, 168)
+  text_muted: '#8a919e'
+  accent: '#576f9f'
+  search_highlight: '#6b80ab'
+  accent_warm: '#7c69a2'
+  hover_bg: rgba(87, 111, 159, 31)
+  selected_bg: rgba(87, 111, 159, 66)
+  capsule_bg: rgba(18, 21, 27, 190)
+  capsule_border: rgba(36, 44, 61, 210)
+  toolbar_bg: rgba(87, 111, 159, 15)
+  divider_color: rgba(255, 255, 255, 15)
+  hover_bg_strong: rgba(87, 111, 159, 41)
+  scrollbar_handle_bg: rgba(255, 255, 255, 36)
+  scrollbar_handle_hover_bg: rgba(87, 111, 159, 115)
+  card_placeholder_text: '#8a919e'
+  button_text_on_accent: '#ffffff'
+  status_info: '#3fcde0'
+  status_danger_bg: rgba(224, 68, 63, 217)
+  status_archive_bg: rgba(224, 145, 63, 204)
+  card_bg_dim: rgba(87, 111, 159, 13)
+  archived_card_bg: rgba(138, 145, 158, 31)
+  archived_card_border: rgba(138, 145, 158, 56)
+  syntax_step: '#3fcde0'
+  syntax_tool: '#e0913f'
+  syntax_success: '#3fe04f'
+  syntax_error: '#e0443f'
+  syntax_result: '#993fe0'
+  tag_accent: '#576f9f'
+  tag_accent_text: '#92a1c1'
+  tag_purple: '#993fe0'
+  tag_purple_text: '#b879e9'
+  tag_orange: '#e0913f'
+  tag_orange_text: '#e9b279'
+  user_card_bg: rgba(29, 35, 48, 180)
+  user_card_accent: '#4d628c'
+  user_card_text: '#d4dced'
+  user_card_muted: '#8a919e'
+  assistant_card_bg: rgba(21, 25, 32, 185)
+  assistant_card_accent: '#3fe04f'
+  assistant_card_text: '#d7deee'
+  assistant_card_muted: '#8a919e'
+  agent_btn_text: '#8a919e'
+  agent_btn_text_active: '#576f9f'
+  agent_btn_bg_active: rgba(87, 111, 159, 41)
+  agent_btn_separator: rgba(36, 44, 61, 160)
+  input_bg_start: rgba(16, 19, 24, 185)
+  input_bg_end: rgba(18, 21, 27, 185)
+  input_focus_bg_start: rgba(24, 28, 38, 235)
+  input_focus_bg_end: rgba(21, 25, 32, 235)
+  input_text: '#d4dced'
+  input_focus_text: '#d8e0ef'
+  input_border: '#242c3d'
+  input_focus_border: '#576f9f'
+  input_placeholder: rgba(212, 220, 237, 92)
+  glow_primary_alpha: 165
+  glow_primary_blur: 26
+  glow_ambient_alpha: 90
+  glow_ambient_blur: 34
+  toolbar_strip_bg: rgba(17, 19, 25, 215)
+  toolbar_strip_border: '#242c3d'
+  realtime_border: '#576f9f'
+  realtime_accent: '#576f9f'
+  realtime_accent_warm: '#7c69a2'
+  realtime_success: '#3fe04f'
+  realtime_error: '#e0443f'
+  realtime_bg: rgba(18, 21, 27, 246)
+  realtime_text: '#d4dced'
+  realtime_text_secondary: rgba(212, 220, 237, 173)
+  realtime_tag_bg: rgba(87, 111, 159, 36)
+  realtime_tag_border: rgba(87, 111, 159, 76)
+  system_border: '#242c3d'
+  system_accent: '#576f9f'
+  send_btn_start: '#576f9f'
+  send_btn_end: '#44577c'
+  send_btn_hover_start: '#6f83ac'
+  send_btn_hover_end: '#576f9f'
+  send_btn_radius: 17
+  timeline_node: '#53575f'
+  timeline_node_hover: '#576f9f'
+  timeline_node_visible: '#3fe04f'
+  timeline_node_selected: '#7c69a2'
+  timeline_line: '#32343a'
+  timeline_line_progress: '#3fe04f'
+  ring_normal: '#576f9f'
+  ring_warning: '#e0913f'
+  ring_danger: '#e0443f'
+  ring_compacted: '#993fe0'
+  branch_label_bg: rgba(87, 111, 159, 36)
+  branch_label_border: rgba(87, 111, 159, 76)
+  window_bg: rgba(87, 111, 159, 10)

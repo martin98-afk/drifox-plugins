@@ -1,0 +1,29 @@
+{
+    "name": "healing-forest",
+    "display_name": {
+        "zh": "治愈森林"
+    },
+    "description": "治愈森林 — 浅动画主题，Wallpaper Engine 创意工坊 3648098553 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
+    "icon": {
+        "light": "icon.png",
+        "dark": "icon_dark.png"
+    },
+    "version": "1.0.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "license": "MIT",
+    "type": "user",
+    "keywords": [
+        "theme",
+        "wallpaper-engine",
+        "migrated",
+        "animation",
+        "主题",
+        "动画"
+    ],
+    "components": {
+        "themes": true
+    },
+    "min_host_version": "0.6.15"
+}

@@ -1,0 +1,133 @@
+# 二人花火（浅色）· Wallpaper Engine 1143394477 转制
+# 动画为完整一轮转制的动画 WebP，Qt 内置解码，不依赖系统媒体栈
+name: '二人花火 · 浅'
+id: hanabi-futari-light
+mode: light
+
+window:
+  gradient_start: rgba(232, 239, 240, 255)
+  gradient_end: rgba(218, 222, 225, 255)
+
+backgrounds:
+  window:
+    animation:
+      src: ../../assets/chat.webp
+      canvas: shared
+      fps: 15
+      fit: cover
+      opacity: 1.0
+    enabled: true
+
+  sidebar:
+    color: rgba(226, 206, 222, 145)
+    enabled: true
+
+  scene:
+    color: rgba(0, 0, 0, 0)
+    enabled: true
+
+  music:
+    tracks:
+      - ../../assets/bgm.mp3
+    volume: 0.45
+    loop: true
+    fade_ms: 420
+    enabled: true
+
+colors:
+  card_bg: rgba(246, 250, 250, 246)
+  card_bg_solid: rgba(246, 250, 250, 252)
+  content_bg: '#eaf3f4'
+  border: '#d5cdda'
+  border_accent: '#99508a'
+  text_primary: '#2b262a'
+  text_secondary: rgba(43, 38, 42, 191)
+  text_muted: '#7b7c7f'
+  accent: '#99508a'
+  search_highlight: '#874679'
+  accent_warm: '#8a565d'
+  hover_bg: rgba(153, 80, 138, 26)
+  selected_bg: rgba(153, 80, 138, 51)
+  capsule_bg: rgba(246, 250, 250, 220)
+  capsule_border: rgba(213, 205, 218, 210)
+  toolbar_bg: rgba(153, 80, 138, 15)
+  divider_color: rgba(43, 38, 42, 20)
+  hover_bg_strong: rgba(153, 80, 138, 31)
+  scrollbar_handle_bg: rgba(43, 38, 42, 38)
+  scrollbar_handle_hover_bg: rgba(153, 80, 138, 102)
+  card_placeholder_text: '#7b7c7f'
+  button_text_on_accent: '#f4f9fb'
+  status_info: '#1f5961'
+  status_danger_bg: rgba(97, 33, 31, 209)
+  status_archive_bg: rgba(97, 65, 31, 209)
+  card_bg_dim: rgba(153, 80, 138, 13)
+  archived_card_bg: rgba(123, 124, 127, 20)
+  archived_card_border: rgba(123, 124, 127, 51)
+  syntax_step: '#1f5961'
+  syntax_tool: '#61411f'
+  syntax_success: '#1f6126'
+  syntax_error: '#61211f'
+  syntax_result: '#441f61'
+  tag_accent: '#99508a'
+  tag_accent_text: '#7a406e'
+  tag_purple: '#441f61'
+  tag_purple_text: '#3a1a52'
+  tag_orange: '#61411f'
+  tag_orange_text: '#52371a'
+  user_card_bg: rgba(231, 223, 232, 215)
+  user_card_accent: '#874679'
+  user_card_text: '#2b262a'
+  user_card_muted: '#7b7c7f'
+  assistant_card_bg: rgba(242, 243, 246, 160)
+  assistant_card_accent: '#1f6126'
+  assistant_card_text: '#292428'
+  assistant_card_muted: '#7b7c7f'
+  agent_btn_text: '#7b7c7f'
+  agent_btn_text_active: '#99508a'
+  agent_btn_bg_active: rgba(153, 80, 138, 31)
+  agent_btn_separator: rgba(213, 205, 218, 160)
+  input_bg_start: rgba(241, 247, 248, 238)
+  input_bg_end: rgba(246, 250, 250, 238)
+  input_focus_bg_start: rgba(239, 236, 241, 244)
+  input_focus_bg_end: rgba(242, 243, 246, 244)
+  input_text: '#2b262a'
+  input_focus_text: '#282327'
+  input_border: '#d5cdda'
+  input_focus_border: '#99508a'
+  input_placeholder: rgba(43, 38, 42, 89)
+  glow_primary_alpha: 120
+  glow_primary_blur: 22
+  glow_ambient_alpha: 60
+  glow_ambient_blur: 30
+  toolbar_strip_bg: rgba(242, 248, 248, 225)
+  toolbar_strip_border: '#d5cdda'
+  realtime_border: '#99508a'
+  realtime_accent: '#99508a'
+  realtime_accent_warm: '#8a565d'
+  realtime_success: '#1f6126'
+  realtime_error: '#61211f'
+  realtime_bg: rgba(246, 250, 250, 250)
+  realtime_text: '#2b262a'
+  realtime_text_secondary: rgba(43, 38, 42, 178)
+  realtime_tag_bg: rgba(153, 80, 138, 26)
+  realtime_tag_border: rgba(153, 80, 138, 61)
+  system_border: '#d5cdda'
+  system_accent: '#99508a'
+  send_btn_start: '#99508a'
+  send_btn_end: '#773e6c'
+  send_btn_hover_start: '#a7689a'
+  send_btn_hover_end: '#99508a'
+  send_btn_radius: 17
+  timeline_node: '#a7abad'
+  timeline_node_hover: '#99508a'
+  timeline_node_visible: '#1f6126'
+  timeline_node_selected: '#8a565d'
+  timeline_line: '#c8ced0'
+  timeline_line_progress: '#1f6126'
+  ring_normal: '#99508a'
+  ring_warning: '#61411f'
+  ring_danger: '#61211f'
+  ring_compacted: '#441f61'
+  branch_label_bg: rgba(153, 80, 138, 26)
+  branch_label_border: rgba(153, 80, 138, 61)
+  window_bg: rgba(153, 80, 138, 10)

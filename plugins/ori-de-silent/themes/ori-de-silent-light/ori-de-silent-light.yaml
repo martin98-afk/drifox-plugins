@@ -1,0 +1,133 @@
+# 奥日 黑暗森林（浅色）· Wallpaper Engine 837761056 转制
+# 动画为完整一轮转制的动画 WebP，Qt 内置解码，不依赖系统媒体栈
+name: '奥日 黑暗森林 · 浅'
+id: ori-de-silent-light
+mode: light
+
+window:
+  gradient_start: rgba(240, 215, 226, 255)
+  gradient_end: rgba(224, 196, 210, 255)
+
+backgrounds:
+  window:
+    animation:
+      src: ../../assets/chat.webp
+      canvas: shared
+      fps: 15
+      fit: cover
+      opacity: 1.0
+    enabled: true
+
+  sidebar:
+    color: rgba(212, 205, 223, 145)
+    enabled: true
+
+  scene:
+    color: rgba(0, 0, 0, 0)
+    enabled: true
+
+  music:
+    tracks:
+      - ../../assets/bgm.mp3
+    volume: 0.45
+    loop: true
+    fade_ms: 420
+    enabled: true
+
+colors:
+  card_bg: rgba(250, 235, 242, 246)
+  card_bg_solid: rgba(250, 235, 242, 252)
+  content_bg: '#f4d3e1'
+  border: '#d2b4cb'
+  border_accent: '#644c8b'
+  text_primary: '#2b211e'
+  text_secondary: rgba(43, 33, 30, 191)
+  text_muted: '#7f6c70'
+  accent: '#644c8b'
+  search_highlight: '#58437a'
+  accent_warm: '#7d517b'
+  hover_bg: rgba(100, 76, 139, 26)
+  selected_bg: rgba(100, 76, 139, 51)
+  capsule_bg: rgba(250, 235, 242, 220)
+  capsule_border: rgba(210, 180, 203, 210)
+  toolbar_bg: rgba(100, 76, 139, 15)
+  divider_color: rgba(43, 33, 30, 20)
+  hover_bg_strong: rgba(100, 76, 139, 31)
+  scrollbar_handle_bg: rgba(43, 33, 30, 38)
+  scrollbar_handle_hover_bg: rgba(100, 76, 139, 102)
+  card_placeholder_text: '#7f6c70'
+  button_text_on_accent: '#f4f9fb'
+  status_info: '#1f5961'
+  status_danger_bg: rgba(97, 33, 31, 209)
+  status_archive_bg: rgba(97, 65, 31, 209)
+  card_bg_dim: rgba(100, 76, 139, 13)
+  archived_card_bg: rgba(127, 108, 112, 20)
+  archived_card_border: rgba(127, 108, 112, 51)
+  syntax_step: '#1f5961'
+  syntax_tool: '#61411f'
+  syntax_success: '#1f6126'
+  syntax_error: '#61211f'
+  syntax_result: '#441f61'
+  tag_accent: '#644c8b'
+  tag_accent_text: '#503d6f'
+  tag_purple: '#441f61'
+  tag_purple_text: '#3a1a52'
+  tag_orange: '#61411f'
+  tag_orange_text: '#52371a'
+  user_card_bg: rgba(226, 210, 226, 215)
+  user_card_accent: '#58437a'
+  user_card_text: '#2b211e'
+  user_card_muted: '#7f6c70'
+  assistant_card_bg: rgba(244, 229, 238, 160)
+  assistant_card_accent: '#1f6126'
+  assistant_card_text: '#291f1c'
+  assistant_card_muted: '#7f6c70'
+  agent_btn_text: '#7f6c70'
+  agent_btn_text_active: '#644c8b'
+  agent_btn_bg_active: rgba(100, 76, 139, 31)
+  agent_btn_separator: rgba(210, 180, 203, 160)
+  input_bg_start: rgba(248, 225, 235, 238)
+  input_bg_end: rgba(250, 235, 242, 238)
+  input_focus_bg_start: rgba(238, 222, 234, 244)
+  input_focus_bg_end: rgba(244, 229, 238, 244)
+  input_text: '#2b211e'
+  input_focus_text: '#281e1c'
+  input_border: '#d2b4cb'
+  input_focus_border: '#644c8b'
+  input_placeholder: rgba(43, 33, 30, 89)
+  glow_primary_alpha: 120
+  glow_primary_blur: 22
+  glow_ambient_alpha: 60
+  glow_ambient_blur: 30
+  toolbar_strip_bg: rgba(248, 228, 237, 225)
+  toolbar_strip_border: '#d2b4cb'
+  realtime_border: '#644c8b'
+  realtime_accent: '#644c8b'
+  realtime_accent_warm: '#7d517b'
+  realtime_success: '#1f6126'
+  realtime_error: '#61211f'
+  realtime_bg: rgba(250, 235, 242, 250)
+  realtime_text: '#2b211e'
+  realtime_text_secondary: rgba(43, 33, 30, 178)
+  realtime_tag_bg: rgba(100, 76, 139, 26)
+  realtime_tag_border: rgba(100, 76, 139, 61)
+  system_border: '#d2b4cb'
+  system_accent: '#644c8b'
+  send_btn_start: '#644c8b'
+  send_btn_end: '#4e3b6c'
+  send_btn_hover_start: '#7a659b'
+  send_btn_hover_end: '#644c8b'
+  send_btn_radius: 17
+  timeline_node: '#ae959d'
+  timeline_node_hover: '#644c8b'
+  timeline_node_visible: '#1f6126'
+  timeline_node_selected: '#7d517b'
+  timeline_line: '#d0b3be'
+  timeline_line_progress: '#1f6126'
+  ring_normal: '#644c8b'
+  ring_warning: '#61411f'
+  ring_danger: '#61211f'
+  ring_compacted: '#441f61'
+  branch_label_bg: rgba(100, 76, 139, 26)
+  branch_label_border: rgba(100, 76, 139, 61)
+  window_bg: rgba(100, 76, 139, 10)

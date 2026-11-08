@@ -1,0 +1,133 @@
+# 黎明流星（深色）· Wallpaper Engine 3413921910 转制
+# 动画为完整一轮转制的动画 WebP，Qt 内置解码，不依赖系统媒体栈
+name: 黎明流星
+id: meteors-dawn-dark
+mode: dark
+
+window:
+  gradient_start: rgba(13, 10, 13, 255)
+  gradient_end: rgba(27, 20, 28, 255)
+
+backgrounds:
+  window:
+    animation:
+      src: ../../assets/chat.webp
+      canvas: shared
+      fps: 15
+      fit: cover
+      opacity: 1.0
+    enabled: true
+
+  sidebar:
+    color: rgba(50, 28, 52, 140)
+    enabled: true
+
+  scene:
+    color: rgba(0, 0, 0, 0)
+    enabled: true
+
+  music:
+    tracks:
+      - ../../assets/01-bgm.mp3
+    volume: 0.45
+    loop: true
+    fade_ms: 420
+    enabled: true
+
+colors:
+  card_bg: rgba(25, 18, 25, 232)
+  card_bg_solid: rgba(25, 18, 25, 248)
+  content_bg: '#130f13'
+  border: '#2f1d30'
+  border_accent: '#704273'
+  text_primary: '#edd3d9'
+  text_secondary: rgba(237, 211, 217, 168)
+  text_muted: '#9e898e'
+  accent: '#703f73'
+  search_highlight: '#815684'
+  accent_warm: '#754c5c'
+  hover_bg: rgba(112, 63, 115, 31)
+  selected_bg: rgba(112, 63, 115, 66)
+  capsule_bg: rgba(25, 18, 25, 190)
+  capsule_border: rgba(47, 29, 48, 210)
+  toolbar_bg: rgba(112, 63, 115, 15)
+  divider_color: rgba(255, 255, 255, 15)
+  hover_bg_strong: rgba(112, 63, 115, 41)
+  scrollbar_handle_bg: rgba(255, 255, 255, 36)
+  scrollbar_handle_hover_bg: rgba(112, 63, 115, 115)
+  card_placeholder_text: '#9e898e'
+  button_text_on_accent: '#ffffff'
+  status_info: '#3fcde0'
+  status_danger_bg: rgba(224, 68, 63, 217)
+  status_archive_bg: rgba(224, 145, 63, 204)
+  card_bg_dim: rgba(112, 63, 115, 13)
+  archived_card_bg: rgba(158, 137, 142, 31)
+  archived_card_border: rgba(158, 137, 142, 56)
+  syntax_step: '#3fcde0'
+  syntax_tool: '#e0913f'
+  syntax_success: '#3fe04f'
+  syntax_error: '#e0443f'
+  syntax_result: '#993fe0'
+  tag_accent: '#703f73'
+  tag_accent_text: '#a282a4'
+  tag_purple: '#993fe0'
+  tag_purple_text: '#b879e9'
+  tag_orange: '#e0913f'
+  tag_orange_text: '#e9b279'
+  user_card_bg: rgba(39, 25, 39, 180)
+  user_card_accent: '#633765'
+  user_card_text: '#edd3d9'
+  user_card_muted: '#9e898e'
+  assistant_card_bg: rgba(28, 20, 29, 185)
+  assistant_card_accent: '#3fe04f'
+  assistant_card_text: '#eed6db'
+  assistant_card_muted: '#9e898e'
+  agent_btn_text: '#9e898e'
+  agent_btn_text_active: '#703f73'
+  agent_btn_bg_active: rgba(112, 63, 115, 41)
+  agent_btn_separator: rgba(47, 29, 48, 160)
+  input_bg_start: rgba(23, 17, 23, 185)
+  input_bg_end: rgba(25, 18, 25, 185)
+  input_focus_bg_start: rgba(32, 22, 32, 235)
+  input_focus_bg_end: rgba(28, 20, 29, 235)
+  input_text: '#edd3d9'
+  input_focus_text: '#efd7dd'
+  input_border: '#2f1d30'
+  input_focus_border: '#703f73'
+  input_placeholder: rgba(237, 211, 217, 92)
+  glow_primary_alpha: 165
+  glow_primary_blur: 26
+  glow_ambient_alpha: 90
+  glow_ambient_blur: 34
+  toolbar_strip_bg: rgba(23, 17, 23, 215)
+  toolbar_strip_border: '#2f1d30'
+  realtime_border: '#703f73'
+  realtime_accent: '#703f73'
+  realtime_accent_warm: '#754c5c'
+  realtime_success: '#3fe04f'
+  realtime_error: '#e0443f'
+  realtime_bg: rgba(25, 18, 25, 246)
+  realtime_text: '#edd3d9'
+  realtime_text_secondary: rgba(237, 211, 217, 173)
+  realtime_tag_bg: rgba(112, 63, 115, 36)
+  realtime_tag_border: rgba(112, 63, 115, 76)
+  system_border: '#2f1d30'
+  system_accent: '#703f73'
+  send_btn_start: '#703f73'
+  send_btn_end: '#57315a'
+  send_btn_hover_start: '#845a87'
+  send_btn_hover_end: '#703f73'
+  send_btn_radius: 17
+  timeline_node: '#5f5458'
+  timeline_node_hover: '#703f73'
+  timeline_node_visible: '#3fe04f'
+  timeline_node_selected: '#754c5c'
+  timeline_line: '#3a3237'
+  timeline_line_progress: '#3fe04f'
+  ring_normal: '#703f73'
+  ring_warning: '#e0913f'
+  ring_danger: '#e0443f'
+  ring_compacted: '#993fe0'
+  branch_label_bg: rgba(112, 63, 115, 36)
+  branch_label_border: rgba(112, 63, 115, 76)
+  window_bg: rgba(112, 63, 115, 10)

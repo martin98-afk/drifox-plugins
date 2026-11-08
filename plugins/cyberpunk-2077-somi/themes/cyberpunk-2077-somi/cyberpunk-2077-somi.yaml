@@ -17,22 +17,25 @@ background:
     enabled: true
 
 backgrounds:
-  # 主场景图：Cyberpunk 2077 红灯室（3962×1800 原图缩至 2560 宽）
-  # foreground 是同一张原壁纸拆出的全画布人物层（1600×727，与 bg 同比例），
-  # 与背景共用同一矩形与同一拉伸变换，才能还原壁纸里的原始构图。
-  # 用 decorations 做这件事会因为 reference 矩形和缩放规则不同而错位。
-  scene:
-    image: ../../assets/bg.jpg
-    opacity: 1.0
-    dim: rgba(8, 6, 12, 0.42)
-    enabled: true
-    foreground:
-      image: ../../assets/somi-deco.png
+  # 动画版：Wallpaper Engine 3244942566 全保真渲染转制的动画 WebP（1600×900@15fps，
+  # WE 原生渲染含雨丝/霓虹/人物层），替换原静态 bg.jpg + somi-deco.png 组合。
+  # 原手调 colors 全部保留不动。
+  window:
+    animation:
+      src: ../../assets/chat.webp
+      canvas: shared
+      fps: 15
+      fit: cover
       opacity: 1.0
-      enabled: true
+    enabled: true
 
-  # 红光流动覆盖层：本壁纸是 scene 类型（无 mp4），不挂 overlay。
-  # 想加动态光影时，在 shared/ 放一段视频并补 overlay.target + overlay.video 即可。
+  sidebar:
+    color: rgba(20, 12, 18, 145)
+    enabled: true
+
+  scene:
+    color: rgba(0, 0, 0, 0)
+    enabled: true
 
   # 主题音乐：三首 Cyberpunk 2077 OST，跨主题共用
   music:

@@ -1,0 +1,133 @@
+# 瀑布青蛙（浅色）· Wallpaper Engine 3238117266 转制
+# 动画为完整一轮转制的动画 WebP，Qt 内置解码，不依赖系统媒体栈
+name: '瀑布青蛙 · 浅'
+id: waterfall-frog-light
+mode: light
+
+window:
+  gradient_start: rgba(233, 240, 207, 255)
+  gradient_end: rgba(216, 224, 187, 255)
+
+backgrounds:
+  window:
+    animation:
+      src: ../../assets/chat.webp
+      canvas: shared
+      fps: 15
+      fit: cover
+      opacity: 1.0
+    enabled: true
+
+  sidebar:
+    color: rgba(214, 216, 201, 145)
+    enabled: true
+
+  scene:
+    color: rgba(0, 0, 0, 0)
+    enabled: true
+
+  music:
+    tracks:
+      - ../../assets/bgm.mp3
+    volume: 0.45
+    loop: true
+    fade_ms: 420
+    enabled: true
+
+colors:
+  card_bg: rgba(246, 250, 231, 246)
+  card_bg_solid: rgba(246, 250, 231, 252)
+  content_bg: '#ebf4c9'
+  border: '#ccd5a9'
+  border_accent: '#6b733f'
+  text_primary: '#2a2b25'
+  text_secondary: rgba(42, 43, 37, 191)
+  text_muted: '#7b7f6a'
+  accent: '#6b733f'
+  search_highlight: '#5e6537'
+  accent_warm: '#4a6843'
+  hover_bg: rgba(107, 115, 63, 26)
+  selected_bg: rgba(107, 115, 63, 51)
+  capsule_bg: rgba(246, 250, 231, 220)
+  capsule_border: rgba(204, 213, 169, 210)
+  toolbar_bg: rgba(107, 115, 63, 15)
+  divider_color: rgba(42, 43, 37, 20)
+  hover_bg_strong: rgba(107, 115, 63, 31)
+  scrollbar_handle_bg: rgba(42, 43, 37, 38)
+  scrollbar_handle_hover_bg: rgba(107, 115, 63, 102)
+  card_placeholder_text: '#7b7f6a'
+  button_text_on_accent: '#f4f9fb'
+  status_info: '#1f5961'
+  status_danger_bg: rgba(97, 33, 31, 209)
+  status_archive_bg: rgba(97, 65, 31, 209)
+  card_bg_dim: rgba(107, 115, 63, 13)
+  archived_card_bg: rgba(123, 127, 106, 20)
+  archived_card_border: rgba(123, 127, 106, 51)
+  syntax_step: '#1f5961'
+  syntax_tool: '#61411f'
+  syntax_success: '#1f6126'
+  syntax_error: '#61211f'
+  syntax_result: '#441f61'
+  tag_accent: '#6b733f'
+  tag_accent_text: '#565c32'
+  tag_purple: '#441f61'
+  tag_purple_text: '#3a1a52'
+  tag_orange: '#61411f'
+  tag_orange_text: '#52371a'
+  user_card_bg: rgba(224, 228, 204, 215)
+  user_card_accent: '#5e6537'
+  user_card_text: '#2a2b25'
+  user_card_muted: '#7b7f6a'
+  assistant_card_bg: rgba(240, 245, 224, 160)
+  assistant_card_accent: '#1f6126'
+  assistant_card_text: '#282923'
+  assistant_card_muted: '#7b7f6a'
+  agent_btn_text: '#7b7f6a'
+  agent_btn_text_active: '#6b733f'
+  agent_btn_bg_active: rgba(107, 115, 63, 31)
+  agent_btn_separator: rgba(204, 213, 169, 160)
+  input_bg_start: rgba(242, 248, 219, 238)
+  input_bg_end: rgba(246, 250, 231, 238)
+  input_focus_bg_start: rgba(235, 239, 218, 244)
+  input_focus_bg_end: rgba(240, 245, 224, 244)
+  input_text: '#2a2b25'
+  input_focus_text: '#272822'
+  input_border: '#ccd5a9'
+  input_focus_border: '#6b733f'
+  input_placeholder: rgba(42, 43, 37, 89)
+  glow_primary_alpha: 120
+  glow_primary_blur: 22
+  glow_ambient_alpha: 60
+  glow_ambient_blur: 30
+  toolbar_strip_bg: rgba(243, 248, 222, 225)
+  toolbar_strip_border: '#ccd5a9'
+  realtime_border: '#6b733f'
+  realtime_accent: '#6b733f'
+  realtime_accent_warm: '#4a6843'
+  realtime_success: '#1f6126'
+  realtime_error: '#61211f'
+  realtime_bg: rgba(246, 250, 231, 250)
+  realtime_text: '#2a2b25'
+  realtime_text_secondary: rgba(42, 43, 37, 178)
+  realtime_tag_bg: rgba(107, 115, 63, 26)
+  realtime_tag_border: rgba(107, 115, 63, 61)
+  system_border: '#ccd5a9'
+  system_accent: '#6b733f'
+  send_btn_start: '#6b733f'
+  send_btn_end: '#535a31'
+  send_btn_hover_start: '#80875a'
+  send_btn_hover_end: '#6b733f'
+  send_btn_radius: 17
+  timeline_node: '#a7ae90'
+  timeline_node_hover: '#6b733f'
+  timeline_node_visible: '#1f6126'
+  timeline_node_selected: '#4a6843'
+  timeline_line: '#c8d0ab'
+  timeline_line_progress: '#1f6126'
+  ring_normal: '#6b733f'
+  ring_warning: '#61411f'
+  ring_danger: '#61211f'
+  ring_compacted: '#441f61'
+  branch_label_bg: rgba(107, 115, 63, 26)
+  branch_label_border: rgba(107, 115, 63, 61)
+  window_bg: rgba(107, 115, 63, 10)
