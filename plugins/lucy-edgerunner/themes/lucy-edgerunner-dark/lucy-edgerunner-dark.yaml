@@ -46,8 +46,8 @@ colors:
   accent: '#576f9f'
   search_highlight: '#6b80ab'
   accent_warm: '#7c69a2'
-  hover_bg: rgba(87, 111, 159, 31)
-  selected_bg: rgba(87, 111, 159, 66)
+  hover_bg: rgba(87, 111, 159, 0.12)
+  selected_bg: rgba(87, 111, 159, 0.26)
   capsule_bg: rgba(18, 21, 27, 190)
   capsule_border: rgba(36, 44, 61, 210)
   toolbar_bg: rgba(87, 111, 159, 15)

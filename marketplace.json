@@ -641,7 +641,7 @@
         {
             "name": "baldurs-gate-3",
             "description": "博德之门 3 — 浅动画主题，Wallpaper Engine 创意工坊 3005498072 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -671,12 +671,19 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-baldurs-gate-3-v1.0.0/baldurs-gate-3-1.0.0-all.tar.gz",
+                    "sha256": "fa615546fa4b19a75169b696a4b7d374880d8a2dcd18b4772c1f58b2401f2e9e",
+                    "size": 15094875
+                }
             }
         },
         {
             "name": "baldurs-gate-3-alt",
             "description": "博德之门 3 · 暗夜 — 深浅双模式动画主题，Wallpaper Engine 创意工坊 3005864018 完整一轮转制动画 WebP 整窗铺底，附 5 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -706,6 +713,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-baldurs-gate-3-alt-v1.0.0/baldurs-gate-3-alt-1.0.0-all.tar.gz",
+                    "sha256": "db81fc3124b7aa131c6c580527a771e6f40dfda75d2c5ef6c28da99218342bc8",
+                    "size": 51263752
+                }
             }
         },
         {
@@ -2001,7 +2015,7 @@
         {
             "name": "cozy-campfire",
             "description": "温暖营火 — 深动画主题，Wallpaper Engine 创意工坊 3582809467 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -2031,6 +2045,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-cozy-campfire-v1.0.0/cozy-campfire-1.0.0-all.tar.gz",
+                    "sha256": "ec04b05ce5f3a2838d11ac4d1be7a43f13ff422b3f8dd2e6939d27f88dbbf48b",
+                    "size": 2871188
+                }
             }
         },
         {
@@ -2165,16 +2186,16 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-cyberpunk-2077-somi-v1.0.1/cyberpunk-2077-somi-1.0.1-all.tar.gz",
-                    "sha256": "09297d51fcb54faa65dfe462fc7aa55c554d9c1b710a58a38ab2144403fbec18",
-                    "size": 36624505
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-cyberpunk-2077-somi-v1.1.0/cyberpunk-2077-somi-1.1.0-all.tar.gz",
+                    "sha256": "74bab6d77f26ef5b93674da6a74e06c87708e9afdf974ebb83a18da991017570",
+                    "size": 54664926
                 }
             }
         },
         {
             "name": "dancing-frogs",
             "description": "跳舞青蛙 — 深浅双模式动画主题，Wallpaper Engine 创意工坊 3317551372 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -2204,12 +2225,19 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-dancing-frogs-v1.0.0/dancing-frogs-1.0.0-all.tar.gz",
+                    "sha256": "ffbf1dfab5aa798ddfb4ebae3177480b9374a9fcf55bdb7298d17c7d2c73462c",
+                    "size": 3313281
+                }
             }
         },
         {
             "name": "darth-vader",
             "description": "达斯·维达 — 深动画主题，Wallpaper Engine 创意工坊 3726523866 完整一轮转制动画 WebP 整窗铺底。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -2239,12 +2267,19 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-darth-vader-v1.0.0/darth-vader-1.0.0-all.tar.gz",
+                    "sha256": "4ba681e54b7f760042ee601fae617012ed7a4dce2620b32970f99dc43d929794",
+                    "size": 8019430
+                }
             }
         },
         {
             "name": "deepseek-honeypot",
             "description": "DeepSeek 蜜罐 — 浅动画主题，Wallpaper Engine 创意工坊 3814696456 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -2274,6 +2309,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-deepseek-honeypot-v1.0.0/deepseek-honeypot-1.0.0-all.tar.gz",
+                    "sha256": "b29a00a4dee3676b11e0335b284c6299287b1049746d08f31717128285d1c69e",
+                    "size": 34414313
+                }
             }
         },
         {
@@ -2592,7 +2634,7 @@
         {
             "name": "dream-view",
             "description": "梦境 — 深浅双模式动画主题，Wallpaper Engine 创意工坊 3379798119 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -2622,6 +2664,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-dream-view-v1.0.0/dream-view-1.0.0-all.tar.gz",
+                    "sha256": "07d277c368b9eda63c763927dc69c50f6f5abb3164aaa2d109fb11cb31050c7e",
+                    "size": 19367432
+                }
             }
         },
         {
@@ -3660,7 +3709,7 @@
         {
             "name": "farming-frogs",
             "description": "农场青蛙 — 深动画主题，Wallpaper Engine 创意工坊 3352342968 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -3690,6 +3739,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-farming-frogs-v1.0.0/farming-frogs-1.0.0-all.tar.gz",
+                    "sha256": "c50a86b73f008b17b2b72325dd4a27a4eb7e4492b0c995341009fd472e03c435",
+                    "size": 1111043
+                }
             }
         },
         {
@@ -4000,7 +4056,7 @@
         {
             "name": "frog-picnic",
             "description": "青蛙野餐 — 浅动画主题，Wallpaper Engine 创意工坊 3219522309 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -4030,6 +4086,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-frog-picnic-v1.0.0/frog-picnic-1.0.0-all.tar.gz",
+                    "sha256": "6ab28b556cc45d06135bd6d1b3daf9c0c922d8fa1c7dba42e3ebd088efa3e153",
+                    "size": 67372572
+                }
             }
         },
         {
@@ -5130,7 +5193,7 @@
         {
             "name": "guts-berserk",
             "description": "格斯 · 剑风传奇 — 深动画主题，Wallpaper Engine 创意工坊 3615895073 完整一轮转制动画 WebP 整窗铺底，附 7 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -5160,12 +5223,19 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-guts-berserk-v1.0.0/guts-berserk-1.0.0-all.tar.gz",
+                    "sha256": "91437188db2904b745c5274a20a833011bea3f40ee74792674c1d4376e2add13",
+                    "size": 60385294
+                }
             }
         },
         {
             "name": "hanabi-futari",
             "description": "二人花火 — 深浅双模式动画主题，Wallpaper Engine 创意工坊 1143394477 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -5195,6 +5265,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-hanabi-futari-v1.0.0/hanabi-futari-1.0.0-all.tar.gz",
+                    "sha256": "132baf7a2be54f3c050b980b1c5b68aee81163eea9e9b7cc205498a892ddf4ca",
+                    "size": 27598303
+                }
             }
         },
         {
@@ -5242,7 +5319,7 @@
         {
             "name": "healing-forest",
             "description": "治愈森林 — 浅动画主题，Wallpaper Engine 创意工坊 3648098553 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -5272,6 +5349,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-healing-forest-v1.0.0/healing-forest-1.0.0-all.tar.gz",
+                    "sha256": "4b29dfa46b8a8bd8d32365cb48a1ed31f0796165fb3223c2a2019d06e5190401",
+                    "size": 38276544
+                }
             }
         },
         {
@@ -6007,7 +6091,7 @@
         {
             "name": "lucy-edgerunner",
             "description": "露西 · 夜之城 — 深浅双模式动画主题，Wallpaper Engine 创意工坊 2963605825 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -6037,6 +6121,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-lucy-edgerunner-v1.0.0/lucy-edgerunner-1.0.0-all.tar.gz",
+                    "sha256": "61faad9fcaa908d5ae22c9592fb742ad1f230b43cf30e4968e981c91502dd126",
+                    "size": 33897612
+                }
             }
         },
         {
@@ -6344,7 +6435,7 @@
         {
             "name": "meteors-dawn",
             "description": "黎明流星 — 深浅双模式动画主题，Wallpaper Engine 创意工坊 3413921910 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -6374,6 +6465,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-meteors-dawn-v1.0.0/meteors-dawn-1.0.0-all.tar.gz",
+                    "sha256": "e2c5539f373474cc42e32191642fc497e95fa128fcdf2718588422c0cc37b469",
+                    "size": 23862404
+                }
             }
         },
         {
@@ -6825,7 +6923,7 @@
         {
             "name": "mystical-landscape",
             "description": "秘境 — 深动画主题，Wallpaper Engine 创意工坊 3483582101 完整一轮转制动画 WebP 整窗铺底。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -6855,6 +6953,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-mystical-landscape-v1.0.0/mystical-landscape-1.0.0-all.tar.gz",
+                    "sha256": "301ef00802ee5df6a4b489497b2f9cab5b6b0a336113f57676a6328d0f4f7a9e",
+                    "size": 10073354
+                }
             }
         },
         {
@@ -7022,7 +7127,7 @@
         {
             "name": "ocean-full-moon",
             "description": "海上明月 — 深动画主题，Wallpaper Engine 创意工坊 2956215523 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -7052,6 +7157,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-ocean-full-moon-v1.0.0/ocean-full-moon-1.0.0-all.tar.gz",
+                    "sha256": "2838eb2067b31cf03856996ceb32cc9b027cb2ded3dde1d6b7ca51e0a376581f",
+                    "size": 58175512
+                }
             }
         },
         {
@@ -7337,7 +7449,7 @@
         {
             "name": "ori-de-silent",
             "description": "奥日 黑暗森林 — 深浅双模式动画主题，Wallpaper Engine 创意工坊 837761056 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -7367,6 +7479,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-ori-de-silent-v1.0.0/ori-de-silent-1.0.0-all.tar.gz",
+                    "sha256": "45abdcdb35888fd30e759a54af0351df65e8b2e48f29fc43e3a9f6e8f4575944",
+                    "size": 17996066
+                }
             }
         },
         {
@@ -7530,7 +7649,7 @@
         {
             "name": "post-apocalyptic",
             "description": "末日自然 — 深动画主题，Wallpaper Engine 创意工坊 917043694 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -7560,6 +7679,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-post-apocalyptic-v1.0.0/post-apocalyptic-1.0.0-all.tar.gz",
+                    "sha256": "3bf479807e95357375cb6592c49f43488730baa6b3b2947d32805a4da2e30a9b",
+                    "size": 59015836
+                }
             }
         },
         {
@@ -7963,7 +8089,7 @@
         {
             "name": "relaxing-robot",
             "description": "放松机器人 — 浅动画主题，Wallpaper Engine 创意工坊 3715230438 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -8302,7 +8428,7 @@
         {
             "name": "shadowheart",
             "description": "影心 — 深浅双模式动画主题，Wallpaper Engine 创意工坊 2876343399 完整一轮转制动画 WebP 整窗铺底，附 2 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -8332,6 +8458,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-shadowheart-v1.0.0/shadowheart-1.0.0-all.tar.gz",
+                    "sha256": "cad8d701a54406dd22408c373d5c271062181391778b2eb3addf913c999de5a6",
+                    "size": 32166287
+                }
             }
         },
         {
@@ -8423,7 +8556,7 @@
         {
             "name": "silk-song",
             "description": "丝之歌 — 深浅双模式动画主题，Wallpaper Engine 创意工坊 3599761711 完整一轮转制动画 WebP 整窗铺底。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -8453,6 +8586,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-silk-song-v1.0.0/silk-song-1.0.0-all.tar.gz",
+                    "sha256": "9594d395a76cf64407df03fa88c4c000bbfd0fd17e6f1e2d2ee7685310e93178",
+                    "size": 7466366
+                }
             }
         },
         {
@@ -8739,7 +8879,7 @@
         {
             "name": "sometimes-happy",
             "description": "有时我很快乐 — 浅动画主题，Wallpaper Engine 创意工坊 3824642124 完整一轮转制动画 WebP 整窗铺底。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -8769,6 +8909,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-sometimes-happy-v1.0.0/sometimes-happy-1.0.0-all.tar.gz",
+                    "sha256": "b78081db2268c70948b6bfb8b694d95344c1216eec07c5ee4500fca7717b663a",
+                    "size": 15903078
+                }
             }
         },
         {
@@ -8966,7 +9113,7 @@
         {
             "name": "sunny-shores",
             "description": "阳光海岸 — 浅动画主题，Wallpaper Engine 创意工坊 3276955573 完整一轮转制动画 WebP 整窗铺底。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -8996,12 +9143,19 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-sunny-shores-v1.0.0/sunny-shores-1.0.0-all.tar.gz",
+                    "sha256": "d7f9fdc847c219ec42d8b19364d8533c04f5f35e07e12440221f6bb81eac5230",
+                    "size": 4022521
+                }
             }
         },
         {
             "name": "sunset-glow",
             "description": "余霞成绮 — 浅动画主题，Wallpaper Engine 创意工坊 3035352006 完整一轮转制动画 WebP 整窗铺底，附 3 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -9031,6 +9185,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-sunset-glow-v1.0.0/sunset-glow-1.0.0-all.tar.gz",
+                    "sha256": "795801736d63d0c7ce18292285e83fbe369c7cdfef0028491df6588ceadde63c",
+                    "size": 39771574
+                }
             }
         },
         {
@@ -9643,7 +9804,7 @@
         {
             "name": "tlou-hdr",
             "description": "最后生还者 HDR — 深动画主题，Wallpaper Engine 创意工坊 824558660 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -9673,6 +9834,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-tlou-hdr-v1.0.0/tlou-hdr-1.0.0-all.tar.gz",
+                    "sha256": "03fa9d0f0a00f5395ec5ceb2f95a302c724bb7253bdd93298129ca39787211bd",
+                    "size": 81425885
+                }
             }
         },
         {
@@ -10240,7 +10408,7 @@
         {
             "name": "waterfall-frog",
             "description": "瀑布青蛙 — 深浅双模式动画主题，Wallpaper Engine 创意工坊 3238117266 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -10270,6 +10438,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-waterfall-frog-v1.0.0/waterfall-frog-1.0.0-all.tar.gz",
+                    "sha256": "c24db88e4da375d677f25e91c1148b8d4bbb2cb7e2745ec071aae2342f2bc98b",
+                    "size": 9034338
+                }
             }
         },
         {
@@ -10489,7 +10664,7 @@
         {
             "name": "wicked-grace",
             "description": "邪恶恩典 — 深动画主题，Wallpaper Engine 创意工坊 3465281285 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -10519,6 +10694,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-wicked-grace-v1.0.0/wicked-grace-1.0.0-all.tar.gz",
+                    "sha256": "0ecdd27a6807fd33573f330cbade3ed73ccf6a222e05adae3bd01b0255b82b0f",
+                    "size": 11903647
+                }
             }
         },
         {
@@ -10565,7 +10747,7 @@
         {
             "name": "witcher3-menu",
             "description": "巫师3 主菜单 — 深动画主题，Wallpaper Engine 创意工坊 818603284 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -10595,6 +10777,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-witcher3-menu-v1.0.0/witcher3-menu-1.0.0-all.tar.gz",
+                    "sha256": "03a280ecd47579e54d7f550d49db69d4c2948c860ad19d120d82d18a7b614156",
+                    "size": 70573765
+                }
             }
         },
         {
@@ -10722,7 +10911,7 @@
         {
             "name": "world-of-warships",
             "description": "战舰世界 — 深动画主题，Wallpaper Engine 创意工坊 3614997336 完整一轮转制动画 WebP 整窗铺底。",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -10752,6 +10941,13 @@
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-world-of-warships-v1.0.0/world-of-warships-1.0.0-all.tar.gz",
+                    "sha256": "f7da1a01c6620bc00329670a11c3dbb8e587a1e5446a5b2325a068070e48c91b",
+                    "size": 6186598
+                }
             }
         },
         {

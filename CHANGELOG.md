@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+### 🔧 29 个迁移动画主题 v1.0.1：欢迎卡片条目 alpha 修正
+- **症状**：这批动画主题下，欢迎页「最近会话 / 最活跃会话」条目（`.session-item`）完全不透明，实底盖住背景动画，hover 态同样全实
+- **根因**：主题 yaml 的 `hover_bg` / `selected_bg` 写成 0-255 整数 alpha（如 `rgba(99, 115, 63, 31)`），这两个 token 经 `--accent-soft` / `--accent-soft-strong` 直接注入 WebView CSS；Chromium 的 rgba alpha 只认 0-1，31 被 clamp 到 1 = 完全不透明。Qt QSS 两种写法都接受，所以 Qt 控件侧看不出问题，只在 WebView 内炸
+- **修复**：29 个插件共 39 个主题 yaml（含 light/dark 变体）的 `hover_bg` 改 0.10~0.12、`selected_bg` 改 0.20~0.26，对齐 midnight 写法；Qt 侧探针实测 0.12 与 31 渲染等价
+- **验证**：全库整数 alpha 的 hover/selected 归零；Edge headless `getComputedStyle` 确认 `--accent-soft` 计算值为 `rgba(..., 0.12)`；58 个主题 yaml 全部解析通过
 ### 🔧 kling-ai-plugin v1.0.1：端点要求 OAuth，补授权声明修复连接失败
 - **症状**：启用后热连接失败，日志 ConnectError 与 401 Unauthorized 交替出现，设置卡红灯
 - **根因**：`kling.ai/mcp/plugin` 按 MCP 规范回 401 + `WWW-Authenticate: Bearer resource_metadata=...oauth-protected-resource/mcp/plugin`，要求 OAuth 授权码流程；插件 `.mcp.json` 缺 `auth` 声明，宿主不触发授权（README「无需密钥直连」沿用 WorkBuddy 市场宣传语，实测不成立）；ConnectError 另有系统代理瞬时抖动成分（httpx trust_env 读 WinINET 注册表代理，curl 不读）
