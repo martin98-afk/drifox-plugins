@@ -4268,7 +4268,7 @@
         {
             "name": "gateway-dingtalk",
             "description": "钉钉 (DingTalk) Stream 模式适配器（社区插件，万物即插件 Phase E）：实时消息收发，支持群/单聊/媒体；基于 dingtalk-stream SDK。设置卡支持扫码登录（官方设备注册接口，免开放平台配置）。",
-            "version": "1.1.0",
+            "version": "1.1.1",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [
@@ -4324,19 +4324,19 @@
             },
             "tarball": {
                 "darwin": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-dingtalk-v1.1.0/gateway-dingtalk-1.1.0-darwin.tar.gz",
-                    "sha256": "c6835b6e4fd69d6fc806ca132ef81d61d614494d2436926222139c1ed2698e5b",
-                    "size": 2203569
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-dingtalk-v1.1.1/gateway-dingtalk-1.1.1-darwin.tar.gz",
+                    "sha256": "c3df669abb6b1c879fbd8364279177972c72fa9e519ad19c3b5ab33d25f3f6a7",
+                    "size": 2203849
                 },
                 "linux": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-dingtalk-v1.1.0/gateway-dingtalk-1.1.0-linux.tar.gz",
-                    "sha256": "1a3ae7640ad9895897613a61094c0289351f4d2effebe5566dbefef5fe484ff6",
-                    "size": 3385049
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-dingtalk-v1.1.1/gateway-dingtalk-1.1.1-linux.tar.gz",
+                    "sha256": "c63ca242bce6e1ec6ed3531e5d52fc035181c29ca614df3f49bc97767dd852fd",
+                    "size": 3385612
                 },
                 "win32": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-dingtalk-v1.1.0/gateway-dingtalk-1.1.0-win32.tar.gz",
-                    "sha256": "ae5e585e8df7f2490ae383afb064f0d3f05473a818dd41570d796fe879348463",
-                    "size": 1623855
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-dingtalk-v1.1.1/gateway-dingtalk-1.1.1-win32.tar.gz",
+                    "sha256": "849a805a807b7da66e6e4e25f60c088c5c0dcc13823f9007286ae16fc5976700",
+                    "size": 1624475
                 }
             }
         },
@@ -4408,7 +4408,7 @@
         {
             "name": "gateway-feishu",
             "description": "飞书 (Feishu/Lark) WebSocket 模式适配器（社区插件，万物即插件 Phase E）：实时消息收发，基于 lark-oapi SDK。设置卡支持扫码创建/更新应用并自动申请消息权限（官方设备授权端点）。",
-            "version": "1.3.0",
+            "version": "1.3.1",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [
@@ -4460,26 +4460,26 @@
             },
             "tarball": {
                 "darwin": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-feishu-v1.3.0/gateway-feishu-1.3.0-darwin.tar.gz",
-                    "sha256": "ab9a54b97b5832436627252b7e2cd7b1d89f2b2ad834e63bc8c936ade031483d",
-                    "size": 6144829
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-feishu-v1.3.1/gateway-feishu-1.3.1-darwin.tar.gz",
+                    "sha256": "35fbf28de0e1c23ac624b92ccbc8880eaf29f3e7def6dd5fd7e1df829e7e8c4e",
+                    "size": 6145604
                 },
                 "linux": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-feishu-v1.3.0/gateway-feishu-1.3.0-linux.tar.gz",
-                    "sha256": "cf8783aa3e1b75ba0d792683371bcf4b2af15d1c1511bb3638ac804387af31dc",
-                    "size": 5803097
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-feishu-v1.3.1/gateway-feishu-1.3.1-linux.tar.gz",
+                    "sha256": "ec98a456ae06e0b21b999fb1dd10d20039bcae99669ca1067e9ff086dc7c308c",
+                    "size": 5803852
                 },
                 "win32": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-feishu-v1.3.0/gateway-feishu-1.3.0-win32.tar.gz",
-                    "sha256": "3d5eecf87b7b9432ab53bf4795ba098991cc94c9143fb55f25c9fd231faebb73",
-                    "size": 5201871
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-feishu-v1.3.1/gateway-feishu-1.3.1-win32.tar.gz",
+                    "sha256": "5ee0f1cc364e7c0d0b82638a768e8e3cc3915a0bce2e608a45a9e4b4a781b37e",
+                    "size": 5202508
                 }
             }
         },
         {
             "name": "gateway-qq",
             "description": "QQ 机器人适配器（QQ 开放平台）：WebSocket 长连接收发群聊/单聊消息；不依赖第三方 SDK，复用宿主 aiohttp/httpx。设置卡支持扫码绑定机器人（官方绑定任务接口，凭据本地解密）。",
-            "version": "1.2.0",
+            "version": "1.2.1",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [
@@ -4514,19 +4514,19 @@
             },
             "tarball": {
                 "darwin": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-qq-v1.2.0/gateway-qq-1.2.0-darwin.tar.gz",
-                    "sha256": "15687b1b995bb58cae363b9ef06786f6b67a51b3bf3c565ad869ff79eae4a951",
-                    "size": 4075327
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-qq-v1.2.1/gateway-qq-1.2.1-darwin.tar.gz",
+                    "sha256": "627126671b9a7977363a325390a1ff5f86eb11e53b00409aa3e073c5b7212181",
+                    "size": 4075962
                 },
                 "linux": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-qq-v1.2.0/gateway-qq-1.2.0-linux.tar.gz",
-                    "sha256": "35013d57f8dc93ac34f4558084246c4bec15bb4cca2641db71ba195604fd62ae",
-                    "size": 4777765
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-qq-v1.2.1/gateway-qq-1.2.1-linux.tar.gz",
+                    "sha256": "1eb93296895dd846d5cf04a1c4a32b8537e40f7cabfc2d40751a11e462ea9cac",
+                    "size": 4778494
                 },
                 "win32": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-qq-v1.2.0/gateway-qq-1.2.0-win32.tar.gz",
-                    "sha256": "3947b8d07d94c7aef74d742ad242566b2d23c3db06de262316cc7bfa90257113",
-                    "size": 3986462
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-qq-v1.2.1/gateway-qq-1.2.1-win32.tar.gz",
+                    "sha256": "ce4800b9c1c22c1aa8b4511bd5c50ddbe6cb938740ae66852e135944cce3a9d2",
+                    "size": 3987004
                 }
             }
         },
@@ -4617,7 +4617,7 @@
         {
             "name": "gateway-wechat",
             "description": "微信机器人适配器（iLink 官方接口）：设置卡扫码登录、长轮询收发单聊消息；无需公众号配置，复用宿主 httpx。",
-            "version": "0.3.1",
+            "version": "0.3.2",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [
@@ -4652,9 +4652,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-wechat-v0.3.1/gateway-wechat-0.3.1-default.tar.gz",
-                    "sha256": "01809c60578533468bb6031725260c4d8a9896d49d9624ffee68da61c1359ec9",
-                    "size": 88916
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-wechat-v0.3.2/gateway-wechat-0.3.2-default.tar.gz",
+                    "sha256": "5df6efea1636b617e1cf65dc01e2a0f0e685b90a028f2f4c76be49b8a88ade9c",
+                    "size": 89562
                 }
             }
         },
