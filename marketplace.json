@@ -767,7 +767,7 @@
         {
             "name": "bili-scroll",
             "description": "每天替你刷一轮 B站：按关键词或推荐流搜视频、逐条读字幕判断、挑出值得的写成日报，特别值得的经你授权后自动评论 @你。扫码登录、峰谷时段自动跑、判重防打扰。",
-            "version": "0.3.0",
+            "version": "0.3.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -937,7 +937,7 @@
         {
             "name": "browser",
             "description": "内置浏览器 — Chrome 体验多标签浏览 + 外部链接接管 + AI 智能体浏览控制（MCP）。",
-            "version": "1.7.0",
+            "version": "1.7.1",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
