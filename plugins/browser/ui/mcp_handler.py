@@ -74,9 +74,8 @@ def _js_result(data: dict, prefix: str) -> str:
     return str(result)
 
 
-def mcp_handle(req: dict) -> dict:
-    """gateway 回调：params.name + params.arguments -> {'text': str}。"""
-    params = req.get("params") or {}
+def mcp_handle(params: dict) -> dict:
+    """gateway 回调：入参即 tools/call 的 params（name + arguments）-> {'text': str}。"""
     name = params.get("name", "")
     args = params.get("arguments") or {}
     try:

@@ -47,9 +47,8 @@ def _maybe_qrcode_popup(name: str, content: str) -> None:
         logger.warning(f"[bili-scroll] 二维码弹窗处理失败: {e}")
 
 
-def mcp_handle(req: Dict[str, Any]) -> dict:
-    """gateway 回调：params.name + params.arguments -> {'text': str}。"""
-    params = req.get("params") or {}
+def mcp_handle(params: Dict[str, Any]) -> dict:
+    """gateway 回调：入参即 tools/call 的 params（name + arguments）-> {'text': str}。"""
     name = params.get("name") or ""
     kwargs = params.get("arguments") or {}
     impl = bili_impl.IMPLS.get(name)

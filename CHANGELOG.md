@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+### 🔧 browser v1.7.1 / bili-scroll v0.3.1：MCP handler 二次解包致 tools/call 全数失败
+- **症状**：gateway 迁移后 tools/list 正常（15 个工具可见），AI 侧任何 `mcp__browser__*` 调用一律返回「未知工具: 」（工具名为空），curl 直打 gateway 传标准 `params.name` 同样失败
+- **根因**：两端解包约定不一致——宿主 `LocalMcpGateway._dispatch` 的 tools/call 分支传给 handler 的已是**已解包的 params**（`{"name": ..., "arguments": ...}`），而两插件 `mcp_handler.py::mcp_handle` 又按完整 JSON-RPC req 再剥一层 `req["params"]`，恒得空 dict，`name` 永远为空，落进兜底分支「未知工具: {name}」。中转报错文案与兜底分支吻合掩盖了「调用已穿透到下游」这一事实
+- **修复**：两插件 `mcp_handle` 入参改名 `params` 并直接取 `name`/`arguments`，docstring 更正为「入参即 tools/call 的 params」
+- **验证**：stub 依赖单测两个 handler 的 name/arguments 解包与未知工具分支；curl 直打 gateway `browser_status` 返回真实浏览器状态；AI 侧完整链路（tool_execute → 客户端 → gateway → handler → 真实浏览器）导航 example.com 并读回页面全文；安装副本热重载后无需重启宿主即生效
+
 ### ✨ browser v1.7.0 / bili-scroll v0.3.0：MCP 工具迁入宿主进程内 gateway，去掉外部 python 子进程
 - **症状**：macOS 打包版连接 `browser` / `bili` MCP 报「未找到能 import mcp 的 python 解释器」。`.mcp.json` 的 `command: python3` 命中系统 python（无 `mcp`/`httpx`），`mcp/server.py::_bootstrap` 的候选清单只有 Windows venv 布局，打包版 `bridge.json` 的 `python_executable` 恒为空；宿主 `py→python3` 回落只保证命令能启动，把失败从 `Errno 2` 挪成自引导失败
 - **根因**：stdio 传输规定 client 必须 spawn 独立子进程，而打包版把 mcp SDK 编进 exe 的 PYZ（FrozenImporter 内存加载），bundle 内无独立 python 可执行文件，外部子进程读不到；插件工具实现本就在宿主主进程内
