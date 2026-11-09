@@ -197,3 +197,42 @@ def save_credentials(app_id: str, app_secret: str) -> str:
     except Exception as e:  # noqa: BLE001 — 重连失败不影响凭据落盘
         logger.warning(f"[feishu_login] 自动重连未触发（可手动开关启用）: {e}")
         return "登录成功，凭据已保存。重连未触发，开关拨一次即可。"
+
+
+def wait_gateway_connected(timeout: float = 30.0, cancel_check=None) -> bool:
+    """等本插件网关平台真正连接成功（rebuild 触发的重连是异步的）。
+
+    网关未启用 / 管理器未初始化 / 主开关未运行时无连接可等，直接 True
+    （连接交给启动期兜底）；轮询超时或用户取消返回 False。
+    """
+    import time as _time
+
+    try:
+        from app.plugins.managers.plugin_config_store import PluginConfigStore
+
+        if not bool(PluginConfigStore().get(PLUGIN_NAME, "enabled")):
+            return True
+        from app.gateway.manager import get_platform_manager
+
+        mgr = get_platform_manager()
+        if mgr is None or not mgr.get_status().get("running"):
+            return True
+        from app.plugins.registries.gateway_platform_registry import GatewayPlatformRegistry
+
+        pids = GatewayPlatformRegistry.get_instance().get_platform_ids_by_source(
+            f"plugin:{PLUGIN_NAME}"
+        )
+        if not pids:
+            return True
+        deadline = _time.monotonic() + timeout
+        while _time.monotonic() < deadline:
+            if cancel_check is not None and cancel_check():
+                return False
+            platforms = mgr.get_status().get("platforms") or {}
+            if all(bool(platforms.get(p, {}).get("connected")) for p in pids):
+                return True
+            _time.sleep(1.0)
+        return False
+    except Exception as e:  # noqa: BLE001 — 状态不可知时不阻塞登录结果
+        logger.debug(f"[{PLUGIN_NAME}] 网关连接状态不可查询: {e}")
+        return True

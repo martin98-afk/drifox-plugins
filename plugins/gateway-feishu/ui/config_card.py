@@ -17,7 +17,7 @@ from loguru import logger
 
 _UI_AVAILABLE = False
 try:  # 宿主缺 qfluentwidgets 时整卡退化为占位类，插件其余组件不受影响
-    from PyQt5.QtCore import QObject, Qt, QThread, pyqtProperty, pyqtSignal
+    from PyQt5.QtCore import QObject, Qt, QThread, QTimer, pyqtProperty, pyqtSignal
     from PyQt5.QtGui import QPixmap
     from PyQt5.QtWidgets import (
         QApplication,
@@ -50,6 +50,7 @@ from .login import (  # noqa: E402 — 须在 _UI_AVAILABLE 探测后导入，�
     fetch_qr,
     poll_once,
     save_credentials,
+    wait_gateway_connected,
 )
 
 _LABEL_MIN_WIDTH = 120
@@ -211,7 +212,15 @@ if _UI_AVAILABLE:
                         self.finished_state.emit(False, f"保存凭据失败：{e}")
                         return
                     tip += " 应用需到飞书开放平台完成发布审批后生效。"
-                    self.finished_state.emit(True, tip)
+                    # 凭据已落盘；等网关真正连接成功再回成功态（未启用网关时直接成功）
+                    self.status_text.emit("凭据已保存，正在连接网关…")
+                    if wait_gateway_connected(cancel_check=lambda: self._cancelled):
+                        self.finished_state.emit(True, tip)
+                    else:
+                        self.finished_state.emit(
+                            False,
+                            "网关连接超时（凭据已保存），可稍后在网关面板查看状态",
+                        )
                     return
                 if status == "access_denied":
                     reason = data.get("error_description") or "授权被拒绝"
@@ -295,6 +304,15 @@ if _UI_AVAILABLE:
                 if self._on_success is not None:
                     self._on_success()
             except Exception:  # noqa: BLE001 — 回显失败不影响登录结果
+                pass
+            # 登录成功：短暂展示成功文案后自动关闭弹窗
+            QTimer.singleShot(1000, self._auto_close)
+
+        def _auto_close(self) -> None:
+            try:
+                if self.isVisible():
+                    self.accept()
+            except RuntimeError:  # 弹窗已销毁（延迟期间用户手动关闭）
                 pass
 
         def _on_close(self) -> None:

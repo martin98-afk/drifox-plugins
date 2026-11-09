@@ -16,7 +16,7 @@ from loguru import logger
 
 _UI_AVAILABLE = False
 try:  # 宿主缺 qfluentwidgets 时整卡退化为占位类，插件其余组件不受影响
-    from PyQt5.QtCore import QObject, Qt, QThread, pyqtProperty, pyqtSignal
+    from PyQt5.QtCore import QObject, Qt, QThread, QTimer, pyqtProperty, pyqtSignal
     from PyQt5.QtGui import QPixmap
     from PyQt5.QtWidgets import (
         QApplication,
@@ -42,7 +42,13 @@ try:  # 宿主缺 qfluentwidgets 时整卡退化为占位类，插件其余组�
 except Exception:  # noqa: BLE001
     ExpandSettingCard = None  # type: ignore
 
-from .login import PLUGIN_NAME, fetch_qr, poll_status, save_bot_token  # noqa: E402 — 须在 _UI_AVAILABLE 探测后导入，避免无 Qt 环境连锁失败
+from .login import (  # noqa: E402 — 须在 _UI_AVAILABLE 探测后导入，避免无 Qt 环境连锁失败
+    PLUGIN_NAME,
+    fetch_qr,
+    poll_status,
+    save_bot_token,
+    wait_gateway_connected,
+)
 
 _LABEL_MIN_WIDTH = 120
 _QR_DISPLAY_WIDTH = 420
@@ -202,7 +208,15 @@ if _UI_AVAILABLE:
                     except Exception as e:  # noqa: BLE001 — 写盘/重连失败单独提示
                         self.finished_state.emit(False, f"保存 token 失败：{e}")
                         return
-                    self.finished_state.emit(True, tip)
+                    # 凭据已落盘；等网关真正连接成功再回成功态（未启用网关时直接成功）
+                    self.status_text.emit("凭据已保存，正在连接网关…")
+                    if wait_gateway_connected(cancel_check=lambda: self._cancelled):
+                        self.finished_state.emit(True, tip)
+                    else:
+                        self.finished_state.emit(
+                            False,
+                            "网关连接超时（凭据已保存），可稍后在网关面板查看状态",
+                        )
                     return
                 # wait / waiting / 未知状态 → 继续轮询
 
@@ -276,6 +290,15 @@ if _UI_AVAILABLE:
                 if self._on_success is not None:
                     self._on_success()
             except Exception:  # noqa: BLE001 — 回显失败不影响登录结果
+                pass
+            # 登录成功：短暂展示成功文案后自动关闭弹窗
+            QTimer.singleShot(1000, self._auto_close)
+
+        def _auto_close(self) -> None:
+            try:
+                if self.isVisible():
+                    self.accept()
+            except RuntimeError:  # 弹窗已销毁（延迟期间用户手动关闭）
                 pass
 
         def _on_close(self) -> None:
