@@ -164,6 +164,8 @@ class QqAdapter(BasePlatformAdapter):
 
         # 重连退避
         self._backoff_idx = 0
+        # 重连互斥（防多循环并发 connect）
+        self._reconnecting = False
 
     # ── 连接生命周期 ─────────────────────────────────────
 
@@ -185,6 +187,17 @@ class QqAdapter(BasePlatformAdapter):
             return False
 
         try:
+            # 重入/重连前先终止残留任务并释放旧连接资源（保留会话凭据），防引用覆盖泄漏
+            cur = asyncio.current_task()
+            for t in (self._listen_task, self._heartbeat_task):
+                if t and t is not cur and not t.done():
+                    t.cancel()
+                    try:
+                        await t
+                    except asyncio.CancelledError:
+                        pass
+            await self._cleanup(keep_session=True)
+
             # HTTP 客户端（OpenAPI 用）
             import httpx as _httpx
 
@@ -253,8 +266,12 @@ class QqAdapter(BasePlatformAdapter):
 
             return True
 
+        except asyncio.CancelledError:
+            # 取消路径（disconnect 竞态）不走 except Exception，必须单独清理
+            await self._cleanup(keep_session=True)
+            raise
         except Exception as e:
-            logger.error("[QQ] Connection failed: {}", e, exc_info=True)
+            logger.exception("[QQ] Connection failed: {}", e)
             self._last_error = f"连接失败: {e}"
             # 保留 session_id/seq 供下次 RESUME 尝试
             await self._cleanup(keep_session=True)
@@ -309,6 +326,8 @@ class QqAdapter(BasePlatformAdapter):
     async def _recv_json(self) -> Optional[Dict[str, Any]]:
         """接收一帧 JSON（忽略非文本帧）"""
         while True:
+            if self._ws is None:
+                return None  # 已被并发清理 → 走断线重连路径
             msg = await self._ws.receive()
             if msg.type == aiohttp.WSMsgType.TEXT:
                 try:
@@ -351,7 +370,7 @@ class QqAdapter(BasePlatformAdapter):
                 return token
 
             except Exception as e:
-                logger.error("[QQ] getAppAccessToken error: {}", e, exc_info=True)
+                logger.exception("[QQ] getAppAccessToken error: {}", e)
                 return ""
 
     # ── 监听与心跳 ───────────────────────────────────────
@@ -365,7 +384,7 @@ class QqAdapter(BasePlatformAdapter):
                 if payload is None:
                     logger.warning("[QQ] WebSocket closed by remote")
                     await self._handle_reconnect()
-                    continue
+                    return  # 新连接已由 connect() 内新建的监听任务接管，本任务职责终止
 
                 op = payload.get("op")
 
@@ -387,42 +406,50 @@ class QqAdapter(BasePlatformAdapter):
                 elif op == OP_RECONNECT:
                     logger.info("[QQ] Server requested reconnect")
                     await self._handle_reconnect()
+                    return  # 同上，新监听任务已接管
 
                 elif op == OP_HEARTBEAT_ACK:
                     logger.debug("[QQ] Heartbeat ACK")
         except asyncio.CancelledError:
             pass
         except Exception as e:
-            logger.error("[QQ] Listen loop crashed: {}", e, exc_info=True)
+            logger.exception("[QQ] Listen loop crashed: {}", e)
             self._last_error = str(e)
             if self._running:
                 await self._handle_reconnect()
 
     async def _handle_reconnect(self) -> None:
         """断线重连（指数退避；优先 RESUME 恢复会话，失败回退 IDENTIFY）"""
-        was_running = self._running
-        # 上次 RESUME 未获确认 → 会话已失效，放弃恢复
-        if self._resume_pending:
-            logger.warning("[QQ] RESUME not confirmed, falling back to IDENTIFY")
-            self._resume_pending = False
-            self._session_id = ""
-            self._last_seq = None
-        await self._cleanup(keep_session=True)
-
-        if not was_running:
+        if self._reconnecting:
+            logger.warning("[QQ] Reconnect already in progress, skip duplicate entry")
             return
+        self._reconnecting = True
+        try:
+            was_running = self._running
+            # 上次 RESUME 未获确认 → 会话已失效，放弃恢复
+            if self._resume_pending:
+                logger.warning("[QQ] RESUME not confirmed, falling back to IDENTIFY")
+                self._resume_pending = False
+                self._session_id = ""
+                self._last_seq = None
+            await self._cleanup(keep_session=True)
 
-        while self._running:
-            delay = RECONNECT_BACKOFF[min(self._backoff_idx, len(RECONNECT_BACKOFF) - 1)]
-            self._backoff_idx += 1
-            logger.info("[QQ] Reconnecting in {}s...", delay)
-            await asyncio.sleep(delay)
-
-            can_resume = bool(self._session_id) and self._last_seq is not None
-            if await self.connect(resume=can_resume):
+            if not was_running:
                 return
 
-        logger.error("[QQ] Reconnect abandoned (stopped)")
+            while self._running:
+                delay = RECONNECT_BACKOFF[min(self._backoff_idx, len(RECONNECT_BACKOFF) - 1)]
+                self._backoff_idx += 1
+                logger.info("[QQ] Reconnecting in {}s...", delay)
+                await asyncio.sleep(delay)
+
+                can_resume = bool(self._session_id) and self._last_seq is not None
+                if await self.connect(resume=can_resume):
+                    return
+
+            logger.error("[QQ] Reconnect abandoned (stopped)")
+        finally:
+            self._reconnecting = False
 
     async def _heartbeat_loop(self) -> None:
         """心跳循环：每 heartbeat_interval 发 op=1"""

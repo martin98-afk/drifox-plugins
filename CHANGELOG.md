@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+### 🔧 gateway-qq v1.2.2：重连竞态修复（多监听任务并发 receive 与 session 泄漏）
+- **症状**：断线后日志风暴——`Concurrent call to receive() is not allowed`、`'NoneType' object has no attribute 'receive'`、一秒内多路 `Reconnecting in 2s/5s/10s/30s` 交错、成串 `Unclosed client session`，退避不收敛
+- **根因**：`_listen_loop` 自身调 `_handle_reconnect`，而重连内的 `connect()` 成功又 create_task 新监听任务；旧任务重连返回后 continue 回循环头，与新任务并发读同一 ws（aiohttp 禁止）。每个监听任务断线/崩溃各开一个重连循环（任务滚雪球），并发 connect 互相覆盖 `_session`/`_ws` 引致泄漏与 NoneType 崩溃；共享 `_backoff_idx` 被成功路径重置，退避失效
+- **修复**：断线分支重连后 return（任务随 ws 世代终结）；`_handle_reconnect` 加 `_reconnecting` 互斥；`connect()` 前置 cancel 残留任务并 cleanup 旧连接资源；`_recv_json` 对 `_ws is None` 返 None 走断线路径；新增 CancelledError 清理路径；4 处 `logger.error(..., exc_info=True)` 改 `logger.exception`（loguru 无该参数，traceback 一直被静默丢弃，`Connection failed:` 恒为空）
+- **验证**：asyncio harness 脚本化 ws 生命周期（秒断/连接失败/稳定连接），改前监听任务峰值 3、并发 receive 违规 3；改后峰值 1、违规 0、session 创建=关闭；py_compile 通过
+
 ### 🔧 browser v1.7.1 / bili-scroll v0.3.1：MCP handler 二次解包致 tools/call 全数失败
 - **症状**：gateway 迁移后 tools/list 正常（15 个工具可见），AI 侧任何 `mcp__browser__*` 调用一律返回「未知工具: 」（工具名为空），curl 直打 gateway 传标准 `params.name` 同样失败
 - **根因**：两端解包约定不一致——宿主 `LocalMcpGateway._dispatch` 的 tools/call 分支传给 handler 的已是**已解包的 params**（`{"name": ..., "arguments": ...}`），而两插件 `mcp_handler.py::mcp_handle` 又按完整 JSON-RPC req 再剥一层 `req["params"]`，恒得空 dict，`name` 永远为空，落进兜底分支「未知工具: {name}」。中转报错文案与兜底分支吻合掩盖了「调用已穿透到下游」这一事实
