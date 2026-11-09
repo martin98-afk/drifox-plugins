@@ -47,21 +47,35 @@ def register_ui(registry):
 
     ensure_scheduler()
 
-    # MCP 控制端点常驻（重依赖 import 放后台线程，别卡 UI 装载；
-    # MCP 壳有 _wait_bridge 轮询兜底时序）
+    # 注册进程内 MCP handler：宿主 LocalMcpGateway 直接调本机工具，
+    # 不再 spawn 外部 python 子进程（打包版不依赖系统解释器安装 mcp/httpx）。
+    # bili_impl 的 vendor 重依赖 import 放后台线程，别卡 UI 装载。
+    def _register_mcp():
+        try:
+            from app.plugins.sdk import caps_for
+
+            register_mcp = caps_for("mcp.register", surface="ui")
+            if register_mcp is None:
+                logger.warning(
+                    "[bili-scroll] mcp.register 能力不可用（宿主版本较旧或缺声明），MCP 工具不可用"
+                )
+                return
+            from .mcp_handler import build_tools, mcp_handle
+
+            register_mcp("bili", mcp_handle, tools=build_tools())
+        except Exception:
+            logger.exception("[bili-scroll] 注册进程内 MCP handler 失败（不影响其余功能）")
+
     try:
         import threading as _threading
 
-        from .control_server import start_control_server
-
         _threading.Thread(
-            target=start_control_server,
-            args=(_PLUGIN_ROOT,),
+            target=_register_mcp,
             daemon=True,
-            name="bili-control-boot",
+            name="bili-mcp-register",
         ).start()
     except Exception:
-        logger.exception("[bili-scroll] MCP 控制端点启动失败（不影响其余功能）")
+        logger.exception("[bili-scroll] MCP 注册线程启动失败（不影响其余功能）")
 
     logger.info("[bili-scroll] UI components registered")
 
@@ -74,12 +88,6 @@ def unload_ui(*_args):
         release_scheduler()
     except Exception:
         pass
-    try:
-        # 旧模块上下文读模块属性（browser 同款）：热重载时相对导入会撞
-        # register_ui 的 sys.modules 清理时序
-        mod = sys.modules.get("ui_plugin_bili_scroll.control_server")
-        if mod is not None:
-            mod.stop_control_server()
-    except Exception:
-        pass
+    # MCP handler 由宿主 UIPluginRegistry.unload_plugin 按插件名统一注销，
+    # 无需插件侧手动清理（gateway 侧 unregister_plugin 已覆盖热重载）。
     logger.info("[bili-scroll] UI components unloaded")

@@ -1,15 +1,13 @@
 {
   "mcpServers": {
     "browser": {
-      "type": "stdio",
-      "command": "python3",
-      "args": [
-        "${CLAUDE_PLUGIN_ROOT}/mcp/server.py"
-      ],
+      "type": "http",
+      "url": "${LOCAL_MCP}/browser",
       "env": {},
       "enabled": true,
-      "url": "",
-      "headers": {}
+      "headers": {},
+      "auth": {},
+      "credential": {}
     }
   }
 }

@@ -61,14 +61,28 @@
 - Cache：`cache/`
 - 拦截配置：`browser-redirect.json`（enabled / intercept_web / intercept_html / intercept_pdf；旧版 intercept_system/intercept_shell 键自动迁移为 intercept_web）
 
+## MCP 工具（`mcp__browser__*`，15 个）
+
+工具在**宿主主进程内**提供，不需要外部 python 子进程，也不要求系统 Python 安装 `mcp` / `httpx`：
+
+- `.mcp.json`：`type: http` + `url: ${LOCAL_MCP}/browser`，宿主连接前把占位符替换成进程内 `LocalMcpGateway` 的运行时地址
+- 插件 `register_ui` 时经能力池 `caps_for("mcp.register")` 把 `ui/mcp_handler.py` 的 handler 登记进 gateway
+- gateway 用标准库讲 MCP 的 Streamable HTTP（纯 JSON 分支），工具实现直接复用 `ui/control_server.py` 的 `_OP_HANDLERS`
+
+`browser_status` / `browser_navigate` / `browser_read` / `browser_execute_js` / `browser_click` / `browser_type` / `browser_scroll` / `browser_screenshot` / `browser_back` / `browser_forward` / `browser_reload` / `browser_tabs` / `browser_switch_tab` / `browser_new_tab` / `browser_close_tab`。
+
+> 兼容：宿主版本不支持 `mcp.register` 时，`ui/__init__.py` 记 warning 降级，浏览器其余功能不受影响。
+
 ## 架构
 
 ```
 browser/
-├── .drifox-plugin/plugin.json   # manifest（commands + ui）
-├── commands/                    # 5 个斜杠命令
+├── .drifox-plugin/plugin.json   # manifest（ui + mcp + mcp.register 能力声明）
+├── .mcp.json                    # type: http + ${LOCAL_MCP}/browser
 └── ui/
-    ├── __init__.py              # register_ui 入口
+    ├── __init__.py              # register_ui 入口（含 gateway handler 注册）
+    ├── mcp_handler.py           # MCP 工具表 + handler（复用 _OP_HANDLERS）
+    ├── control_server.py        # /api/* 兼容端点 + Qt 主线程派发
     ├── browser_window.py        # 主窗口（工具栏/标签栏/页面区）
     ├── tab_widget.py            # Chrome 标签栏 + 冻结策略
     ├── url_bar.py               # 地址栏（URL 规范化/补全/加载指示）

@@ -38,7 +38,7 @@ def register_ui(registry):
     except Exception:
         logger.exception("[browser] 外部链接重定向安装失败（不影响其余功能）")
 
-    # 0.5) 启动浏览器控制 HTTP 端点（供 MCP 服务器控制浏览器）
+    # 0.5) 启动浏览器控制 HTTP 端点（供 /api/* 及旧通道使用）
     try:
         from pathlib import Path as _Path
         from .control_server import start_control_server
@@ -47,6 +47,23 @@ def register_ui(registry):
         start_control_server(plugin_root)
     except Exception:
         logger.exception("[browser] 控制端点启动失败（不影响其余功能）")
+
+    # 0.6) 注册进程内 MCP handler：宿主 LocalMcpGateway 直接调本机工具，
+    # 不再 spawn 外部 python 子进程（打包版不依赖系统解释器安装 mcp/httpx）。
+    try:
+        from app.plugins.sdk import caps_for
+
+        register_mcp = caps_for("mcp.register", surface="ui")
+        if register_mcp is not None:
+            from .mcp_handler import MCP_TOOLS, mcp_handle
+
+            register_mcp("browser", mcp_handle, tools=MCP_TOOLS)
+        else:
+            logger.warning(
+                "[browser] mcp.register 能力不可用（宿主版本较旧或缺声明），MCP 工具不可用"
+            )
+    except Exception:
+        logger.exception("[browser] 注册进程内 MCP handler 失败（不影响其余功能）")
 
     # 1) 清理旧子模块缓存
     prefix = "ui_plugin_browser."

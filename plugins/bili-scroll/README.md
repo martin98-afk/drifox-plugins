@@ -14,7 +14,7 @@
 ## 它是怎么跑的
 
 - **值班轮** = 独立引擎会话（`create_engine_session`）+ 值班章程（`skills/bili-scroll-duty/SKILL.md`，298 行纪律：防提示注入 / 成本红线 / 判重机制）+ 工具白名单
-- **B站能力 = MCP**（`mcp__bili__*`，26 个工具）：两段式（browser 插件同款）——`mcp/server.py` stdio 壳只做转发（bridge.json 自引导解释器），真正执行在宿主进程内控制端点（`ui/control_server.py` → `biliscroll_core/bili_impl.py`，deps / stdlib 与 PIL 仲裁 / 凭证 env 全在宿主侧，MCP 子进程零重依赖）
+- **B站能力 = MCP**（`mcp__bili__*`，工具表动态）：工具在**宿主主进程内**提供——`.mcp.json` 写 `type: http` + `url: ${LOCAL_MCP}/bili`，`register_ui` 时经 `caps_for("mcp.register")` 把 `ui/mcp_handler.py` 登记进 `LocalMcpGateway`，handler 直接调 `biliscroll_core.bili_impl.IMPLS`（工具表来自 `SCHEMAS`）。零外部 python 子进程、零自引导，不要求系统 Python 安装 `mcp`/`httpx`；deps / stdlib 与 PIL 仲裁 / 凭证 env 全在宿主侧
 - **峰谷定时** = QTimer 5 分钟 tick，午间 12-14 / 夜间 18-09 窗口内每天一轮，每日配额封顶；先记账再跑，重入不会连发
 - **判重** = `seen.tsv` 一行一条；同一视频不评第二次；rpid 回填供复核
 - **数据落盘** = `<app_data>/plugin_data/bili-scroll/`（日报、判重表、归档、调度状态），升级重装不丢；扫码凭证同目录（`bili_credential.json`）
@@ -24,15 +24,15 @@
 ```
 plugins/bili-scroll/
 ├── .drifox-plugin/plugin.json   # api_version 2，capabilities 显式清单
-├── .mcp.json                    # MCP server 声明（mcp__bili__* 前缀）
-├── mcp/server.py                # stdio 转发壳 + bridge.json 自引导
+├── .mcp.json                    # type: http + ${LOCAL_MCP}/bili（mcp__bili__* 前缀）
+├── ui/mcp_handler.py            # 进程内 MCP handler（动态工具表 + 二维码副作用）
 ├── deps/ + deps/win32/          # 自带依赖（deps_loader 规范，宿主已有的包不遮蔽）
 ├── deps/_pystdlib_xml/          # 宿主打包缺失的标准库副本（xml/optparse），meta_path 仲裁注入
 ├── vendor/bilibili-mcp/         # 上游 server（工具函数宿主进程内直用；patch ⑦⑨⑩）
 ├── skills/bili-scroll-duty/     # 值班章程（值班轮的 system prompt）
 ├── tools/                       # 值班窄口五件套 / bili_duty_run / bili_status（DriFox tools）
 ├── biliscroll_core/             # paths / store / round_runner / scheduler / diagnostics / bili_impl / pil_arbiter
-└── ui/                          # 浮动卡（/bili-scroll 打开）+ 峰谷调度器 + 控制端点 + 二维码弹窗
+└── ui/                          # 浮动卡（/bili-scroll 打开）+ 峰谷调度器 + /api/* 兼容端点 + 二维码弹窗
 ```
 
 ## 红线

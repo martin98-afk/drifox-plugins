@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
-"""B站能力控制端点（宿主进程内）— mcp/server.py 的 HTTP 后端。
+"""B站能力控制端点（宿主进程内）— /api/* 兼容通道。
 
-browser 插件同款两段式：MCP stdio 子进程只做转发，重依赖（vendor /
-bilibili_api / deps / stdlib 与 PIL 仲裁 / 凭证 env）全留宿主进程。
-端口/token 写 mcp/bridge.json，MCP 壳自引导解释器后按 bridge 连入。
+MCP 工具已改走宿主 LocalMcpGateway：ui/mcp_handler.py 直接调
+biliscroll_core.bili_impl，不再 spawn 外部 python 子进程，也不需要
+bridge.json 里的解释器路径。重依赖（vendor / bilibili_api / deps /
+stdlib 与 PIL 仲裁 / 凭证 env）全留宿主进程。
 
 本模块放 ui/ 包内（非 biliscroll_core/）：ui 热重载会清
 ui_plugin_bili_scroll.* 的 sys.modules 强制重编，端点路由改动才能即时生效；
 biliscroll_core.* 是共享顶层名模块会滞留旧版。
 
-接口：
+接口（兼容保留）：
     GET  /healthz                      存活探针（无鉴权）
     GET  /api/tools?token=...          工具表（name/description/inputSchema）
-    POST /api/tools {token}            同上（MCP 壳统一 POST 形态）
+    POST /api/tools {token}            同上
     POST /api/call {token,name,kwargs} 执行工具 → {ok, content|error}
 """
 import json
@@ -138,64 +139,8 @@ class _Handler(BaseHTTPRequestHandler):
         self.wfile.write(payload)
 
 
-def _find_python() -> str:
-    """寻找能 import mcp+httpx 的解释器（供 MCP 壳自引导），找不到返回空串。"""
-    import os as _os
-    import shutil
-    import subprocess
-    import sys as _sys
-
-    kwargs = {}
-    if _os.name == "nt":
-        flag = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-        if flag:
-            kwargs["creationflags"] = flag
-
-    candidates = []
-    exe = _sys.executable
-    # 打包宿主的解释器是冻结 exe，不能拉子进程；仅源码 python 可候选
-    if exe and _os.path.basename(exe).lower().startswith("python"):
-        candidates.append(exe)
-    for p in (
-        Path(exe).parent.parent / ".venv" / "Scripts" / "python.exe",
-        Path(r"D:\work\DriFox\.venv\Scripts\python.exe"),
-        Path.home() / "work" / "DriFox" / ".venv" / "Scripts" / "python.exe",
-    ):
-        if p.exists():
-            candidates.append(str(p))
-    for name in ("python", "python3", "py"):
-        p = shutil.which(name)
-        if p and p not in candidates:
-            candidates.append(p)
-    for c in candidates:
-        try:
-            r = subprocess.run(
-                [c, "-c", "import mcp, httpx"],
-                capture_output=True,
-                timeout=10,
-                **kwargs,
-            )
-            if r.returncode == 0:
-                return c
-        except Exception:
-            continue
-    return ""
-
-
-def _resolve_python(plugin_root: Path) -> str:
-    """bridge.json 里已有探测结果且解释器仍在 → 复用，避免启动期重复 spawn。"""
-    try:
-        bridge = plugin_root / "mcp" / "bridge.json"
-        if bridge.exists():
-            prev = json.loads(bridge.read_text(encoding="utf-8")).get("python_executable", "")
-            if prev and Path(prev).exists():
-                return prev
-    except Exception:
-        pass
-    return _find_python()
-
-
 def _write_bridge(plugin_root: Path, port: int, token: str):
+    """写兼容通道端口/token（MCP 工具已走宿主进程内 gateway，不再写解释器路径）"""
     global _BRIDGE_FILE
     mcp_dir = plugin_root / "mcp"
     mcp_dir.mkdir(parents=True, exist_ok=True)
@@ -203,7 +148,6 @@ def _write_bridge(plugin_root: Path, port: int, token: str):
     data = {
         "port": port,
         "token": token,
-        "python_executable": _resolve_python(plugin_root),
         "plugin_root": str(plugin_root),
     }
     try:

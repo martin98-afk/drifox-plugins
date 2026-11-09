@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
-"""浏览器控制端点 — 主进程内本地 HTTP 服务，供 MCP 服务器控制插件浏览器
+"""浏览器控制端点 — 主进程内本地 HTTP 服务，供 /api/* 兼容通道使用
 
 架构：
-    AI 模型 → MCP 服务器(子进程) → HTTP → 本模块(主进程) → 操作 QWebEngineView
+    AI 模型 → 宿主 LocalMcpGateway → ui/mcp_handler.py → 本模块 _OP_HANDLERS
+    （MCP 工具已在主进程内直调，不再需要外部 python 子进程；保留本 HTTP
+     端点供 /api/* 兼容调用）
 
 要点：
 - ThreadingHTTPServer 绑定 127.0.0.1:0（动态端口），随机 token 鉴权
-- 端口/token/可用 python 路径写入 ../mcp/bridge.json，供 MCP 服务器连接
+- 端口/token 写入 ../mcp/bridge.json（不再写 python_executable）
 - 所有 Qt 操作经 _MainThreadDispatcher 派发到主线程执行（线程安全）
 - 幂等启动：热重载时复用已启动的服务器
 
@@ -21,11 +23,9 @@
 """
 
 import json
-import os
 import secrets
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlparse
 
@@ -34,7 +34,7 @@ from loguru import logger
 # 复用 external_open 的主线程派发器（install_redirect 时已在主线程创建）
 from .external_open import _get_dispatcher
 
-_BRIDGE_FILE = None  # 插件根/mcp/bridge.json（由插件根路径确定）
+_BRIDGE_FILE = None  # 插件根/mcp/bridge.json（兼容通道用，由插件根路径确定）
 _server_ref = {"server": None, "token": "", "port": 0}
 
 
@@ -389,79 +389,8 @@ class _Handler(BaseHTTPRequestHandler):
         self.wfile.write(payload)
 
 
-def _nowindow_kwargs() -> dict:
-    """Windows 下隐藏子进程控制台窗口（CREATE_NO_WINDOW），避免闪黑窗"""
-    if os.name == "nt":
-        import subprocess as _sp
-
-        flag = getattr(_sp, "CREATE_NO_WINDOW", 0)
-        if flag:
-            return {"creationflags": flag}
-    return {}
-
-
-def _find_python() -> str:
-    """寻找能 import mcp 的 python 解释器（供 MCP 服务器自引导），找不到返回空串"""
-    import shutil
-    import subprocess
-    import sys as _sys
-
-    candidates = []
-    # 1. 当前解释器（仅当确实是 python，而非打包 exe）
-    exe = _sys.executable
-    if exe and os.path.basename(exe).lower().startswith("python"):
-        candidates.append(exe)
-    # 2. 开发环境 venv（源码运行 / 常见位置）
-    for p in (
-        Path(exe).parent.parent / ".venv" / "Scripts" / "python.exe",
-        Path(r"D:\work\DriFox\.venv\Scripts\python.exe"),
-        Path.home() / "work" / "DriFox" / ".venv" / "Scripts" / "python.exe",
-    ):
-        if p.exists():
-            candidates.append(str(p))
-    # 3. PATH 中的 python（WindowsApps stub 会被下方 import mcp 测试天然排除）
-    for name in ("python", "python3", "py"):
-        p = shutil.which(name)
-        if p and p not in candidates:
-            candidates.append(p)
-    # 验证候选能 import mcp（不能则跳过，绝不选非 python 可执行文件）
-    for c in candidates:
-        try:
-            r = subprocess.run(
-                [c, "-c", "import mcp, httpx"],
-                capture_output=True,
-                timeout=10,
-                **_nowindow_kwargs(),
-            )
-            if r.returncode == 0:
-                return c
-        except Exception:
-            continue
-    return ""
-
-
-def _resolve_python(plugin_root) -> str:
-    """决定写入 bridge.json 的 python 路径（启动期不 spawn 子进程为原则）
-
-    上次探测结果已落盘在 bridge.json 且解释器仍在 → 直接复用，省掉
-    `_find_python()` 的 2s 子进程探测（会阻塞 UI 插件装载，实测 2.077s）。
-    复用值的安全性由消费方保证：`mcp/server.py::_bootstrap` 用前会再跑一次
-    `_can_import_mcp(py)` 验证并逐个回退候选，旧值失效不会导致 MCP 起不来。
-    只在 bridge.json 缺失/记录为空/文件已被删除时才做一次真实探测。
-    """
-    try:
-        bridge = plugin_root / "mcp" / "bridge.json"
-        if bridge.exists():
-            prev = json.loads(bridge.read_text(encoding="utf-8")).get("python_executable", "")
-            if prev and Path(prev).exists():
-                return prev
-    except Exception:
-        pass
-    return _find_python()
-
-
 def _write_bridge(plugin_root, port: int, token: str):
-    """写桥接信息：端口/token/可用的 python，供 MCP 服务器读取"""
+    """写兼容通道的端口/token（MCP 工具已走宿主进程内 gateway，不再需要解释器路径）"""
     global _BRIDGE_FILE
     mcp_dir = plugin_root / "mcp"
     mcp_dir.mkdir(parents=True, exist_ok=True)
@@ -470,7 +399,6 @@ def _write_bridge(plugin_root, port: int, token: str):
     data = {
         "port": port,
         "token": token,
-        "python_executable": _resolve_python(plugin_root),
         "plugin_root": str(plugin_root),
     }
     try:

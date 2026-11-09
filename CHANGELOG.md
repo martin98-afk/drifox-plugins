@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+### ✨ browser v1.7.0 / bili-scroll v0.3.0：MCP 工具迁入宿主进程内 gateway，去掉外部 python 子进程
+- **症状**：macOS 打包版连接 `browser` / `bili` MCP 报「未找到能 import mcp 的 python 解释器」。`.mcp.json` 的 `command: python3` 命中系统 python（无 `mcp`/`httpx`），`mcp/server.py::_bootstrap` 的候选清单只有 Windows venv 布局，打包版 `bridge.json` 的 `python_executable` 恒为空；宿主 `py→python3` 回落只保证命令能启动，把失败从 `Errno 2` 挪成自引导失败
+- **根因**：stdio 传输规定 client 必须 spawn 独立子进程，而打包版把 mcp SDK 编进 exe 的 PYZ（FrozenImporter 内存加载），bundle 内无独立 python 可执行文件，外部子进程读不到；插件工具实现本就在宿主主进程内
+- **修复**：两插件 `.mcp.json` 改 `type: http` + `url: ${LOCAL_MCP}/<name>`，`plugin.json` 声明 `mcp.register` 能力，`register_ui` 经 `caps_for("mcp.register")` 把 `ui/mcp_handler.py` 的 handler 登记进宿主 `LocalMcpGateway`；宿主连接前把占位符替换成运行时 `:0` 端口地址，走现成 `streamablehttp_client` 纯 JSON 分支。工具实现直接复用各插件已有的 `_OP_HANDLERS` / `bili_impl.IMPLS`（动态工具表），零 HTTP 自调用、不 import mcp SDK
+- **清理**：删两插件 `mcp/server.py` 转发壳；`ui/control_server.py` 删 `_find_python` / `_resolve_python` / `_nowindow_kwargs` 与 `bridge.json` 的 `python_executable`（消掉启动期 2s 解释器探测 spawn），保留 `/api/*` 兼容端点；`docs/mcp.md` 与两插件 README 同步架构说明
+- **依赖**：宿主 `LocalMcpGateway` + `mcp.register` 能力（主仓 `08b289c2` / `b46fb6ad` 引入，尚未发版）；旧宿主不支持该能力时插件记 warning 降级，浏览器其余功能不受影响。两插件 `min_host_version` 待宿主发版后按实际版本号回填
+- **验证**：两插件 Python 文件 py_compile 通过、4 个 JSON 配置可解析、孤立 import 静态检查为零；宿主侧 gateway 9 个单测全过，真实 SDK 客户端 `initialize → list_tools → call_tool` 三步握手通过。插件仓端到端待宿主新版本打包后实测
+
 ### 🔧 29 个迁移动画主题 v1.0.1：欢迎卡片条目 alpha 修正
 - **症状**：这批动画主题下，欢迎页「最近会话 / 最活跃会话」条目（`.session-item`）完全不透明，实底盖住背景动画，hover 态同样全实
 - **根因**：主题 yaml 的 `hover_bg` / `selected_bg` 写成 0-255 整数 alpha（如 `rgba(99, 115, 63, 31)`），这两个 token 经 `--accent-soft` / `--accent-soft-strong` 直接注入 WebView CSS；Chromium 的 rgba alpha 只认 0-1，31 被 clamp 到 1 = 完全不透明。Qt QSS 两种写法都接受，所以 Qt 控件侧看不出问题，只在 WebView 内炸

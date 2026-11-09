@@ -200,7 +200,11 @@ stdio 的 `command` 必须是**三平台都存在**的命令：
 
 宿主对 `py` / `python` / `python3` 会先探测可用性再回落，但这只是兜底：**不要依赖它**，manifest 里直接写跨平台命令。
 两个常见坑：Windows 上 `python3` 可能命中 Microsoft Store 占位 stub（宿主会跳过它继续找），
-以及 `python3` 在不同系统上版本不同 —— 需要特定版本时靠脚本内部自举（如 `mcp/server.py` 的 `_bootstrap` 按 `bridge.json` 重启到目标解释器），不要写死在 `command` 里。
+以及 `python3` 在不同系统上版本不同（打包版主进程内没有可外借的独立解释器，外部 python 常缺 `mcp`/`httpx`）。
+
+若 MCP server 的工具实现本就在宿主主进程内（如 browser / bili-scroll），优先走宿主进程内 gateway：
+`.mcp.json` 写 `type: http` + `url: ${LOCAL_MCP}/<name>`，插件经 `caps_for("mcp.register")` 注册 handler，
+宿主连接前把占位符替换成运行时分配的 loopback 地址。零子进程、零自引导、不依赖系统解释器。
 
 ## 安全注意
 

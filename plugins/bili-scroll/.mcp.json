@@ -1,13 +1,13 @@
 {
   "mcpServers": {
     "bili": {
-      "type": "stdio",
-      "command": "python3",
-      "args": [
-        "${CLAUDE_PLUGIN_ROOT}/mcp/server.py"
-      ],
+      "type": "http",
+      "url": "${LOCAL_MCP}/bili",
       "env": {},
-      "enabled": true
+      "enabled": true,
+      "headers": {},
+      "auth": {},
+      "credential": {}
     }
   }
 }
