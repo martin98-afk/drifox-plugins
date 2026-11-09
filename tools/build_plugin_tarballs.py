@@ -468,6 +468,10 @@ def build_tarball(
 
 
 def release_url(name: str, version: str, filename: str) -> str:
+    # 文件名与版本号必须同源：历史上曾产出 tag v1.2.0 + 文件名 1.1.2-all 的
+    # 混合 URL，客户端按清单版本判定「已更新」却装到旧包。
+    if not filename.startswith(f"{name}-{version}-"):
+        raise ValueError(f"产物文件名 {filename!r} 与插件版本 {version} 不匹配，拒绝拼接 release URL")
     tag = f"{RELEASE_TAG_PREFIX}{name}-v{version}"
     return f"{REPO_URL}/releases/download/{tag}/{filename}"
 

@@ -292,6 +292,46 @@ def _published_version(tarball: dict) -> str:
             return m.group(1)
     return ""
 
+# URL 版本校验：tag 段（/download/<tag>/ 里的 -vX.Y.Z）与 asset 文件名段
+# （<name>-X.Y.Z-<plat>.tar.gz）各提取一次，两处都必须等于清单 version。
+_TAG_VERSION_RE = re.compile(r"/download/[^/]*?-v(\d+(?:\.\d+)+)/")
+_FILENAME_VERSION_RE = re.compile(r"^(.+?)-(\d+(?:\.\d+)+)-")
+
+def _tarball_version_mismatch(version: str, tarball: Any) -> list[str]:
+    """校验 tarball 各 URL 内嵌版本与清单 version 一致，返回问题列表。
+
+    历史上 tag 与 asset 文件名曾脱钩（tag v1.2.0 下挂着 1.1.2-all 产物），
+    客户端按清单 version 比对判定「无更新」，下载到的却是旧包，形成
+    「点更新永远是旧版本」死循环（2026-11 gateway-qq 实证，装 3 次全是
+    1.1.2 裸包）。此校验让混合清单在生成/检查阶段直接失败。
+    """
+    problems: list[str] = []
+    if not isinstance(tarball, dict) or not version:
+        return problems
+    urls: list[tuple[str, str]] = []  # (定位键, url)
+    for key, meta in tarball.items():
+        if not isinstance(meta, dict):
+            continue  # mirrors 键是列表，单独处理
+        if str(meta.get("url") or ""):
+            urls.append((f"tarball.{key}", str(meta["url"])))
+        for i, m in enumerate(meta.get("mirrors") or []):
+            if str(m or ""):
+                urls.append((f"tarball.{key}.mirrors[{i}]", str(m)))
+    for where, url in urls:
+        tag_ver = ""
+        m = _TAG_VERSION_RE.search(url)
+        if m:
+            tag_ver = m.group(1)
+        file_ver = ""
+        m = _FILENAME_VERSION_RE.match(url.rsplit("/", 1)[-1])
+        if m:
+            file_ver = m.group(2)
+        if tag_ver and tag_ver != version:
+            problems.append(f"{where} release tag 版本 v{tag_ver} ≠ 清单版本 v{version}: {url}")
+        if file_ver and file_ver != version:
+            problems.append(f"{where} 产物文件名版本 {file_ver} ≠ 清单版本 v{version}: {url}")
+    return problems
+
 def _version_lt(a: str, b: str) -> bool:
     """a < b 的语义版本比较（只处理点分数字，解析失败视为不小于）。"""
     def _parts(v: str) -> list[int]:
@@ -428,6 +468,14 @@ def check_consistency(generated: dict, existing: dict) -> list[str]:
                 f"当前为 {ex_source.get('path')!r}"
             )
 
+        # tarball URL 内嵌版本必须与清单 version 一致（防「版本号新+产物旧」混合清单）
+        diffs.extend(
+            f"插件 {name} {p}"
+            for p in _tarball_version_mismatch(
+                str(ex_p.get("version") or ""), ex_p.get("tarball")
+            )
+        )
+
     return diffs
 
 
@@ -489,6 +537,28 @@ def main(argv: list[str] | None = None) -> int:
             return 0
     else:
         # 生成模式
+        # tarball 版本一致性守门：version 与 URL 内嵌版本（tag + 文件名）不一致
+        # 的清单直接拒绝写出（回退逻辑保留旧 tarball 字段 + plugin.json 新版本
+        # 的组合正是混合清单的来源）。
+        bad = [
+            f"{p.get('name')}: {m}"
+            for p in generated["plugins"]
+            for m in _tarball_version_mismatch(
+                str(p.get("version") or ""), p.get("tarball")
+            )
+        ]
+        if bad:
+            print(_red(f"✗ 生成的清单存在 tarball 版本不一致（{len(bad)} 处），拒绝写出："))
+            for b in bad:
+                print(f"        {_red('✗')}: {b}")
+            print()
+            print(
+                _yellow(
+                    "请先构建并发布对应版本的 tarball（build/publish_plugin_tarballs.py），"
+                    "再运行本脚本"
+                )
+            )
+            return 1
         output = json.dumps(generated, indent=4, ensure_ascii=False) + "\n"
         MARKETPLACE_PATH.write_text(output, encoding="utf-8")
         print(_green(f"✓ 已生成 {MARKETPLACE_PATH.relative_to(REPO_ROOT)}（{plugin_count} 个插件）"))
