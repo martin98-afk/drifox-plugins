@@ -4479,7 +4479,7 @@
         {
             "name": "gateway-qq",
             "description": "QQ 机器人适配器（QQ 开放平台）：WebSocket 长连接收发群聊/单聊消息；不依赖第三方 SDK，复用宿主 aiohttp/httpx。设置卡支持扫码绑定机器人（官方绑定任务接口，凭据本地解密）。",
-            "version": "1.2.1",
+            "version": "1.2.2",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [
@@ -4514,19 +4514,19 @@
             },
             "tarball": {
                 "darwin": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-qq-v1.2.1/gateway-qq-1.2.1-darwin.tar.gz",
-                    "sha256": "627126671b9a7977363a325390a1ff5f86eb11e53b00409aa3e073c5b7212181",
-                    "size": 4075962
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-qq-v1.2.2/gateway-qq-1.2.2-darwin.tar.gz",
+                    "sha256": "03f79b56a30c0ef3cc99576bcb2ef3743a0bc7255d4540e38676e93fb13a9380",
+                    "size": 4076254
                 },
                 "linux": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-qq-v1.2.1/gateway-qq-1.2.1-linux.tar.gz",
-                    "sha256": "1eb93296895dd846d5cf04a1c4a32b8537e40f7cabfc2d40751a11e462ea9cac",
-                    "size": 4778494
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-qq-v1.2.2/gateway-qq-1.2.2-linux.tar.gz",
+                    "sha256": "2778e424be2ae53bbb884afb0c6640836fb7213bfa7ad3926cd797ca6b38b0bb",
+                    "size": 4778952
                 },
                 "win32": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-qq-v1.2.1/gateway-qq-1.2.1-win32.tar.gz",
-                    "sha256": "ce4800b9c1c22c1aa8b4511bd5c50ddbe6cb938740ae66852e135944cce3a9d2",
-                    "size": 3987004
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-qq-v1.2.2/gateway-qq-1.2.2-win32.tar.gz",
+                    "sha256": "29267a062344df3bc8dcaea68776dfa4c2c5972ae17a93d8d1b3a8227a192515",
+                    "size": 3987308
                 }
             }
         },
