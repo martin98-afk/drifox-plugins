@@ -840,19 +840,19 @@
             },
             "tarball": {
                 "darwin": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.3.0/bili-scroll-0.3.0-darwin.tar.gz",
-                    "sha256": "9d7d26fb29d155db99dd30700d3adc28e2853bc34f4775bb4a68c14ae9f7b58a",
-                    "size": 19295920
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.3.1/bili-scroll-0.3.1-darwin.tar.gz",
+                    "sha256": "c5794b89544ad795fb83c3aa68d0a2176d19472875ed8c03c749dea2e4759f57",
+                    "size": 19295894
                 },
                 "linux": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.3.0/bili-scroll-0.3.0-linux.tar.gz",
-                    "sha256": "607debc2b3f28369dc615b55c7f192f6e8fdb13e923217407a317677f02d6035",
-                    "size": 20854014
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.3.1/bili-scroll-0.3.1-linux.tar.gz",
+                    "sha256": "5efaf32d0c4f78f7e911983cb2a2db8c03f61b2a6cc5a99e9f8884db804cb3e4",
+                    "size": 20853985
                 },
                 "win32": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.3.0/bili-scroll-0.3.0-win32.tar.gz",
-                    "sha256": "b73d6b6ab93cbed94c9187d7fc8d8d728bd542d7c907f221d762212302eaa212",
-                    "size": 15182829
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.3.1/bili-scroll-0.3.1-win32.tar.gz",
+                    "sha256": "2cc36fbaa61a3e71db1505a53ccacf0ebc85a101abe73cd6954a5a1c97ca0cfb",
+                    "size": 15182817
                 }
             }
         },
@@ -972,9 +972,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-browser-v1.7.0/browser-1.7.0-all.tar.gz",
-                    "sha256": "837cbd56a6132c9e4e97f63df8ed04dede2272ec144bea91725b0b78ddb97cca",
-                    "size": 80406
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-browser-v1.7.1/browser-1.7.1-all.tar.gz",
+                    "sha256": "a91064cef7bf32f8e9ff9e65f9cf1bca73f3536126ab64d25c8dc5d69bdc18af",
+                    "size": 80409
                 }
             }
         },
