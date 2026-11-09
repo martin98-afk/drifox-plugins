@@ -840,19 +840,19 @@
             },
             "tarball": {
                 "darwin": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.3.1/bili-scroll-0.3.1-darwin.tar.gz",
-                    "sha256": "c5794b89544ad795fb83c3aa68d0a2176d19472875ed8c03c749dea2e4759f57",
-                    "size": 19295894
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.3.2/bili-scroll-0.3.2-darwin.tar.gz",
+                    "sha256": "e7dd08ec52c68c59c75ceb2c12cc53ada994447d0f1b6779fa83db5f88c06874",
+                    "size": 19295917
                 },
                 "linux": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.3.1/bili-scroll-0.3.1-linux.tar.gz",
-                    "sha256": "5efaf32d0c4f78f7e911983cb2a2db8c03f61b2a6cc5a99e9f8884db804cb3e4",
-                    "size": 20853985
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.3.2/bili-scroll-0.3.2-linux.tar.gz",
+                    "sha256": "871974c01cad73cdaa796e5f856a1dbcefacfaff031117a5558500561f901f4a",
+                    "size": 20853998
                 },
                 "win32": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.3.1/bili-scroll-0.3.1-win32.tar.gz",
-                    "sha256": "2cc36fbaa61a3e71db1505a53ccacf0ebc85a101abe73cd6954a5a1c97ca0cfb",
-                    "size": 15182817
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.3.2/bili-scroll-0.3.2-win32.tar.gz",
+                    "sha256": "b1d454e03e11ea988c492a925c7b1f13f45c3e6974361dc1701108a4c1effb3a",
+                    "size": 15182809
                 }
             }
         },
