@@ -791,7 +791,7 @@
             "display_name": {
                 "zh": "B站日报"
             },
-            "downloads": 23,
+            "downloads": 26,
             "keywords": [
                 "bilibili",
                 "b站",
@@ -958,7 +958,7 @@
             "display_name": {
                 "zh": "内置浏览器"
             },
-            "downloads": 89,
+            "downloads": 92,
             "keywords": [
                 "browser",
                 "web",
@@ -4287,7 +4287,7 @@
             "display_name": {
                 "zh": "钉钉网关"
             },
-            "downloads": 1,
+            "downloads": 6,
             "platforms": [
                 "windows",
                 "linux",
@@ -4427,7 +4427,7 @@
             "display_name": {
                 "zh": "飞书网关"
             },
-            "downloads": 47,
+            "downloads": 53,
             "platforms": [
                 "windows",
                 "linux",
@@ -4498,7 +4498,7 @@
             "display_name": {
                 "zh": "QQ 网关"
             },
-            "downloads": 7,
+            "downloads": 14,
             "dependencies": {
                 "pip": {
                     "default": [
@@ -4636,7 +4636,7 @@
             "display_name": {
                 "zh": "微信网关"
             },
-            "downloads": 18,
+            "downloads": 19,
             "dependencies": {
                 "pip": {
                     "default": [
@@ -4677,7 +4677,7 @@
             "display_name": {
                 "zh": "企业微信网关"
             },
-            "downloads": 2,
+            "downloads": 4,
             "min_host_version": "0.6.10",
             "api_version": 2,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
