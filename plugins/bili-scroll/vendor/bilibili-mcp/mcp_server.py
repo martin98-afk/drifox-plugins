@@ -1777,7 +1777,7 @@ async def _entries_from_pvdata(data: dict) -> list:
     if not url:
         return []
     try:
-        raw = await _fetch_bytes(url, _image_headers())
+        raw, _mime = await _fetch_bytes(url, _image_headers())
     except Exception:
         return []
     if not raw or len(raw) % 2:
@@ -1909,7 +1909,7 @@ async def bili_frames(bvid: str, num: int = 3, at: list | None = None) -> list:
         if no not in cache:
             if no >= len(sheets):
                 raise RuntimeError(f"拼图 {no} 不存在（共 {len(sheets)} 张）")
-            cache[no] = await _fetch_bytes(str(sheets[no]), headers)
+            cache[no], _ = await _fetch_bytes(str(sheets[no]), headers)
         return cache[no]
 
     # 每张拼图装几块要等第一张下来才知道（列数 = 宽 // 块宽）
