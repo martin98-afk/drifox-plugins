@@ -11,10 +11,15 @@
 
 ## 认证
 
-首次启用会跳转浏览器完成 OAuth 授权。DriFox 自动完成动态客户端注册与
-PKCE，token 保存在插件自身配置中，之后自动刷新。
+腾讯文档 MCP 官方已下线 OAuth，仅支持空间级 MCP token：
 
-授权入口：设置 → MCP 连接器 → 本插件 → 点击授权按钮。
+1. 电脑端打开 docs.qq.com 空间列表，进入目标空间
+2. 右上角「≡」→「使用MCP」→「获取MCP token」（需超级会员/超级会员Plus，token 一年有效）
+3. 编辑本插件 `.mcp.json`，把 token 粘贴到 `headers.Authorization` 的值里
+   （key 必须叫 `Authorization`，直接填 token 值，不带 Bearer 前缀）
+4. 保存后宿主热重载自动重连
+
+注意：token 是空间级的，一个空间一个 token；多空间需配置多个 server entry。
 
 ## 上游
 

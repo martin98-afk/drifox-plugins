@@ -3,15 +3,12 @@
     "tencent-docs": {
       "type": "http",
       "url": "https://docs.qq.com/openapi/mcp",
-      "enabled": false,
+      "enabled": true,
       "command": "",
       "args": [],
       "env": {},
-      "headers": {},
-      "auth": {
-        "type": "oauth",
-        "client_name": "DriFox",
-        "scope": ""
+      "headers": {
+        "Authorization": "PASTE_TENCENT_DOCS_TOKEN_HERE"
       }
     }
   }
