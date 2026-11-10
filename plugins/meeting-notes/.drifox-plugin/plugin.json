@@ -1,0 +1,147 @@
+{
+    "name": "meeting-notes",
+    "display_name": {
+        "zh": "会议纪要"
+    },
+    "version": "0.1.0",
+    "description": "语音会议纪要：连续分片录音转写，硅基流动 Diarize 模型区分说话人，会后整段复转提升准确度，再由系统大模型生成结构化纪要与待办；本地会议管理，支持重命名说话人与导出 Markdown",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "license": "MIT",
+    "type": "user",
+    "api_version": 2,
+    "min_host_version": "0.6.12",
+    "platforms": [
+        "windows",
+        "darwin"
+    ],
+    "capabilities": [
+        "ui.notify",
+        "ui.dialog",
+        "engine.session",
+        "model.config",
+        "provider.list",
+        "model.enumerate",
+        "storage.data_dir"
+    ],
+    "keywords": [
+        "meeting",
+        "transcript",
+        "asr",
+        "diarization",
+        "会议",
+        "纪要",
+        "转录",
+        "说话人分离"
+    ],
+    "config_schema": {
+        "title": "会议纪要配置",
+        "fields": [
+            {
+                "key": "siliconflow_api_key",
+                "label": "硅基流动 API Key",
+                "type": "password",
+                "default": "",
+                "env": "SILICONFLOW_API_KEY",
+                "placeholder": "留空则自动复用「语音输入」插件已填的 Key"
+            },
+            {
+                "key": "reuse_voice_input_key",
+                "label": "复用语音输入插件的 Key",
+                "type": "bool",
+                "default": true,
+                "description": "开启后，上面留空时自动读取 voice-input 插件的硅基流动 Key"
+            },
+            {
+                "key": "asr_model",
+                "label": "识别模型",
+                "type": "select",
+                "default": "XingChenAGI/XingChenASR-Diarize-V3.0",
+                "options": [
+                    {
+                        "value": "XingChenAGI/XingChenASR-Diarize-V3.0",
+                        "label": "星尘 ASR 说话人分离（免费，推荐）"
+                    },
+                    {
+                        "value": "XingChenAGI/XingChenASR-V3.2",
+                        "label": "星尘 ASR V3.2（免费，无说话人）"
+                    },
+                    {
+                        "value": "FunAudioLLM/SenseVoiceSmall",
+                        "label": "SenseVoice Small（免费，无说话人）"
+                    },
+                    {
+                        "value": "Qwen/Qwen3-ASR-1.7B",
+                        "label": "Qwen3-ASR（约 0.79 元/小时，准确度更高）"
+                    }
+                ],
+                "description": "说话人分离只在 Diarize 模型上可用；其余模型只出文字"
+            },
+            {
+                "key": "chunk_seconds",
+                "label": "切片时长（秒）",
+                "type": "number",
+                "default": 20,
+                "min": 10,
+                "max": 60,
+                "step": 5,
+                "description": "每片录多久上传识别一次。越短字幕越实时，请求越频繁（免费模型有限流）"
+            },
+            {
+                "key": "keep_audio",
+                "label": "保留录音文件",
+                "type": "bool",
+                "default": true,
+                "description": "保留会议 WAV 以便重转。关闭后会议结束即删除录音，只留文字"
+            },
+            {
+                "key": "summary_model",
+                "label": "纪要模型",
+                "type": "text",
+                "default": "",
+                "placeholder": "留空跟随当前对话模型，如 硅基流动:deepseek-ai/DeepSeek-V3",
+                "description": "生成纪要用的服务商与模型，格式「服务商:模型名」。留空则用当前窗口模型"
+            },
+            {
+                "key": "summary_prompt",
+                "label": "纪要提示词",
+                "type": "textarea",
+                "default": "",
+                "rows": 6,
+                "placeholder": "留空使用内置模板（概要/关键讨论/决议/待办/风险）",
+                "description": "自定义纪要输出结构。用 {transcript} 代表转写稿；不写占位符时转写稿会自动接在末尾"
+            },
+            {
+                "key": "siliconflow_console",
+                "label": "获取硅基流动 Key",
+                "type": "link",
+                "url": "https://cloud.siliconflow.cn/account/ak",
+                "placeholder": "前往硅基流动创建 API Key"
+            }
+        ]
+    },
+    "components": {
+        "tools": false,
+        "commands": false,
+        "agents": false,
+        "skills": false,
+        "hooks": false,
+        "mcp": false,
+        "lsp": false,
+        "themes": false,
+        "ui": true,
+        "providers": false,
+        "team_templates": false,
+        "model_adapters": false,
+        "loop_policies": false,
+        "storages": false,
+        "serializers": false,
+        "gateways": false,
+        "engines": false
+    }
+}
