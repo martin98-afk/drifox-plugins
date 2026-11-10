@@ -190,7 +190,7 @@ except Exception as _e:  # noqa: BLE001 - 扩展模块缺失不应阻断上游�
 
 importlib.reload(_server)
 
-IMPLS: dict = {}    # 工具名 → 同步 impl（kwargs → content str）
+IMPLS: dict = {}    # 工具名 → 同步 impl（kwargs → str 或 MCP content 块列表）
 SCHEMAS: dict = {}  # 工具名 → OpenAI function schema（上游原始定义）
 
 
@@ -204,6 +204,18 @@ def _make_impl(fn):
         out = asyncio.run(fn(**kwargs))
         if isinstance(out, str):
             return out
+        if isinstance(out, list):
+            # MCP Content 块列表（含 ImageContent）保留结构，交给 gateway 透传；
+            # 旧路径 json.dumps(default=str) 会把图片压成 repr 字符串。
+            blocks = []
+            for item in out:
+                if hasattr(item, "model_dump"):
+                    blocks.append(item.model_dump(exclude_none=True))
+                elif isinstance(item, dict):
+                    blocks.append(item)
+                else:
+                    blocks.append({"type": "text", "text": str(item)})
+            return blocks
         return json.dumps(out, ensure_ascii=False, default=str)
 
     return _impl

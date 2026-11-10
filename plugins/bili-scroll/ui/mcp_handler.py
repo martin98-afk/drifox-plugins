@@ -31,6 +31,8 @@ def build_tools() -> List[dict]:
 
 def _maybe_qrcode_popup(name: str, content: str) -> None:
     """扫码体验：bili_login 出码弹窗直显；登录 done/timeout 自动收窗。"""
+    if not isinstance(content, str):
+        return
     try:
         if name == "bili_login":
             data = json.loads(content)
@@ -57,7 +59,11 @@ def mcp_handle(params: Dict[str, Any]) -> dict:
     try:
         content = impl(**kwargs)
         _maybe_qrcode_popup(name, content)
-        return {"text": content if isinstance(content, str) else json.dumps(content, ensure_ascii=False, default=str)}
+        if isinstance(content, str):
+            return {"text": content}
+        if isinstance(content, list):
+            return {"content": content}
+        return {"text": json.dumps(content, ensure_ascii=False, default=str)}
     except Exception as e:
         from loguru import logger
 
