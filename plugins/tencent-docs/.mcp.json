@@ -7,8 +7,15 @@
       "command": "",
       "args": [],
       "env": {},
-      "headers": {
-        "Authorization": "PASTE_TENCENT_DOCS_TOKEN_HERE"
+      "headers": {},
+      "credential": {
+        "label": "MCP Token",
+        "placeholder": "腾讯文档空间 MCP Token",
+        "getUrl": "https://docs.qq.com/open/document/mcp/get-token",
+        "inject": {
+          "type": "header",
+          "name": "Authorization"
+        }
       }
     }
   }
