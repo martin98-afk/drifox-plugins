@@ -6440,6 +6440,72 @@
             }
         },
         {
+            "name": "meeting-notes",
+            "description": "语音会议纪要：连续分片录音转写，硅基流动 Diarize 模型区分说话人，会后整段复转提升准确度，再由系统大模型生成结构化纪要与待办；本地会议管理，支持重命名说话人与导出 Markdown",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/meeting-notes",
+                "ref": "main"
+            },
+            "components": {
+                "tools": false,
+                "commands": false,
+                "agents": false,
+                "skills": false,
+                "hooks": false,
+                "mcp": false,
+                "lsp": false,
+                "themes": false,
+                "ui": true,
+                "providers": false,
+                "team_templates": false,
+                "model_adapters": false,
+                "loop_policies": false,
+                "storages": false,
+                "serializers": false,
+                "gateways": false,
+                "engines": false
+            },
+            "display_name": {
+                "zh": "会议纪要"
+            },
+            "keywords": [
+                "meeting",
+                "transcript",
+                "asr",
+                "diarization",
+                "会议",
+                "纪要",
+                "转录",
+                "说话人分离"
+            ],
+            "platforms": [
+                "windows",
+                "darwin",
+                "linux"
+            ],
+            "min_host_version": "0.6.12",
+            "api_version": 2,
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-meeting-notes-v0.1.0/meeting-notes-0.1.0-all.tar.gz",
+                    "sha256": "2f48d695dcd948267ca604493af7c16ea42f88c4119d37504355d55a1bbc5a94",
+                    "size": 61096
+                }
+            }
+        },
+        {
             "name": "memory-match",
             "description": "经典记忆翻牌游戏——在 DriFox 中直接玩的浮動卡片",
             "version": "0.3.0",
