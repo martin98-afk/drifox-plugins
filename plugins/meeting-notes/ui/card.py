@@ -15,6 +15,7 @@
 
 from __future__ import annotations
 
+import shutil
 import tempfile
 import threading
 import time
@@ -66,6 +67,9 @@ _REFINE_SEGMENT_SEC = 600
 # 不足这么长的尾巴不单独精转（秒）
 _MIN_REFINE_SEC = 30
 
+# 内容面板最大宽度：屏幕很宽时铺满会把转写行长拉到难读
+_PANEL_MAX_WIDTH = 1280
+
 
 class MeetingNotesCard(QWidget):
     """会议纪要主卡片。"""
@@ -79,6 +83,7 @@ class MeetingNotesCard(QWidget):
     _sig_refine_done = pyqtSignal(object, bool)
     _sig_summary_done = pyqtSignal(str)
     _sig_summary_error = pyqtSignal(str)
+    _sig_import_done = pyqtSignal(object)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
@@ -129,6 +134,7 @@ class MeetingNotesCard(QWidget):
         self._sig_refine_done.connect(self._on_refine_done)
         self._sig_summary_done.connect(self._on_summary_done)
         self._sig_summary_error.connect(self._on_summary_error)
+        self._sig_import_done.connect(self._on_import_done)
 
         self._build_ui()
 
@@ -267,15 +273,16 @@ class MeetingNotesCard(QWidget):
     # ══════════════════════════════════════════════════
 
     def _build_ui(self) -> None:
-        outer = QVBoxLayout(self)
+        outer = QHBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)
 
-        # 内容面板：整页铺满且自身不透明。full 卡容器是透明承托，
-        # 不铺底的话主题壁纸会直接透上来，正文对比度不够。
+        # 内容面板：自身不透明（full 卡容器是透明承托，不铺底壁纸会透上来压掉对比度），
+        # 但限最大宽度——屏幕很宽时铺满会把转写行长拉到难读，两侧留白更稳。
         self._panel = QFrame(self)
         self._panel.setObjectName("mnPanel")
-        outer.addWidget(self._panel)
+        self._panel.setMaximumWidth(_PANEL_MAX_WIDTH)
+        outer.addWidget(self._panel, 1)
 
         root = QHBoxLayout(self._panel)
         root.setContentsMargins(0, 0, 0, 0)
@@ -306,11 +313,20 @@ class MeetingNotesCard(QWidget):
         self._search.textChanged.connect(self._on_search)
         lay.addWidget(self._search)
 
-        # 新建会议：显式入口。麦克风只负责「在会议内录音」，不再兼职开新会议
-        self._new_btn = PushButton(FluentIcon.ADD, "新建会议", panel)
+        # 新建会议 + 导入音频：两个入口并排，都不与「录音」混在一起
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(8)
+        self._new_btn = PushButton(FluentIcon.ADD, "新建", panel)
         self._new_btn.setCursor(Qt.PointingHandCursor)
+        self._new_btn.setToolTip("新建一场空会议")
         self._new_btn.clicked.connect(self._on_new_meeting)
-        lay.addWidget(self._new_btn)
+        self._import_btn = PushButton(FluentIcon.FOLDER, "导入音频", panel)
+        self._import_btn.setCursor(Qt.PointingHandCursor)
+        self._import_btn.setToolTip("把已有录音（16bit WAV）导入成一场会议并识别")
+        self._import_btn.clicked.connect(self._on_import_audio)
+        btn_row.addWidget(self._new_btn, 1)
+        btn_row.addWidget(self._import_btn, 1)
+        lay.addLayout(btn_row)
 
         self._list_scroll = SmoothScrollArea(panel)
         self._list_scroll.setWidgetResizable(True)
@@ -591,6 +607,10 @@ class MeetingNotesCard(QWidget):
         return self._tr_host.findChildren(TranscriptRow)
 
     def _render_transcript(self) -> None:
+        bar = self._tr_scroll.verticalScrollBar()
+        prev_value = bar.value()
+        at_bottom = prev_value >= bar.maximum() - 80
+
         for i in reversed(range(self._tr_lay.count())):
             it = self._tr_lay.itemAt(i)
             w = it.widget() if it is not None else None
@@ -617,6 +637,13 @@ class MeetingNotesCard(QWidget):
             )
             row.speaker_renamed.connect(self._on_speaker_renamed)
             self._tr_lay.insertWidget(self._tr_lay.count() - 1, row)
+
+        # 重建后恢复阅读位置：精转会在录音中整页重绘，不恢复会跳回顶部
+        def _restore() -> None:
+            b = self._tr_scroll.verticalScrollBar()
+            b.setValue(b.maximum() if at_bottom else min(prev_value, b.maximum()))
+
+        QTimer.singleShot(0, _restore)
 
     def _append_transcript_rows(self, segs: List[dict]) -> None:
         """录音中增量追加（不整页重绘，避免滚动位置跳动）。"""
@@ -709,6 +736,91 @@ class MeetingNotesCard(QWidget):
         self._render_current()
         self._switch_tab(0)
         self._notify("success", "已新建会议", "点右侧麦克风开始录音")
+
+    def _on_import_audio(self) -> None:
+        """导入外部音频作为一场会议：校验规整 → 建会议 → 走同一套精转流程。"""
+        if self._recording or self._finished_pending or self._refining:
+            self._notify("info", "正在处理", "结束当前录音或整理完再导入")
+            return
+        # 导入前先确认能识别：没 Key 的话导入完只会得到一场空会议
+        if not config.resolve_api_key(config.read_config()):
+            self._notify(
+                "error",
+                "缺少 API Key",
+                "请先到 设置 → 会议纪要配置 填写硅基流动 Key（或配置「语音输入」插件）",
+            )
+            return
+        path = self._pick_file("导入音频", "", "WAV 音频 (*.wav)")
+        if not path:
+            return
+        src = Path(path)
+        if not src.exists():
+            self._notify("error", "文件不存在", path)
+            return
+
+        self._status_lbl.setText("正在导入音频")
+        self._hint_lbl.setText(src.name)
+        self._sync_buttons()
+
+        tmp = Path(tempfile.mkdtemp(prefix="drifox_meeting_import_")) / "audio.wav"
+
+        def work() -> None:
+            payload = {"src": src, "tmp": tmp, "duration": 0.0, "error": ""}
+            try:
+                payload["duration"] = store.normalize_import_wav(src, tmp)
+            except Exception as e:  # noqa: BLE001 — 格式不支持等，回主线程提示
+                payload["error"] = str(e)
+            self._sig_import_done.emit(payload)
+
+        threading.Thread(target=work, daemon=True, name="meeting-notes-import").start()
+
+    def _on_import_done(self, payload: dict) -> None:
+        tmp = Path(payload.get("tmp"))
+        err = str(payload.get("error") or "")
+        if err:
+            store.cleanup_temp([tmp])
+            try:
+                tmp.parent.rmdir()
+            except OSError:
+                pass
+            self._status_lbl.setText("导入失败")
+            self._hint_lbl.setText(err)
+            self._sync_buttons()
+            self._notify("error", "导入失败", err)
+            return
+
+        cfg = config.read_config()
+        m = store.new_meeting(str(cfg.get("asr_model") or config.DEFAULT_MODEL))
+        m.title = store.safe_filename(Path(payload["src"]).stem)
+        m.status = "done"
+        m.duration_sec = float(payload.get("duration") or 0.0)
+        store.save(m)
+
+        try:
+            shutil.move(str(tmp), str(store.audio_path_for(m)))
+        except OSError as e:  # noqa: BLE001 — 挪不进去就别建成半截会议
+            store.delete(m.id)
+            self._status_lbl.setText("导入失败")
+            self._hint_lbl.setText(f"写入会议目录失败：{e}")
+            self._sync_buttons()
+            self._notify("error", "导入失败", str(e))
+            return
+        finally:
+            try:
+                tmp.parent.rmdir()
+            except OSError:
+                pass
+
+        self._meeting = m
+        self._reload_list()
+        self._mark_selected(m.id)
+        self._render_current()
+        self._switch_tab(0)
+        self._notify("success", "音频已导入", "正在分段识别，完成后自动生成纪要")
+
+        # 复用「会议已结束」的收尾链路：逐段精转，全部转完自动出纪要
+        self._finished_pending = True
+        self._drain_refine_then_finish()
 
     def _start_recording(self) -> None:
         """在当前会议里开始录音（已有录音则往后追加）；没有会议时先建一场。"""
@@ -1025,21 +1137,26 @@ class MeetingNotesCard(QWidget):
         这样「结束会议」最多只需等最后一段，而不是整场音频。
         """
         m = self._meeting
-        if m is None or self._refining or self._joiner is None:
+        if m is None or self._refining:
             return False
         cfg = config.read_config()
         key = config.resolve_api_key(cfg)
         if not key:
             return False
 
-        total = self._joiner.duration_sec()
+        total = (
+            self._joiner.duration_sec()
+            if self._joiner is not None
+            else float(m.duration_sec or 0.0)
+        )
         start = float(m.refined_until or 0.0)
         remain = total - start
         if remain < _MIN_REFINE_SEC:
             return False
         if not force_final and remain < _REFINE_SEGMENT_SEC:
             return False
-        end = total if force_final else start + _REFINE_SEGMENT_SEC
+        # 一次最多传一段（50MB/1 小时上限），长音频靠多次 drain 跑完
+        end = min(total, start + _REFINE_SEGMENT_SEC)
 
         # 切片在主线程做完：录音中主 WAV 正被追加写，后台并发读同一文件
         # 会与追加重写 RIFF 头撞上。读 10 分钟音频只要几十毫秒。
@@ -1460,6 +1577,17 @@ class MeetingNotesCard(QWidget):
             self, title, content, QMessageBox.Yes | QMessageBox.No, QMessageBox.No
         )
         return ret == QMessageBox.Yes
+
+    def _pick_file(self, title: str, start_dir: str, file_filter: str) -> str:
+        api = self._cap("ui.dialog")
+        fn = api.get("pick_file") if isinstance(api, dict) else None
+        if callable(fn):
+            try:
+                return str(fn(title, start_dir, file_filter) or "")
+            except Exception as e:  # noqa: BLE001
+                logger.debug(f"[meeting-notes] 宿主文件框失败，回退原生: {e}")
+        path, _ = QFileDialog.getOpenFileName(self, title, start_dir, file_filter)
+        return str(path or "")
 
     def _save_file(self, title: str, start_dir: str, file_filter: str) -> str:
         api = self._cap("ui.dialog")

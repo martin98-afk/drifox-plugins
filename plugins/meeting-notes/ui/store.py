@@ -524,6 +524,43 @@ def _locate_data_chunk(f) -> tuple:
         f.seek(size + (size & 1), 1)
 
 
+def normalize_import_wav(src: Path, dst: Path) -> float:
+    """把外部 WAV 规整成插件可处理的形态并写到 dst，返回时长（秒）。
+
+    只接受 16bit PCM：单声道直接复制，立体声下混成单声道。
+    其他位宽/编码直接拒绝——转码需要 ffmpeg，宿主不带。
+    """
+    with wave.open(str(src), "rb") as f:
+        nch = f.getnchannels()
+        width = f.getsampwidth()
+        rate = f.getframerate()
+        total = f.getnframes()
+        frames = f.readframes(total)
+    if width != 2:
+        raise ValueError(f"需要 16bit PCM 的 WAV（当前 {width * 8}bit）")
+    if not frames:
+        raise ValueError("音频是空的")
+
+    if nch == 1:
+        shutil.copyfile(src, dst)
+    elif nch == 2:
+        import array
+
+        samples = array.array("h")
+        samples.frombytes(frames)
+        mono = array.array(
+            "h", ((samples[i] + samples[i + 1]) // 2 for i in range(0, len(samples) - 1, 2))
+        )
+        with wave.open(str(dst), "wb") as out:
+            out.setnchannels(1)
+            out.setsampwidth(2)
+            out.setframerate(rate)
+            out.writeframes(mono.tobytes())
+    else:
+        raise ValueError(f"不支持 {nch} 声道（需要单声道或立体声）")
+    return total / float(rate or 16000)
+
+
 def extract_wav_range(src: Path, out: Path, start_sec: float, end_sec: float) -> Optional[Path]:
     """从主录音里剪出 [start_sec, end_sec) 一段。用于增量精转。"""
     if not src.exists():

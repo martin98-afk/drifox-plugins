@@ -7,7 +7,8 @@
     rec.close()                # 异常路径兜底释放设备
 
 平台差异被隔离在 recorder_win / recorder_mac 里：Windows 是 MCI（模块顶层
-绑定 ctypes.windll，只能按平台延迟导入），macOS 是 AVFoundation。
+绑定 ctypes.windll，只能按平台延迟导入），macOS 是 AVFoundation，
+Linux 是 arecord（alsa-utils）。
 """
 
 from __future__ import annotations
@@ -20,7 +21,7 @@ from loguru import logger
 
 
 def is_supported() -> bool:
-    return sys.platform in ("win32", "darwin")
+    return sys.platform in ("win32", "darwin", "linux")
 
 
 def make_recorder():
@@ -33,6 +34,10 @@ def make_recorder():
         from .recorder_win import WinChunkRecorder
 
         return WinChunkRecorder()
+    if sys.platform.startswith("linux"):
+        from .recorder_linux import LinuxChunkRecorder
+
+        return LinuxChunkRecorder()
     raise RuntimeError(f"当前平台（{sys.platform}）不支持录音")
 
 

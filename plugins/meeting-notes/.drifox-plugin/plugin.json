@@ -18,7 +18,8 @@
     "min_host_version": "0.6.12",
     "platforms": [
         "windows",
-        "darwin"
+        "darwin",
+        "linux"
     ],
     "capabilities": [
         "ui.notify",

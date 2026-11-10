@@ -106,6 +106,40 @@ class StoreTests(unittest.TestCase):
         with wave.open(str(part), "rb") as wf:
             self.assertEqual(wf.getnframes(), 32000)
 
+    def test_import_wav_mono_copied(self):
+        src = self.tmp / "in.wav"
+        write_wav(src, 2.0)
+        dst = self.tmp / "out.wav"
+        duration = store.normalize_import_wav(src, dst)
+        self.assertAlmostEqual(duration, 2.0, places=2)
+        self.assertEqual(dst.read_bytes(), src.read_bytes())
+
+    def test_import_wav_stereo_downmixed(self):
+        src = self.tmp / "stereo.wav"
+        with wave.open(str(src), "wb") as wf:
+            wf.setnchannels(2)
+            wf.setsampwidth(2)
+            wf.setframerate(16000)
+            # 左右声道交替：100 与 200 → 下混应得 150
+            wf.writeframes(struct.pack("<hhhh", 100, 200, 100, 200) * 8000)
+        dst = self.tmp / "mono.wav"
+        duration = store.normalize_import_wav(src, dst)
+        self.assertAlmostEqual(duration, 1.0, places=2)
+        with wave.open(str(dst), "rb") as wf:
+            self.assertEqual(wf.getnchannels(), 1)
+            data = wf.readframes(2)
+        self.assertEqual(struct.unpack("<h", data[:2])[0], 150)
+
+    def test_import_wav_rejects_8bit(self):
+        src = self.tmp / "bad.wav"
+        with wave.open(str(src), "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(1)
+            wf.setframerate(16000)
+            wf.writeframes(b"\x80" * 100)
+        with self.assertRaises(ValueError):
+            store.normalize_import_wav(src, self.tmp / "o.wav")
+
     # ── 会议文件夹 ──
 
     def test_save_creates_named_folder(self):
