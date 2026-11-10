@@ -9549,9 +9549,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-tencent-docs-v1.0.2/tencent-docs-1.0.2-all.tar.gz",
-                    "sha256": "d2b928834837b3bcca802ff5b24c915dc446c86014365dfbee65aee624a980bd",
-                    "size": 12065
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-tencent-docs-v1.0.3/tencent-docs-1.0.3-all.tar.gz",
+                    "sha256": "58cc866000ac0ebf09307ab9874dfce6ec60cb1189fd8d9193c2deec9fb79971",
+                    "size": 12084
                 }
             }
         },
