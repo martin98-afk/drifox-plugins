@@ -9517,7 +9517,7 @@
         {
             "name": "tencent-docs",
             "description": "腾讯文档 — 创建、搜索、阅读和编辑腾讯文档，支持文档、表格、幻灯片与思维导图。",
-            "version": "1.0.2",
+            "version": "1.0.3",
             "author": "liliMozi",
             "license": "GPL-3.0-or-later",
             "categories": [

@@ -11,7 +11,7 @@
       "credential": {
         "label": "MCP Token",
         "placeholder": "腾讯文档空间 MCP Token",
-        "getUrl": "https://docs.qq.com/open/document/mcp/get-token",
+        "getUrl": "https://docs.qq.com/scenario/open-claw.html?authType=2",
         "inject": {
           "type": "header",
           "name": "Authorization"

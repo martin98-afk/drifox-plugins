@@ -15,7 +15,7 @@
 
 1. 电脑端打开 docs.qq.com 空间列表，进入目标空间
 2. 右上角「≡」→「使用MCP」→「获取MCP token」（需超级会员/超级会员Plus，token 一年有效）
-3. 设置 → MCP 连接器 → 本插件 → 填入 Token（「申请页」按钮直达官方获取教程）
+3. 设置 → MCP 连接器 → 本插件 → 填入 Token（「申请页」按钮直达一键复制页）
 4. 宿主按 `credential.inject` 把 Token 以 `Authorization: <token>` 头注入（无 Bearer 前缀）
 
 注意：token 是空间级的，一个空间一个 token；多空间需配置多个 server entry。
