@@ -791,7 +791,7 @@
             "display_name": {
                 "zh": "B站日报"
             },
-            "downloads": 26,
+            "downloads": 27,
             "keywords": [
                 "bilibili",
                 "b站",
@@ -958,7 +958,7 @@
             "display_name": {
                 "zh": "内置浏览器"
             },
-            "downloads": 92,
+            "downloads": 93,
             "keywords": [
                 "browser",
                 "web",
@@ -4427,7 +4427,7 @@
             "display_name": {
                 "zh": "飞书网关"
             },
-            "downloads": 53,
+            "downloads": 55,
             "platforms": [
                 "windows",
                 "linux",
@@ -4636,7 +4636,7 @@
             "display_name": {
                 "zh": "微信网关"
             },
-            "downloads": 19,
+            "downloads": 20,
             "dependencies": {
                 "pip": {
                     "default": [
