@@ -22,18 +22,52 @@
 
 from __future__ import annotations
 
+import importlib.machinery
+import importlib.util
 import json
 import os
 import shutil
 import struct
+import sys
 import time
 import uuid
-import wave
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from loguru import logger
+
+
+def _load_vendored_wave():
+    """打包版宿主（PyInstaller）没收录 stdlib wave，改用插件自带副本。
+
+    副本由 CI 按 tools/smoke_check_tarball.py 的 STDLIB_SHIM_PLUGINS 生成到
+    deps/_pystdlib_xml/wave.py。frozen finder 挂在 sys.meta_path 前面，只往
+    sys.path 塞目录不生效，必须自带 finder 接管。
+    """
+    shim = Path(__file__).resolve().parents[1] / "deps" / "_pystdlib_xml"
+    if not (shim / "wave.py").is_file():
+        raise ModuleNotFoundError(
+            "No module named 'wave'（宿主未带该标准库，插件也缺 deps/_pystdlib_xml/wave.py）"
+        )
+    file_finder = importlib.machinery.FileFinder.path_hook(
+        (importlib.machinery.SourceFileLoader, importlib.machinery.SOURCE_SUFFIXES)
+    )(str(shim))
+
+    class _WaveOnly:
+        def find_spec(self, fullname, path=None, target=None):
+            if fullname != "wave":
+                return None
+            return file_finder.find_spec(fullname, target)
+
+    sys.meta_path.insert(0, _WaveOnly())
+    return importlib.import_module("wave")
+
+
+try:
+    import wave
+except ModuleNotFoundError:
+    wave = _load_vendored_wave()
 
 PLUGIN_NAME = "meeting-notes"
 

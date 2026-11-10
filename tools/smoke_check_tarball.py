@@ -51,6 +51,8 @@ _SKIP_DIR_PARTS = {"__pycache__", ".git", "deps", "vendor", "node_modules"}
 # 这里反向盯豁免区：清单内插件的包不带 shim = 装上必炸，一票拒绝。
 # 宿主补齐 hiddenimports 后清空此表。
 STDLIB_SHIM_PLUGINS = {
+    # meeting-notes 用 wave 读写会议录音，打包版 base_library.zip 同样没有
+    "meeting-notes": ("_pystdlib_xml/wave.py",),
     "bili-scroll": (
         "_pystdlib_xml/xml/__init__.py",
         "_pystdlib_xml/xml/dom/__init__.py",

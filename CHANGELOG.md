@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+### 🔧 meeting-notes v0.1.1：打包版缺 stdlib wave 导致整个 UI 加载失败
+- **症状**：打包版宿主（PyInstaller）里 `[UIPluginRegistry] Failed to load UI for meeting-notes: No module named 'wave'`，卡片与设置面板全部不出现；源码跑（venv 3.14）正常
+- **根因**：打包版只收集主程序用到的 stdlib 子集，`_internal/base_library.zip` 实测无 `wave.py`；`ui/store.py` 顶层 `import wave` 直接炸掉 `ui/__init__.py` 整条导入链
+- **修复**：`store.py` 捕获 `ModuleNotFoundError` 后从插件自带 `deps/_pystdlib_xml/wave.py` 接管导入（frozen finder 在 `sys.meta_path` 前面，只塞 `sys.path` 不生效，自带 finder）；`tools/smoke_check_tarball.py` 的 `STDLIB_SHIM_PLUGINS` 加 `meeting-notes → _pystdlib_xml/wave.py`，CI 构建时按清单从 3.14 stdlib 生成副本，门禁校验包内必带
+- **验证**：安装副本热重载后日志 `[meeting-notes] 已注册 full 卡片`，UI 在打包版宿主内正常加载
 ### 🔧 gateway-qq v1.2.2：重连竞态修复（多监听任务并发 receive 与 session 泄漏）
 - **症状**：断线后日志风暴——`Concurrent call to receive() is not allowed`、`'NoneType' object has no attribute 'receive'`、一秒内多路 `Reconnecting in 2s/5s/10s/30s` 交错、成串 `Unclosed client session`，退避不收敛
 - **根因**：`_listen_loop` 自身调 `_handle_reconnect`，而重连内的 `connect()` 成功又 create_task 新监听任务；旧任务重连返回后 continue 回循环头，与新任务并发读同一 ws（aiohttp 禁止）。每个监听任务断线/崩溃各开一个重连循环（任务滚雪球），并发 connect 互相覆盖 `_session`/`_ws` 引致泄漏与 NoneType 崩溃；共享 `_backoff_idx` 被成功路径重置，退避失效
