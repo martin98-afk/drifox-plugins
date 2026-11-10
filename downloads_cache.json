@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1794307097.1383638,
+  "fetched_at": 1794334979.1875415,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -20,7 +20,7 @@
     "baldurs-gate-3": 2,
     "baldurs-gate-3-alt": 3,
     "beautiful-article-skills": 3,
-    "bili-scroll": 29,
+    "bili-scroll": 31,
     "bili-summary": 1,
     "breakout": 6,
     "browser": 93,
@@ -149,6 +149,7 @@
     "marketplace-recommend": 2,
     "mattpocock-skills": 0,
     "mcp-builder": 1,
+    "meeting-notes": 1,
     "memory-match": 4,
     "meteors-dawn": 4,
     "microsoft-learn": 0,
@@ -221,7 +222,7 @@
     "tailwind-pro": 0,
     "taskboard": 3,
     "teach": 1,
-    "tencent-docs": 3,
+    "tencent-docs": 4,
     "tencent-hunyuan": 2,
     "tencent-map": 1,
     "test-scaffold": 0,

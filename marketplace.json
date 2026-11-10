@@ -791,7 +791,7 @@
             "display_name": {
                 "zh": "B站日报"
             },
-            "downloads": 29,
+            "downloads": 31,
             "keywords": [
                 "bilibili",
                 "b站",
@@ -6476,6 +6476,7 @@
             "display_name": {
                 "zh": "会议纪要"
             },
+            "downloads": 1,
             "keywords": [
                 "meeting",
                 "transcript",
@@ -9601,7 +9602,7 @@
             "display_name": {
                 "zh": "腾讯文档"
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "mcp",
                 "connector",
