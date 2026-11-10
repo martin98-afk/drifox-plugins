@@ -162,12 +162,14 @@ class MeetingNotesCard(QWidget):
     def apply_theme(self) -> None:
         self._theme = Theme(self._ctx())
         t = self._theme
-        side_bg = t.dim("#000000", 0.18 if t.is_dark else 0.035)
+        side_bg = t.dim("#000000", 0.16 if t.is_dark else 0.03)
+        # 面板底色：半透明——全不透明会盖死主题壁纸，全透明正文又被壁纸吃掉对比度
+        panel_bg = t.with_alpha(t.card_bg_solid, 0.82)
         # 内容面板自带底色：整页铺满的实心面，跟壁纸隔开
         self.setStyleSheet(
             f"MeetingNotesCard {{ background: transparent; {t.font()} }}"
             "QFrame#mnPanel {"
-            f"background: {t.card_bg_solid};"
+            f"background: {panel_bg};"
             f"border: 1px solid {t.border};"
             "border-radius: 0px;"
             "}"
@@ -750,7 +752,11 @@ class MeetingNotesCard(QWidget):
                 "请先到 设置 → 会议纪要配置 填写硅基流动 Key（或配置「语音输入」插件）",
             )
             return
-        path = self._pick_file("导入音频", "", "WAV 音频 (*.wav)")
+        path = self._pick_file(
+            "导入音频",
+            "",
+            "音频 (*.wav *.m4a *.mp3 *.aac *.flac *.ogg *.wma *.amr *.opus);;所有文件 (*)",
+        )
         if not path:
             return
         src = Path(path)
@@ -767,7 +773,7 @@ class MeetingNotesCard(QWidget):
         def work() -> None:
             payload = {"src": src, "tmp": tmp, "duration": 0.0, "error": ""}
             try:
-                payload["duration"] = store.normalize_import_wav(src, tmp)
+                payload["duration"] = store.convert_audio(src, tmp)
             except Exception as e:  # noqa: BLE001 — 格式不支持等，回主线程提示
                 payload["error"] = str(e)
             self._sig_import_done.emit(payload)

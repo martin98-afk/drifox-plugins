@@ -561,6 +561,46 @@ def normalize_import_wav(src: Path, dst: Path) -> float:
     return total / float(rate or 16000)
 
 
+def convert_audio(src: Path, dst: Path) -> float:
+    """把任意常见音频转成插件要的 WAV（16k/16bit/单声道），返回时长（秒）。
+
+    有 ffmpeg 就交给它（m4a/mp3/aac/flac/ogg/wma 都能吃，顺带统一采样率）；
+    没有 ffmpeg 时只接受 16bit WAV，走内置的纯标准库路径。
+    """
+    import shutil
+    import subprocess
+
+    ffmpeg = shutil.which("ffmpeg")
+    if ffmpeg:
+        cmd = [
+            ffmpeg,
+            "-y",
+            "-i",
+            str(src),
+            "-vn",
+            "-ac",
+            "1",
+            "-ar",
+            "16000",
+            "-c:a",
+            "pcm_s16le",
+            str(dst),
+        ]
+        proc = subprocess.run(cmd, capture_output=True)
+        if proc.returncode != 0 or not dst.exists() or dst.stat().st_size <= 44:
+            detail = (proc.stderr or b"").decode("utf-8", "ignore").strip().splitlines()
+            tail = detail[-1] if detail else "未知错误"
+            raise RuntimeError(f"音频转码失败：{tail}")
+        with wave.open(str(dst), "rb") as wf:
+            return wf.getnframes() / float(wf.getframerate() or 16000)
+
+    if src.suffix.lower() != ".wav":
+        raise RuntimeError(
+            "导入该格式需要安装 ffmpeg（或用工具先转成 16bit WAV）"
+        )
+    return normalize_import_wav(src, dst)
+
+
 def extract_wav_range(src: Path, out: Path, start_sec: float, end_sec: float) -> Optional[Path]:
     """从主录音里剪出 [start_sec, end_sec) 一段。用于增量精转。"""
     if not src.exists():
