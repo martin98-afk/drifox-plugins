@@ -767,7 +767,7 @@
         {
             "name": "bili-scroll",
             "description": "每天替你刷一轮 B站：按关键词或推荐流搜视频、逐条读字幕判断、挑出值得的写成日报，特别值得的经你授权后自动评论 @你。扫码登录、峰谷时段自动跑、判重防打扰。",
-            "version": "0.3.2",
+            "version": "0.3.3",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -840,19 +840,19 @@
             },
             "tarball": {
                 "darwin": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.3.2/bili-scroll-0.3.2-darwin.tar.gz",
-                    "sha256": "e7dd08ec52c68c59c75ceb2c12cc53ada994447d0f1b6779fa83db5f88c06874",
-                    "size": 19295917
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.3.3/bili-scroll-0.3.3-darwin.tar.gz",
+                    "sha256": "b67eb07236ff4a12833aa5439d2fd3fb6dd181f5131476d1255e5d0aed9192c0",
+                    "size": 19295974
                 },
                 "linux": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.3.2/bili-scroll-0.3.2-linux.tar.gz",
-                    "sha256": "871974c01cad73cdaa796e5f856a1dbcefacfaff031117a5558500561f901f4a",
-                    "size": 20853998
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.3.3/bili-scroll-0.3.3-linux.tar.gz",
+                    "sha256": "7aaea4c91f282b71516333718f2eee1aa7733ef1ead1ec200cd661ae01e6e540",
+                    "size": 20853891
                 },
                 "win32": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.3.2/bili-scroll-0.3.2-win32.tar.gz",
-                    "sha256": "b1d454e03e11ea988c492a925c7b1f13f45c3e6974361dc1701108a4c1effb3a",
-                    "size": 15182809
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-bili-scroll-v0.3.3/bili-scroll-0.3.3-win32.tar.gz",
+                    "sha256": "d4163cea01723c5c20d94a927165ae72e5668cb840c7b7f1c6b6d73ec88d429f",
+                    "size": 15182983
                 }
             }
         },
