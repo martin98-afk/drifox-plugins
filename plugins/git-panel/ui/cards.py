@@ -3391,10 +3391,8 @@ class GitPanelCard(QWidget):
         override = resolve_model(
             load_plugin_text_config("commit_provider", ""),
             load_plugin_text_config("commit_model", ""),
-            main_widget,
         )
         llm = get_llm_config(
-            main_widget,
             override_provider=override[0] if override else None,
             override_model=override[1] if override else None,
             services=ctx.get("services"),

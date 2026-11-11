@@ -1,18 +1,19 @@
 # -*- coding: utf-8 -*-
 """git-panel LLM 配置辅助 — 提交描述生成的模型解析与调用材料
 
-复用主程序模型配置（与 prompt-enhancer 同约定）：
-- 明文 API_KEY 经宿主 services["get_provider_config"] 获取（内存态已解锁）；
-  磁盘 app.config 只用于读非密钥字段（渲染「服务商/模型」两级下拉的降级路径），
-  密钥模式下其 API_KEY 是密文/空串，不可用于请求。
+复用主程序模型配置（与 prompt-enhancer 同约定），全部走宿主内存态：
+- 服务商/模型两级下拉：provider.list / model.enumerate 能力（内存态，
+  用户刚加的服务商立即可见）；能力不可用（旧宿主 / 无活跃窗口）下拉为空，
+  已存配置由设置卡回显逻辑保留不丢。
+- 明文 API_KEY 经宿主 services["get_provider_config"] 或能力池 model.config
+  获取（内存态已解锁明文）；绝不 json.load(app.config)——密钥模式下磁盘
+  API_KEY 是密文/空串，不可用于请求。
 - PluginConfigStore 读取 commit_prompt / commit_provider / commit_model 配置
   （服务商、模型分开存，对齐 vision-proxy）；commit_model 存旧格式
   「服务商:模型名」合并值时按兼容路径拆分。
 - get_llm_config：override 优先，回退调用方当前会话模型
 """
 
-import json
-import os
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -26,52 +27,6 @@ DEFAULT_COMMIT_PROMPT = (
     "如有关键改动点可用短句补充；不要用 Markdown 代码块包裹、不要解释，只输出提交描述本身。"
 )
 
-# 主程序 LLM 配置路径（与 prompt-enhancer 同约定）
-_DEFAULT_SYSTEM_CONFIG_PATHS = (
-    os.path.join(os.path.expanduser("~"), ".drifox", "app.config"),
-    os.path.abspath(os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "..", "..", ".drifox", "app.config")),
-)
-
-_SYSTEM_CONFIG_CACHE: Dict[str, Any] = {"path": None, "mtime": 0.0, "data": None}
-
-
-def _resolve_system_config_path() -> Optional[str]:
-    for p in _DEFAULT_SYSTEM_CONFIG_PATHS:
-        if p and os.path.exists(p):
-            return p
-    return None
-
-
-def _load_system_config() -> Optional[Dict[str, Any]]:
-    """读取并缓存主程序 app.config（按 mtime 失效）。
-
-    ⚠️ 仅供读取**非密钥字段**（provider_name / 模型列表 等用于渲染下拉选项）。
-    密钥模式下磁盘 API_KEY 是密文/空串，取 key 走宿主
-    services["get_provider_config"]（见 get_llm_config）。
-    """
-    cfg_path = _resolve_system_config_path()
-    if not cfg_path:
-        return None
-    try:
-        mtime = os.path.getmtime(cfg_path)
-    except OSError:
-        return None
-    cache = _SYSTEM_CONFIG_CACHE
-    if cache["path"] == cfg_path and cache["mtime"] == mtime and cache["data"] is not None:
-        return cache["data"]
-    try:
-        with open(cfg_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except (OSError, ValueError):
-        return None
-    cache["path"] = cfg_path
-    cache["mtime"] = mtime
-    cache["data"] = data
-    return data
-
-
 def _caps(name: str) -> Any:
     """取宿主能力（设置卡无 ctx，走 caps_for 按插件名解析到活跃窗口）。"""
     try:
@@ -84,7 +39,7 @@ def _caps(name: str) -> Any:
 
 
 def load_provider_entries() -> List[Dict[str, Any]]:
-    """内存态服务商清单（provider.list 能力）；不可用返回 []（调用方回退磁盘扫描）。"""
+    """内存态服务商清单（provider.list 能力）；不可用返回 []（下拉留空保已存值）。"""
     fn = _caps("provider.list")
     if not callable(fn):
         return []
@@ -114,163 +69,95 @@ def load_models_of(provider_id: str) -> List[str]:
 def load_provider_tree() -> List[Tuple[str, str]]:
     """服务商两级下拉的第一级选项：[(display, config_id)]。
 
-    首选 provider.list（内存态，用户刚加的服务商立即可见）；能力不可用
-    （旧宿主 / 无活跃窗口）回退扫描 app.config 非密钥字段。
+    走 provider.list（内存态，用户刚加的服务商立即可见）；能力不可用
+    （旧宿主 / 无活跃窗口）返回 []，由设置卡回显逻辑保住已存值。
     """
-    entries = load_provider_entries()
-    if entries:
-        out: List[Tuple[str, str]] = []
-        for p in entries:
-            pid = str(p.get("id") or "")
-            if not pid:
-                continue
-            label = str(p.get("display_name") or pid)
-            if p.get("is_current"):
-                label = f"{label}（当前）"
-            out.append((label, pid))
-        if out:
-            return out
-    # 降级：磁盘扫描（仅非密钥字段，与旧版渲染路径同源）
-    data = _load_system_config()
-    if data is None:
-        return []
-    saved = (data.get("LLM") or {}).get("SavedProviders") or {}
-    seen: set = set()
-    out = []
-    for cid, p in saved.items():
-        if not isinstance(p, dict):
+    out: List[Tuple[str, str]] = []
+    for p in load_provider_entries():
+        pid = str(p.get("id") or "")
+        if not pid:
             continue
-        name = str(p.get("provider_name") or p.get("name") or cid).strip()
-        if not cid or not name or cid in seen:
-            continue
-        seen.add(cid)
-        out.append((name, cid))
-    out.sort(key=lambda item: item[0].lower())
+        label = str(p.get("display_name") or pid)
+        if p.get("is_current"):
+            label = f"{label}（当前）"
+        out.append((label, pid))
     return out
 
 
 def load_models_by_tree(provider_id: str) -> List[str]:
-    """服务商两级下拉的第二级选项：模型名列表。
+    """服务商两级下拉的第二级选项：模型名列表（model.enumerate 能力）。
 
-    首选 model.enumerate；不可用时回退 app.config 的「模型列表」。
+    能力不可用返回 []，由设置卡回显逻辑保住已存值。
     """
-    models = load_models_of(provider_id)
-    if models:
-        return models
-    data = _load_system_config()
-    if data is None:
-        return []
-    for cid, p in ((data.get("LLM") or {}).get("SavedProviders") or {}).items():
-        if cid != provider_id or not isinstance(p, dict):
-            continue
-        models = [str(m).strip() for m in (p.get("模型列表") or []) if str(m).strip()]
-        if not models and p.get("模型名称"):
-            models = [str(p["模型名称"]).strip()]
-        return models
-    return []
+    return load_models_of(provider_id)
 
 
-def parse_provider_options() -> List[Tuple[str, str]]:
-    """扫描主程序 LLM.SavedProviders → [(「服务商:模型名」显示与值)]"""
-    data = _load_system_config()
-    if data is None:
-        return []
-    saved = ((data.get("LLM") or {}).get("SavedProviders") or {})
-    out: List[Tuple[str, str]] = []
-    seen = set()
-    for _cid, p in saved.items():
-        if not isinstance(p, dict):
-            continue
-        provider_name = str(p.get("provider_name") or p.get("name") or "").strip()
-        models = list(p.get("模型列表") or [])
-        if not models and p.get("模型名称"):
-            models = [p.get("模型名称")]
-        for m in models:
-            m = str(m).strip()
-            if not provider_name or not m:
-                continue
-            display = f"{provider_name}:{m}"
-            if display in seen:
-                continue
-            seen.add(display)
-            out.append((display, display))
-    out.sort(key=lambda item: item[0].lower())
-    return out
+def _pool_resolve_config():
+    """能力池 model.config 解析器（含明文 key 完整配置）；不可用返回 None。
 
-
-def _get_provider_config_from_memory(
-    main_widget, provider: str = "", model: str = ""
-) -> Optional[Dict[str, Any]]:
-    """从宿主内存态取服务商配置（含已解密明文 API_KEY）。
-
-    兜底路径：宿主未提供 services["get_provider_config"]（旧版主程序）时使用。
-    严禁读 app.config 文件——密钥模式下磁盘 API_KEY 是密文（enc:v2:…）或空串。
+    pool.legacy("get_provider_config", "model.config")：旧服务键优先、
+    能力主实现兜底；两者同签名（无参 = 当前会话模型，带参 = 五级匹配）。
     """
-    valid = getattr(main_widget, "_valid_configs", None)
-    if not isinstance(valid, dict) or not valid:
+    try:
+        from app.plugins.sdk import pool_for
+
+        pool = pool_for(plugin=PLUGIN_NAME, surface="ui")
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"[git-panel] 取能力池失败: {e}")
         return None
-    if provider:
-        if provider in valid:
-            return dict(valid[provider])
-        for _cid, info in valid.items():
-            if not isinstance(info, dict):
-                continue
-            if provider in (info.get("display_name"), info.get("provider_name"), info.get("name")):
-                return dict(info)
+    if pool is None:
         return None
-    name = getattr(main_widget, "_current_provider_name", None) or ""
-    cfg = valid.get(name)
-    return dict(cfg) if isinstance(cfg, dict) else None
+    try:
+        resolve = pool.legacy("get_provider_config", "model.config")
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"[git-panel] model.config 能力不可用: {e}")
+        return None
+    return resolve if callable(resolve) else None
 
 
 def get_llm_config(
-    main_widget,
     override_provider: str = None,
     override_model: str = None,
     services: Dict[str, Any] = None,
 ) -> Optional[Dict[str, Any]]:
     """取本次生成用的模型配置；override 优先，回退调用方当前会话模型；无 → None。
 
-    取配置的唯一正确通道是宿主：services["get_provider_config"]（主程序公开服务，
-    读内存态已解锁明文并叠加模型默认参数），旧版主程序则回退遍历
-    main_widget._valid_configs。**绝不 json.load(app.config)**：密钥模式下磁盘
-    API_KEY 是密文或空串，拿它发请求必然 401。
+    取配置的唯一正确通道是宿主内存态，两路按优先级：
+    1. ctx["services"]["get_provider_config"]（窗口上下文注入）；
+    2. 能力池 model.config（caps_for 解析到活跃窗口）。
+    **绝不 json.load(app.config)**：密钥模式下磁盘 API_KEY 是密文或空串，
+    拿它发请求必然 401。
     """
     provider = override_provider or ""
     model = override_model or ""
 
-    if isinstance(services, dict):
-        get_cfg = services.get("get_provider_config")
-        if callable(get_cfg):
-            try:
-                cfg = get_cfg(provider, model)
-            except Exception as e:  # noqa: BLE001
-                logger.warning(f"[git-panel] get_provider_config 调用失败: {e}")
-                cfg = None
-            # 判据是「配置非空」：免鉴权服务商 API_KEY 本为空，
-            # build_openai_client 会剥掉 Authorization 头
-            if isinstance(cfg, dict) and cfg:
-                return cfg
-            if provider:
-                # 显式指名的服务商失效 → 不静默串到别的服务商
-                return None
-
-    cfg = _get_provider_config_from_memory(main_widget, provider, model)
-    if not isinstance(cfg, dict):
+    if isinstance(services, dict) and callable(services.get("get_provider_config")):
+        get_cfg = services["get_provider_config"]
+    else:
+        get_cfg = _pool_resolve_config()
+    if not callable(get_cfg):
         return None
-    if model:
-        cfg["模型名称"] = model
-    return cfg
+    try:
+        cfg = get_cfg(provider, model)
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"[git-panel] 模型配置解析失败: {e}")
+        cfg = None
+    # 判据是「配置非空」：免鉴权服务商 API_KEY 本为空，
+    # build_openai_client 会剥掉 Authorization 头；
+    # 服务返回空（服务商不存在 / 宿主未就绪）→ None，
+    # 显式指名的服务商失效时不静默串到别的服务商
+    if isinstance(cfg, dict) and cfg:
+        return cfg
+    return None
 
 
-def resolve_model(
-    provider_raw: str, model_raw: str, main_widget
-) -> Optional[Tuple[str, str]]:
-    """commit_provider + commit_model 配置 → (provider, model)；空/失败回退当前会话模型。
+def resolve_model(provider_raw: str, model_raw: str) -> Optional[Tuple[str, str]]:
+    """commit_provider + commit_model 配置 → (provider, model)；两键均空 → None。
 
-    新格式两键分开存（对齐 vision-proxy）；commit_model 存旧格式
-    「服务商:模型名」合并值时直接拆分。只配 provider 不配 model =
-    用该服务商的默认模型（get_provider_config 语义）。
+    两键均空 = None = 沿用调用方当前会话模型（get_llm_config 传空
+    provider/model 即取当前会话配置，与旧的内存兜底语义一致）。新格式两键
+    分开存（对齐 vision-proxy）；commit_model 存旧格式「服务商:模型名」合并值
+    时直接拆分。只配 provider 不配 model = 用该服务商的默认模型。
     """
     provider = str(provider_raw or "").strip()
     model = str(model_raw or "").strip()
@@ -280,14 +167,6 @@ def resolve_model(
         provider, model = provider.strip(), model.strip()
     if provider or model:
         return provider, model
-    valid = getattr(main_widget, "_valid_configs", None)
-    if isinstance(valid, dict):
-        cur_name = getattr(main_widget, "_current_provider_name", None) or "系统默认配置"
-        cur_cfg = valid.get(cur_name) or {}
-        provider = cur_cfg.get("provider_name") or cur_cfg.get("name") or cur_name
-        model = cur_cfg.get("模型名称") or ""
-        if provider and model:
-            return str(provider), str(model)
     return None
 
 
