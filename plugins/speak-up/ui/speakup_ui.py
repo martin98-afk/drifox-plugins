@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Any, Callable, Optional
 
 _PLUGIN_ROOT = Path(__file__).resolve().parent.parent
 if str(_PLUGIN_ROOT) not in sys.path:
@@ -20,7 +19,7 @@ if str(_PLUGIN_ROOT) not in sys.path:
 from loguru import logger  # noqa: E402
 
 from speakup_core.config import load_config  # noqa: E402
-from speakup_core.runner import SpeakUpRunner  # noqa: E402
+from speakup_core.runtime import bind_caps, get_runner, shutdown_runner  # noqa: E402,F401
 
 PLUGIN_NAME = "speak-up"
 
@@ -40,38 +39,8 @@ try:
 except Exception:  # noqa: BLE001 - 宿主缺 qfluentwidgets 时整个卡不注册
     QWidget = object  # type: ignore
 
-# 单例 runner（工具、hook、卡片共用同一个，避免多份定时器）
-_runner: Optional[SpeakUpRunner] = None
-_get_caps: Optional[Callable[[str], Any]] = None
-
-
-def bind_caps(getter: Callable[[str], Any]) -> None:
-    """宿主注入能力取值器（register_ui 时调用一次）。"""
-    global _get_caps
-    _get_caps = getter
-
-
-def get_runner() -> SpeakUpRunner:
-    """取（必要时创建）全局 runner。首次调用会启动定时器。"""
-    global _runner
-    if _runner is None:
-        if _get_caps is None:
-            raise RuntimeError("speak-up：能力取值器尚未注入（register_ui 未执行）")
-        _runner = SpeakUpRunner(get_caps=_get_caps, get_config=load_config)
-        if load_config().enabled:
-            _runner.start()
-    return _runner
-
-
-def shutdown_runner() -> None:
-    """插件卸载时停止定时器。"""
-    global _runner
-    if _runner is not None:
-        try:
-            _runner.stop()
-        except Exception as e:  # noqa: BLE001
-            logger.warning(f"[speak-up] 停止 runner 失败: {e}")
-        _runner = None
+# runner 单例与 bind_caps/get_runner/shutdown_runner 实体在 speakup_core.runtime，
+# 全进程一份；此处只导入转发，勿在模块内另存引用。
 
 
 if _UI_AVAILABLE:

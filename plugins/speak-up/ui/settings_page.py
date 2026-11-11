@@ -249,7 +249,7 @@ if _UI_AVAILABLE:
 
         def _manual(self, mode: str) -> None:
             try:
-                from ui.speakup_ui import get_runner  # type: ignore
+                from speakup_core.runtime import get_runner  # type: ignore
 
                 runner = get_runner()
                 result = runner.roll(source="手动", mode=mode)
@@ -261,7 +261,7 @@ if _UI_AVAILABLE:
 
         def _refresh_status(self, message: Optional[str] = None) -> None:
             try:
-                from ui.speakup_ui import get_runner  # type: ignore
+                from speakup_core.runtime import get_runner  # type: ignore
 
                 snap = get_runner().state_snapshot()
                 parts = [
