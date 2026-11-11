@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+### ✨ voice-reply v1.8.0 / voice-input v0.7.0 / meeting-notes v0.2.0：改用主程序已配置的多模态服务商（带完整回退）
+- **背景**：`multimodal-providers` 插件把 12 条图像/视频/语音服务商声明交还市场，但消费侧（朗读/听写/纪要）仍各存一份 API Key，两份配置各活各的
+- **接入**：三个 UI 插件的设置卡新增「配置来源」下拉，列出主程序「服务商设置」里能力类型匹配的实例；选中后经 `model.config_for(config_id, capability_type=...)` 取该实例的 `API_URL`/`API_KEY`(明文)/`模型名称`。voice-reply 额外把音色值前缀换成宿主模型名（`模型:音色` 格式网关下前缀不换会报音色不存在）
+- **回退**：未选、实例被删、实例没填 Key、能力未授权、或旧宿主 `TypeError` 退回旧签名而解析出 chat 实例——一律沿用原配置，行为与接入前完全一致。meeting-notes 优先级：宿主实例 > 本插件自填 Key > 复用 voice-input 的 Key；voice-input 把宿主实例排识别链首位、自存 Key 继续作后备
+- **不进链路**：`minimax-h3` / `gpt-image-2` / `voice-clone` 是 commands/skills 型，宿主不向子进程注入能力池，强行接入只会变成假接入
+- **依赖**：宿主 `ProviderDef.capability_type`（DriFox 0.7.1+）与 `model.config_for` 能力；三插件 manifest 已补 `provider.list` / `model.config_for` 声明
+- **验证**：三插件接入分支脚本各 5~6 条（无能力/chat 实例/正常接管/链首顺序/Key 优先级/端点回退）全过；`plugins/meeting-notes/tests` + `plugins/voice-input/tests` 44 passed；`validate_plugins.py` 三插件 OK
+
 ### ✨ meeting-notes v0.1.3：左侧列表支持拖拽外部音频文件直接导入会议
 - **交互**：音频文件拖到左侧列表区，边框高亮提示，松手即导入成一场会议并自动分段识别出纪要；与「导入音频」按钮走同一条链路（状态机检查、Key 检查、后台转码、精转收尾全复用）
 - **规则**：多文件只取第一个并提示；录音/整理中拖入提示先结束当前任务；支持的格式与文件框一致（wav/m4a/mp3/aac/flac/ogg/wma/amr/opus，扩展名两处共用同一份常量）

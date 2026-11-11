@@ -21,6 +21,7 @@
 
 | 项 | 说明 |
 |---|---|
+| 配置来源 | 下拉选主程序「服务商设置」里的语音识别实例；选中后端点/Key/模型以它为准，优先级高于下面两项 |
 | 硅基流动 API Key | 留空时自动复用「语音输入」插件的 Key |
 | 识别模型 | 默认 `XingChenASR-Diarize-V3.0`（免费，带说话人分离） |
 | 切片时长 | 默认 20 秒。越短越实时，请求越频繁（免费模型有限流） |
@@ -50,6 +51,7 @@
 - **导入转码**：macOS 走 `/usr/bin/afconvert`（系统自带，GUI 宿主极简 PATH 也能看到，零依赖零许可）；其从 AAC 解码产出的 WAVE_FORMAT_EXTENSIBLE 头会被改写成标准 PCM，供标准库 `wave` 读取。Windows 走 ffmpeg 并加 `CREATE_NO_WINDOW` 避免闪黑窗；两者都没有时只接受 16bit WAV。
 - **转写渲染**：整页刷新复用已有行对象逐段改数据，不销毁重建（600 行实测 330ms → 1ms）；说话人改名只更新匹配徽章，不全页重绘。
 - **识别**：`/v1/audio/transcriptions` multipart 上传，串行队列（并发会撞免费模型限流），失败退避重试 2 次。
+- **识别配置优先级**：配置项 `host_provider` 选中的宿主实例（`model.config_for` + `capability_type=speech_recognition`，取其 `API_URL`/`API_KEY`/`模型名称`）> 本插件自填 Key > 复用 voice-input 的 Key。宿主未选、实例失效或旧宿主忽略 `capability_type` 时逐级回退，最终落到内置硅基流动端点，行为与接入前一致。
 - **说话人**：Diarize 模型返回 `segments[].speaker`。分片之间编号不自洽，所以录音中每攒够 10 分钟精转一段、结束时再转最后的尾巴（增量精转，每次只重识别一段音频，替换该时间段的实时结果）。
 - **纪要**：宿主 `engine.session` + 当前（或指定）模型，插件不单独保存 LLM 密钥；模型输出首行的 `# 标题` 会顺带写成会议名。
 

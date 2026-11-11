@@ -21,6 +21,7 @@ from typing import Any, List
 
 from loguru import logger
 
+from .host_source import HOST_PROVIDER_KEY, host_options, resolve_override
 from .voice_presets import (
     DEFAULT_API_URL,
     DEFAULT_MODEL,
@@ -179,6 +180,8 @@ if _UI_AVAILABLE:
 
             # 在线引擎专属行：本地引擎时整行置灰，避免「一堆填了没用的空框」
             self._api_rows: List[QWidget] = []
+            # 选了宿主服务商时被接管的行（地址/模型/Key 一律以宿主为准）
+            self._host_locked_rows: List[QWidget] = []
 
             # ── 语音引擎 ──
             self._engine_combo = ComboBox(self.view)
@@ -187,20 +190,36 @@ if _UI_AVAILABLE:
             self._engine_combo.currentIndexChanged.connect(self._on_engine_changed)
             self.viewLayout.addWidget(_FieldRow("语音引擎", self._engine_combo, self.view))
 
+            # ── 配置来源（宿主服务商 / 插件内手填） ──
+            self._source_combo = ComboBox(self.view)
+            self._source_combo.addItem("插件内手填（下面自己填）", userData="")
+            for config_id, label in host_options("voice-reply"):
+                self._source_combo.addItem(label, userData=config_id)
+            self._source_combo.setToolTip(
+                "选「语音合成 · xxx」则直接用主程序服务商设置里那条实例的端点与 Key；\n"
+                "选「插件内手填」则用下面自己的配置（行为与旧版一致）"
+            )
+            self._source_combo.currentIndexChanged.connect(self._on_source_changed)
+            self.viewLayout.addWidget(_FieldRow("配置来源", self._source_combo, self.view))
+
             # ── 服务商（界面辅助：填地址 + 决定 Key 链接） ──
             self._provider_combo = ComboBox(self.view)
             for preset in ENDPOINT_PRESETS:
                 self._provider_combo.addItem(preset.label, userData=preset.url)
             self._provider_combo.addItem("自定义（手填地址）", userData=_CUSTOM_PROVIDER)
             self._provider_combo.currentIndexChanged.connect(self._on_provider_changed)
-            self._api_rows.append(_FieldRow("服务商", self._provider_combo, self.view))
+            self._provider_row = _FieldRow("服务商", self._provider_combo, self.view)
+            self._api_rows.append(self._provider_row)
+            self._host_locked_rows.append(self._provider_row)
 
             # ── API 地址（纯输入框：显示真实 URL，服务商下拉负责预填） ──
             self._url_edit = LineEdit(self.view)
             self._url_edit.setPlaceholderText("OpenAI 兼容 /audio/speech 端点")
             self._url_edit.setClearButtonEnabled(True)
             self._url_edit.editingFinished.connect(self._on_url_finished)
-            self._api_rows.append(_FieldRow("API 地址", self._url_edit, self.view))
+            self._url_row = _FieldRow("API 地址", self._url_edit, self.view)
+            self._api_rows.append(self._url_row)
+            self._host_locked_rows.append(self._url_row)
 
             # ── 模型（可编辑下拉：显示真实模型名，可手填） ──
             self._model_combo = EditableComboBox(self.view)
@@ -212,7 +231,9 @@ if _UI_AVAILABLE:
             )
             self._model_combo.currentIndexChanged.connect(self._on_model_changed)
             self._model_combo.textChanged.connect(self._on_model_text_changed)
-            self._api_rows.append(_FieldRow("模型", self._model_combo, self.view))
+            self._model_row = _FieldRow("模型", self._model_combo, self.view)
+            self._api_rows.append(self._model_row)
+            self._host_locked_rows.append(self._model_row)
 
             # ── 音色（可编辑下拉：随模型换批 + 手填） ──
             self._voice_combo = EditableComboBox(self.view)
@@ -229,7 +250,9 @@ if _UI_AVAILABLE:
             self._key_link.setIcon(FluentIcon.LINK)
             self._key_link.setText("获取 Key")
             self._key_link.setVisible(False)
-            self._api_rows.append(_FieldRow("API Key", _InlineRow(self._key_edit, self._key_link, self.view), self.view))
+            self._key_row = _FieldRow("API Key", _InlineRow(self._key_edit, self._key_link, self.view), self.view)
+            self._api_rows.append(self._key_row)
+            self._host_locked_rows.append(self._key_row)
 
             for row in self._api_rows:
                 self.viewLayout.addWidget(row)
@@ -294,7 +317,22 @@ if _UI_AVAILABLE:
             self._key_edit.setText(api_key)
             self._key_edit.blockSignals(False)
 
+            host_provider = str(store.get("voice-reply", HOST_PROVIDER_KEY) or "").strip()
+            self._echo_source(host_provider)
+
             self._apply_engine_state()
+
+        def _echo_source(self, host_provider: str) -> None:
+            """回显配置来源；宿主实例已被删时补一条失效项（不写盘，运行期自然回退）。"""
+            index = self._source_combo.findData(host_provider) if host_provider else 0
+            if host_provider and index < 0:
+                self._source_combo.addItem(
+                    f"⚠ 已失效的宿主实例（{host_provider[:8]}）", userData=host_provider
+                )
+                index = self._source_combo.count() - 1
+            self._source_combo.blockSignals(True)
+            self._source_combo.setCurrentIndex(index if index >= 0 else 0)
+            self._source_combo.blockSignals(False)
 
         @staticmethod
         def _select_or_set_text(combo, value: str) -> None:
@@ -371,11 +409,17 @@ if _UI_AVAILABLE:
         # ── 引擎状态 ────────────────────────────────────────
 
         def _apply_engine_state(self) -> None:
-            """本地引擎时置灰在线相关行（配置结构仍可见，避免布局跳动）。"""
+            """本地引擎 / 宿主服务商模式下置灰不生效的行（结构可见，避免布局跳动）。"""
             online = str(self._engine_combo.currentData() or "local") == "api"
+            host_mode = bool(str(self._source_combo.currentData() or "").strip())
+            locked = {id(row) for row in self._host_locked_rows}
             for row in self._api_rows:
-                row.setEnabled(online)
+                row.setEnabled(online and not (host_mode and id(row) in locked))
             self._test_btn.setEnabled(online)
+
+        def _on_source_changed(self, _index: int) -> None:
+            self._save(HOST_PROVIDER_KEY, str(self._source_combo.currentData() or ""))
+            self._apply_engine_state()
 
         # ── 事件 ────────────────────────────────────────────
 
@@ -458,18 +502,28 @@ if _UI_AVAILABLE:
             return f"{self._current_model()}:{name or DEFAULT_VOICE_NAME}"
 
         def _on_test(self) -> None:
-            """测试连接：用卡里当前值（不是已存值）真发一次合成请求。"""
+            """测试连接：用当前生效值真发一次合成请求（宿主模式下取宿主配置）。"""
+            url = self._url_edit.text().strip() or DEFAULT_API_URL
+            model = self._current_model()
+            voice = self._current_voice()
             key = self._key_edit.text().strip()
+            host_provider = str(self._source_combo.currentData() or "").strip()
+            if host_provider:
+                override = resolve_override("voice-reply", host_provider, voice)
+                if not override:
+                    self._show_probe(False, "宿主服务商配置不可用：确认该实例已填 API Key")
+                    return
+                url = override["api_url"]
+                key = override["api_key"]
+                model = override.get("api_model", model)
+                voice = override.get("api_voice", voice)
             if not key:
                 self._show_probe(False, "未填写 API Key")
                 return
-            url = self._url_edit.text().strip() or DEFAULT_API_URL
             self._test_btn.setEnabled(False)
             self._test_btn.setText("测试中…")
             self._test_result.setText("")
-            self._probe = _TtsProbeWorker(
-                url, self._current_model(), self._current_voice(), key, self
-            )
+            self._probe = _TtsProbeWorker(url, model, voice, key, self)
             self._probe.done.connect(self._on_probe_done)
             self._probe.start()
 
@@ -497,8 +551,12 @@ if _UI_AVAILABLE:
                     "api_model": "",
                     "api_voice": "",
                     "api_key": "",
+                    HOST_PROVIDER_KEY: "",
                 },
             )
+            self._source_combo.blockSignals(True)
+            self._source_combo.setCurrentIndex(0)
+            self._source_combo.blockSignals(False)
             self._echo()
 
         # ── 存储 ────────────────────────────────────────────

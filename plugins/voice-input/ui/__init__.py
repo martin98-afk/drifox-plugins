@@ -96,32 +96,54 @@ def _cleanup_wav() -> None:
     _wav_path = ""
 
 
-def _read_config() -> Dict[str, str]:
-    """读插件配置。主程序未注入配置系统/读取失败时返回空 dict（调用方拦截并提示）。"""
+def _read_config() -> Dict[str, Any]:
+    """读插件配置。主程序未注入配置系统/读取失败时返回空 dict（调用方拦截并提示）。
+
+    额外返回 `host_chain`：宿主语音识别实例解析成功时的链首项，失败为 None，
+    此时行为与改造前完全一致（只用自存 Key）。
+    """
     try:
         from app.plugins.managers.plugin_config_store import PluginConfigStore
 
+        from .host_source import HOST_PROVIDER_KEY, resolve_override
+
         store = PluginConfigStore()
+        host = resolve_override(
+            PLUGIN_NAME, str(store.get(PLUGIN_NAME, HOST_PROVIDER_KEY) or "")
+        )
+        host_chain = None
+        if host:
+            host_chain = (
+                host["api_url"],
+                host["api_model"] or _SILICONFLOW_DEFAULT_MODEL,
+                host["api_key"],
+                host["name"],
+            )
         return {
             "provider": str(store.get(PLUGIN_NAME, "provider") or "auto"),
             "sf_key": str(store.get(PLUGIN_NAME, "siliconflow_api_key") or "").strip(),
             "sf_model": str(store.get(PLUGIN_NAME, "siliconflow_model") or "").strip()
             or _SILICONFLOW_DEFAULT_MODEL,
             "mm_key": str(store.get(PLUGIN_NAME, "minimax_api_key") or "").strip(),
+            "host_chain": host_chain,
         }
     except Exception as e:  # noqa: BLE001 — 配置不可用不崩，交给调用方提示
         logger.warning(f"[voice-input] 读取插件配置失败: {e}")
         return {}
 
 
-def _build_chain(cfg: Dict[str, str]) -> list:
+def _build_chain(cfg: Dict[str, Any]) -> list:
     """按引擎选择生成识别链 [(url, model, key, 名称), ...]，头部优先。
 
+    - 宿主实例（选了且解析成功）排首位，不受「识别引擎」开关影响：
+      用户显式选中它本身就是偏好表达；
     - auto：硅基流动优先，MiniMax（配了 key）作备用；
     - siliconflow / minimax：仅用对应单引擎。
     """
     p = cfg.get("provider", "auto")
     chain: list = []
+    if cfg.get("host_chain"):
+        chain.append(cfg["host_chain"])
     if p in ("auto", "siliconflow") and cfg.get("sf_key"):
         chain.append((_SILICONFLOW_URL, cfg["sf_model"], cfg["sf_key"], "硅基流动"))
     if p in ("auto", "minimax") and cfg.get("mm_key"):

@@ -29,6 +29,7 @@ from typing import Any, Dict
 
 from loguru import logger
 
+from .host_source import HOST_PROVIDER_KEY, resolve_override
 from .tts_text import build_speakable_text
 from .voice_presets import (
     DEFAULT_API_URL,
@@ -197,12 +198,17 @@ def _notify(main_widget, kind: str, title: str, msg: str) -> None:
 
 
 def _read_config() -> Dict[str, str]:
-    """读插件配置。主程序未注入配置系统/读取失败时按默认值降级。"""
+    """读插件配置。主程序未注入配置系统/读取失败时按默认值降级。
+
+    宿主服务商优先：配置项 `host_provider` 选中了主程序里的语音合成实例且
+    解析成功时，用它的端点/Key/模型覆盖插件自存值；没选或解析失败则原样
+    使用插件配置（行为与改造前一致）。
+    """
     try:
         from app.plugins.managers.plugin_config_store import PluginConfigStore
 
         store = PluginConfigStore()
-        return {
+        cfg = {
             "engine": str(store.get(PLUGIN_NAME, "engine") or "local").strip(),
             "api_url": str(store.get(PLUGIN_NAME, "api_url") or "").strip()
             or _DEFAULT_API_URL,
@@ -212,6 +218,14 @@ def _read_config() -> Dict[str, str]:
             or _DEFAULT_API_VOICE,
             "api_key": str(store.get(PLUGIN_NAME, "api_key") or "").strip(),
         }
+        override = resolve_override(
+            PLUGIN_NAME,
+            str(store.get(PLUGIN_NAME, HOST_PROVIDER_KEY) or ""),
+            cfg["api_voice"],
+        )
+        if override:
+            cfg.update(override)
+        return cfg
     except Exception as e:  # noqa: BLE001 — 配置不可用走默认值
         logger.warning(f"[voice-reply] 读取插件配置失败，按默认: {e}")
         return {"engine": "local", "api_url": "", "api_model": "", "api_voice": "", "api_key": ""}

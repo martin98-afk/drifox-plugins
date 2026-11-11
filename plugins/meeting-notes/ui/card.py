@@ -939,7 +939,7 @@ class MeetingNotesCard(QWidget):
         self._recorder = rec
         self._joiner = store.WavJoiner(audio_path, append=append)
         self._queue = asr.TranscribeQueue(
-            config.SILICONFLOW_URL,
+            config.asr_url(cfg),
             m.model,
             key,
         )
@@ -1276,7 +1276,11 @@ class MeetingNotesCard(QWidget):
     ) -> bool:
         """识别已切好的一段音频，替换该时间段内的实时结果。"""
         result = asr.transcribe_with_retry(
-            config.SILICONFLOW_URL, model, key, str(part), timeout=asr.FULL_TIMEOUT_SEC
+            config.asr_url(config.read_config()),
+            model,
+            key,
+            str(part),
+            timeout=asr.FULL_TIMEOUT_SEC,
         )
         segs = asr.to_absolute_segments(result, start)
         if not segs:

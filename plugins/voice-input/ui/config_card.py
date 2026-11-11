@@ -19,6 +19,8 @@ from typing import Any, List, Tuple
 
 from loguru import logger
 
+from .host_source import HOST_PROVIDER_KEY, host_options, resolve_override
+
 _UI_AVAILABLE = False
 try:  # 宿主必然装有 qfluentwidgets；缺失时降级不注册卡
     from PyQt5.QtCore import Qt, QObject, QThread, pyqtProperty, pyqtSignal
@@ -179,6 +181,18 @@ if _UI_AVAILABLE:
             self._sf_rows: List[QWidget] = []
             self._mm_rows: List[QWidget] = []
 
+            # ── 配置来源（宿主服务商，排识别链首位） ──
+            self._source_combo = ComboBox(self.view)
+            self._source_combo.addItem("不使用（只用下面的 Key）", userData="")
+            for config_id, label in host_options(PLUGIN_NAME):
+                self._source_combo.addItem(label, userData=config_id)
+            self._source_combo.setToolTip(
+                "选主程序「服务商设置」里的语音识别实例：它的端点/Key/模型排识别链第一位；\n"
+                "不选或实例失效时只用下面的自填 Key（行为与旧版一致）"
+            )
+            self._source_combo.currentIndexChanged.connect(self._on_source_changed)
+            self.viewLayout.addWidget(_FieldRow("配置来源", self._source_combo, self.view))
+
             # ── 识别引擎 ──
             self._provider_combo = ComboBox(self.view)
             self._provider_combo.addItem("自动（硅基流动优先，失败转 MiniMax）", userData="auto")
@@ -281,6 +295,17 @@ if _UI_AVAILABLE:
             self._sf_model.blockSignals(False)
             self._move_cursor_to_start(self._sf_model)
 
+            host_provider = str(store.get(PLUGIN_NAME, HOST_PROVIDER_KEY) or "").strip()
+            source_index = self._source_combo.findData(host_provider) if host_provider else 0
+            if host_provider and source_index < 0:
+                self._source_combo.addItem(
+                    f"⚠ 已失效的宿主实例（{host_provider[:8]}）", userData=host_provider
+                )
+                source_index = self._source_combo.count() - 1
+            self._source_combo.blockSignals(True)
+            self._source_combo.setCurrentIndex(source_index if source_index >= 0 else 0)
+            self._source_combo.blockSignals(False)
+
             self._apply_engine_state()
 
         @staticmethod
@@ -309,6 +334,9 @@ if _UI_AVAILABLE:
 
         # ── 事件 ────────────────────────────────────────────
 
+        def _on_source_changed(self, _index: int) -> None:
+            self._save(HOST_PROVIDER_KEY, str(self._source_combo.currentData() or ""))
+
         def _on_provider_changed(self, _index: int) -> None:
             self._save("provider", str(self._provider_combo.currentData() or "auto"))
             self._apply_engine_state()
@@ -331,6 +359,18 @@ if _UI_AVAILABLE:
 
             provider = str(self._provider_combo.currentData() or "auto")
             chain: List[Tuple[str, str, str, str]] = []
+            host_query = str(self._source_combo.currentData() or "").strip()
+            if host_query:
+                host = resolve_override(PLUGIN_NAME, host_query)
+                if host:
+                    chain.append(
+                        (
+                            host["api_url"],
+                            host["api_model"] or _DEFAULT_MODEL,
+                            host["api_key"],
+                            host["name"],
+                        )
+                    )
             sf_key = self._sf_key.text().strip()
             mm_key = self._mm_key.text().strip()
             if provider in ("auto", "siliconflow") and sf_key:
@@ -374,6 +414,7 @@ if _UI_AVAILABLE:
                     "siliconflow_api_key": "",
                     "siliconflow_model": "",
                     "minimax_api_key": "",
+                    HOST_PROVIDER_KEY: "",
                 },
             )
             self._test_result.setText("")

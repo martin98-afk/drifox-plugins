@@ -8,7 +8,7 @@
         "light": "icon.png",
         "dark": "icon_dark.png"
     },
-    "version": "1.7.2",
+    "version": "1.8.0",
     "type": "user",
     "platforms": [
         "windows",
@@ -16,7 +16,9 @@
     ],
     "min_host_version": "0.6.12",
     "capabilities": [
-        "ui.notify"
+        "ui.notify",
+        "provider.list",
+        "model.config_for"
     ],
     "keywords": [
         "voice",
@@ -45,7 +47,15 @@
                         "label": "在线 API（OpenAI 兼容 /audio/speech）"
                     }
                 ],
-                "description": "本地引擎零配置零成本；在线引擎音质更好，需填 API Key"
+                "description": "本地引擎零配置零成本；在线引擎音质更好。在线引擎可改用主程序已配置的语音合成服务商（见「配置来源」）"
+            },
+            {
+                "key": "host_provider",
+                "label": "配置来源",
+                "type": "text",
+                "default": "",
+                "placeholder": "留空 = 用下面的手填配置",
+                "description": "填主程序「服务商设置」里语音合成实例的配置 ID，则端点/Key/模型改用该实例；留空或无效时回退到下面的手填配置。自绘设置卡里这项是下拉选择"
             },
             {
                 "key": "api_url",

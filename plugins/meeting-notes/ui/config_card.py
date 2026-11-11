@@ -110,6 +110,20 @@ if _UI_AVAILABLE:
             self.viewLayout.setContentsMargins(48, 8, 48, 8)
             self.viewLayout.setSpacing(4)
 
+            # ── 配置来源（宿主语音识别实例，优先于下面的 Key） ──
+            self._source = ComboBox(self.view)
+            self._source.addItem("不使用（用下面的 Key）", userData="")
+            for config_id, label in _host_options():
+                self._source.addItem(label, userData=config_id)
+            self._source.setToolTip(
+                "选主程序「服务商设置」里的语音识别实例：端点/Key/模型以它为准；\n"
+                "不选或实例失效时用下面的自填或复用 Key（行为与旧版一致）"
+            )
+            self._source.currentIndexChanged.connect(
+                lambda: _save({"host_provider": str(self._source.currentData() or "")})
+            )
+            self.viewLayout.addWidget(_FieldRow("配置来源", self._source, self.view))
+
             # ── 硅基流动 Key ──
             self._key = PasswordLineEdit(self.view)
             self._key.setClearButtonEnabled(True)
@@ -211,6 +225,17 @@ if _UI_AVAILABLE:
 
         def _echo(self) -> None:
             from .summary import DEFAULT_PROMPT_TEMPLATE
+
+            host_provider = str(_load("host_provider", "") or "").strip()
+            source_index = self._source.findData(host_provider) if host_provider else 0
+            if host_provider and source_index < 0:
+                self._source.addItem(
+                    f"⚠ 已失效的宿主实例（{host_provider[:8]}）", userData=host_provider
+                )
+                source_index = self._source.count() - 1
+            self._source.blockSignals(True)
+            self._source.setCurrentIndex(source_index if source_index >= 0 else 0)
+            self._source.blockSignals(False)
 
             self._key.blockSignals(True)
             self._key.setText(str(_load("siliconflow_api_key", "")))
@@ -347,3 +372,26 @@ if _UI_AVAILABLE:
             self._prompt.setPlainText(DEFAULT_PROMPT_TEMPLATE)
             self._prompt.blockSignals(False)
             _save({"summary_prompt": ""})
+
+def _host_options() -> List[Tuple[str, str]]:
+    """主程序里 capability_type=speech_recognition 的服务商实例。"""
+    try:
+        from app.plugins.sdk import pool_for
+
+        pool = pool_for(plugin=PLUGIN_NAME, surface="ui")
+        if pool is None or "provider.list" not in pool:
+            return []
+        out: List[Tuple[str, str]] = []
+        for item in pool["provider.list"]() or []:
+            if str(item.get("capability_type") or "") != "speech_recognition":
+                continue
+            config_id = str(item.get("id") or "").strip()
+            if not config_id:
+                continue
+            name = str(item.get("display_name") or item.get("provider_name") or config_id)
+            out.append((config_id, f"语音识别 · {name}"))
+        return out
+    except Exception as e:  # noqa: BLE001 — 宿主不可用不影响配置卡渲染
+        logger.debug(f"[meeting-notes] 列宿主语音识别服务商失败: {e}")
+        return []
+

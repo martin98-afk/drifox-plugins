@@ -1,0 +1,29 @@
+{
+    "name": "multimodal-providers",
+    "display_name": {
+        "zh": "多模态服务商"
+    },
+    "description": "多模态能力服务商：豆包 / 海螺 / MiniMax / 硅基流动 / OpenAI / 智谱的图像、视频、语音合成与语音识别定义",
+    "version": "0.2.0",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "author": {
+        "name": "DriFoxx Team"
+    },
+    "homepage": "https://github.com/martin98-afk/DriFox",
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "min_host_version": "0.7.1",
+    "keywords": [
+        "provider",
+        "multimodal",
+        "image-generation",
+        "video-generation",
+        "speech"
+    ],
+    "components": {
+        "providers": true
+    }
+}

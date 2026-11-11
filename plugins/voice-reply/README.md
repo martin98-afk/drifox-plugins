@@ -28,13 +28,28 @@
 | 配置项 | 默认值 | 说明 |
 |--------|--------|------|
 | 语音引擎 | 本地系统语音 | `local` / `api`；选本地时在线相关行整体置灰 |
+| 配置来源 | 插件内手填 | 下拉列出主程序「服务商设置」里 `capability_type=speech_generation` 的实例；选中后端点/模型/Key 三行置灰并以该实例为准 |
 | 服务商 | 硅基流动 | 界面辅助行（不落盘）：选中即预填 API 地址，并联动行尾「获取 Key」链接 |
 | API 地址 | 硅基流动端点 | 真实 URL 输入框，可手改；改成已知平台域名时服务商自动跟随，认不出则显示「自定义」并收起 Key 链接 |
 | 模型 | `FunAudioLLM/CosyVoice2-0.5B` | 可编辑下拉：CosyVoice2-0.5B / Fish-Speech 1.5 / MOSS-TTSD-v0.5 / 手填 |
 | 音色 | `FunAudioLLM/CosyVoice2-0.5B:alex` | 可编辑下拉，随模型换批；CosyVoice2 与 Fish-Speech 1.5 共用 8 个预置音色 |
 | API Key | 空 | 环境变量 `TTS_API_KEY` 可覆盖；行尾「获取 Key」直达对应平台密钥页 |
 
-卡底「测试连接」用当前填写值真发一次合成请求（合成两个字，不播放）：成功显示「可用 · 耗时 · 音频大小」，失败显示人话原因（401/403 = Key 无效，404 = 端点或模型不存在，429 = 限流）。
+卡底「测试连接」用当前生效值真发一次合成请求（合成两个字，不播放）：成功显示「可用 · 耗时 · 音频大小」，失败显示人话原因（401/403 = Key 无效，404 = 端点或模型不存在，429 = 限流）。选了宿主配置来源时，测试也用宿主实例的端点/Key/模型。
+
+### 复用主程序已配置的服务商
+
+配置项 `host_provider`（设置卡里的「配置来源」）存主程序服务商实例的配置 ID，解析链路：
+
+```
+pool_for(plugin="voice-reply", surface="ui")["model.config_for"]
+  (config_id, capability_type="speech_generation")
+→ {API_URL, API_KEY(明文), 模型名称}
+```
+
+- 解析成功：端点/Key/模型三项改用宿主值，音色仍由本插件管（前缀自动换成宿主模型名）
+- 未选、实例被删、实例没填 Key、或旧宿主忽略 `capability_type` 解析成 chat 实例：一律回退插件自存配置，行为与旧版一致
+- 依赖宿主 `ProviderDef.capability_type`（DriFox 0.7.1+）与 `model.config_for` 能力；manifest 已声明 `provider.list` / `model.config_for`
 
 预置服务商与其 API Key 管理页（2026-10 逐个验证可访问）：
 

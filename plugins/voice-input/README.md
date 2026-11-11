@@ -26,6 +26,7 @@
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
+| 配置来源 | select | 主程序「服务商设置」里 `capability_type=speech_recognition` 的实例；选中后其端点/Key/模型排识别链首位，不选或失效则只用下面的自填 Key |
 | 识别引擎 | select | `auto`（默认，硅基流动优先，失败转 MiniMax）/ `siliconflow`（仅硅基流动）/ `minimax`（仅 MiniMax） |
 | 硅基流动 API Key | password | [硅基流动](https://cloud.siliconflow.cn/account/ak) 获取；免费模型不消耗余额 |
 | 硅基流动模型 | select | 免费模型下拉：Qwen3-ASR（默认）/ SenseVoice-Small / 星尘 ASR 系列，均为免费档 |
@@ -55,7 +56,7 @@
 点按钮 → 平台录音后端录 16kHz/16bit/mono WAV（临时目录）
           ├─ Windows：winmm (mciSendStringW)
           └─ macOS：AVFoundation (AVAudioRecorder，ctypes 直调，绕过 pyobjc 未打包问题)
-        → 按配置生成识别链（自动模式：硅基流动 → MiniMax）
+        → 按配置生成识别链（宿主实例 → 自存硅基流动 → 自存 MiniMax）
         → POST multipart（file + model，Bearer 认证）→ JSON {"text": ...}
         → 头部引擎失败自动转链内下一个；全部失败报错收场
         → 文本回主线程 → input_area 光标处 insertText → 删除临时 WAV
@@ -63,6 +64,20 @@
 
 录音后端按 `sys.platform` 分派（`_make_recorder`）：winmm 模块顶层绑定
 `ctypes.windll`（Windows 专属符号），非 Windows 平台必须绕开其 import。
+
+### 复用主程序已配置的服务商
+
+配置项 `host_provider`（设置卡里的「配置来源」）存主程序服务商实例的配置 ID：
+
+```
+pool_for(plugin="voice-input", surface="ui")["model.config_for"]
+  (config_id, capability_type="speech_recognition")
+→ {API_URL, API_KEY(明文), 模型名称}
+```
+
+- 解析成功：该实例作为识别链首项，自存 Key 仍排后面作后备
+- 未选、实例被删、实例没填 Key、或旧宿主忽略 `capability_type` 解析成 chat 实例：完全回退到原「硅基流动 → MiniMax」链路
+- 依赖宿主 `ProviderDef.capability_type`（DriFox 0.7.1+）与 `model.config_for` 能力；manifest 已声明 `provider.list` / `model.config_for`
 
 识别请求在 QThread 内执行（30 秒超时），不卡 UI；上传用标准库 urllib 手写
 multipart（宿主未收集 requests，插件零第三方依赖）。按钮位置锚定

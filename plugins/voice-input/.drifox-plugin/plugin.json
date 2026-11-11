@@ -3,7 +3,7 @@
     "display_name": {
         "zh": "语音输入"
     },
-    "version": "0.6.3",
+    "version": "0.7.0",
     "description": "输入框工具栏语音听写按钮：点击开始录音，再次点击结束并把识别文字插入输入框光标处。纯云端识别：硅基流动（免费模型，默认）与 MiniMax 双引擎可配，云端失败自动互为备用",
     "icon": {
         "light": "icon.png",
@@ -20,7 +20,9 @@
     ],
     "min_host_version": "0.6.12",
     "capabilities": [
-        "ui.notify"
+        "ui.notify",
+        "provider.list",
+        "model.config_for"
     ],
     "keywords": [
         "voice",
@@ -33,6 +35,14 @@
     "config_schema": {
         "title": "语音听写配置",
         "fields": [
+            {
+                "key": "host_provider",
+                "label": "配置来源",
+                "type": "text",
+                "default": "",
+                "placeholder": "留空 = 用下面的自填 Key",
+                "description": "填主程序「服务商设置」里语音识别实例的配置 ID，则该实例的端点/Key/模型排识别链第一位；留空或失效时回退到下面的自填 Key。自绘设置卡里这项是下拉选择"
+            },
             {
                 "key": "provider",
                 "label": "识别引擎",
