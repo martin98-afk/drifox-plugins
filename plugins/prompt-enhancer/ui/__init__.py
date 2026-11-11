@@ -21,10 +21,10 @@
   智能重试全部自动生效，插件零协议知识；
 - 后台 QRunnable + 信号桥接，结果在主线程注回输入框，避免 UI 卡死。
 
-模型配置来自宿主 services["get_provider_config"]（主程序读内存态已解锁明文，
-服务商与模型均未配置时沿用调用方当前 provider/model。"""
+模型配置来自宿主 services["get_provider_config"] 或能力池 model.config
+（内存态已解锁明文，两路同签名；服务商与模型均未配置时沿用调用方当前
+provider/model）。"""
 
-import json
 import os
 import re
 import threading
@@ -90,58 +90,6 @@ def _plugin_root() -> str:
     return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-# 主程序 LLM 配置路径（与 ip-switcher/ui/config.py 中 _get_system_config_path 同约定）
-_DEFAULT_SYSTEM_CONFIG_PATHS = (
-    # DriFox 运行时的标准位置
-    os.path.join(os.path.expanduser("~"), ".drifox", "app.config"),
-    # 项目自带调试配置（开发期可能复用）
-    os.path.abspath(os.path.join(_plugin_root(), "..", "..", ".drifox", "app.config")),
-)
-
-
-def _resolve_system_config_path() -> Optional[str]:
-    """定位主程序 app.config（不存在则返回 None，调用方需容忍空列表）。"""
-    for p in _DEFAULT_SYSTEM_CONFIG_PATHS:
-        if p and os.path.exists(p):
-            return p
-    return None
-
-
-# 模块级 app.config 解析缓存：单次点击触发 3 次读盘，开销忽略但用 mtime 兜底外部修改
-_SYSTEM_CONFIG_CACHE: Dict[str, Any] = {"path": None, "mtime": 0.0, "data": None}
-
-
-def _load_system_config() -> Optional[Dict[str, Any]]:
-    """读取并缓存主程序 app.config（按文件 mtime 失效，避免热重载期间读到陈旧快照）。
-
-    ⚠️ 仅供读取**非密钥字段**（provider_name / 模型列表 等用于渲染下拉选项）。
-    严禁用它取 API_KEY：密钥模式下磁盘该字段是密文（password 模式 enc:v2:…）
-    或空串（keyring 模式），拿它发请求必然 401。要 key 走宿主
-    services["get_provider_config"]（见 _get_llm_config）。
-    """
-    cfg_path = _resolve_system_config_path()
-    if not cfg_path:
-        return None
-    try:
-        mtime = os.path.getmtime(cfg_path)
-    except OSError as e:
-        logger.debug(f"[PromptEnhancer] app.config stat 失败: {e}")
-        return None
-    cache = _SYSTEM_CONFIG_CACHE
-    if cache["path"] == cfg_path and cache["mtime"] == mtime and cache["data"] is not None:
-        return cache["data"]
-    try:
-        with open(cfg_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-    except (OSError, ValueError) as e:
-        logger.debug(f"[PromptEnhancer] 读取主程序 app.config 失败: {e}")
-        return None
-    cache["path"] = cfg_path
-    cache["mtime"] = mtime
-    cache["data"] = data
-    return data
-
-
 def _caps(name: str) -> Any:
     """取宿主能力（设置卡无 ctx，走 caps_for 按插件名解析到活跃窗口）。"""
     try:
@@ -154,7 +102,7 @@ def _caps(name: str) -> Any:
 
 
 def _load_provider_entries() -> List[Dict[str, Any]]:
-    """内存态服务商清单（provider.list 能力）；不可用返回 []（调用方回退磁盘扫描）。"""
+    """内存态服务商清单（provider.list 能力）；不可用返回 []（下拉留空保已存值）。"""
     fn = _caps("provider.list")
     if not callable(fn):
         return []
@@ -184,8 +132,8 @@ def _load_models_of(provider_id: str) -> List[str]:
 def _load_provider_tree() -> List[Tuple[str, str]]:
     """服务商两级下拉第一级选项：[(display, config_id)]。
 
-    首选 provider.list（内存态，用户刚加的服务商立即可见）；能力不可用
-    （旧宿主 / 无活跃窗口）回退扫描 app.config 非密钥字段。
+    走 provider.list（内存态，用户刚加的服务商立即可见）；能力不可用
+    （旧宿主 / 无活跃窗口）返回 []，由设置卡回显逻辑保住已存值。
     """
     out: List[Tuple[str, str]] = []
     for p in _load_provider_entries():
@@ -196,42 +144,15 @@ def _load_provider_tree() -> List[Tuple[str, str]]:
         if p.get("is_current"):
             label = f"{label}（当前）"
         out.append((label, pid))
-    if out:
-        return out
-    # 降级：磁盘扫描（仅非密钥字段，与旧版渲染路径同源）
-    data = _load_system_config()
-    if data is None:
-        return []
-    saved = (data.get("LLM") or {}).get("SavedProviders") or {}
-    seen: set = set()
-    for cid, p in saved.items():
-        if not isinstance(p, dict):
-            continue
-        name = str(p.get("provider_name") or p.get("name") or cid).strip()
-        if not cid or not name or cid in seen:
-            continue
-        seen.add(cid)
-        out.append((name, cid))
-    out.sort(key=lambda item: item[0].lower())
     return out
 
 
 def _load_models_by_tree(provider_id: str) -> List[str]:
-    """服务商两级下拉第二级选项：模型名列表。首选 model.enumerate，回退磁盘。"""
-    models = _load_models_of(provider_id)
-    if models:
-        return models
-    data = _load_system_config()
-    if data is None:
-        return []
-    for cid, p in ((data.get("LLM") or {}).get("SavedProviders") or {}).items():
-        if cid != provider_id or not isinstance(p, dict):
-            continue
-        models = [str(m).strip() for m in (p.get("模型列表") or []) if str(m).strip()]
-        if not models and p.get("模型名称"):
-            models = [str(p["模型名称"]).strip()]
-        return models
-    return []
+    """服务商两级下拉第二级选项：模型名列表（model.enumerate 能力）。
+
+    能力不可用返回 []，由设置卡回显逻辑保住已存值。
+    """
+    return _load_models_of(provider_id)
 
 
 def _parse_enhance_model(value: str) -> Optional[Tuple[str, str]]:
@@ -619,45 +540,40 @@ class _EnhanceConfigCard(_ConfigCardBase):
         self._echo()
 
 
-def _get_provider_config_from_memory(
-    main_widget, provider: str = "", model: str = ""
-) -> Optional[Dict[str, Any]]:
-    """从宿主**内存态**取服务商配置（含已解密明文 API_KEY）。
+def _pool_resolve_config():
+    """能力池 model.config 解析器（含明文 key 完整配置）；不可用返回 None。
 
-    兜底路径：宿主未提供 services["get_provider_config"]（旧版主程序）时使用。
-    严禁读 app.config 文件——密钥模式下磁盘 API_KEY 是密文（enc:v2:…）或空串，
-    拿它发请求必然 401。
+    pool.legacy("get_provider_config", "model.config")：旧服务键优先、
+    能力主实现兜底；两者同签名（无参 = 当前会话模型，带参 = 五级匹配）。
     """
-    valid = getattr(main_widget, "_valid_configs", None)
-    if not isinstance(valid, dict) or not valid:
+    try:
+        from app.plugins.sdk import pool_for
+
+        pool = pool_for(plugin=PLUGIN_NAME, surface="ui")
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"[PromptEnhancer] 取能力池失败: {e}")
         return None
-    if provider:
-        # 按 config_id / display_name / provider_name 匹配（与主程序五级解析同序）
-        if provider in valid:
-            return dict(valid[provider])
-        for _cid, info in valid.items():
-            if not isinstance(info, dict):
-                continue
-            if provider in (info.get("display_name"), info.get("provider_name"), info.get("name")):
-                return dict(info)
+    if pool is None:
         return None
-    name = getattr(main_widget, "_current_provider_name", None) or ""
-    cfg = valid.get(name)
-    return dict(cfg) if isinstance(cfg, dict) else None
+    try:
+        resolve = pool.legacy("get_provider_config", "model.config")
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"[PromptEnhancer] model.config 能力不可用: {e}")
+        return None
+    return resolve if callable(resolve) else None
 
 
 def _get_llm_config(
-    main_widget,
     override_provider: Optional[str] = None,
     override_model: Optional[str] = None,
     services: Optional[Dict[str, Any]] = None,
 ) -> Optional[Dict[str, Any]]:
     """取执行本次提示词增强的模型配置（API_KEY / API_URL / 模型名称）。
 
-    取配置的**唯一正确通道**是宿主：
-    1. services["get_provider_config"]（主程序公开服务，读内存态已解锁明文，
-       并叠加模型默认参数，与主程序发起请求的配置同构）；
-    2. 兜底遍历 main_widget._valid_configs（同为内存态，旧版主程序无服务时用）。
+    取配置的唯一正确通道是宿主内存态，两路按优先级：
+    1. ctx["services"]["get_provider_config"]（窗口上下文注入，与主程序
+       发起请求的配置同构）；
+    2. 能力池 model.config（caps_for 解析到活跃窗口）。
 
     绝不 json.load(app.config)：密钥模式下磁盘 API_KEY 是密文或空串。
 
@@ -667,39 +583,32 @@ def _get_llm_config(
     provider = override_provider or ""
     model = override_model or ""
 
-    # 1) 宿主公开服务（首选）
-    if isinstance(services, dict):
-        get_cfg = services.get("get_provider_config")
-        if callable(get_cfg):
-            try:
-                cfg = get_cfg(provider, model)
-            except Exception as e:  # noqa: BLE001
-                logger.warning(f"[PromptEnhancer] get_provider_config 调用失败: {e}")
-                cfg = None
-            # 判据是「配置非空」而非「key 非空」：免鉴权服务商（如 OpenCode 免费
-            # 模型）API_KEY 本就为空，build_openai_client 会剥掉 Authorization 头
-            if isinstance(cfg, dict) and cfg:
-                return cfg
-            # 服务返回空（provider 不存在 / 宿主未就绪）→ 继续兜底，
-            # 显式指名的 provider 失效时不静默串到别的服务商
-            if provider:
-                return None
-
-    # 2) 内存态兜底（旧版主程序 / 未注入 services 的调用路径）
-    cfg = _get_provider_config_from_memory(main_widget, provider, model)
-    if not isinstance(cfg, dict):
+    if isinstance(services, dict) and callable(services.get("get_provider_config")):
+        get_cfg = services["get_provider_config"]
+    else:
+        get_cfg = _pool_resolve_config()
+    if not callable(get_cfg):
         return None
-    if model:
-        cfg["模型名称"] = model
-    return cfg
+    try:
+        cfg = get_cfg(provider, model)
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"[PromptEnhancer] 模型配置解析失败: {e}")
+        cfg = None
+    # 判据是「配置非空」而非「key 非空」：免鉴权服务商（如 OpenCode 免费
+    # 模型）API_KEY 本就为空，build_openai_client 会剥掉 Authorization 头；
+    # 服务返回空（服务商不存在 / 宿主未就绪）→ None，
+    # 显式指名的 provider 失效时不静默串到别的服务商
+    if isinstance(cfg, dict) and cfg:
+        return cfg
+    return None
 
 
-def _resolve_enhance_model(main_widget) -> Optional[Tuple[str, str]]:
+def _resolve_enhance_model() -> Optional[Tuple[str, str]]:
     """读取 enhance_provider + enhance_model 配置 → (provider, model) 或 None。
 
     服务商、模型分开存（对齐 vision-proxy）；enhance_model 存旧格式
-    「服务商:模型名」时拆分兼容。两键均空/解析失败 → 回退到调用方当前
-    provider/model（保证任务不空跑）；再失败 → None。
+    「服务商:模型名」时拆分兼容。两键均空 → None（= 沿用调用方当前
+    provider/model，由宿主 get_provider_config / model.config 解析）。
     """
     provider = str(PluginConfigStore().get(PLUGIN_NAME, "enhance_provider") or "").strip()
     model = str(PluginConfigStore().get(PLUGIN_NAME, "enhance_model") or "").strip()
@@ -709,19 +618,6 @@ def _resolve_enhance_model(main_widget) -> Optional[Tuple[str, str]]:
             provider, model = parsed_old
     if provider or model:
         return provider, model
-    # 兜底：用调用方当前 provider + model（即便解析失败也保证能跑）
-    valid = getattr(main_widget, "_valid_configs", None)
-    if isinstance(valid, dict):
-        cur_name = getattr(main_widget, "_current_provider_name", None) or "系统默认配置"
-        cur_cfg = valid.get(cur_name) or {}
-        provider = (
-            cur_cfg.get("provider_name")
-            or cur_cfg.get("name")
-            or cur_name
-        )
-        model = cur_cfg.get("模型名称") or ""
-        if provider and model:
-            return str(provider), str(model)
     return None
 
 
@@ -751,9 +647,8 @@ def _on_enhance_clicked(context: Dict[str, Any]) -> None:
         enhance_prompt = DEFAULT_ENHANCE_PROMPT
 
     # 模型选择：enhance_model 配置优先，否则沿用调用方当前模型
-    override = _resolve_enhance_model(main_widget)
+    override = _resolve_enhance_model()
     llm_config = _get_llm_config(
-        main_widget,
         override_provider=override[0] if override else None,
         override_model=override[1] if override else None,
         services=context.get("services"),

@@ -10,7 +10,7 @@
     },
     "license": "MIT",
     "type": "user",
-    "min_host_version": "0.6.12",
+    "min_host_version": "0.8.0",
     "capabilities": [
         "engine.session",
         "model.config",
