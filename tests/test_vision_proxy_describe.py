@@ -188,7 +188,7 @@ def test_impl_single_string_path(vd, tmp_path):
     finally:
         vd._STORE.values = {}
     assert r.success is False
-    assert "model.config" in r.error
+    assert "model.config_for" in r.error
 
 
 def test_impl_too_many_images(vd, tmp_path):
@@ -231,7 +231,7 @@ def test_impl_capability_missing(vd, tmp_path, monkeypatch):
     finally:
         vd._STORE.values = {}
     assert r.success is False
-    assert "model.config" in r.error
+    assert "model.config_for" in r.error
 
 
 # ── 4. 成功路径（引擎替身）──
@@ -262,10 +262,15 @@ def test_impl_success(vd, tmp_path, monkeypatch):
     session = _FakeSession()
 
     class _Pool(dict):
-        def legacy(self, key, cap_id):
-            return lambda provider="", model="": {"模型名称": model or "gpt-4o"}
+        pass
 
-    monkeypatch.setattr(vd, "_host_pool", lambda: _Pool({"model.config": 1, "engine.session": 1}))
+    pool = _Pool(
+        {
+            "model.config_for": lambda query, capability_type="chat": {"模型名称": "gpt-4o"},
+            "engine.session": 1,
+        }
+    )
+    monkeypatch.setattr(vd, "_host_pool", lambda: pool)
     monkeypatch.setattr(vd, "_create_session", lambda override: (session, ""))
     try:
         r = vd._impl({}, paths=[str(_png(tmp_path))], question="读出报错")

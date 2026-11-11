@@ -15,10 +15,10 @@
     "license": "GPL-3.0-or-later",
     "type": "user",
     "api_version": 2,
-    "min_host_version": "0.6.10",
+    "min_host_version": "0.8.0",
     "capabilities": [
         "engine.session",
-        "model.config",
+        "model.config_for",
         "provider.list",
         "model.enumerate"
     ],

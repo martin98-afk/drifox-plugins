@@ -6,7 +6,7 @@
 
 链路：
     1. 图片路径 / URL → data URI（本地文件 base64，远程 URL 原样透传）
-    2. 宿主 get_provider_config(provider, model) 取含明文密钥的视觉模型配置
+    2. 宿主 model.config_for(query, capability_type="chat") 取含明文密钥的视觉模型配置
     3. 宿主 create_engine_session + model_config_override 发一轮多模态请求
     4. turn() 的文本作为工具结果回给当前模型
 
@@ -14,7 +14,7 @@
 thinking 参数）、单向伪装头、max_tokens 钳制、智能重试全在引擎里，自建直发
 会丢这些（实测非流式 400）。
 
-为什么这两个能力要显式 surface="ui"：engine.session / model.config 的
+为什么这两个能力要显式 surface="ui"：engine.session / model.config_for 的
 provider 只注册在 ui surface（app/plugins/capabilities/providers/ui_core.py），
 而工具插件的 tool_ctx["services"] 只投影 tool surface，拿不到。
 """
@@ -122,16 +122,17 @@ def _vision_override(provider: str, model: str) -> Tuple[Dict[str, Any], str]:
     if not provider and not model:
         return {}, "未配置视觉模型：请在插件设置里填「视觉服务商」或「视觉模型」"
     pool = _host_pool()
-    if pool is None or "model.config" not in pool:
-        return {}, "宿主未提供 model.config 能力（请升级 DriFox，或检查 manifest capabilities）"
-    try:
-        resolve = pool.legacy("get_provider_config", "model.config")
-    except Exception as e:  # noqa: BLE001
-        return {}, f"宿主未提供 get_provider_config 服务: {e}"
+    if pool is None or "model.config_for" not in pool:
+        return {}, "宿主未提供 model.config_for 能力（请升级 DriFox，或检查 manifest capabilities）"
+    resolve = pool["model.config_for"]
     if not callable(resolve):
-        return {}, "宿主未提供 get_provider_config 服务"
+        return {}, "宿主未提供 model.config_for 能力"
+    # query 三格式：服务商:模型名 / 服务商名 / 模型名（宿主侧五级匹配 + 模糊匹配）。
+    # capability_type 固定 "chat"：视觉理解 = 多模态对话，画图/语音实例
+    # （capability_type=image_generation 等）做不了看图，按类型排除。
+    query = f"{provider}:{model}" if provider and model else (provider or model)
     try:
-        raw_cfg: Any = resolve(provider, model) or {}
+        raw_cfg: Any = resolve(query, capability_type="chat") or {}
     except Exception as e:  # noqa: BLE001
         return {}, f"解析视觉模型配置失败: {type(e).__name__}: {e}"
     if not isinstance(raw_cfg, dict) or not raw_cfg:
@@ -143,8 +144,12 @@ def _auto_pick_vision_model() -> Tuple[str, str, str]:
     """未显式配置时，自动挑一个声明支持图像的模型。
 
     走 provider.list → model.enumerate 两级：先用「当前服务商」里的视觉模型，
-    没有再遍历其余服务商。supports_vision 由宿主的声明层（「声明_支持图像」
-    六键 L0）给出，比按模型名猜（含 -vl / vision / 4o 等字样）可靠。
+    没有再遍历其余服务商。实例级先用 capability_type 预剪枝（非 chat 实例
+    ——画图/语音等——不可能有支持看图的对话模型，跳过省一次 enumerate）；
+    模型级仍以 supports_vision 为准：实例级类型表达不了单模型的多模态能力，
+    纯文本 chat 实例里的模型同样过不了这关。supports_vision 由宿主的声明层
+    （「声明_支持图像」六键 L0）给出，比按模型名猜（含 -vl / vision / 4o 等
+    字样）可靠。
 
     Returns: (provider_id, model_name, error)；成功时 error 为空串。
     """
@@ -161,6 +166,9 @@ def _auto_pick_vision_model() -> Tuple[str, str, str]:
     for p in ordered:
         pid = str(p.get("id") or "")
         if not pid:
+            continue
+        # 实例级预剪枝：非 chat 类型（画图/语音/转写实例）无看图对话模型
+        if str(p.get("capability_type", "chat") or "chat") != "chat":
             continue
         try:
             models = pool["model.enumerate"](pid) or []
