@@ -96,7 +96,11 @@ class TaskBoardController(QObject):
         """当前看板运行环境：模型显示名 + 工作目录（头部信息栏用）"""
         model_display = ""
         try:
-            fn = (self._services or {}).get("get_model_config")
+            # get_model_config 旧键已随 LEGACY_MAP 退役：走 model.config 能力
+            from app.plugins.sdk import pool_for
+
+            _pool = pool_for(plugin=PLUGIN_ID, surface="ui")
+            fn = _pool["model.config"] if _pool is not None and "model.config" in _pool else None
             mc = fn() if callable(fn) else {}
             provider = mc.get("服务商名", "")
             model = mc.get("模型名称", "")
