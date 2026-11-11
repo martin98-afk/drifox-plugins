@@ -5,9 +5,9 @@
 - 服务商/模型两级下拉：provider.list / model.enumerate 能力（内存态，
   用户刚加的服务商立即可见）；能力不可用（旧宿主 / 无活跃窗口）下拉为空，
   已存配置由设置卡回显逻辑保留不丢。
-- 明文 API_KEY 经宿主 services["get_provider_config"] 或能力池 model.config
-  获取（内存态已解锁明文）；绝不 json.load(app.config)——密钥模式下磁盘
-  API_KEY 是密文/空串，不可用于请求。
+- 明文 API_KEY 经能力池 model.config_for / model.config 获取（内存态已解锁
+  明文）；绝不 json.load(app.config)——密钥模式下磁盘 API_KEY 是密文/空串，
+  不可用于请求。
 - PluginConfigStore 读取 commit_prompt / commit_provider / commit_model 配置
   （服务商、模型分开存，对齐 vision-proxy）；commit_model 存旧格式
   「服务商:模型名」合并值时按兼容路径拆分。
@@ -92,11 +92,13 @@ def load_models_by_tree(provider_id: str) -> List[str]:
     return load_models_of(provider_id)
 
 
-def _pool_resolve_config():
-    """能力池 model.config 解析器（含明文 key 完整配置）；不可用返回 None。
+def _pool_resolve_config(provider: str = "", model: str = "") -> Optional[Dict[str, Any]]:
+    """能力池解析完整模型配置（含明文 key）；不可用返回 None。
 
-    pool.legacy("get_provider_config", "model.config")：旧服务键优先、
-    能力主实现兜底；两者同签名（无参 = 当前会话模型，带参 = 五级匹配）。
+    model.config_for 按名五级解析（「服务商:模型 / 服务商 / 模型名」，
+    capability_type 缺省 chat）；provider/model 均空时走 model.config
+    无参调用沿用当前会话模型。旧 model.config 带参是 config_id 匹配、
+    空 config_id 忽略 model，语义不符，不走。
     """
     try:
         from app.plugins.sdk import pool_for
@@ -108,47 +110,42 @@ def _pool_resolve_config():
     if pool is None:
         return None
     try:
-        resolve = pool.legacy("get_provider_config", "model.config")
+        if provider or model:
+            resolve = pool["model.config_for"]
+            if not callable(resolve):
+                return None
+            query = f"{provider}:{model}" if provider and model else (provider or model)
+            cfg = resolve(query)
+        else:
+            resolve = pool["model.config"]
+            if not callable(resolve):
+                return None
+            cfg = resolve()
     except Exception as e:  # noqa: BLE001
-        logger.debug(f"[git-panel] model.config 能力不可用: {e}")
+        logger.warning(f"[git-panel] 模型配置解析失败: {e}")
         return None
-    return resolve if callable(resolve) else None
+    # 「配置非空」判据：免鉴权服务商 API_KEY 本就为空；服务返回空
+    # （服务商不存在 / 宿主未就绪）→ None，指名的服务商失效不串别的服务商
+    return cfg if isinstance(cfg, dict) and cfg else None
 
 
 def get_llm_config(
     override_provider: str = None,
     override_model: str = None,
-    services: Dict[str, Any] = None,
 ) -> Optional[Dict[str, Any]]:
     """取本次生成用的模型配置；override 优先，回退调用方当前会话模型；无 → None。
 
-    取配置的唯一正确通道是宿主内存态，两路按优先级：
-    1. ctx["services"]["get_provider_config"]（窗口上下文注入）；
-    2. 能力池 model.config（caps_for 解析到活跃窗口）。
+    取配置的唯一正确通道是宿主内存态：能力池 model.config_for（按名五级
+    解析）/ model.config（无参 = 当前会话模型）。
     **绝不 json.load(app.config)**：密钥模式下磁盘 API_KEY 是密文或空串，
     拿它发请求必然 401。
     """
-    provider = override_provider or ""
-    model = override_model or ""
-
-    if isinstance(services, dict) and callable(services.get("get_provider_config")):
-        get_cfg = services["get_provider_config"]
-    else:
-        get_cfg = _pool_resolve_config()
-    if not callable(get_cfg):
-        return None
-    try:
-        cfg = get_cfg(provider, model)
-    except Exception as e:  # noqa: BLE001
-        logger.warning(f"[git-panel] 模型配置解析失败: {e}")
-        cfg = None
+    cfg = _pool_resolve_config(override_provider or "", override_model or "")
     # 判据是「配置非空」：免鉴权服务商 API_KEY 本为空，
     # build_openai_client 会剥掉 Authorization 头；
     # 服务返回空（服务商不存在 / 宿主未就绪）→ None，
     # 显式指名的服务商失效时不静默串到别的服务商
-    if isinstance(cfg, dict) and cfg:
-        return cfg
-    return None
+    return cfg
 
 
 def resolve_model(provider_raw: str, model_raw: str) -> Optional[Tuple[str, str]]:

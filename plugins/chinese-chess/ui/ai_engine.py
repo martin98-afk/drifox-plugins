@@ -210,11 +210,13 @@ def _strip_thinking(text: str) -> str:
 # ── 模型配置 ──
 
 
-def _pool_resolve_config():
-    """能力池 model.config 解析器（含明文 key 完整配置）；不可用返回 None。
+def _pool_resolve_config(provider: str = "", model: str = "") -> Optional[Dict[str, Any]]:
+    """能力池解析完整模型配置（含明文 key）；不可用返回 None。
 
-    pool.legacy("get_provider_config", "model.config")：旧服务键优先、
-    能力主实现兜底；两者同签名（无参 = 当前会话模型，带参 = 五级匹配）。
+    model.config_for 按名五级解析（「服务商:模型 / 服务商 / 模型名」，
+    capability_type 缺省 chat）；provider/model 均空时走 model.config
+    无参调用沿用当前会话模型。旧 model.config 带参是 config_id 匹配、
+    空 config_id 忽略 model，语义不符，不走。
     """
     try:
         from app.plugins.sdk import pool_for
@@ -226,49 +228,43 @@ def _pool_resolve_config():
     if pool is None:
         return None
     try:
-        resolve = pool.legacy("get_provider_config", "model.config")
+        if provider or model:
+            resolve = pool["model.config_for"]
+            if not callable(resolve):
+                return None
+            query = f"{provider}:{model}" if provider and model else (provider or model)
+            cfg = resolve(query)
+        else:
+            resolve = pool["model.config"]
+            if not callable(resolve):
+                return None
+            cfg = resolve()
     except Exception as e:  # noqa: BLE001
-        logger.debug(f"[chinese-chess] model.config 能力不可用: {e}")
+        logger.warning(f"[chinese-chess] 模型配置解析失败: {e}")
         return None
-    return resolve if callable(resolve) else None
+    # 「配置非空」判据：免鉴权服务商 API_KEY 本就为空；服务返回空
+    # （服务商不存在 / 宿主未就绪）→ None，指名的 provider 失效不串别的服务商
+    return cfg if isinstance(cfg, dict) and cfg else None
 
 
 def _get_llm_config(
     provider: str = "",
     model: str = "",
-    services: Optional[Dict[str, Any]] = None,
 ) -> Optional[Dict[str, Any]]:
     """取模型配置（API_KEY / API_URL / 模型名称）。
 
-    唯一正确通道是宿主内存态，两路按优先级：
-    1. services["get_provider_config"]（窗口上下文注入）；
-    2. 能力池 model.config（caps_for 解析到活跃窗口）。
+    唯一正确通道是宿主内存态：能力池 model.config_for（按名五级解析）/
+    model.config（无参 = 当前会话模型）。
     绝不读 app.config 磁盘文件——密钥模式下 API_KEY 是密文。
 
     provider/model 为空时沿用主程序当前会话模型；提供时用指定服务商，
     且显式指名的 provider 失效时不静默串到别的服务商（返 None）。
     """
-    if isinstance(services, dict) and callable(services.get("get_provider_config")):
-        get_cfg = services["get_provider_config"]
-    else:
-        get_cfg = _pool_resolve_config()
-    if not callable(get_cfg):
-        return None
-    try:
-        cfg = get_cfg(provider, model)
-    except Exception as e:  # noqa: BLE001
-        logger.warning(f"[chinese-chess] 模型配置解析失败: {e}")
-        cfg = None
-    # 判据是「配置非空」非「key 非空」：免鉴权服务商 API_KEY 本就为空；
-    # 服务返回空（服务商不存在 / 宿主未就绪）→ None，
-    # 显式指名的 provider 失效时不静默串到别的服务商
-    if isinstance(cfg, dict) and cfg:
-        return dict(cfg)
-    return None
+    cfg = _pool_resolve_config(provider, model)
+    return dict(cfg) if cfg else None
 
 
 def _resolve_side_config(
-    services: Optional[Dict[str, Any]],
     side: str,
     card,
 ) -> Optional[Dict[str, Any]]:
@@ -285,7 +281,7 @@ def _resolve_side_config(
         # 旧格式兼容：「Provider:Model」合并值
         provider, model = model.split(":", 1)
         provider, model = provider.strip(), model.strip()
-    cfg = _get_llm_config(provider, model, services)
+    cfg = _get_llm_config(provider, model)
     if not cfg:
         return None
     return {**cfg, "温度": 0.3, "思考模式": False}
@@ -533,16 +529,7 @@ def start_ai_move(card):
 
     返回 True = 任务已派发；False = 缺少上下文/模型配置。
     """
-    # 上下文 services（EP3 契约：get_provider_config / create_engine_session）
-    services: Dict[str, Any] = {}
-    ctx_provider = getattr(card, "_context_provider", None)
-    if callable(ctx_provider):
-        try:
-            services = (ctx_provider() or {}).get("services") or {}
-        except Exception as e:  # noqa: BLE001
-            logger.debug(f"[chinese-chess] 读取上下文 services 失败: {e}")
-
-    llm_config = _resolve_side_config(services, card._side_to_move, card)
+    llm_config = _resolve_side_config(card._side_to_move, card)
     if not llm_config:
         logger.warning("[chinese-chess] 未找到模型配置，LLM 不可用")
         return False

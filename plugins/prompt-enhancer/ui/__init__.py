@@ -21,9 +21,8 @@
   智能重试全部自动生效，插件零协议知识；
 - 后台 QRunnable + 信号桥接，结果在主线程注回输入框，避免 UI 卡死。
 
-模型配置来自宿主 services["get_provider_config"] 或能力池 model.config
-（内存态已解锁明文，两路同签名；服务商与模型均未配置时沿用调用方当前
-provider/model）。"""
+模型配置来自能力池 model.config_for / model.config（内存态已解锁明文，
+按名五级解析；服务商与模型均未配置时沿用调用方当前 provider/model）。"""
 
 import os
 import re
@@ -158,7 +157,7 @@ def _load_models_by_tree(provider_id: str) -> List[str]:
 def _parse_enhance_model(value: str) -> Optional[Tuple[str, str]]:
     """解析旧格式「enhance_model」合并值「服务商:模型名」→ (provider, model) 或 None。
 
-    仅用于兼容历史存量配置；有效性由 get_provider_config 五级解析兜底
+    仅用于兼容历史存量配置；有效性由 model.config_for 五级解析兜底
     （拆开的两键与设置卡新写入的完全同构），不再预校验 SavedProviders。
     """
     if not value or ":" not in value:
@@ -540,11 +539,13 @@ class _EnhanceConfigCard(_ConfigCardBase):
         self._echo()
 
 
-def _pool_resolve_config():
-    """能力池 model.config 解析器（含明文 key 完整配置）；不可用返回 None。
+def _pool_resolve_config(provider: str = "", model: str = "") -> Optional[Dict[str, Any]]:
+    """能力池解析完整模型配置（含明文 key）；不可用返回 None。
 
-    pool.legacy("get_provider_config", "model.config")：旧服务键优先、
-    能力主实现兜底；两者同签名（无参 = 当前会话模型，带参 = 五级匹配）。
+    model.config_for 按名五级解析（「服务商:模型 / 服务商 / 模型名」，
+    capability_type 缺省 chat）；provider/model 均空时走 model.config
+    无参调用沿用当前会话模型。旧 model.config 带参是 config_id 匹配、
+    空 config_id 忽略 model，语义不符，不走。
     """
     try:
         from app.plugins.sdk import pool_for
@@ -556,51 +557,45 @@ def _pool_resolve_config():
     if pool is None:
         return None
     try:
-        resolve = pool.legacy("get_provider_config", "model.config")
+        if provider or model:
+            resolve = pool["model.config_for"]
+            if not callable(resolve):
+                return None
+            query = f"{provider}:{model}" if provider and model else (provider or model)
+            cfg = resolve(query)
+        else:
+            resolve = pool["model.config"]
+            if not callable(resolve):
+                return None
+            cfg = resolve()
     except Exception as e:  # noqa: BLE001
-        logger.debug(f"[PromptEnhancer] model.config 能力不可用: {e}")
+        logger.warning(f"[PromptEnhancer] 模型配置解析失败: {e}")
         return None
-    return resolve if callable(resolve) else None
+    # 「配置非空」判据：免鉴权服务商 API_KEY 本就为空；服务返回空
+    # （服务商不存在 / 宿主未就绪）→ None，指名的 provider 失效不串别的服务商
+    return cfg if isinstance(cfg, dict) and cfg else None
 
 
 def _get_llm_config(
     override_provider: Optional[str] = None,
     override_model: Optional[str] = None,
-    services: Optional[Dict[str, Any]] = None,
 ) -> Optional[Dict[str, Any]]:
     """取执行本次提示词增强的模型配置（API_KEY / API_URL / 模型名称）。
 
-    取配置的唯一正确通道是宿主内存态，两路按优先级：
-    1. ctx["services"]["get_provider_config"]（窗口上下文注入，与主程序
-       发起请求的配置同构）；
-    2. 能力池 model.config（caps_for 解析到活跃窗口）。
+    取配置的唯一正确通道是宿主内存态：能力池 model.config_for（按名五级
+    解析）/ model.config（无参 = 当前会话模型）。
 
     绝不 json.load(app.config)：密钥模式下磁盘 API_KEY 是密文或空串。
 
     override_provider/override_model 均提供时优先用该服务商；否则沿用调用方
     当前 provider/model。返回 None 表示无可用配置（需提示用户先配置模型）。
     """
-    provider = override_provider or ""
-    model = override_model or ""
-
-    if isinstance(services, dict) and callable(services.get("get_provider_config")):
-        get_cfg = services["get_provider_config"]
-    else:
-        get_cfg = _pool_resolve_config()
-    if not callable(get_cfg):
-        return None
-    try:
-        cfg = get_cfg(provider, model)
-    except Exception as e:  # noqa: BLE001
-        logger.warning(f"[PromptEnhancer] 模型配置解析失败: {e}")
-        cfg = None
+    cfg = _pool_resolve_config(override_provider or "", override_model or "")
     # 判据是「配置非空」而非「key 非空」：免鉴权服务商（如 OpenCode 免费
     # 模型）API_KEY 本就为空，build_openai_client 会剥掉 Authorization 头；
     # 服务返回空（服务商不存在 / 宿主未就绪）→ None，
     # 显式指名的 provider 失效时不静默串到别的服务商
-    if isinstance(cfg, dict) and cfg:
-        return cfg
-    return None
+    return cfg
 
 
 def _resolve_enhance_model() -> Optional[Tuple[str, str]]:
@@ -608,7 +603,7 @@ def _resolve_enhance_model() -> Optional[Tuple[str, str]]:
 
     服务商、模型分开存（对齐 vision-proxy）；enhance_model 存旧格式
     「服务商:模型名」时拆分兼容。两键均空 → None（= 沿用调用方当前
-    provider/model，由宿主 get_provider_config / model.config 解析）。
+    provider/model，由能力池 model.config_for / model.config 解析）。
     """
     provider = str(PluginConfigStore().get(PLUGIN_NAME, "enhance_provider") or "").strip()
     model = str(PluginConfigStore().get(PLUGIN_NAME, "enhance_model") or "").strip()
@@ -651,7 +646,6 @@ def _on_enhance_clicked(context: Dict[str, Any]) -> None:
     llm_config = _get_llm_config(
         override_provider=override[0] if override else None,
         override_model=override[1] if override else None,
-        services=context.get("services"),
     )
     if not llm_config:
         _notify(main_widget, "提示词增强", "未找到模型配置，请先在设置中配置模型", "warning")
