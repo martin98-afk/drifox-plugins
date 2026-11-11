@@ -374,13 +374,19 @@ if _UI_AVAILABLE:
             _save({"summary_prompt": ""})
 
 def _host_options() -> List[Tuple[str, str]]:
-    """主程序里 capability_type=speech_recognition 的服务商实例。"""
+    """主程序里 capability_type=speech_recognition 的实例与其模型。
+
+    query 直接交给 `model.config_for`：`<配置ID>` 走实例默认模型，
+    `<配置ID>:<模型名>` 选到具体模型。先给默认项再逐模型展开，
+    老配置里存的纯配置 ID 仍能回显。
+    """
     try:
         from app.plugins.sdk import pool_for
 
         pool = pool_for(plugin=PLUGIN_NAME, surface="ui")
         if pool is None or "provider.list" not in pool:
             return []
+        can_enumerate = "model.enumerate" in pool
         out: List[Tuple[str, str]] = []
         for item in pool["provider.list"]() or []:
             if str(item.get("capability_type") or "") != "speech_recognition":
@@ -389,7 +395,19 @@ def _host_options() -> List[Tuple[str, str]]:
             if not config_id:
                 continue
             name = str(item.get("display_name") or item.get("provider_name") or config_id)
-            out.append((config_id, f"语音识别 · {name}"))
+            out.append((config_id, f"语音识别 · {name}（实例默认模型）"))
+            if not can_enumerate:
+                continue
+            try:
+                models = pool["model.enumerate"](config_id) or []
+            except Exception as e:  # noqa: BLE001 — 单个实例失败不影响其他
+                logger.debug(f"[meeting-notes] 枚举 {config_id} 模型失败: {e}")
+                continue
+            for model in models:
+                model_name = str((model or {}).get("name") or "").strip()
+                if not model_name:
+                    continue
+                out.append((f"{config_id}:{model_name}", f"语音识别 · {name} · {model_name}"))
         return out
     except Exception as e:  # noqa: BLE001 — 宿主不可用不影响配置卡渲染
         logger.debug(f"[meeting-notes] 列宿主语音识别服务商失败: {e}")

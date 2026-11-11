@@ -22,6 +22,7 @@
     "capabilities": [
         "ui.notify",
         "provider.list",
+        "model.enumerate",
         "model.config_for"
     ],
     "keywords": [

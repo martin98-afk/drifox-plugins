@@ -26,7 +26,7 @@
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| 配置来源 | select | 主程序「服务商设置」里 `capability_type=speech_recognition` 的实例；选中后其端点/Key/模型排识别链首位，不选或失效则只用下面的自填 Key |
+| 配置来源 | select | 主程序「服务商设置」里 `capability_type=speech_recognition` 的实例，每个实例再展开到具体模型（「语音识别 · 实例名 · 模型名」）；选中后其端点/Key/模型排识别链首位，不选或失效则只用下面的自填 Key |
 | 识别引擎 | select | `auto`（默认，硅基流动优先，失败转 MiniMax）/ `siliconflow`（仅硅基流动）/ `minimax`（仅 MiniMax） |
 | 硅基流动 API Key | password | [硅基流动](https://cloud.siliconflow.cn/account/ak) 获取；免费模型不消耗余额 |
 | 硅基流动模型 | select | 免费模型下拉：Qwen3-ASR（默认）/ SenseVoice-Small / 星尘 ASR 系列，均为免费档 |

@@ -25,10 +25,14 @@ CAPABILITY_TYPE = "speech_generation"
 
 
 def host_options(plugin: str) -> List[Tuple[str, str]]:
-    """列出宿主里能力类型匹配的服务商实例：[(config_id, 展示文案)]。
+    """列出宿主里能力类型匹配的服务商实例与其模型：[(query, 展示文案)]。
 
-    只读 provider.list（不含密钥与 URL）。宿主不支持/未授权时返回空列表，
-    配置卡据此只显示「插件内手填」一项。
+    query 直接交给 `model.config_for`：`<配置ID>` 走实例默认模型，
+    `<配置ID>:<模型名>` 选到具体模型（宿主解析器原生支持该格式）。
+    先给「实例默认模型」再逐模型展开——老配置里存的纯配置 ID 仍能回显。
+
+    只读 provider.list 与 model.enumerate（都不含密钥与 URL）。宿主不支持/
+    未授权时返回空列表，配置卡据此只显示「插件内手填」一项。
     """
     try:
         from app.plugins.sdk import pool_for
@@ -36,6 +40,7 @@ def host_options(plugin: str) -> List[Tuple[str, str]]:
         pool = pool_for(plugin=plugin, surface="ui")
         if pool is None or "provider.list" not in pool:
             return []
+        can_enumerate = "model.enumerate" in pool
         out: List[Tuple[str, str]] = []
         for item in pool["provider.list"]() or []:
             if str(item.get("capability_type") or "") != CAPABILITY_TYPE:
@@ -44,7 +49,19 @@ def host_options(plugin: str) -> List[Tuple[str, str]]:
             if not config_id:
                 continue
             name = str(item.get("display_name") or item.get("provider_name") or config_id)
-            out.append((config_id, f"语音合成 · {name}"))
+            out.append((config_id, f"语音合成 · {name}（实例默认模型）"))
+            if not can_enumerate:
+                continue
+            try:
+                models = pool["model.enumerate"](config_id) or []
+            except Exception as e:  # noqa: BLE001 — 单个实例枚举失败不影响其他
+                logger.debug(f"[voice-reply] 枚举 {config_id} 模型失败: {e}")
+                continue
+            for model in models:
+                model_name = str((model or {}).get("name") or "").strip()
+                if not model_name:
+                    continue
+                out.append((f"{config_id}:{model_name}", f"语音合成 · {name} · {model_name}"))
         return out
     except Exception as e:  # noqa: BLE001 — 宿主不可用不应影响配置卡渲染
         logger.debug(f"[voice-reply] 列宿主语音服务商失败: {e}")
