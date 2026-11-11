@@ -5,10 +5,10 @@
 旧实现用原生 QLabel/QComboBox 且标签硬编码白色文字，浅色主题下标签不可见、
 下拉渲染成黑条；⚠️ hint 也是开发期遗留，一并移除。
 
-服务商/模型分开选（对齐 vision-proxy）：数据源首选 provider.list /
-model.enumerate 能力（内存态，随选随取），能力不可用回退扫描主配置
-LLM.SavedProviders 非密钥字段。AI 决策走宿主 EngineSession（ui/ai_engine.py），
-红黑方各自存 provider/model 两键，均空 = 沿用主程序当前会话模型。
+服务商/模型分开选（对齐 vision-proxy）：数据源走 provider.list /
+model.enumerate 能力（内存态，随选随取）；能力不可用（旧宿主 / 无活跃窗口）
+下拉为空，已存的红黑方配置由回显逻辑保留不丢。AI 决策走宿主 EngineSession
+（ui/ai_engine.py），红黑方各自存 provider/model 两键，均空 = 沿用主程序当前会话模型。
 
 UI 即时保存：任一控件变化 → PluginConfigStore().set_values() → 落盘 + 回调
 ChessCard.update_config() 让对局立刻按新配置执行（无需重启插件）。
@@ -16,9 +16,6 @@ ChessCard.update_config() 让对局立刻按新配置执行（无需重启插件
 
 from __future__ import annotations
 
-import json
-import os
-from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from loguru import logger
@@ -50,50 +47,7 @@ DEFAULT_RED_CONTROL = "manual"
 _LABEL_MIN_WIDTH = 120
 
 
-# ── 系统配置定位（参考 ip-switcher/ui/config.py discover_system_providers）──
-def _get_drifox_root() -> Path:
-    """定位 DriFox 应用根目录（.drifox/app.config 所在层）。"""
-    candidates = []
-    env = os.environ.get("DRIFOX_ROOT")
-    if env:
-        candidates.append(Path(env))
-    candidates.append(Path.home() / ".drifox")
-    for c in candidates:
-        if (c / "app.config").exists():
-            return c
-    return candidates[0]
-
-
-def discover_system_providers() -> List[Dict[str, Any]]:
-    """扫描 DriFox 主配置的 LLM.SavedProviders，返回 provider 信息列表。
-
-    返回：[{provider_name, url, models: [str, ...]}, ...]
-    失败（无主程序 / 解析异常）返回空列表。
-    """
-    cfg_path = _get_drifox_root() / "app.config"
-    if not cfg_path.exists():
-        return []
-    try:
-        with cfg_path.open("r", encoding="utf-8") as f:
-            data = json.load(f)
-        providers = (data.get("LLM", {}) or {}).get("SavedProviders", {}) or {}
-        result: List[Dict[str, Any]] = []
-        for _cid, p in providers.items():
-            if not isinstance(p, dict):
-                continue
-            name = p.get("provider_name") or p.get("name") or ""
-            url = p.get("API_URL") or ""
-            models = list(p.get("模型列表") or []) or (
-                [p.get("模型名称")] if p.get("模型名称") else []
-            )
-            if name:
-                result.append({"provider_name": name, "url": url, "models": models})
-        return result
-    except (OSError, ValueError) as e:
-        logger.debug(f"[chinese-chess] 系统模型发现失败: {e}")
-        return []
-
-
+# ── 宿主能力 ──
 def _caps(name: str) -> Any:
     """取宿主能力（设置卡无 ctx，走 caps_for 按插件名解析到活跃窗口）。"""
     try:
@@ -106,7 +60,7 @@ def _caps(name: str) -> Any:
 
 
 def _load_provider_entries() -> List[Dict[str, Any]]:
-    """内存态服务商清单（provider.list 能力）；不可用返回 []（调用方回退磁盘扫描）。"""
+    """内存态服务商清单（provider.list 能力）；不可用返回 []（下拉留空保已存值）。"""
     fn = _caps("provider.list")
     if not callable(fn):
         return []
@@ -136,8 +90,8 @@ def _load_models_of(provider_id: str) -> List[str]:
 def _load_provider_tree() -> List[tuple]:
     """服务商两级下拉第一级选项：[(display, key)]。
 
-    首选 provider.list（内存态，key=config_id）；能力不可用回退
-    discover_system_providers 磁盘扫描（key=provider_name，五级解析均可吃）。
+    走 provider.list（内存态，key=config_id）；能力不可用（旧宿主 /
+    无活跃窗口）返回 []，由回显逻辑保住已存值。
     """
     out: List[tuple] = []
     for p in _load_provider_entries():
@@ -148,28 +102,15 @@ def _load_provider_tree() -> List[tuple]:
         if p.get("is_current"):
             label = f"{label}（当前）"
         out.append((label, pid))
-    if out:
-        return out
-    seen: set = set()
-    for p in discover_system_providers():
-        name = str(p.get("provider_name") or "")
-        if not name or name in seen:
-            continue
-        seen.add(name)
-        out.append((name, name))
     return out
 
 
 def _load_models_by_tree(provider_key: str) -> List[str]:
-    """服务商两级下拉第二级选项：模型名列表。首选 model.enumerate，回退磁盘。"""
-    models = _load_models_of(provider_key)
-    if models:
-        return models
-    for p in discover_system_providers():
-        if str(p.get("provider_name") or "") != provider_key:
-            continue
-        return [str(m) for m in (p.get("models") or []) if str(m).strip()]
-    return []
+    """服务商两级下拉第二级选项：模型名列表（model.enumerate 能力）。
+
+    能力不可用返回 []，由回显逻辑保住已存值。
+    """
+    return _load_models_of(provider_key)
 
 
 # ── 字段行：左侧标签 + 右侧控件（对齐主程序 PluginConfigCard._FieldRow）──
@@ -301,6 +242,15 @@ class _ChessConfigCard(_CardBase):
         self.viewLayout.addWidget(_field_row("我方模型（红方）", self._red_model_combo, self.view))
         self.viewLayout.addWidget(_field_row("对方服务商（黑方）", self._black_provider_combo, self.view))
         self.viewLayout.addWidget(_field_row("对方模型（黑方）", self._black_model_combo, self.view))
+
+        # 能力不可用（旧宿主/无活跃窗口）时下拉为空：空态说明（已存值仍保留）
+        if not self._providers:
+            hint = BodyLabel(
+                "未取到服务商清单（宿主版本较旧或无活跃窗口），已存配置仍保留。",
+                self.view,
+            )
+            hint.setContentsMargins(_LABEL_MIN_WIDTH + 12, 0, 0, 0)
+            self.viewLayout.addWidget(hint)
 
         # 回显当前生效配置
         self._echo()

@@ -210,67 +210,64 @@ def _strip_thinking(text: str) -> str:
 # ── 模型配置 ──
 
 
+def _pool_resolve_config():
+    """能力池 model.config 解析器（含明文 key 完整配置）；不可用返回 None。
+
+    pool.legacy("get_provider_config", "model.config")：旧服务键优先、
+    能力主实现兜底；两者同签名（无参 = 当前会话模型，带参 = 五级匹配）。
+    """
+    try:
+        from app.plugins.sdk import pool_for
+
+        pool = pool_for(plugin="chinese-chess", surface="ui")
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"[chinese-chess] 取能力池失败: {e}")
+        return None
+    if pool is None:
+        return None
+    try:
+        resolve = pool.legacy("get_provider_config", "model.config")
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"[chinese-chess] model.config 能力不可用: {e}")
+        return None
+    return resolve if callable(resolve) else None
+
+
 def _get_llm_config(
-    main_widget,
     provider: str = "",
     model: str = "",
     services: Optional[Dict[str, Any]] = None,
 ) -> Optional[Dict[str, Any]]:
     """取模型配置（API_KEY / API_URL / 模型名称）。
 
-    唯一正确通道 services["get_provider_config"]（宿主内存态明文 + 模型
-    默认参数）；旧宿主兜底遍历 main_widget._valid_configs。
+    唯一正确通道是宿主内存态，两路按优先级：
+    1. services["get_provider_config"]（窗口上下文注入）；
+    2. 能力池 model.config（caps_for 解析到活跃窗口）。
     绝不读 app.config 磁盘文件——密钥模式下 API_KEY 是密文。
 
     provider/model 为空时沿用主程序当前会话模型；提供时用指定服务商，
     且显式指名的 provider 失效时不静默串到别的服务商（返 None）。
     """
-    if isinstance(services, dict):
-        get_cfg = services.get("get_provider_config")
-        if callable(get_cfg):
-            try:
-                cfg = get_cfg(provider, model)
-            except Exception as e:  # noqa: BLE001
-                logger.warning(f"[chinese-chess] get_provider_config 调用失败: {e}")
-                cfg = None
-            # 判据是「配置非空」非「key 非空」：免鉴权服务商 API_KEY 本就为空
-            if isinstance(cfg, dict) and cfg:
-                return dict(cfg)
-            if provider:
-                return None
-
-    valid = getattr(main_widget, "_valid_configs", None)
-    if not isinstance(valid, dict) or not valid:
-        return None
-    if provider:
-        # 按 config_id / display_name / provider_name 匹配（与主程序五级解析同序）
-        cfg = None
-        if provider in valid:
-            cfg = dict(valid[provider])
-        else:
-            for _cid, info in valid.items():
-                if isinstance(info, dict) and provider in (
-                    info.get("display_name"),
-                    info.get("provider_name"),
-                    info.get("name"),
-                ):
-                    cfg = dict(info)
-                    break
-        if cfg is None:
-            return None
+    if isinstance(services, dict) and callable(services.get("get_provider_config")):
+        get_cfg = services["get_provider_config"]
     else:
-        name = getattr(main_widget, "_current_provider_name", None) or ""
-        raw = valid.get(name)
-        cfg = dict(raw) if isinstance(raw, dict) else None
-        if cfg is None:
-            return None
-    if model:
-        cfg["模型名称"] = model
-    return cfg
+        get_cfg = _pool_resolve_config()
+    if not callable(get_cfg):
+        return None
+    try:
+        cfg = get_cfg(provider, model)
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"[chinese-chess] 模型配置解析失败: {e}")
+        cfg = None
+    # 判据是「配置非空」非「key 非空」：免鉴权服务商 API_KEY 本就为空；
+    # 服务返回空（服务商不存在 / 宿主未就绪）→ None，
+    # 显式指名的 provider 失效时不静默串到别的服务商
+    if isinstance(cfg, dict) and cfg:
+        return dict(cfg)
+    return None
 
 
 def _resolve_side_config(
-    main_widget,
     services: Optional[Dict[str, Any]],
     side: str,
     card,
@@ -288,38 +285,10 @@ def _resolve_side_config(
         # 旧格式兼容：「Provider:Model」合并值
         provider, model = model.split(":", 1)
         provider, model = provider.strip(), model.strip()
-    cfg = _get_llm_config(main_widget, provider, model, services)
+    cfg = _get_llm_config(provider, model, services)
     if not cfg:
         return None
     return {**cfg, "温度": 0.3, "思考模式": False}
-
-
-def _resolve_main_widget(card) -> Optional[Any]:
-    """从 ChessCard 实例尽量找到 main_widget（多级兜底）。
-
-    优先级：ctx["main_widget"] → card.parent() 链遍历找拥有
-    _valid_configs 属性的祖先 → None
-    """
-    # 1) 上下文 provider
-    provider = getattr(card, "_context_provider", None)
-    if callable(provider):
-        try:
-            ctx = provider() or {}
-            mw = ctx.get("main_widget")
-            if mw is not None:
-                return mw
-        except Exception:
-            pass
-
-    # 2) 父链兜底：找带 _valid_configs 的祖先 QWidget
-    cur = getattr(card, "parent", lambda: None)()
-    for _ in range(15):  # 限深防止死循环
-        if cur is None:
-            break
-        if hasattr(cur, "_valid_configs"):
-            return cur
-        cur = cur.parent() if hasattr(cur, "parent") else None
-    return None
 
 
 # ── 后台任务 ──
@@ -564,11 +533,6 @@ def start_ai_move(card):
 
     返回 True = 任务已派发；False = 缺少上下文/模型配置。
     """
-    main_widget = _resolve_main_widget(card)
-    if main_widget is None:
-        logger.warning("[chinese-chess] 未找到 main_widget，LLM 不可用")
-        return False
-
     # 上下文 services（EP3 契约：get_provider_config / create_engine_session）
     services: Dict[str, Any] = {}
     ctx_provider = getattr(card, "_context_provider", None)
@@ -578,7 +542,7 @@ def start_ai_move(card):
         except Exception as e:  # noqa: BLE001
             logger.debug(f"[chinese-chess] 读取上下文 services 失败: {e}")
 
-    llm_config = _resolve_side_config(main_widget, services, card._side_to_move, card)
+    llm_config = _resolve_side_config(services, card._side_to_move, card)
     if not llm_config:
         logger.warning("[chinese-chess] 未找到模型配置，LLM 不可用")
         return False
