@@ -6500,9 +6500,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-meeting-notes-v0.1.1/meeting-notes-0.1.1-all.tar.gz",
-                    "sha256": "1b4cafd12f55f5abae98ece6cbfb4d537f6e8b266ad264d99fb56c53c03db78b",
-                    "size": 150947
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-meeting-notes-v0.1.2/meeting-notes-0.1.2-all.tar.gz",
+                    "sha256": "6d47bdb18a0e8d0699bf3bfcc99ab9470b4a1a9839d195abf2b609aae147ba54",
+                    "size": 158116
                 }
             }
         },
