@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+### 🔧 voice-reply v1.8.1 / voice-input v0.7.1 / meeting-notes v0.2.1：配置来源可选到具体模型
+- **症状**：上一版的「配置来源」下拉只能选到服务商实例，多模型实例（如硅基流动语音合成的 CosyVoice2 / Fish-Speech / MOSS-TTSD）无法指定用哪个，实际只能跑实例默认模型
+- **修复**：每个实例先出一项「实例默认模型」（query 为纯配置 ID，旧配置照常回显），再按 `model.enumerate` 逐模型展开，query 用宿主原生支持的 `<配置ID>:<模型名>` 格式；缺 `model.enumerate` 能力的旧宿主只出默认项。voice-reply / voice-input manifest 补 `model.enumerate` 声明
+- **说明**：这三个版本号的 tarball 已在上一提交由 CI 发布，同版本号收不到修复，故按 patch 升版本
+- **验证**：多模型展开 / chat 实例过滤 / query 透传 / 旧宿主降级 四类分支全过；插件测试 44 passed；`validate_plugins.py` 四插件 OK
 ### ✨ voice-reply v1.8.0 / voice-input v0.7.0 / meeting-notes v0.2.0：改用主程序已配置的多模态服务商（带完整回退）
 - **背景**：`multimodal-providers` 插件把 12 条图像/视频/语音服务商声明交还市场，但消费侧（朗读/听写/纪要）仍各存一份 API Key，两份配置各活各的
 - **接入**：三个 UI 插件的设置卡新增「配置来源」下拉，列出主程序「服务商设置」里能力类型匹配的实例；选中后经 `model.config_for(config_id, capability_type=...)` 取该实例的 `API_URL`/`API_KEY`(明文)/`模型名称`。voice-reply 额外把音色值前缀换成宿主模型名（`模型:音色` 格式网关下前缀不换会报音色不存在）
