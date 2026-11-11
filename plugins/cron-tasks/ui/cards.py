@@ -57,32 +57,23 @@ FONT_CSS = get_font_family_css()
 
 
 def resolve_ui_service(name: str):
-    """从 controller 缓存取宿主服务；缓存未就绪时从活跃窗口上下文兜底拉。
+    """能力池 platform.read 的 legacy 键取用（list_platform_sessions / list_platforms）。
 
-    与 controller._on_notify 同一范式：卡片可能先于 services 注入被构造，
-    故不能只依赖构造期捕获。
+    pool_for 自动解析活跃窗口；能力不可用返回 None（下拉留空，回显保已存值）。
     """
     try:
-        from .controller import CronTasksController
+        from app.plugins.sdk import pool_for
 
-        svc = (CronTasksController.get_instance()._services or {}).get(name)
-        if callable(svc):
-            return svc
+        pool = pool_for(plugin="cron-tasks", surface="ui")
     except Exception:
-        pass
+        return None
+    if pool is None or "platform.read" not in pool:
+        return None
     try:
-        from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
-
-        reg = UIPluginRegistry.get_instance()
-        provider = reg._resolve_active_window_provider() or reg._context_provider
-        if provider is not None:
-            ctx = provider() or {}
-            svc = (ctx.get("services") or {}).get(name)
-            if callable(svc):
-                return svc
+        svc = pool.legacy(name, "platform.read")
     except Exception:
-        pass
-    return None
+        return None
+    return svc if callable(svc) else None
 
 
 def _panel_title_css() -> str:
@@ -1071,7 +1062,7 @@ class JobEditPanel(QWidget):
     def _load_gateway_sessions(self):
         """拉取主程序已知 gateway 会话（platform:chat_id 免手填）
 
-        走注入的 `services["list_platform_sessions"]`。不自行 import
+        走能力池 platform.read（list_platform_sessions）。不自行 import
         `app.gateway.get_platform_manager()`——该模块级单例只由
         GatewayService 赋值，插件侧恒为 None，会导致下拉框永远为空。
         """
@@ -1592,7 +1583,7 @@ class CronTasksCard(QFrame):
         from .controller import CronTasksController
 
         ctrl = CronTasksController.get_instance()
-        ctrl.ensure_started(self._last_ctx)
+        ctrl.ensure_started()
         ctrl.bind_card(self)  # 注册卡片实例，调度器变化时刷新
         self.refresh_jobs()
         self._start_poll()
@@ -1607,8 +1598,13 @@ class CronTasksCard(QFrame):
             pass
 
     def _load_agents(self):
-        services = self._last_ctx.get("services") or {}
-        am_getter = services.get("get_agent_manager")
+        try:
+            from app.plugins.sdk import pool_for
+
+            pool = pool_for(plugin="cron-tasks", surface="ui")
+            am_getter = pool.legacy("get_agent_manager", "agent.read") if pool is not None and "agent.read" in pool else None
+        except Exception:
+            am_getter = None
         names: List[str] = []
         if callable(am_getter):
             am = am_getter()
@@ -1619,39 +1615,45 @@ class CronTasksCard(QFrame):
         self._edit_panel.load_agents(names)
 
     def _load_models(self):
-        """从主程序 _valid_configs 灌入模型选项（参考 prompt-enhancer 先例）
+        """从宿主能力池灌入模型选项（provider.list + model.enumerate）
 
-        展开粒度：每个配置 × 其「模型列表」逐项 = 一个选项
+        展开粒度：每个 chat 类型服务商 × 其「模型列表」逐项 = 一个选项
         （一个服务商可选它的任意模型，不再只绑当前模型）。
         key 为复合键 "<config_id>||<model>"，执行时覆盖 模型名称。
-        双源兜底：ctx main_widget → UIPluginRegistry._main_widget → 任一窗口 main_widget。
+        服务商/窗口解析由能力池内部完成，插件不再摸 main_widget 私有状态。
         """
-        mw = self._last_ctx.get("main_widget")
-        if mw is None:
-            try:
-                from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
+        from app.plugins.sdk import pool_for
 
-                reg = UIPluginRegistry.get_instance()
-                mw = reg._main_widget or next(iter(reg._window_main_widgets.values()), None)
-            except Exception:
-                mw = None
-        valid = getattr(mw, "_valid_configs", None)
-        current = getattr(mw, "_current_provider_name", None)
+        pool = pool_for(plugin="cron-tasks", surface="ui")
         options: List[Dict[str, str]] = []
-        if isinstance(valid, dict):
-            for key, cfg in valid.items():
-                if not isinstance(cfg, dict):
+        if pool is not None and "provider.list" in pool and "model.enumerate" in pool:
+            try:
+                providers = pool["provider.list"]() or []
+            except Exception as e:  # noqa: BLE001 — 下拉为空不算致命
+                logger.debug(f"[cron-tasks] provider.list 失败: {e}")
+                providers = []
+            for p in providers:
+                pid = str(p.get("id") or "")
+                if not pid:
                     continue
-                display = str(cfg.get("display_name") or cfg.get("name") or cfg.get("provider_name") or key)
-                cur_model = str(cfg.get("模型名称") or "")
-                models = [str(m) for m in (cfg.get("模型列表") or []) if str(m).strip()]
-                if not models:
-                    models = [cur_model] if cur_model else []
-                for model in models:
-                    label = f"{display} · {model}"
-                    if key == current and model == cur_model:
+                # 定时任务驱动对话执行，只列 chat 类型实例
+                # （image/video/speech 实例对对话无意义，灌进下拉只会误选）
+                if str(p.get("capability_type") or "chat") != "chat":
+                    continue
+                display = str(p.get("display_name") or p.get("provider_name") or pid)
+                try:
+                    models = pool["model.enumerate"](pid) or []
+                except Exception as e:  # noqa: BLE001 — 单服务商失败不影响其他
+                    logger.debug(f"[cron-tasks] model.enumerate({pid}) 失败: {e}")
+                    continue
+                for m in models:
+                    name = str(m.get("name") or "")
+                    if not name:
+                        continue
+                    label = f"{display} · {name}"
+                    if p.get("is_current") and m.get("is_current"):
                         label += "（当前）"
-                    options.append({"key": f"{key}||{model}", "label": label})
+                    options.append({"key": f"{pid}||{name}", "label": label})
         self._edit_panel.load_models(options)
 
     # ---------- UI ----------
@@ -1803,8 +1805,13 @@ class CronTasksCard(QFrame):
     def _on_new(self):
         self._load_models()  # 懒刷新（打开时再拉，避开 showEvent 时序）
         default_wd = ""
-        services = self._last_ctx.get("services") or {}
-        get_wd = services.get("get_workdir")
+        try:
+            from app.plugins.sdk import pool_for
+
+            pool = pool_for(plugin="cron-tasks", surface="ui")
+            get_wd = pool["workdir.read"] if pool is not None and "workdir.read" in pool else None
+        except Exception:
+            get_wd = None
         if callable(get_wd):
             try:
                 default_wd = get_wd() or ""
@@ -1817,8 +1824,13 @@ class CronTasksCard(QFrame):
         """模板点击 → 打开编辑表单（预填模板内容）"""
         self._load_models()
         default_wd = ""
-        services = self._last_ctx.get("services") or {}
-        get_wd = services.get("get_workdir")
+        try:
+            from app.plugins.sdk import pool_for
+
+            pool = pool_for(plugin="cron-tasks", surface="ui")
+            get_wd = pool["workdir.read"] if pool is not None and "workdir.read" in pool else None
+        except Exception:
+            get_wd = None
         if callable(get_wd):
             try:
                 default_wd = get_wd() or ""

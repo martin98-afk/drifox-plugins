@@ -155,7 +155,6 @@ class CronTasksController:
         from crontasks_core.scheduler import CronScheduler
 
         self.scheduler = CronScheduler()
-        self._services: Dict[str, Any] = {}
         self._card: Optional[Any] = None
         self._started = False
 
@@ -204,16 +203,8 @@ class CronTasksController:
     #  启动 / 停止
     # ================================================================
 
-    def ensure_started(self, ctx: Dict[str, Any] | None = None):
-        """单例启动调度器；ctx 提供 services 时刷新缓存（含 main_widget 供模型覆盖）"""
-        if ctx:
-            services = ctx.get("services")
-            if isinstance(services, dict) and services.get("create_engine_session"):
-                self._services = services
-                self.scheduler.set_services(services)
-            mw = ctx.get("main_widget")
-            if mw is not None:
-                self.scheduler._main_widget = mw
+    def ensure_started(self):
+        """单例启动调度器（能力由调度器经能力池自行解析，无需注入）"""
         if not self._started:
             self.scheduler.start()
             self._started = True
@@ -255,19 +246,13 @@ class CronTasksController:
             logger.warning(f"[cron-tasks] refresh_card: {e}")
 
     def _on_notify(self, title: str, message: str):
-        """通知：services.notify（InfoBar）；缓存空时从 registry 活跃窗口兜底拉"""
-        notify = (self._services or {}).get("notify")
-        if not callable(notify):
-            try:
-                from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
+        """通知：能力池 ui.notify（InfoBar）；不可用降级日志"""
+        try:
+            from app.plugins.sdk import caps_for
 
-                reg = UIPluginRegistry.get_instance()
-                provider = reg._resolve_active_window_provider() or reg._context_provider
-                if provider is not None:
-                    ctx = provider() or {}
-                    notify = (ctx.get("services") or {}).get("notify")
-            except Exception:
-                notify = None
+            notify = caps_for("ui.notify", plugin="cron-tasks", surface="ui")
+        except Exception:
+            notify = None
         if callable(notify):
             try:
                 notify(title, message)

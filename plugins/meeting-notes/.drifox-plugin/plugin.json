@@ -15,7 +15,7 @@
     "license": "MIT",
     "type": "user",
     "api_version": 2,
-    "min_host_version": "0.6.12",
+    "min_host_version": "0.6.10",
     "platforms": [
         "windows",
         "darwin",
@@ -26,6 +26,7 @@
         "ui.dialog",
         "engine.session",
         "model.config",
+        "model.config_for",
         "provider.list",
         "model.enumerate",
         "model.config_for",

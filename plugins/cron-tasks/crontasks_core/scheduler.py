@@ -6,8 +6,8 @@
 - 串行执行：同一时刻仅一个任务在跑（tool_executor 为主程序共享单例，
   并行会互相干扰工作目录/会话状态；到期任务依次排队）
 - 任务执行完自动重算 next_run_at（at 类型跑完即禁用）
-- services 懒解析：每次 tick 前尝试从活跃窗口拉最新（多窗口/主窗口变化自适应），
-  拉不到时退回 controller 缓存
+- 能力全部走能力池（pool_for 自动解析活跃窗口）：无窗口/能力缺失时取空值降级
+  （任务推迟重试或跟随当前会话模型），插件不摸宿主私有状态
 """
 
 from __future__ import annotations
@@ -42,8 +42,6 @@ class CronScheduler(QObject):
         self._store = store or CronStore()
         self._jobs: List[CronJob] = []
         self._executor: Optional[CronExecutor] = None
-        self._services: Dict[str, Any] = {}  # controller 注入的缓存
-        self._main_widget: Any = None  # 活跃窗口 main_widget（模型列表/覆盖用）
         self._prev_workdir: str = ""  # 执行前的工作目录（结束后还原）
         self._job_workdir: str = ""  # 本任务设置的目录（判断用户是否中途切走）
         self._timer = QTimer(self)
@@ -165,11 +163,11 @@ class CronScheduler(QObject):
         self._prev_workdir = ""
         self._job_workdir = ""
         try:
-            services = self._services or {}
-            set_workdir = services.get("set_workdir")
+            pool = self._pool()
+            set_workdir = pool["workdir.write"] if pool is not None and "workdir.write" in pool else None
             if not callable(set_workdir):
                 return
-            get_workdir = services.get("get_workdir")
+            get_workdir = pool["workdir.read"] if pool is not None and "workdir.read" in pool else None
             if job_workdir and callable(get_workdir):
                 cur = get_workdir() or ""
                 if cur and cur != job_workdir:
@@ -228,31 +226,18 @@ class CronScheduler(QObject):
         return bool(ex and ex.isRunning())
 
     # ================================================================
-    #  services 注入（controller 转发，含 UIPluginRegistry 活跃窗口解析）
+    #  能力池（pool_for 每次现取：活跃窗口切换自动跟随；无窗口降级由调用方处理）
     # ================================================================
 
-    def set_services(self, services: Dict[str, Any]):
-        if services:
-            self._services = services
-
-    def _resolve_services(self) -> Dict[str, Any]:
-        """尝试从活跃窗口拉最新 services，失败退回缓存"""
+    def _pool(self):
+        """当前能力池视图；不可用返回 None。"""
         try:
-            from app.plugins.registries.ui_plugin_registry import UIPluginRegistry
+            from app.plugins.sdk import pool_for
 
-            reg = UIPluginRegistry.get_instance()
-            provider = reg._resolve_active_window_provider() or reg._context_provider
-            if provider is not None:
-                ctx = provider() or {}
-                services = ctx.get("services")
-                if isinstance(services, dict) and services.get("create_engine_session"):
-                    self._services = services
-                    mw = ctx.get("main_widget")
-                    if mw is not None:
-                        self._main_widget = mw
-        except Exception:
-            pass
-        return self._services
+            return pool_for(plugin="cron-tasks", surface="ui")
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"[cron-tasks] 取能力池失败: {e}")
+            return None
 
     # ================================================================
     #  任务 CRUD（UI 调用，主线程）
@@ -369,9 +354,10 @@ class CronScheduler(QObject):
         return True
 
     def _dispatch(self, job: CronJob):
-        services = self._resolve_services()
-        if not services or not callable(services.get("create_engine_session")):
-            logger.warning("[cron-tasks] 无可用 services，任务推迟到下一轮 tick")
+        pool = self._pool()
+        create_session = pool["engine.session"] if pool is not None and "engine.session" in pool else None
+        if not callable(create_session):
+            logger.warning("[cron-tasks] engine.session 能力不可用，任务推迟到下一轮 tick")
             self.notify_requested.emit("定时任务", "对话服务未就绪，任务将在稍后自动重试")
             # 推迟：保持 next_run_at 不变，30 秒后重试
             job.next_run_at = datetime.now().replace(second=0, microsecond=0).isoformat(
@@ -381,14 +367,14 @@ class CronScheduler(QObject):
             return
 
         # 组装执行上下文：agent prompt + agent 视角工具集 + workdir + 模型覆盖
-        agent_name = self._resolve_agent_name(job, services)
+        agent_name = self._resolve_agent_name(job)
         system_prompt = ""
         tools: List[Dict] = []
         try:
-            get_prompt = services.get("get_agent_prompt")
+            get_prompt = pool["agent.read"] if "agent.read" in pool else None
             if callable(get_prompt):
                 system_prompt = get_prompt(agent_name) or ""
-            get_tools = services.get("get_tools_schema")
+            get_tools = pool["model.schema"] if "model.schema" in pool else None
             if callable(get_tools):
                 tools = get_tools(agent_name) or []
         except Exception as e:
@@ -397,7 +383,7 @@ class CronScheduler(QObject):
         # 无人值守场景剔除 question：该工具会阻塞等用户回答，没人应答 → 卡满执行超时
         tools = [t for t in tools if t.get("function", {}).get("name") != "question"]
 
-        # 模型覆盖：任务指定模型 → 从主程序 _valid_configs 取完整配置传 override
+        # 模型覆盖：任务指定模型 → 能力池 model.config_for 按名解析完整配置
         model_override = self._resolve_model_override(job)
 
         # 无人值守轮数上限：模型陷入工具失败循环（如 websearch 无 key 反复失败）时
@@ -411,8 +397,8 @@ class CronScheduler(QObject):
         self._prev_workdir = ""
         self._job_workdir = ""
         workdir = (job.workdir or "").strip()
-        get_workdir = services.get("get_workdir")
-        set_workdir = services.get("set_workdir")
+        get_workdir = pool["workdir.read"] if "workdir.read" in pool else None
+        set_workdir = pool["workdir.write"] if "workdir.write" in pool else None
         if workdir and callable(set_workdir):
             if callable(get_workdir):
                 self._prev_workdir = get_workdir() or ""
@@ -427,7 +413,7 @@ class CronScheduler(QObject):
         self._executor = CronExecutor()
         self._executor.configure(
             job=job,
-            services=services,
+            create_session=create_session,
             system_prompt=system_prompt,
             tools=tools,
             model_config_override=model_override,
@@ -438,7 +424,7 @@ class CronScheduler(QObject):
         self.job_started.emit(job.id)
         logger.info(f"[cron-tasks] 执行任务: {job.display_label()} ({job.id})")
 
-    def _resolve_agent_name(self, job: CronJob, services: Dict[str, Any]) -> str:
+    def _resolve_agent_name(self, job: CronJob) -> str:
         """解析任务执行所用智能体名：任务指定 > 主程序默认"""
         if job.agent:
             return job.agent
@@ -451,26 +437,27 @@ class CronScheduler(QObject):
 
     def _resolve_model_override(self, job: CronJob) -> Optional[Dict[str, Any]]:
         """任务指定模型 → 返回完整模型配置 dict（作为 model_config_override）；
-        未指定/配置缺失 → None（跟随当前会话模型）。
+        未指定/解析不可用 → None（跟随当前会话模型）。
 
-        model_key 复合键格式："<config_id>||<model_name>"（每服务商可选其模型列表任意模型）；
-        兼容旧格式：纯 config_id（用该配置当前模型）。
-        模型列表来源：main_widget._valid_configs（provider 名 → 配置 dict），
-        同 prompt-enhancer 先例（用户已确认接受私有状态复用）。
+        model_key 复合键格式："<config_id>||<model_name>"（每服务商可选其
+        模型列表任意模型）；兼容旧格式纯 config_id（用该配置当前模型）。
+        走能力池 model.config_for 按名五级解析（宿主窗口内存态含明文 key）；
+        无窗口/能力缺失/服务商失效时返回 None 降级（无人值守不因模型解析失败而丢任务）。
         """
-        if not job.model_key or self._main_widget is None:
+        if not job.model_key:
             return None
-        valid = getattr(self._main_widget, "_valid_configs", None)
-        if not isinstance(valid, dict):
+        pool = self._pool()
+        resolve = pool["model.config_for"] if pool is not None and "model.config_for" in pool else None
+        if not callable(resolve):
             return None
         config_id, _, model_name = str(job.model_key).partition("||")
-        cfg = valid.get(config_id)
-        if not isinstance(cfg, dict) or not cfg:
+        query = f"{config_id}:{model_name}" if model_name else config_id
+        try:
+            cfg = resolve(query)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(f"[cron-tasks] 模型配置解析失败 {query!r}: {e}")
             return None
-        override = dict(cfg)
-        if model_name:
-            override["模型名称"] = model_name
-        return override
+        return dict(cfg) if isinstance(cfg, dict) and cfg else None
 
     def _on_executor_done(self, result: dict):
         """执行完成（主线程 Queued 回调 / stop / cancel_job 手动收尾）：
@@ -590,10 +577,11 @@ class CronScheduler(QObject):
 
         def _worker():
             try:
-                send = (self._services or {}).get("send_to_platform")
+                pool = self._pool()
+                send = pool["platform.send"] if pool is not None and "platform.send" in pool else None
                 if not callable(send):
                     logger.warning(
-                        "[cron-tasks] gateway 通知跳过：主程序未提供 send_to_platform 服务"
+                        "[cron-tasks] gateway 通知跳过：platform.send 能力不可用"
                     )
                     return
                 result = send(platform_name, chat_id, text)

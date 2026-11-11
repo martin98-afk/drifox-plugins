@@ -121,24 +121,25 @@ def build_messages(meeting, custom_template: str = "") -> List[Dict[str, str]]:
 
 
 def _resolve_model_override(spec: str) -> Optional[Dict[str, Any]]:
-    """把 provider:model 配置解析成宿主可用的完整模型配置（含明文 key）。"""
+    """把 provider:model 配置解析成宿主可用的完整模型配置（含明文 key）。
+
+    走 model.config_for 按名五级解析（「服务商:模型 / 服务商 / 模型名」，
+    capability_type 缺省 chat）。旧 model.config 带参是 config_id 匹配、
+    空 config_id 忽略 model，语义不符，不走。
+    """
     spec = (spec or "").strip()
     if not spec:
         return None
 
-    provider, _, model = spec.partition(":")
-    if not model:
-        model, provider = provider, ""
-
     from app.plugins.sdk import pool_for
 
     pool = pool_for(plugin=PLUGIN_NAME, surface="ui")
-    if pool is None or "model.config" not in pool:
-        raise RuntimeError("宿主未提供 model.config 能力，无法解析指定模型")
-    resolve = pool.legacy("get_provider_config", "model.config")
+    if pool is None or "model.config_for" not in pool:
+        raise RuntimeError("宿主未提供 model.config_for 能力，无法解析指定模型")
+    resolve = pool["model.config_for"]
     if not callable(resolve):
-        raise RuntimeError("宿主未提供 get_provider_config 服务")
-    cfg = resolve(provider, model) or {}
+        raise RuntimeError("宿主未提供 model.config_for 能力")
+    cfg = resolve(spec) or {}
     if not isinstance(cfg, dict) or not cfg:
         raise RuntimeError(f"找不到模型配置：{spec}（检查服务商与模型名）")
     return {str(k): v for k, v in cfg.items()}
