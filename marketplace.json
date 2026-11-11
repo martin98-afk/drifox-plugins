@@ -4427,7 +4427,7 @@
             "display_name": {
                 "zh": "飞书网关"
             },
-            "downloads": 55,
+            "downloads": 57,
             "platforms": [
                 "windows",
                 "linux",
@@ -4498,7 +4498,7 @@
             "display_name": {
                 "zh": "QQ 网关"
             },
-            "downloads": 14,
+            "downloads": 16,
             "dependencies": {
                 "pip": {
                     "default": [
@@ -4636,7 +4636,7 @@
             "display_name": {
                 "zh": "微信网关"
             },
-            "downloads": 20,
+            "downloads": 21,
             "dependencies": {
                 "pip": {
                     "default": [
@@ -6476,7 +6476,7 @@
             "display_name": {
                 "zh": "会议纪要"
             },
-            "downloads": 1,
+            "downloads": 4,
             "keywords": [
                 "meeting",
                 "transcript",
@@ -9602,7 +9602,7 @@
             "display_name": {
                 "zh": "腾讯文档"
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "mcp",
                 "connector",
@@ -9821,7 +9821,7 @@
             "display_name": {
                 "zh": "最后生还者主题"
             },
-            "downloads": 8,
+            "downloads": 9,
             "keywords": [
                 "theme",
                 "the-last-of-us",
