@@ -595,14 +595,75 @@ def normalize_import_wav(src: Path, dst: Path) -> float:
     return total / float(rate or 16000)
 
 
+def _rewrite_extensible_wav(path: Path) -> None:
+    """把 macOS afconvert 产出的 WAVE_FORMAT_EXTENSIBLE 头改成标准 PCM 头。
+
+    实测：afconvert 从 AAC/m4a 解码时 fmt tag 恒为 0xFFFE（extensible，40 字节），
+    Python 标准库 wave 读它会报 "unknown format: 65534"；从 AIFF 解码则是
+    标准 PCM（tag=1）。这里只按 tag 判断，数据块原样搬运，不重编码。
+    """
+    raw = path.read_bytes()
+    if len(raw) < 12 or raw[:4] != b"RIFF" or raw[8:12] != b"WAVE":
+        return
+    pos = 12
+    fmt = None
+    data = b""
+    while pos + 8 <= len(raw):
+        cid, size = struct.unpack("<4sI", raw[pos : pos + 8])
+        body = raw[pos + 8 : pos + 8 + size]
+        if cid == b"fmt ":
+            fmt = body
+        elif cid == b"data":
+            data = body
+        pos += 8 + size + (size & 1)
+    if fmt is None or len(fmt) < 16 or struct.unpack("<H", fmt[:2])[0] != 0xFFFE:
+        return  # 已经是标准 PCM，或不是预期的 extensible 头
+    nch = struct.unpack("<H", fmt[2:4])[0]
+    rate = struct.unpack("<I", fmt[4:8])[0]
+    bits = struct.unpack("<H", fmt[14:16])[0]
+    width = bits // 8
+    header = struct.pack(
+        "<4sI4s4sIHHIIHH4sI",
+        b"RIFF", 36 + len(data), b"WAVE", b"fmt ", 16, 1,
+        nch, rate, rate * nch * width, nch * width, bits, b"data", len(data),
+    )
+    path.write_bytes(header + data)
+
+def _convert_with_afconvert(src: Path, dst: Path, tool: str) -> float:
+    """macOS 系统自带转码器：解压缩音频 → 16k/16bit/单声道 WAV，返回时长。"""
+    import subprocess
+
+    cmd = [tool, "-f", "WAVE", "-d", "LEI16@16000", "-c", "1", str(src), str(dst)]
+    # check=False：失败要读 stderr 抛带详情的 RuntimeError 再回退 ffmpeg
+    proc = subprocess.run(cmd, stdin=subprocess.DEVNULL, capture_output=True, check=False)
+    if proc.returncode != 0 or not dst.exists() or dst.stat().st_size <= 44:
+        detail = (proc.stderr or b"").decode("utf-8", "ignore").strip().splitlines()
+        tail = detail[-1] if detail else "未知错误"
+        raise RuntimeError(f"afconvert 转码失败：{tail}")
+    _rewrite_extensible_wav(dst)
+    with wave.open(str(dst), "rb") as wf:
+        return wf.getnframes() / float(wf.getframerate() or 16000)
+
 def convert_audio(src: Path, dst: Path) -> float:
     """把任意常见音频转成插件要的 WAV（16k/16bit/单声道），返回时长（秒）。
 
-    有 ffmpeg 就交给它（m4a/mp3/aac/flac/ogg/wma 都能吃，顺带统一采样率）；
-    没有 ffmpeg 时只接受 16bit WAV，走内置的纯标准库路径。
+    macOS 优先用系统自带的 afconvert（在 /usr/bin，GUI 宿主极简 PATH 也能看到，
+    零依赖零许可）；其余平台优先 ffmpeg；都没有时只接受 16bit WAV。
     """
     import shutil
     import subprocess
+    import sys
+
+    # afconvert 走绝对路径：打包版 GUI 进程 PATH 只有 /usr/bin:/bin:/usr/sbin:/sbin，
+    # 用 which 找 /opt/homebrew/bin 下的 ffmpeg 恒失败，这也是导入报错的真正原因。
+    afconvert = "/usr/bin/afconvert"
+    af_error = ""
+    if sys.platform == "darwin" and Path(afconvert).is_file() and src.suffix.lower() != ".wav":
+        try:
+            return _convert_with_afconvert(src, dst, afconvert)
+        except Exception as e:  # noqa: BLE001 — 解不了的格式再交给 ffmpeg 兜底
+            af_error = str(e)
+            logger.warning(f"[meeting-notes] afconvert 转码失败，尝试 ffmpeg: {e}")
 
     ffmpeg = shutil.which("ffmpeg")
     if ffmpeg:
@@ -620,7 +681,14 @@ def convert_audio(src: Path, dst: Path) -> float:
             "pcm_s16le",
             str(dst),
         ]
-        proc = subprocess.run(cmd, capture_output=True)
+        # GUI 宿主里起 console 子进程会闪黑窗：Windows 下必须 CREATE_NO_WINDOW。
+        # 该常量只在 win32 存在，用 getattr 兜底，POSIX 传 0（实测传非零会 ValueError）。
+        proc = subprocess.run(
+            cmd,
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+        )
         if proc.returncode != 0 or not dst.exists() or dst.stat().st_size <= 44:
             detail = (proc.stderr or b"").decode("utf-8", "ignore").strip().splitlines()
             tail = detail[-1] if detail else "未知错误"
@@ -629,6 +697,10 @@ def convert_audio(src: Path, dst: Path) -> float:
             return wf.getnframes() / float(wf.getframerate() or 16000)
 
     if src.suffix.lower() != ".wav":
+        # mac 上别再提示「装 ffmpeg」：brew 装到 /opt/homebrew/bin，
+        # GUI 进程的极简 PATH 依然扫不到，用户装了也还是失败。
+        if sys.platform == "darwin":
+            raise RuntimeError(af_error or "系统无法解码该音频，请先转成 16bit WAV")
         raise RuntimeError(
             "导入该格式需要安装 ffmpeg（或用工具先转成 16bit WAV）"
         )

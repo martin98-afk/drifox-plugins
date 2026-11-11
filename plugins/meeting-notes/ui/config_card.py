@@ -151,6 +151,19 @@ if _UI_AVAILABLE:
             )
             self.viewLayout.addWidget(_FieldRow("切片时长", self._chunk, self.view))
 
+            # ── 纪要生成超时 ──
+            from .config import SUMMARY_TIMEOUT_MAX, SUMMARY_TIMEOUT_MIN
+            self._summary_timeout = SpinBox(self.view)
+            self._summary_timeout.setRange(SUMMARY_TIMEOUT_MIN, SUMMARY_TIMEOUT_MAX)
+            self._summary_timeout.setSingleStep(30)
+            self._summary_timeout.setSuffix(" 秒")
+            self._summary_timeout.valueChanged.connect(
+                lambda v: _save({"summary_timeout_sec": int(v)})
+            )
+            self.viewLayout.addWidget(
+                _FieldRow("纪要生成超时", self._summary_timeout, self.view)
+            )
+
             # ── 保留录音 ──
             self._keep_audio = SwitchButton(self.view)
             self._keep_audio.checkedChanged.connect(
@@ -219,6 +232,16 @@ if _UI_AVAILABLE:
             except (TypeError, ValueError):
                 self._chunk.setValue(20)
             self._chunk.blockSignals(False)
+
+            from .config import DEFAULT_SUMMARY_TIMEOUT_SEC
+            self._summary_timeout.blockSignals(True)
+            try:
+                self._summary_timeout.setValue(
+                    int(_load("summary_timeout_sec", DEFAULT_SUMMARY_TIMEOUT_SEC))
+                )
+            except (TypeError, ValueError):
+                self._summary_timeout.setValue(DEFAULT_SUMMARY_TIMEOUT_SEC)
+            self._summary_timeout.blockSignals(False)
 
             self._keep_audio.blockSignals(True)
             self._keep_audio.setChecked(bool(_load("keep_audio", True)))

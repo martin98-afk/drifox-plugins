@@ -25,6 +25,7 @@ ENGINE_NAME = "meeting-notes"
 # 超出截断并在提示词里注明，避免把上下文撑爆。
 MAX_TRANSCRIPT_CHARS = 60000
 
+# 默认超时；实际值由配置 summary_timeout_sec 注入，常量只作调用方缺省兜底
 SUMMARY_TIMEOUT_SEC = 180.0
 
 SYSTEM_PROMPT = (

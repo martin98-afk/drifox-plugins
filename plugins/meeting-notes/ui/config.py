@@ -18,6 +18,10 @@ VOICE_INPUT_PLUGIN = "voice-input"
 SILICONFLOW_URL = "https://api.siliconflow.cn/v1/audio/transcriptions"
 DEFAULT_MODEL = "XingChenAGI/XingChenASR-Diarize-V3.0"
 DEFAULT_CHUNK_SEC = 20
+# 纪要生成超时（秒）。转写稿长、模型慢时可自行调大。
+DEFAULT_SUMMARY_TIMEOUT_SEC = 180
+SUMMARY_TIMEOUT_MIN = 60
+SUMMARY_TIMEOUT_MAX = 600
 
 # 支持说话人分离的模型（返回 segments[].speaker）
 DIARIZE_MODELS = {
@@ -29,6 +33,7 @@ DEFAULTS: Dict[str, Any] = {
     "reuse_voice_input_key": True,
     "asr_model": DEFAULT_MODEL,
     "chunk_seconds": DEFAULT_CHUNK_SEC,
+    "summary_timeout_sec": DEFAULT_SUMMARY_TIMEOUT_SEC,
     "keep_audio": True,
     "summary_model": "",
     "summary_prompt": "",
@@ -66,6 +71,16 @@ def read_config() -> Dict[str, Any]:
         cfg["chunk_seconds"] = DEFAULT_CHUNK_SEC
     cfg["reuse_voice_input_key"] = bool(cfg.get("reuse_voice_input_key"))
     cfg["keep_audio"] = bool(cfg.get("keep_audio"))
+    try:
+        cfg["summary_timeout_sec"] = max(
+            SUMMARY_TIMEOUT_MIN,
+            min(
+                SUMMARY_TIMEOUT_MAX,
+                int(float(cfg.get("summary_timeout_sec") or DEFAULT_SUMMARY_TIMEOUT_SEC)),
+            ),
+        )
+    except (TypeError, ValueError):
+        cfg["summary_timeout_sec"] = DEFAULT_SUMMARY_TIMEOUT_SEC
     return cfg
 
 
