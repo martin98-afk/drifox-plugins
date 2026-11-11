@@ -185,5 +185,50 @@ class TestRetryLogic(unittest.TestCase):
         self.assertEqual(captured, [((0, 9, 0, 8), "llm", "")])
 
 
+class TestEngineSessionChannel(unittest.TestCase):
+    """engine.session 通道冒烟：create_session 闭包接入 + 缺失显式报错。
+
+    背景：通道断裂（引用未定义变量）曾被 mock _one_shot_ask 的用例掩盖，
+    此处不 mock 通道本身。
+    """
+
+    def test_missing_create_session_raises(self):
+        """create_session 不可用 → RuntimeError（显式报错，不静默）。"""
+        task = _AIMoveTask(
+            board=initial_board(),
+            side=RED,
+            history=[],
+            llm_config={"API_KEY": "x", "API_URL": "http://x", "模型名称": "gpt-4"},
+            signals=_AISignals(),
+            create_session=None,
+        )
+        with self.assertRaises(RuntimeError):
+            task._one_shot_ask("prompt")
+
+    def test_create_session_wired(self):
+        """mock create_session 闭包 → session.turn 正常返回 → 出参正确。"""
+        session = MagicMock()
+        session.turn.return_value = MagicMock(
+            timed_out=False,
+            cancelled=False,
+            error=None,
+            text='{"from":[0,9],"to":[0,8]}',
+        )
+        create = MagicMock(return_value=session)
+        task = _AIMoveTask(
+            board=initial_board(),
+            side=RED,
+            history=[],
+            llm_config={"API_KEY": "x", "API_URL": "http://x", "模型名称": "gpt-4"},
+            signals=_AISignals(),
+            create_session=create,
+        )
+        text, fr = task._one_shot_ask("prompt")
+        self.assertEqual(text, '{"from":[0,9],"to":[0,8]}')
+        self.assertIsNone(fr)
+        create.assert_called_once()
+        self.assertEqual(create.call_args.args[0], "chinese-chess")
+        session.cleanup.assert_called_once()
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

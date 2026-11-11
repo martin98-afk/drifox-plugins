@@ -21,7 +21,6 @@
         "engine.session",
         "agent.read",
         "model.schema",
-        "model.config",
         "model.config_for",
         "provider.list",
         "model.enumerate",

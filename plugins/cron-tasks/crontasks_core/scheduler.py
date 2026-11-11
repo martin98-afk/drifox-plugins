@@ -561,7 +561,8 @@ class CronScheduler(QObject):
     def _notify_gateway(self, job_id: str, label: str, status: str, summary: str, notify_mode: str, icon: str, response_text: str = ""):
         """gateway:平台:chat_id → 后台线程异步发送（失败仅记日志，不阻塞收尾）
 
-        走主程序注入的 `services["send_to_platform"]`，不自行 import
+        主线程预取能力池 platform.send 闭包，线程内只调用（不在工作线程
+        现取 pool_for——其活跃窗口解析会跨线程读 QWidget）。不自行 import
         `app.gateway.get_platform_manager()`——后者返回的模块级单例只由
         GatewayService 赋值，插件侧恒为 None。
         """
@@ -575,15 +576,20 @@ class CronScheduler(QObject):
         else:
             text = f"{icon}「{label}」{summary[:300]}"
 
+        try:
+            pool = self._pool()
+            send = pool["platform.send"] if pool is not None and "platform.send" in pool else None
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"[cron-tasks] 取 platform.send 失败: {e}")
+            send = None
+
         def _worker():
+            if not callable(send):
+                logger.warning(
+                    "[cron-tasks] gateway 通知跳过：platform.send 能力不可用"
+                )
+                return
             try:
-                pool = self._pool()
-                send = pool["platform.send"] if pool is not None and "platform.send" in pool else None
-                if not callable(send):
-                    logger.warning(
-                        "[cron-tasks] gateway 通知跳过：platform.send 能力不可用"
-                    )
-                    return
                 result = send(platform_name, chat_id, text)
                 if getattr(result, "success", False):
                     logger.info(f"[cron-tasks] gateway 通知已发送 ({platform_name})")

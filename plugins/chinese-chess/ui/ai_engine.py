@@ -5,7 +5,7 @@ EP3 迁移：LLM 调用经宿主 create_engine_session（EngineSession 契约）
 不再自建 openai client 直发（非流式直发会被只支持流式的服务商 400 拒绝，
 且绕过 Transport 层丢失伪装头/协议适配/max_tokens 钳制/智能重试）：
 
-1. ChessCard 经 ctx 拿 main_widget + services
+1. start_ai_move() 主线程预取能力池 engine.session 闭包传入任务
 2. _resolve_side_config() 按红/黑方选择解析模型配置（关思考 + 低温度）
 3. _AIMoveTask.run() 调 _one_shot_ask() → session.turn() 拿响应
 4. parse_move() 拆 JSON 走法；_is_legal() 校验
@@ -332,7 +332,7 @@ class _AIMoveTask(QRunnable):
         prompt_suffix: Optional[str] = None,
         side_cn: Optional[str] = None,
         model_name: Optional[str] = None,
-        services: Optional[Dict[str, Any]] = None,
+        create_session: Any = None,
     ):
         super().__init__()
         # 深拷贝棋盘，避免主线程修改影响后台任务
@@ -344,7 +344,7 @@ class _AIMoveTask(QRunnable):
         self.history = list(history or [])
         self.llm_config = llm_config
         self.signals = signals
-        self.services = services or {}
+        self.create_session = create_session  # 主线程预取的 engine.session 闭包
         self.max_retries = max_retries if max_retries is not None else self.MAX_RETRY_ATTEMPTS - 1
         self.prompt_suffix = prompt_suffix  # 可选：追加到 system prompt 末尾的额外约束
         self._lock = threading.Lock()
@@ -452,10 +452,10 @@ class _AIMoveTask(QRunnable):
         Raises:
             RuntimeError / TimeoutError — 供 run() 计入重试。
         """
-        create = (self.services or {}).get("create_engine_session")
+        create = self.create_session
         if not callable(create):
             raise RuntimeError(
-                "主程序未提供 create_engine_session 服务，请升级 DriFox ≥ 0.5.10"
+                "宿主未提供 engine.session 能力，请升级 DriFox"
             )
 
         # 解析失败重试：prompt 强化追加（明确"仅输出标准 JSON"）
@@ -566,6 +566,18 @@ def start_ai_move(card):
     side_cn_now = "红" if card._side_to_move == RED else "黑"
     model_now = llm_config.get("模型名称", "unknown")
 
+    # 主线程预取 engine.session 闭包（工作线程内不再解析能力，避免跨线程读 QWidget）
+    try:
+        from app.plugins.sdk import pool_for
+
+        _pool = pool_for(plugin="chinese-chess", surface="ui")
+        create_session = (
+            _pool["engine.session"] if _pool is not None and "engine.session" in _pool else None
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"[chinese-chess] 取 engine.session 失败: {e}")
+        create_session = None
+
     task = _AIMoveTask(
         board=card._board,
         side=card._side_to_move,
@@ -575,10 +587,10 @@ def start_ai_move(card):
         max_retries=1,
         side_cn=side_cn_now,
         model_name=model_now,
-        services=services,
+        create_session=create_session,
     )
 
-    pool = getattr(main_widget, "_gen_thread_pool", None) or QThreadPool.globalInstance()
+    pool = QThreadPool.globalInstance()
     pool.start(task)
     card._ai_task = task
     return True
