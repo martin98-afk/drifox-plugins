@@ -6442,7 +6442,7 @@
         {
             "name": "meeting-notes",
             "description": "语音会议纪要：连续分片录音转写，硅基流动 Diarize 模型区分说话人，会后整段复转提升准确度，再由系统大模型生成结构化纪要与待办；本地会议管理，支持重命名说话人与导出 Markdown",
-            "version": "0.2.0",
+            "version": "0.2.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -6500,9 +6500,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-meeting-notes-v0.2.0/meeting-notes-0.2.0-all.tar.gz",
-                    "sha256": "8d09cc10b148536b1e55eebd69d6e09d0a5fd0156b0314f586a555ed71f24eda",
-                    "size": 160574
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-meeting-notes-v0.2.1/meeting-notes-0.2.1-all.tar.gz",
+                    "sha256": "3d7d71591121cca8f585d53cbb06711aa61217181d31ca208ce7bc47f5652998",
+                    "size": 160841
                 }
             }
         },
@@ -10451,7 +10451,7 @@
         {
             "name": "voice-input",
             "description": "输入框工具栏语音听写按钮：点击开始录音，再次点击结束并把识别文字插入输入框光标处。纯云端识别：硅基流动（免费模型，默认）与 MiniMax 双引擎可配，云端失败自动互为备用",
-            "version": "0.7.0",
+            "version": "0.7.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -10505,16 +10505,16 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-voice-input-v0.7.0/voice-input-0.7.0-all.tar.gz",
-                    "sha256": "f75ac8f964c7f72b0c1845d1eddef0c11679a5a4e55acba3ad9869109347f8cb",
-                    "size": 136514
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-voice-input-v0.7.1/voice-input-0.7.1-all.tar.gz",
+                    "sha256": "2deccf62308c1321ae7ebf66d56a28b9d4f7edb2e81b9c8b5692fc179e82cfb5",
+                    "size": 136797
                 }
             }
         },
         {
             "name": "voice-reply",
             "description": "消息卡片页脚「朗读」按钮：点击播报本条 AI 回复。双引擎：本地系统语音（Windows SAPI5 / macOS say，免费零配置，默认）+ OpenAI 兼容在线 TTS API（默认预填硅基流动 CosyVoice2，可指向任意兼容服务）",
-            "version": "1.8.0",
+            "version": "1.8.1",
             "author": "DriFox",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -10569,9 +10569,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-voice-reply-v1.8.0/voice-reply-1.8.0-all.tar.gz",
-                    "sha256": "4fbf2a055ed102ff5ca4a349c4511f5b4f2bd1e30a5ce30c27bb81ab46e9a91d",
-                    "size": 128204
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-voice-reply-v1.8.1/voice-reply-1.8.1-all.tar.gz",
+                    "sha256": "a8f6ebfb8e90148c15ab7947ac42cacb8b3f14af1a64a2fc1d2dda99ef2d8dd4",
+                    "size": 128599
                 }
             }
         },
