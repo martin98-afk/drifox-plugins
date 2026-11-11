@@ -921,7 +921,7 @@
             "display_name": {
                 "zh": "打砖块游戏"
             },
-            "downloads": 6,
+            "downloads": 7,
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
@@ -999,7 +999,7 @@
             "display_name": {
                 "zh": "日历"
             },
-            "downloads": 31,
+            "downloads": 32,
             "keywords": [
                 "calendar",
                 "date",
@@ -3909,7 +3909,7 @@
             "display_name": {
                 "zh": "多格式文件设计"
             },
-            "downloads": 10,
+            "downloads": 11,
             "keywords": [
                 "document",
                 "docx",
@@ -4252,7 +4252,7 @@
             "display_name": {
                 "zh": "2048 游戏"
             },
-            "downloads": 8,
+            "downloads": 9,
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
@@ -4427,7 +4427,7 @@
             "display_name": {
                 "zh": "飞书网关"
             },
-            "downloads": 57,
+            "downloads": 58,
             "platforms": [
                 "windows",
                 "linux",
@@ -6237,7 +6237,7 @@
             "display_name": {
                 "zh": "magpie 网关"
             },
-            "downloads": 14,
+            "downloads": 15,
             "keywords": [
                 "magpie",
                 "网关",
@@ -6476,7 +6476,7 @@
             "display_name": {
                 "zh": "会议纪要"
             },
-            "downloads": 11,
+            "downloads": 15,
             "keywords": [
                 "meeting",
                 "transcript",
@@ -7051,7 +7051,7 @@
             "display_name": {
                 "zh": "多模态服务商"
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "provider",
                 "multimodal",
@@ -10486,7 +10486,7 @@
             "display_name": {
                 "zh": "语音输入"
             },
-            "downloads": 43,
+            "downloads": 46,
             "keywords": [
                 "voice",
                 "dictation",
@@ -10549,7 +10549,7 @@
             "display_name": {
                 "zh": "语音朗读"
             },
-            "downloads": 18,
+            "downloads": 21,
             "keywords": [
                 "voice",
                 "tts",
