@@ -1,6 +1,10 @@
 # Changelog
 
 ## Unreleased
+### ✨ meeting-notes v0.1.3：左侧列表支持拖拽外部音频文件直接导入会议
+- **交互**：音频文件拖到左侧列表区，边框高亮提示，松手即导入成一场会议并自动分段识别出纪要；与「导入音频」按钮走同一条链路（状态机检查、Key 检查、后台转码、精转收尾全复用）
+- **规则**：多文件只取第一个并提示；录音/整理中拖入提示先结束当前任务；支持的格式与文件框一致（wav/m4a/mp3/aac/flac/ogg/wma/amr/opus，扩展名两处共用同一份常量）
+- **验证**：offscreen 冒烟全过；拖拽 5 分支定向验证（accept+高亮 / 非音频 ignore / Leave 恢复 / Drop 汇入导入链且无 Key 拦停 / txt ignore）
 ### 🔧 meeting-notes v0.1.1：打包版缺 stdlib wave 导致整个 UI 加载失败
 - **症状**：打包版宿主（PyInstaller）里 `[UIPluginRegistry] Failed to load UI for meeting-notes: No module named 'wave'`，卡片与设置面板全部不出现；源码跑（venv 3.14）正常
 - **根因**：打包版只收集主程序用到的 stdlib 子集，`_internal/base_library.zip` 实测无 `wave.py`；`ui/store.py` 顶层 `import wave` 直接炸掉 `ui/__init__.py` 整条导入链

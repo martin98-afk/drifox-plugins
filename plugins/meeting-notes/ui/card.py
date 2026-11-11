@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from loguru import logger
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal
+from PyQt5.QtCore import QEvent, Qt, QTimer, pyqtSignal
 from PyQt5.QtWidgets import (
     QFileDialog,
     QFrame,
@@ -67,6 +67,10 @@ _IDLE_POLL_MS = 150
 _REFINE_SEGMENT_SEC = 600
 # 不足这么长的尾巴不单独精转（秒）
 _MIN_REFINE_SEC = 30
+
+# 拖拽与文件框共用的音频过滤器/扩展名：两处不一致会出现「对话框能选、拖进来却拒收」
+_AUDIO_FILTER = "音频 (*.wav *.m4a *.mp3 *.aac *.flac *.ogg *.wma *.amr *.opus);;所有文件 (*)"
+_AUDIO_EXTS = {".wav", ".m4a", ".mp3", ".aac", ".flac", ".ogg", ".wma", ".amr", ".opus"}
 
 # 内容面板最大宽度：屏幕很宽时铺满会把转写行长拉到难读
 _PANEL_MAX_WIDTH = 1280
@@ -297,6 +301,11 @@ class MeetingNotesCard(QWidget):
         panel = QFrame(self._panel)
         panel.setObjectName("mnSide")
         panel.setFixedWidth(284)
+        # 左侧整列作为音频拖拽落区：子控件（列表项/搜索框）不收拖拽时，
+        # Qt 会沿父链把 DragEnter/Drop 交给这里
+        panel.setAcceptDrops(True)
+        panel.installEventFilter(self)
+        self._side_panel = panel
         lay = QVBoxLayout(panel)
         lay.setContentsMargins(16, 14, 12, 12)
         lay.setSpacing(10)
@@ -344,7 +353,7 @@ class MeetingNotesCard(QWidget):
         self._list_lay.addStretch(1)
         self._list_scroll.setWidget(self._list_host)
 
-        self._list_empty = QLabel("还没有会议记录\n点上方麦克风开第一场", self._list_host)
+        self._list_empty = QLabel("还没有会议记录\n点上方麦克风开第一场\n或把音频文件直接拖进来", self._list_host)
         self._list_empty.setAlignment(Qt.AlignCenter)
         self._list_lay.insertWidget(0, self._list_empty)
         lay.addWidget(self._list_scroll, 1)
@@ -743,6 +752,11 @@ class MeetingNotesCard(QWidget):
         self._notify("success", "已新建会议", "点右侧麦克风开始录音")
 
     def _on_import_audio(self) -> None:
+        path = self._pick_file("导入音频", "", _AUDIO_FILTER)
+        if path:
+            self._import_audio_file(Path(path))
+
+    def _import_audio_file(self, src: Path) -> None:
         """导入外部音频作为一场会议：校验规整 → 建会议 → 走同一套精转流程。"""
         if self._recording or self._finished_pending or self._refining:
             self._notify("info", "正在处理", "结束当前录音或整理完再导入")
@@ -755,16 +769,8 @@ class MeetingNotesCard(QWidget):
                 "请先到 设置 → 会议纪要配置 填写硅基流动 Key（或配置「语音输入」插件）",
             )
             return
-        path = self._pick_file(
-            "导入音频",
-            "",
-            "音频 (*.wav *.m4a *.mp3 *.aac *.flac *.ogg *.wma *.amr *.opus);;所有文件 (*)",
-        )
-        if not path:
-            return
-        src = Path(path)
         if not src.exists():
-            self._notify("error", "文件不存在", path)
+            self._notify("error", "文件不存在", str(src))
             return
 
         self._status_lbl.setText("正在导入音频")
@@ -830,6 +836,62 @@ class MeetingNotesCard(QWidget):
         # 复用「会议已结束」的收尾链路：逐段精转，全部转完自动出纪要
         self._finished_pending = True
         self._drain_refine_then_finish()
+
+    # ══════════════════════════════════════════════════
+    #  拖拽导入
+    # ══════════════════════════════════════════════════
+
+    def eventFilter(self, obj, event):  # noqa: N802 — Qt 命名
+        """左侧列表区拖拽导入：音频文件拖进来高亮提示，松手即走导入链路。"""
+        if obj is not self._side_panel:
+            return super().eventFilter(obj, event)
+        if event.type() in (QEvent.DragEnter, QEvent.DragMove):
+            files = self._dropped_audio_files(event.mimeData())
+            if files:
+                event.acceptProposedAction()
+                self._set_drop_active(True)
+            else:
+                event.ignore()
+                self._set_drop_active(False)
+            return True
+        if event.type() == QEvent.DragLeave:
+            self._set_drop_active(False)
+            return True
+        if event.type() == QEvent.Drop:
+            self._set_drop_active(False)
+            files = self._dropped_audio_files(event.mimeData())
+            if not files:
+                event.ignore()
+                return True
+            event.acceptProposedAction()
+            if len(files) > 1:
+                self._notify(
+                    "info", "只导入第一个文件", f"一次只支持导入一场会议（共拖入 {len(files)} 个）"
+                )
+            self._import_audio_file(Path(files[0]))
+            return True
+        return super().eventFilter(obj, event)
+
+    @staticmethod
+    def _dropped_audio_files(mime) -> List[str]:
+        if mime is None or not mime.hasUrls():
+            return []
+        out = []
+        for url in mime.urls():
+            p = url.toLocalFile()
+            if p and Path(p).suffix.lower() in _AUDIO_EXTS:
+                out.append(p)
+        return out
+
+    def _set_drop_active(self, on: bool) -> None:
+        # 子控件样式表覆盖祖先规则的同名属性；置空即回到 apply_theme 的口径
+        ss = self._side_panel.styleSheet()
+        if on and not ss:
+            self._side_panel.setStyleSheet(
+                "QFrame#mnSide {" f"border: 2px solid {self._theme.accent};" "}"
+            )
+        elif not on and ss:
+            self._side_panel.setStyleSheet("")
 
     def _start_recording(self) -> None:
         """在当前会议里开始录音（已有录音则往后追加）；没有会议时先建一场。"""

@@ -3,7 +3,7 @@
     "display_name": {
         "zh": "会议纪要"
     },
-    "version": "0.1.2",
+    "version": "0.1.3",
     "description": "语音会议纪要：连续分片录音转写，硅基流动 Diarize 模型区分说话人，会后整段复转提升准确度，再由系统大模型生成结构化纪要与待办；本地会议管理，支持重命名说话人与导出 Markdown",
     "icon": {
         "light": "icon.svg",
