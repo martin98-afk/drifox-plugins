@@ -136,10 +136,10 @@ if _UI_AVAILABLE:
 
 def register_ui(registry):
     """注册卡片与设置页（能力取值器 + 定时器启动）。"""
+    # 热重载时摘除旧 speakup_core.*，让 UI 侧重新拿到最新代码
+    # （ui/speakup_ui 等宿主按 ui_plugin_speak_up 前缀自行 purge，裸前缀永不命中）
     for key in list(sys.modules):
-        if key.startswith("speakup_ui.") or key.startswith("speakup_core.") or key.startswith("settings_page."):
-            sys.modules.pop(key, None)
-        elif key == "speakup_core":
+        if key == "speakup_core" or key.startswith("speakup_core."):
             sys.modules.pop(key, None)
 
     from app.plugins.capabilities.resolve import caps_for
