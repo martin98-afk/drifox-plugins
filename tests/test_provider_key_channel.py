@@ -6,15 +6,20 @@
 已入系统凭证库）。插件把密文当 Bearer token 发出 → 401
 `log in fail: Please carry the API secret key`。
 
-修复：改走宿主 `ctx["services"]["get_provider_config"]`（主程序读内存态已解锁
-明文），旧版主程序回退遍历 `main_widget._valid_configs`（同为内存态）。
+演进（能力池收敛）：磁盘扫描（json.load app.config）与
+`main_widget._valid_configs` 内存兜底已全部删除，取配置只走宿主内存态两路——
+1. ctx["services"]["get_provider_config"]（窗口上下文注入）；
+2. 能力池 model.config（pool_for(...).legacy("get_provider_config",
+   "model.config")，caps_for 解析到活跃窗口；两者同签名：无参 = 当前会话
+   模型，带参 = 五级匹配指定服务商/模型）。
 
-本测试用 importlib 按 DriFox 实际插件加载方式加载模块（目录名带连字符）。
+本测试 mock 能力池 / 宿主服务验证该通道（不落任何磁盘配置文件）；
+用 importlib 按 DriFox 实际插件加载方式加载模块（目录名带连字符）。
 """
 
 import importlib.util
-import json
 import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -23,7 +28,6 @@ _ROOT = Path(__file__).resolve().parent.parent
 _PE_UI = _ROOT / "plugins" / "prompt-enhancer" / "ui" / "__init__.py"
 _GP_LLM = _ROOT / "plugins" / "git-panel" / "ui" / "llm_config.py"
 
-_DISK_CIPHER = "enc:v2:CIPHERTEXT-NOT-A-USABLE-KEY"
 _MEM_PLAIN = "test-plain-key-from-memory"
 
 
@@ -78,17 +82,74 @@ def _stubs():
     registries = types.ModuleType("app.plugins.registries")
     ui_reg = types.ModuleType("app.plugins.registries.ui_plugin_registry")
     ui_reg.UIPluginRegistry = _UIReg
+    sdk = types.ModuleType("app.plugins.sdk")
+    sdk.caps_for = lambda *a, **k: None
+    sdk.pool_for = lambda plugin="", surface="": None
     return {
         "app.plugins": plugins,
         "app.plugins.managers": managers,
         "app.plugins.managers.plugin_config_store": store,
         "app.plugins.registries": registries,
         "app.plugins.registries.ui_plugin_registry": ui_reg,
+        "app.plugins.sdk": sdk,
     }
 
 
+def _install_sdk(monkeypatch, pool):
+    """让插件内的 `from app.plugins.sdk import pool_for` 拿到 mock 能力池"""
+    sdk = types.ModuleType("app.plugins.sdk")
+    sdk.caps_for = lambda *a, **k: None
+    sdk.pool_for = lambda plugin="", surface="": pool
+    monkeypatch.setitem(sys.modules, "app.plugins.sdk", sdk)
+
+
+class _FakePool:
+    """能力池替身：legacy(旧服务键, 能力 id) 返回注入的 model.config 解析器"""
+
+    def __init__(self, resolve=None, legacy_error: Exception = None):
+        self._resolve = resolve
+        self._legacy_error = legacy_error
+
+    def __contains__(self, cap_id):
+        return cap_id == "model.config"
+
+    def legacy(self, key, cap_id):
+        if self._legacy_error is not None:
+            raise self._legacy_error
+        assert cap_id == "model.config"
+        return self._resolve
+
+
+def _make_pool_resolve(valid: dict, current_id: str = "cid1"):
+    """mock 宿主 model.config 语义：无参 = 当前会话；带参 = 五级匹配指定服务商"""
+
+    def resolve(provider: str = "", model: str = ""):
+        cfg = None
+        if not provider:
+            cfg = valid.get(current_id)
+        elif provider in valid:
+            cfg = valid[provider]
+        else:
+            for info in valid.values():
+                if isinstance(info, dict) and provider in (
+                    info.get("display_name"),
+                    info.get("provider_name"),
+                    info.get("name"),
+                ):
+                    cfg = info
+                    break
+        if not isinstance(cfg, dict) or not cfg:
+            return {}
+        out = dict(cfg)
+        if model:
+            out["模型名称"] = model
+        return out
+
+    return resolve
+
+
 def _host_valid_configs():
-    """主程序内存态 _valid_configs（API_KEY 已是解密后的明文）"""
+    """宿主内存态配置（API_KEY 已是解密后的明文）"""
     return {
         "cid1": {
             "provider_name": "MiniMax",
@@ -101,77 +162,24 @@ def _host_valid_configs():
     }
 
 
-def _make_host():
-    import types
-
-    host = types.SimpleNamespace()
-    host._valid_configs = _host_valid_configs()
-    host._display_to_config_id = {"MiniMax": "cid1"}
-    host._current_provider_name = "cid1"
-    host._current_model_name = "MiniMax-M3"
-    return host
-
-
 @pytest.fixture()
-def pe(tmp_path, monkeypatch):
-    """prompt-enhancer：加载模块，并让「磁盘 app.config」指向一份密文配置"""
+def pe():
+    """prompt-enhancer：加载模块（能力池默认不可用，用例内按需 _install_sdk）"""
     pytest.importorskip("PyQt5.QtCore")  # prompt-enhancer ui/__init__ 顶层依赖 Qt
-    mod = _load("_pe_key_probe", _PE_UI, _stubs())
-    fake_cfg = tmp_path / "app.config"
-    fake_cfg.write_text(
-        json.dumps(
-            {
-                "LLM": {
-                    "SavedProviders": {
-                        "cid1": {
-                            "provider_name": "MiniMax",
-                            "API_URL": "https://api.example.com/v1",
-                            "API_KEY": _DISK_CIPHER,
-                            "模型名称": "MiniMax-M3",
-                        }
-                    }
-                }
-            }
-        ),
-        encoding="utf-8",
-    )
-    mod._SYSTEM_CONFIG_CACHE.update({"path": None, "mtime": 0.0, "data": None})
-    mod._DEFAULT_SYSTEM_CONFIG_PATHS = (str(fake_cfg),)
-    return mod
+    return _load("_pe_key_probe", _PE_UI, _stubs())
 
 
 @pytest.fixture()
-def gp(tmp_path):
-    """git-panel：同上"""
-    mod = _load("_gp_key_probe", _GP_LLM, {})
-    fake_cfg = tmp_path / "app.config"
-    fake_cfg.write_text(
-        json.dumps(
-            {
-                "LLM": {
-                    "SavedProviders": {
-                        "cid1": {
-                            "provider_name": "MiniMax",
-                            "API_URL": "https://api.example.com/v1",
-                            "API_KEY": _DISK_CIPHER,
-                            "模型名称": "MiniMax-M3",
-                        }
-                    }
-                }
-            }
-        ),
-        encoding="utf-8",
-    )
-    mod._SYSTEM_CONFIG_CACHE.update({"path": None, "mtime": 0.0, "data": None})
-    mod._DEFAULT_SYSTEM_CONFIG_PATHS = (str(fake_cfg),)
-    return mod
+def gp():
+    """git-panel：加载 llm_config 模块"""
+    return _load("_gp_key_probe", _GP_LLM, {})
 
 
 # ── prompt-enhancer ──
 
 
 def test_pe_prefers_host_service_plaintext(pe):
-    """宿主服务可用时取到明文 key（不经磁盘）"""
+    """宿主服务可用时取到明文 key（不经能力池）"""
     services = {
         "get_provider_config": lambda provider="", model="": {
             "API_KEY": _MEM_PLAIN,
@@ -179,24 +187,40 @@ def test_pe_prefers_host_service_plaintext(pe):
             "模型名称": model or "MiniMax-M3",
         }
     }
-    cfg = pe._get_llm_config(_make_host(), "MiniMax", "MiniMax-M2.7", services)
+    cfg = pe._get_llm_config("MiniMax", "MiniMax-M2.7", services)
     assert cfg is not None
     assert cfg["API_KEY"] == _MEM_PLAIN
     assert cfg["模型名称"] == "MiniMax-M2.7"
-    assert not cfg["API_KEY"].startswith("enc:v2:")
 
 
-def test_pe_fallback_uses_memory_not_disk(pe):
-    """无 services（旧版主程序）→ 回退内存态，绝不返回磁盘密文"""
-    cfg = pe._get_llm_config(_make_host(), "MiniMax", "MiniMax-M2.7")
+def test_pe_fallback_pool_plaintext(pe, monkeypatch):
+    """无 services（上下文未注入）→ 能力池 model.config 兜底，同样取内存态明文"""
+    _install_sdk(monkeypatch, _FakePool(_make_pool_resolve(_host_valid_configs())))
+    cfg = pe._get_llm_config("MiniMax", "MiniMax-M2.7")
     assert cfg is not None
     assert cfg["API_KEY"] == _MEM_PLAIN
-    assert _DISK_CIPHER not in json.dumps(cfg, ensure_ascii=False)
+    assert cfg["模型名称"] == "MiniMax-M2.7"
 
 
-def test_pe_unknown_provider_not_silently_switched(pe):
+def test_pe_pool_unavailable_returns_none(pe, monkeypatch):
+    """无 services 且能力池不可用（无窗口/旧宿主）→ None，不崩不降级到磁盘"""
+    _install_sdk(monkeypatch, None)  # pool_for 返回 None
+    assert pe._get_llm_config("MiniMax", "MiniMax-M2.7") is None
+    assert pe._get_llm_config() is None
+
+
+def test_pe_pool_denied_returns_none(pe, monkeypatch):
+    """能力被拒（legacy 抛异常）→ None（能力不可用时下拉空/调用方提示配置）"""
+    _install_sdk(
+        monkeypatch, _FakePool(legacy_error=RuntimeError("capability denied"))
+    )
+    assert pe._get_llm_config("MiniMax") is None
+
+
+def test_pe_unknown_provider_not_silently_switched(pe, monkeypatch):
     """显式指名的服务商不存在 → 返回 None，不串到别的服务商"""
-    assert pe._get_llm_config(_make_host(), "不存在的服务商") is None
+    _install_sdk(monkeypatch, _FakePool(_make_pool_resolve(_host_valid_configs())))
+    assert pe._get_llm_config("不存在的服务商") is None
 
 
 def test_pe_empty_key_provider_is_valid(pe):
@@ -208,7 +232,7 @@ def test_pe_empty_key_provider_is_valid(pe):
             "模型名称": "deepseek-v4-flash-free",
         }
     }
-    cfg = pe._get_llm_config(_make_host(), "OpenCode Zen", "deepseek-v4-flash-free", services)
+    cfg = pe._get_llm_config("OpenCode Zen", "deepseek-v4-flash-free", services)
     assert cfg is not None
     assert cfg["API_KEY"] == ""
 
@@ -224,21 +248,28 @@ def test_gp_prefers_host_service_plaintext(gp):
             "模型名称": model or "MiniMax-M3",
         }
     }
-    cfg = gp.get_llm_config(_make_host(), "MiniMax", "MiniMax-M2.7", services)
+    cfg = gp.get_llm_config("MiniMax", "MiniMax-M2.7", services)
     assert cfg is not None
     assert cfg["API_KEY"] == _MEM_PLAIN
-    assert not cfg["API_KEY"].startswith("enc:v2:")
+    assert cfg["模型名称"] == "MiniMax-M2.7"
 
 
-def test_gp_fallback_uses_memory_not_disk(gp):
-    cfg = gp.get_llm_config(_make_host(), "MiniMax", "MiniMax-M2.7")
+def test_gp_fallback_pool_plaintext(gp, monkeypatch):
+    _install_sdk(monkeypatch, _FakePool(_make_pool_resolve(_host_valid_configs())))
+    cfg = gp.get_llm_config("MiniMax", "MiniMax-M2.7")
     assert cfg is not None
     assert cfg["API_KEY"] == _MEM_PLAIN
-    assert _DISK_CIPHER not in json.dumps(cfg, ensure_ascii=False)
 
 
-def test_gp_unknown_provider_not_silently_switched(gp):
-    assert gp.get_llm_config(_make_host(), "不存在的服务商") is None
+def test_gp_pool_unavailable_returns_none(gp, monkeypatch):
+    _install_sdk(monkeypatch, None)
+    assert gp.get_llm_config("MiniMax", "MiniMax-M2.7") is None
+    assert gp.get_llm_config() is None
+
+
+def test_gp_unknown_provider_not_silently_switched(gp, monkeypatch):
+    _install_sdk(monkeypatch, _FakePool(_make_pool_resolve(_host_valid_configs())))
+    assert gp.get_llm_config("不存在的服务商") is None
 
 
 def test_gp_empty_key_provider_is_valid(gp):
@@ -249,6 +280,14 @@ def test_gp_empty_key_provider_is_valid(gp):
             "模型名称": "deepseek-v4-flash-free",
         }
     }
-    cfg = gp.get_llm_config(_make_host(), "OpenCode Zen", "deepseek-v4-flash-free", services)
+    cfg = gp.get_llm_config("OpenCode Zen", "deepseek-v4-flash-free", services)
     assert cfg is not None
     assert cfg["API_KEY"] == ""
+
+
+def test_gp_resolve_model_legacy_combined_value(gp):
+    """resolve_model：两键分开存为主；model 键存旧格式合并值时拆分；均空 → None"""
+    assert gp.resolve_model("MiniMax", "MiniMax-M2.7") == ("MiniMax", "MiniMax-M2.7")
+    assert gp.resolve_model("", "MiniMax:MiniMax-M2.7") == ("MiniMax", "MiniMax-M2.7")
+    assert gp.resolve_model("", "MiniMax") == ("", "MiniMax")
+    assert gp.resolve_model("", "") is None
