@@ -48,11 +48,11 @@ def register_ui(registry) -> None:
         del sys.modules[name]
 
     from .insights import InsightsPage
-    from .store import get_plugin_data_dir
+    from .plugin_config import plugin_data_dir
 
     # 主线程预热数据目录：避免后台 worker 首次走 caps_for 的 adopted-thread 路径
     try:
-        get_plugin_data_dir()
+        plugin_data_dir()
     except Exception:
         pass
 

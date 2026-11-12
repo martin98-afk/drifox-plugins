@@ -21,7 +21,7 @@ from .analyzer import CATEGORY_COLORS, CATEGORY_LABELS, CATEGORY_ORDER, SessionA
 from .charts import DonutChart, RingProgress, StackedBar
 from .fmt import fmt_cost, fmt_duration, fmt_int, fmt_k, fmt_pct, fmt_ts
 from .theme import Palette, parse_color
-from .widgets import BarRow, EmptyState, FlowLayout, LegendList, Pill, SectionCard, css, make_label
+from .widgets import clear_layout, BarRow, EmptyState, FlowLayout, LegendList, Pill, SectionCard, css, make_label
 
 
 def _category_rows(comp: Dict[str, int]) -> List[Tuple[str, str, int, QColor]]:
@@ -90,11 +90,7 @@ class StatsCard(SectionCard):
         return box
 
     def _rebuild(self) -> None:
-        while self._grid.count():
-            item = self._grid.takeAt(0)
-            widget = item.widget() if item else None
-            if widget is not None:
-                widget.deleteLater()
+        clear_layout(self._grid)
         analysis = self._analysis
         if analysis is None:
             self._grid.addWidget(EmptyState("等待会话数据", self), 0, 0)
@@ -142,11 +138,7 @@ class CompositionCard(SectionCard):
         self._rebuild()
 
     def _clear_host(self) -> None:
-        while self._host_layout.count():
-            item = self._host_layout.takeAt(0)
-            widget = item.widget() if item else None
-            if widget is not None:
-                widget.deleteLater()
+        clear_layout(self._host_layout)
 
     def _rebuild(self) -> None:
         self._clear_host()
@@ -213,11 +205,7 @@ class CurrentContextCard(SectionCard):
         self._rebuild()
 
     def _rebuild(self) -> None:
-        while self._layout.count():
-            item = self._layout.takeAt(0)
-            widget = item.widget() if item else None
-            if widget is not None:
-                widget.deleteLater()
+        clear_layout(self._layout)
         analysis = self._analysis
         if analysis is None:
             self._layout.addWidget(EmptyState("等待会话数据", self))
@@ -288,11 +276,7 @@ class TimingCard(SectionCard):
         self._rebuild()
 
     def _rebuild(self) -> None:
-        while self._layout.count():
-            item = self._layout.takeAt(0)
-            widget = item.widget() if item else None
-            if widget is not None:
-                widget.deleteLater()
+        clear_layout(self._layout)
         analysis = self._analysis
         if analysis is None:
             self._layout.addWidget(EmptyState("等待会话数据", self))
@@ -352,11 +336,7 @@ class EventsCard(SectionCard):
         self._rebuild()
 
     def _rebuild(self) -> None:
-        while self._layout.count():
-            item = self._layout.takeAt(0)
-            widget = item.widget() if item else None
-            if widget is not None:
-                widget.deleteLater()
+        clear_layout(self._layout)
         analysis = self._analysis
         if analysis is None:
             self._layout.addWidget(EmptyState("等待会话数据", self))
@@ -421,16 +401,8 @@ class FilesCard(SectionCard):
         self._rebuild()
 
     def _rebuild(self) -> None:
-        while self._chips_layout.count():
-            item = self._chips_layout.takeAt(0)
-            widget = item.widget() if item else None
-            if widget is not None:
-                widget.deleteLater()
-        while self._layout.count():
-            item = self._layout.takeAt(0)
-            widget = item.widget() if item else None
-            if widget is not None:
-                widget.deleteLater()
+        clear_layout(self._chips_layout)
+        clear_layout(self._layout)
         analysis = self._analysis
         p = self._palette
         if analysis is None:
@@ -512,11 +484,7 @@ class CommandsCard(SectionCard):
         self._rebuild()
 
     def _rebuild(self) -> None:
-        while self._layout.count():
-            item = self._layout.takeAt(0)
-            widget = item.widget() if item else None
-            if widget is not None:
-                widget.deleteLater()
+        clear_layout(self._layout)
         analysis = self._analysis
         p = self._palette
         if analysis is None:
@@ -577,11 +545,7 @@ class LedgerCard(SectionCard):
         self._rebuild(limit)
 
     def _rebuild(self, limit: int = 10) -> None:
-        while self._layout.count():
-            item = self._layout.takeAt(0)
-            widget = item.widget() if item else None
-            if widget is not None:
-                widget.deleteLater()
+        clear_layout(self._layout)
         p = self._palette
         items = sorted(self._counter.items(), key=lambda kv: -kv[1])[:limit]
         self.set_subtitle(f"{len(self._counter)} 项" if self._counter else "")

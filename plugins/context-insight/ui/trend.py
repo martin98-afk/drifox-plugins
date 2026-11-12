@@ -15,6 +15,7 @@ from PyQt5.QtWidgets import QSizePolicy, QVBoxLayout, QWidget
 
 from .fmt import fmt_int, fmt_k
 from .theme import Palette
+from .widgets import clear_layout
 from .tooltip import hide_chart_tooltip, show_chart_tooltip
 
 
@@ -194,11 +195,7 @@ class TrendList(QWidget):
         unit: str = "step",
         reverse: bool = True,
     ) -> None:
-        while self._layout.count():
-            item = self._layout.takeAt(0)
-            widget = item.widget() if item else None
-            if widget is not None:
-                widget.deleteLater()
+        clear_layout(self._layout)
         self._rows = []
         max_input = max((int(s.get("input", 0) or 0) for s in steps), default=1) or 1
         max_delta = max((abs(int(s.get("delta", 0) or 0)) for s in steps), default=1) or 1
