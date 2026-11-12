@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <!-- 外环：上下文窗口 -->
+  <circle cx="12" cy="12" r="8.3" stroke="#333" stroke-width="1.4" opacity="0.32"/>
+  <!-- 分段高亮：组成占比 -->
+  <path d="M12 3.7a8.3 8.3 0 0 1 8.3 8.3" stroke="#333" stroke-width="2.8" stroke-linecap="round"/>
+  <path d="M3.7 12a8.3 8.3 0 0 0 4.15 7.19" stroke="#333" stroke-width="2.8" stroke-linecap="round" opacity="0.55"/>
+  <!-- 中心：三层上下文 -->
+  <rect x="8.15" y="8.15" width="7.7" height="2.05" rx="1.025" fill="#333"/>
+  <rect x="8.15" y="11.0" width="5.5" height="2.05" rx="1.025" fill="#333" opacity="0.68"/>
+  <rect x="8.15" y="13.85" width="3.4" height="2.05" rx="1.025" fill="#333" opacity="0.42"/>
+</svg>
