@@ -6538,7 +6538,7 @@
                 "darwin",
                 "linux"
             ],
-            "min_host_version": "0.6.12",
+            "min_host_version": "0.6.10",
             "api_version": 2,
             "icon": {
                 "light": "icon.svg",
@@ -8091,7 +8091,7 @@
                 "提示词",
                 "优化"
             ],
-            "min_host_version": "0.6.12",
+            "min_host_version": "0.6.10",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -9614,7 +9614,7 @@
                 "并行任务",
                 "对话引擎"
             ],
-            "min_host_version": "0.5.0",
+            "min_host_version": "0.6.10",
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
                 "light": "icons/board.svg",
@@ -10545,7 +10545,7 @@
                 "windows",
                 "darwin"
             ],
-            "min_host_version": "0.6.12",
+            "min_host_version": "0.7.2",
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
@@ -10609,7 +10609,7 @@
                 "windows",
                 "darwin"
             ],
-            "min_host_version": "0.6.12",
+            "min_host_version": "0.7.2",
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
@@ -10824,7 +10824,7 @@
                 "恢复",
                 "同步"
             ],
-            "min_host_version": "0.6.10",
+            "min_host_version": "0.7.2",
             "api_version": 2,
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
