@@ -1846,6 +1846,45 @@
             }
         },
         {
+            "name": "context-insight",
+            "description": "上下文洞察 — 透视会话上下文组成、逐请求演进、压缩事件、工具/技能/命令台账与多 Agent 编队；全页洞察面板内含会话上下文与 /context 命令",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui",
+                "stats"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/context-insight",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true,
+                "hooks": true
+            },
+            "display_name": {
+                "zh": "上下文洞察"
+            },
+            "keywords": [
+                "context",
+                "token",
+                "insight",
+                "dashboard",
+                "compaction",
+                "agent"
+            ],
+            "min_host_version": "0.6.13",
+            "api_version": 2,
+            "homepage": "https://github.com/martin98-afk/DriFox",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "context-stats",
             "description": "欢迎卡片用量统计 — 在欢迎卡片新增「📊 用量」tab，用 echarts 展示模型上下文（token）用量与消息量趋势",
             "version": "0.1.1",

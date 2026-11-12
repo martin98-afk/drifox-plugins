@@ -1,0 +1,131 @@
+{
+  "name": "context-insight",
+  "description": "上下文洞察 — 透视会话上下文组成、逐请求演进、压缩事件、工具/技能/命令台账与多 Agent 编队；全页洞察面板内含会话上下文与 /context 命令",
+  "version": "1.0.0",
+  "author": {
+    "name": "DriFox Contributors"
+  },
+  "license": "MIT",
+  "type": "user",
+  "api_version": 2,
+  "display_name": {
+    "zh": "上下文洞察"
+  },
+  "min_host_version": "0.6.13",
+  "homepage": "https://github.com/martin98-afk/DriFox",
+  "icon": {
+    "light": "icon.svg",
+    "dark": "icon_dark.svg"
+  },
+  "keywords": [
+    "context",
+    "token",
+    "insight",
+    "dashboard",
+    "compaction",
+    "agent"
+  ],
+  "capabilities": [
+    "model.schema",
+    "session.history",
+    "session.manage",
+    "storage.data_dir",
+    "stream.subscribe",
+    "team.read",
+    "ui.notify",
+    "ui.card.hide"
+  ],
+  "components": {
+    "ui": true,
+    "hooks": true
+  },
+  "config_schema": {
+    "title": "上下文洞察偏好",
+    "fields": [
+      {
+        "key": "default_range",
+        "label": "默认时间范围",
+        "type": "select",
+        "default": "7d",
+        "options": [
+          {
+            "value": "today",
+            "label": "今天"
+          },
+          {
+            "value": "7d",
+            "label": "最近 7 天"
+          },
+          {
+            "value": "30d",
+            "label": "最近 30 天"
+          },
+          {
+            "value": "all",
+            "label": "全部"
+          }
+        ],
+        "description": "打开上下文洞察页时默认使用的统计范围。"
+      },
+      {
+        "key": "trend_granularity",
+        "label": "趋势图粒度",
+        "type": "select",
+        "default": "step",
+        "options": [
+          {
+            "value": "step",
+            "label": "按请求（Step）"
+          },
+          {
+            "value": "turn",
+            "label": "按轮次（Turn）"
+          }
+        ],
+        "description": "Context 面板趋势图的默认粒度。"
+      },
+      {
+        "key": "trend_mode",
+        "label": "趋势图读数",
+        "type": "select",
+        "default": "total",
+        "options": [
+          {
+            "value": "total",
+            "label": "累计组成"
+          },
+          {
+            "value": "delta",
+            "label": "单次变化"
+          }
+        ],
+        "description": "累计：每个请求的上下文总量；变化：相邻请求的有符号增量。"
+      },
+      {
+        "key": "auto_refresh",
+        "label": "对话进行中自动刷新",
+        "type": "bool",
+        "default": true,
+        "description": "开启后，流式落定与消息更新时自动刷新当前会话面板。"
+      },
+      {
+        "key": "system_prompt_prefix",
+        "label": "系统提示前缀",
+        "type": "textarea",
+        "rows": 3,
+        "default": "",
+        "placeholder": "拼接在每个会话系统提示词之前，留空不注入",
+        "description": "作为常驻指令块随系统提示一起注入（BuildSystemPrompt hook）；留空不注入。"
+      },
+      {
+        "key": "system_prompt_suffix",
+        "label": "系统提示后缀",
+        "type": "textarea",
+        "rows": 3,
+        "default": "",
+        "placeholder": "拼接在每个会话系统提示词之后，留空不注入",
+        "description": "作为常驻指令块随系统提示一起注入（BuildSystemPrompt hook）；留空不注入。"
+      }
+    ]
+  }
+}
