@@ -1848,7 +1848,7 @@
         {
             "name": "context-insight",
             "description": "上下文洞察 — 透视会话上下文组成、逐请求演进、压缩事件、工具/技能/命令台账与多 Agent 编队；全页洞察面板内含会话上下文与 /context 命令",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -1885,9 +1885,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-context-insight-v1.0.0/context-insight-1.0.0-all.tar.gz",
-                    "sha256": "6b1f962a345e8a75185c7e365f0237e19176086dfcdcf9ff2a3e16f5aa168ba4",
-                    "size": 58656
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-context-insight-v1.0.1/context-insight-1.0.1-all.tar.gz",
+                    "sha256": "a2d401e5927172a5cda2f048313a145138712f9826192f3d10b13b200bb86273",
+                    "size": 59112
                 }
             }
         },
