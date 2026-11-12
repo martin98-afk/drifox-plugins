@@ -1,6 +1,14 @@
 # Changelog
 
 ## Unreleased
+### ✨ context-insight v1.1.0：编队 tab 新增团队消息轨迹泳道图（复刻 dsh-context pulse 语义）
+- **形态**：每个团队成员一条横泳道，任务/回复邮件按时间沿 x 轴展开，贝塞尔弧线从发件人泳道连到收件人泳道；泳道头像点击筛选、事件点点击在条带下方展开详情、hover 出摘要 tooltip；横滚默认锚到最新，主题/字号随宿主缩放
+- **数据源**：宿主 TeamManager 邮箱——`team.read` 白名单新增 `get_mailbox_mails`（DriFox 0.7.3+，源码主程序已同步改 `facets.py`），逐成员聚合 task/reply 邮件归一成事件流
+- **快照回放**：DriFox 邮箱是「在线信箱」语义（成员离队整目录删除），聚合结果按 `mail_id` 增量落 `plugin_data/context-insight/teamcomms/<run_id>.jsonl`（单 run 上限 2000 条）；团队解散后打开历史会话仍能回放全程轨迹，泳道名单从快照事件反推，leader 按 task 发送数推定
+- **新文件**：`ui/lanechart.py`（QPainter 泳道组件：固定标签列 + 横滚画布）、`ui/teamcomms.py`（聚合/快照/回放）；`fleet.py` 编队顶部接线、`panel.py` `_render_fleet` 聚合接线
+- **依赖**：manifest `min_host_version` 升 0.7.3（`team.read` 能力早已声明，本次扩的白名单对插件透明）
+- **验证**：聚合/快照/回放/名单/布局 offscreen 冒烟 20 项全过（`D:\work\DriFox\.venv`）；宿主 facets 契约测试 13 passed
+
 ### 🔧 voice-reply v1.8.1 / voice-input v0.7.1 / meeting-notes v0.2.1：配置来源可选到具体模型
 - **症状**：上一版的「配置来源」下拉只能选到服务商实例，多模型实例（如硅基流动语音合成的 CosyVoice2 / Fish-Speech / MOSS-TTSD）无法指定用哪个，实际只能跑实例默认模型
 - **修复**：每个实例先出一项「实例默认模型」（query 为纯配置 ID，旧配置照常回显），再按 `model.enumerate` 逐模型展开，query 用宿主原生支持的 `<配置ID>:<模型名>` 格式；缺 `model.enumerate` 能力的旧宿主只出默认项。voice-reply / voice-input manifest 补 `model.enumerate` 声明

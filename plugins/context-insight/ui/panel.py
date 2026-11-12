@@ -40,6 +40,7 @@ from .fleet import FleetWidget
 from .fmt import fmt_cost, fmt_int, fmt_k
 from .scrollbars import scrollbar_style
 from .plugin_config import get_config, set_data_root
+from .teamcomms import append_snapshot, build_lane_roster, gather_team_comms, load_snapshot
 from .theme import Palette, apply_tooltip_palette
 from .widgets import LegendChips, SegmentedControl, SectionCard, TabStrip, css
 
@@ -578,9 +579,32 @@ class ContextPanel(QWidget):
                         }
                     )
         subs = []
+        comms_payload: Dict[str, Any] = {}
         team_read = caps.get("team.read") if hasattr(caps, "get") else None
         if team_read is not None:
             getter = team_read.get if hasattr(team_read, "get") else lambda name: getattr(team_read, name, None)
+            team_name = meta.team_name or "default"
+            gathered = gather_team_comms(team_read, team_name)
+            live_events = gathered.get("events") or []
+            run_id = meta.team_run_id or ""
+            if run_id:
+                if live_events:
+                    append_snapshot(run_id, live_events)
+                merged: Dict[str, Dict[str, Any]] = {}
+                for old_event in load_snapshot(run_id):
+                    merged[str(old_event.get("mail_id"))] = old_event
+                for live_event in live_events:
+                    merged[str(live_event.get("mail_id"))] = live_event
+                events = sorted(merged.values(), key=lambda e: (float(e.get("time") or 0), str(e.get("mail_id") or "")))
+            else:
+                events = live_events
+            lanes = build_lane_roster(
+                gathered.get("members") or [],
+                gathered.get("leader") or "",
+                events,
+                meta.agent_name or "",
+            )
+            comms_payload = {"lanes": lanes, "events": events}
             for method_name, status in (("get_running_tasks", "running"), ("get_pending_tasks", "pending")):
                 fn = getter(method_name)
                 if not callable(fn):
@@ -605,6 +629,7 @@ class ContextPanel(QWidget):
                 "current": current,
                 "team": team,
                 "subagents": subs,
+                "comms": comms_payload,
                 "is_streaming": current["is_streaming"],
             }
         )

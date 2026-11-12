@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
-"""编队（Fleet）—— 当前 Agent、团队成员与子智能体卡片。"""
+"""编队（Fleet）—— 当前 Agent、团队成员、子智能体卡片与消息轨迹泳道图。"""
 
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
+from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from .fmt import fmt_cost, fmt_k, fmt_ts
+from .lanechart import TeamLaneChart
+from .teamcomms import fmt_event_time, summary_of_event
 from .theme import Palette
 from .widgets import clear_layout, EmptyState, Pill, SectionCard, css, make_label
 
@@ -72,6 +75,9 @@ class FleetWidget(QWidget):
         self._team_card: Optional[SectionCard] = None
         self._sub_card: Optional[SectionCard] = None
         self._data: Dict[str, Any] = {}
+        # 泳道交互状态跨重建保留（clear_layout 全量重建组件）
+        self._lane_selected = ""
+        self._detail_mail_id = ""
 
     def set_palette_obj(self, palette: Palette) -> None:
         self._palette = palette
@@ -91,6 +97,9 @@ class FleetWidget(QWidget):
         team = self._data.get("team") or []
         subs = self._data.get("subagents") or []
         is_streaming = bool(self._data.get("is_streaming"))
+
+        # ── 消息轨迹泳道 ──
+        self._render_lanes(p)
 
         # ── 当前 Agent ──
         card = SectionCard("当前 Agent", self)
@@ -188,6 +197,66 @@ class FleetWidget(QWidget):
         self._layout.addWidget(sub_card)
         self._sub_card = sub_card
         self._layout.addStretch(1)
+
+    def _render_lanes(self, p: Palette) -> None:
+        """消息轨迹泳道卡：有泳道名单才出现（活跃团队或快照回放）。"""
+        comms = self._data.get("comms") or {}
+        lanes = comms.get("lanes") or []
+        events = comms.get("events") or []
+        if not lanes:
+            return
+        card = SectionCard("消息轨迹", self)
+        card.set_palette_obj(p)
+        card.set_subtitle(f"{len(events)} 条" if events else "")
+        if events:
+            scale = max(0.9, p.fs(0) / 13.0)
+            chart = TeamLaneChart(self)
+            chart.set_palette_obj(p)
+            chart.set_data(lanes, events, self._lane_selected, scale)
+            chart.laneClicked.connect(self._on_lane_clicked)
+            chart.eventClicked.connect(self._show_comms_detail)
+            card.add_widget(chart)
+            detail = QLabel(self)
+            detail.setWordWrap(True)
+            detail.setTextFormat(Qt.RichText)
+            detail.setStyleSheet(
+                f"color: {css(p.text_secondary)}; font-size: {p.fs(-2)}px; background: {css(p.alpha(p.border, 24))};"
+                f" border-radius: 7px; padding: 7px 10px;"
+            )
+            detail.hide()
+            card.add_widget(detail)
+            self._comms_detail = detail
+            if self._detail_mail_id:
+                for event in events:
+                    if event.get("mail_id") == self._detail_mail_id:
+                        self._fill_comms_detail(event, p)
+                        break
+        else:
+            card.add_widget(EmptyState("团队邮箱暂无消息往来", self))
+        self._layout.addWidget(card)
+
+    def _on_lane_clicked(self, name: str) -> None:
+        self._lane_selected = str(name or "")
+
+    def _show_comms_detail(self, event: Dict[str, Any]) -> None:
+        self._detail_mail_id = str(event.get("mail_id") or "")
+        self._fill_comms_detail(event, self._palette)
+
+    def _fill_comms_detail(self, event: Dict[str, Any], p: Palette) -> None:
+        detail = getattr(self, "_comms_detail", None)
+        if detail is None:
+            return
+        if event.get("kind") == "reply":
+            kind = "回复" + ("（成功）" if event.get("success", True) else "（失败）")
+        else:
+            status = str(event.get("status") or "")
+            kind = {"pending": "任务（待处理）", "running": "任务（进行中）"}.get(status, "任务（已完成）")
+        text = summary_of_event(event, 360) or "（无正文）"
+        detail.setText(
+            f"<b>{event.get('from')} → {event.get('to')}</b> · {kind} · {fmt_event_time(event.get('time'))}<br/>"
+            f"{text}"
+        )
+        detail.show()
 
     def _agent_card(self, name: str, role: str, info: Dict[str, Any], role_color=None) -> QFrame:
         card = _AgentCard(self)
