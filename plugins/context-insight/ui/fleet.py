@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QVBoxLayou
 
 from .fmt import fmt_cost, fmt_k, fmt_ts
 from .theme import Palette
-from .widgets import EmptyState, Pill, SectionCard, css, make_label
+from .widgets import clear_layout, EmptyState, Pill, SectionCard, css, make_label
 
 
 class _AgentCard(QFrame):
@@ -82,11 +82,7 @@ class FleetWidget(QWidget):
         self._render()
 
     def _clear(self) -> None:
-        while self._layout.count():
-            item = self._layout.takeAt(0)
-            widget = item.widget() if item else None
-            if widget is not None:
-                widget.deleteLater()
+        clear_layout(self._layout)
 
     def _render(self) -> None:
         self._clear()

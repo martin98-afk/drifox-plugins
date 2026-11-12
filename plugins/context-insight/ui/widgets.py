@@ -39,6 +39,31 @@ def repolish(widget: QWidget) -> None:
     widget.update()
 
 
+def clear_layout(layout) -> None:
+    """彻底清空布局：递归子布局，widget 先脱离显示再延时删除。
+
+    只 ``takeAt(0) + deleteLater()`` 不够，两个坑都会留下重影：
+    ① ``addLayout()`` 加进去的子布局，``item.widget()`` 是 None，整段被跳过，
+       子布局里的数字控件永远不会被回收；
+    ② widget 只被 ``deleteLater()``，在事件循环处理前仍在原位置绘制，
+       连续刷新时新旧数字叠在一起。
+    """
+    while layout.count():
+        item = layout.takeAt(0)
+        if item is None:
+            continue
+        widget = item.widget()
+        if widget is not None:
+            widget.hide()
+            widget.setParent(None)
+            widget.deleteLater()
+            continue
+        child = item.layout()
+        if child is not None:
+            clear_layout(child)
+            child.deleteLater()
+
+
 class FlowLayout(QLayout):
     """自动换行布局（Qt 官方示例的轻量实现）。"""
 
@@ -350,11 +375,7 @@ class LegendList(QWidget):
 
     def set_data(self, rows: Iterable[Tuple[str, str, int, QColor]], total: Optional[int] = None) -> None:
         self._data = [(k, label, max(0, int(v)), c) for k, label, v, c in rows]
-        while self._layout.count():
-            item = self._layout.takeAt(0)
-            widget = item.widget() if item else None
-            if widget is not None:
-                widget.deleteLater()
+        clear_layout(self._layout)
         total = total if total is not None else sum(v for _, _, v, _ in self._data)
         for key, label, value, color in self._data:
             row = _LegendRow(key, label, value, color, total, self._palette, self)
@@ -381,11 +402,7 @@ class LegendChips(QWidget):
 
     def set_data(self, rows: Iterable[Tuple[str, QColor]]) -> None:
         self._data = list(rows)
-        while self._flow.count():
-            item = self._flow.takeAt(0)
-            widget = item.widget() if item else None
-            if widget is not None:
-                widget.deleteLater()
+        clear_layout(self._flow)
         for label, color in self._data:
             chip = QLabel(label, self)
             chip.setStyleSheet(

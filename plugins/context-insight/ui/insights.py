@@ -30,7 +30,7 @@ from .panel import ContextPanel
 from .plugin_config import get_config, set_data_root
 from .scrollbars import scrollbar_style
 from .theme import Palette, apply_tooltip_palette, parse_color
-from .widgets import ElidedLabel, EmptyState, KpiCard, LegendList, SectionCard, SegmentedControl, TabStrip, css, css_html, make_label
+from .widgets import clear_layout, ElidedLabel, EmptyState, KpiCard, LegendList, SectionCard, SegmentedControl, TabStrip, css, css_html, make_label
 
 try:
     from qfluentwidgets import ComboBox as _SortCombo
@@ -681,11 +681,7 @@ class InsightsPage(QWidget):
         return out
 
     def _render_sessions(self, items: List[Dict[str, Any]]) -> None:
-        while self._cards_layout.count():
-            item = self._cards_layout.takeAt(0)
-            widget = item.widget() if item else None
-            if widget is not None:
-                widget.deleteLater()
+        clear_layout(self._cards_layout)
         self._session_cards = []
         visible = self._visible_items(items)
         self._filter_hint.setText(f"筛选：{self._filter_day}" if self._filter_day else "")
