@@ -1868,7 +1868,7 @@
             "display_name": {
                 "zh": "上下文洞察"
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "context",
                 "token",
@@ -4299,7 +4299,7 @@
             "display_name": {
                 "zh": "2048 游戏"
             },
-            "downloads": 9,
+            "downloads": 10,
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
@@ -6523,7 +6523,7 @@
             "display_name": {
                 "zh": "会议纪要"
             },
-            "downloads": 15,
+            "downloads": 16,
             "keywords": [
                 "meeting",
                 "transcript",
