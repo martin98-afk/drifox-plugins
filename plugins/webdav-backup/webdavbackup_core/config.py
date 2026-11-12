@@ -77,14 +77,34 @@ def _to_int(v: Any, default: int) -> int:
         return default
 
 
-def load_config() -> Dict[str, Any]:
-    """读取插件配置（三级链兜底），字段已归一化"""
-    from webdavbackup_core import host_compat
+def _readers():
+    """取配置读取能力函数。
 
-    store = host_compat.get_config_store()
+    非宿主上下文（纯单测 / 宿主未就绪）回退到旧的配置存储，保持可测。
+    password / encryption_password 是 password 类型字段，存储层自动走
+    系统密钥库（插件侧无感知）。
+    """
+    try:
+        from app.plugins.sdk import caps_for
+
+        return caps_for("plugin.config.read")
+    except Exception:  # noqa: BLE001 - 无能力池时回退旧通道
+        from webdavbackup_core import host_compat
+
+        store = host_compat.get_config_store()
+        return lambda key, default=None: store.get(PLUGIN_NAME, key) or default
+
+
+def load_config() -> Dict[str, Any]:
+    """读取插件配置（三级链兜底），字段已归一化
+
+    普通项与两个 password 字段都走 plugin.config.read；密钥字段由存储层
+    透明加密（插件侧无感知）。
+    """
+    read = _readers()
 
     def g(key: str, default: str = "") -> str:
-        v = store.get(PLUGIN_NAME, key)
+        v = read(key, default)
         if v is None or v == "":
             return default
         return str(v)
@@ -103,9 +123,9 @@ def load_config() -> Dict[str, Any]:
     include_dirs = {
         dirname
         for field, dirname in INCLUDE_FIELDS.items()
-        if _to_bool(store.get(PLUGIN_NAME, field), INCLUDE_DEFAULTS[dirname])
+        if _to_bool(read(field, INCLUDE_DEFAULTS[dirname]), INCLUDE_DEFAULTS[dirname])
     }
-    raw_extra = store.get(PLUGIN_NAME, "include_extra") or ""
+    raw_extra = read("include_extra", "") or ""
     include_extra = [
         seg.strip().strip("/").replace("\\", "/")
         for seg in re.split(r"[\n,，]", str(raw_extra))
@@ -114,12 +134,16 @@ def load_config() -> Dict[str, Any]:
     return {
         "server_url": g("server_url", schema_defaults["server_url"]).strip(),
         "username": g("username", "").strip(),
-        "password": g("password", ""),
+        "password": str(read("password", "") or ""),
         "remote_dir": g("remote_dir", schema_defaults["remote_dir"]).strip().strip("/"),
-        "auto_backup": _to_bool(store.get(PLUGIN_NAME, "auto_backup"), schema_defaults["auto_backup"]),
-        "interval_hours": max(1, _to_int(store.get(PLUGIN_NAME, "interval_hours"), schema_defaults["interval_hours"])),
-        "keep_versions": max(1, _to_int(store.get(PLUGIN_NAME, "keep_versions"), schema_defaults["keep_versions"])),
-        "encryption_password": g("encryption_password", ""),
+        "auto_backup": _to_bool(read("auto_backup", False) or False, schema_defaults["auto_backup"]),
+        "interval_hours": max(
+            1, _to_int(read("interval_hours", 0) or 0, schema_defaults["interval_hours"])
+        ),
+        "keep_versions": max(
+            1, _to_int(read("keep_versions", 0) or 0, schema_defaults["keep_versions"])
+        ),
+        "encryption_password": str(read("encryption_password", "") or ""),
         "include_dirs": include_dirs,
         "include_extra": include_extra,
     }

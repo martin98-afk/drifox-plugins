@@ -14,12 +14,14 @@
         "windows",
         "darwin"
     ],
-    "min_host_version": "0.6.12",
+    "min_host_version": "0.7.2",
     "capabilities": [
         "ui.notify",
         "provider.list",
         "model.enumerate",
-        "model.config_for"
+        "model.config_for",
+        "plugin.config.read",
+        "plugin.config.write"
     ],
     "keywords": [
         "voice",
