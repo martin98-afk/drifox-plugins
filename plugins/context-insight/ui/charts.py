@@ -14,6 +14,7 @@ from PyQt5.QtGui import (
     QBrush,
     QColor,
     QFont,
+    QFontMetrics,
     QLinearGradient,
     QPainter,
     QPainterPath,
@@ -47,6 +48,17 @@ def _draw_text(
     painter.setFont(_font(palette, size, bold))
     painter.drawText(rect, align, text)
 
+
+def _axis_left(palette: Palette, texts: Iterable[str], size: int, base: float = 44.0) -> float:
+    """按最宽刻度文本实测宽度算左边距。
+
+    写死左边距会把大数值裁掉：标签框宽 = left - 8，44 只剩 36px，
+    "148.8M" 在 9px 字号下会从左侧溢出可视区（7 日用量实测）。
+    base 保留为历史下限，避免小区间时留白突变。
+    """
+    fm = QFontMetrics(_font(palette, size))
+    widest = max((fm.horizontalAdvance(t) for t in texts), default=0)
+    return max(base, float(widest) + 12.0)
 
 def _rounded_path(rect: QRectF, radius: float) -> QPainterPath:
     path = QPainterPath()
@@ -313,11 +325,19 @@ class BarChart(QWidget):
         self._hover = -1
         self.update()
 
+    def _left_margin(self) -> float:
+        max_value = max(self._values or [0]) or 1
+        return _axis_left(
+            self._palette,
+            [fmt_k(max_value * i / 4) for i in range(5)],
+            self._palette.fs(-4, 9),
+        )
+
     def paintEvent(self, _event) -> None:  # noqa: N802
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing, True)
         painter.setRenderHint(QPainter.TextAntialiasing, True)
-        left, right, top, bottom = 44, 12, 16, 26
+        left, right, top, bottom = self._left_margin(), 12, 16, 26
         plot = QRectF(left, top, max(10, self.width() - left - right), max(10, self.height() - top - bottom))
         max_value = max(self._values or [0]) or 1
         # 网格 + 左侧刻度
@@ -395,7 +415,7 @@ class BarChart(QWidget):
     def _hit(self, x: float) -> int:
         if not self._values:
             return -1
-        left, right = 44, 12
+        left, right = self._left_margin(), 12
         width = max(10, self.width() - left - right)
         slot = width / len(self._values)
         idx = int((x - left) // slot)
@@ -570,8 +590,23 @@ class TrendChart(QWidget):
         self.setMinimumWidth(min_w)
         self.update()
 
+    def _span(self) -> float:
+        if self._mode == "delta":
+            max_pos = max((max(0, int(s.get("delta", 0))) for s in self._steps), default=0)
+            max_neg = max((max(0, -int(s.get("delta", 0))) for s in self._steps), default=0)
+            return max(max_pos, max_neg) or 1
+        return max([max(1, int(s.get("input", 0))) for s in self._steps] or [1])
+
+    def _left_margin(self) -> float:
+        span = self._span()
+        return _axis_left(
+            self._palette,
+            [fmt_k(span * (3 - i) / 3) for i in range(4)],
+            self._palette.fs(-5, 9),
+        )
+
     def _bar_rects(self) -> List[Tuple[QRectF, int]]:
-        left, right, top, bottom = 44, 12, 14, 24
+        left, right, top, bottom = self._left_margin(), 12, 14, 24
         plot = QRectF(left, top, max(10, self.width() - left - right), max(10, self.height() - top - bottom))
         n = len(self._steps)
         if n == 0:
@@ -587,7 +622,7 @@ class TrendChart(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing, True)
         painter.setRenderHint(QPainter.TextAntialiasing, True)
-        left, right, top, bottom = 44, 12, 14, 24
+        left, right, top, bottom = self._left_margin(), 12, 14, 24
         plot = QRectF(left, top, max(10, self.width() - left - right), max(10, self.height() - top - bottom))
         n = len(self._steps)
         if n == 0:
@@ -603,13 +638,7 @@ class TrendChart(QWidget):
             return
 
         # 数值范围
-        if self._mode == "delta":
-            max_pos = max((max(0, int(s.get("delta", 0))) for s in self._steps), default=0)
-            max_neg = max((max(0, -int(s.get("delta", 0))) for s in self._steps), default=0)
-            span = max(max_pos, max_neg) or 1
-        else:
-            totals = [max(1, int(s.get("input", 0))) for s in self._steps]
-            span = max(totals or [1])
+        span = self._span()
 
         def y_of(value: float) -> float:
             if self._mode == "delta":
