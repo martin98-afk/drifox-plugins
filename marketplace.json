@@ -1882,6 +1882,13 @@
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-context-insight-v1.0.0/context-insight-1.0.0-all.tar.gz",
+                    "sha256": "6b1f962a345e8a75185c7e365f0237e19176086dfcdcf9ff2a3e16f5aa168ba4",
+                    "size": 58656
+                }
             }
         },
         {
