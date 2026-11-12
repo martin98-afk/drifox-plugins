@@ -958,7 +958,7 @@
             "display_name": {
                 "zh": "内置浏览器"
             },
-            "downloads": 93,
+            "downloads": 94,
             "keywords": [
                 "browser",
                 "web",
@@ -1122,7 +1122,7 @@
             "display_name": {
                 "zh": "Catppuccin 主题"
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "theme",
                 "catppuccin",
@@ -1868,6 +1868,7 @@
             "display_name": {
                 "zh": "上下文洞察"
             },
+            "downloads": 2,
             "keywords": [
                 "context",
                 "token",
@@ -1913,7 +1914,7 @@
             "display_name": {
                 "zh": "欢迎卡片用量统计"
             },
-            "downloads": 27,
+            "downloads": 28,
             "keywords": [
                 "welcome",
                 "stats",
@@ -4803,7 +4804,7 @@
             "display_name": {
                 "zh": "Git 控制面板"
             },
-            "downloads": 96,
+            "downloads": 97,
             "keywords": [
                 "git",
                 "source-control",
@@ -5936,7 +5937,7 @@
             "display_name": {
                 "zh": "Kim Service 技能合集"
             },
-            "downloads": 10,
+            "downloads": 11,
             "keywords": [
                 "prompt",
                 "optimizer",
@@ -8082,7 +8083,7 @@
             "display_name": {
                 "zh": "提示词增强"
             },
-            "downloads": 80,
+            "downloads": 81,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -8182,7 +8183,7 @@
             "display_name": {
                 "zh": "快速截图"
             },
-            "downloads": 44,
+            "downloads": 45,
             "keywords": [
                 "screenshot",
                 "clipboard",
@@ -9243,7 +9244,7 @@
             "display_name": {
                 "zh": "SSH 远程工具包"
             },
-            "downloads": 31,
+            "downloads": 32,
             "platforms": [
                 "windows",
                 "linux",
@@ -9910,7 +9911,7 @@
             "display_name": {
                 "zh": "最后生还者主题"
             },
-            "downloads": 10,
+            "downloads": 11,
             "keywords": [
                 "theme",
                 "the-last-of-us",
@@ -10532,7 +10533,7 @@
             "display_name": {
                 "zh": "语音输入"
             },
-            "downloads": 46,
+            "downloads": 48,
             "keywords": [
                 "voice",
                 "dictation",
@@ -10943,7 +10944,7 @@
             "display_name": {
                 "zh": "PowerShell 工具"
             },
-            "downloads": 41,
+            "downloads": 42,
             "keywords": [
                 "powershell",
                 "windows",
