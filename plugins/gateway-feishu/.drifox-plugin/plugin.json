@@ -8,7 +8,7 @@
         "zh": "飞书网关"
     },
     "description": "飞书 (Feishu/Lark) WebSocket 模式适配器（社区插件，万物即插件 Phase E）：实时消息收发，基于 lark-oapi SDK。设置卡支持扫码创建/更新应用并自动申请消息权限（官方设备授权端点）。",
-    "version": "1.6.1",
+    "version": "1.7.0",
     "author": {
         "name": "DriFoxx Team"
     },
@@ -69,6 +69,13 @@
                 "type": "password",
                 "default": "",
                 "placeholder": "飞书开放平台 App Secret"
+            },
+            {
+                "key": "require_mention",
+                "label": "群聊 @校验",
+                "type": "bool",
+                "default": true,
+                "description": "群聊中需要 @机器人 才回复（关闭后群里所有消息都会响应）"
             },
             {
                 "key": "create_bot",

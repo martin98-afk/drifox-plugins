@@ -271,6 +271,8 @@ class FeishuAdapter(BasePlatformAdapter):
         self._app_secret = config.extra.get("app_secret") or ""
         self._encrypt_key = config.extra.get("encrypt_key") or ""
         self._verification_token = config.extra.get("verification_token") or ""
+        # 群聊响应策略：默认只在被 @机器人 时回复（对齐 dsh-im mention 模式）
+        self._require_mention = config.extra.get("require_mention", True)
 
         self._ws_client = None
         self._running = False
@@ -555,6 +557,11 @@ class FeishuAdapter(BasePlatformAdapter):
             name_by_key = {
                 m.key: f"@{m.name}" for m in mentions if getattr(m, "key", None)
             }
+            if str(getattr(message, "chat_type", "p2p") or "p2p") == "group" \
+                    and self._require_mention and not bot_keys:
+                # 群里没 @机器人：不响应，避免抢话（与 telegram/discord 一致）
+                logger.debug("[Feishu] 群消息未 @机器人，跳过: chat_id={}", chat_id)
+                return
             lead = _re.match(r"^(@_user_\d+)\s*", text)
             if lead and (not mentions or lead.group(1) in bot_keys):
                 # 开头的机器人提及剥掉（mentions 缺失时防御性剥，@_user_N
@@ -1786,6 +1793,7 @@ def _build_config() -> "PlatformConfig":
         extra={
             "app_id": store.get("gateway-feishu", "app_id") or "",
             "app_secret": store.get("gateway-feishu", "app_secret") or "",
+            "require_mention": bool(store.get("gateway-feishu", "require_mention", True)),
         },
     )
 
@@ -1799,6 +1807,7 @@ def _write_config(config: "PlatformConfig") -> None:
             "enabled": config.enabled,
             "app_id": (config.extra or {}).get("app_id") or "",
             "app_secret": (config.extra or {}).get("app_secret") or "",
+            "require_mention": bool((config.extra or {}).get("require_mention", True)),
         },
     )
 
@@ -1813,12 +1822,16 @@ def _build_config_values(values: dict, old_config) -> "PlatformConfig":
     enabled = values.get("enabled", store.get(plugin, "enabled"))
     app_id = values.get("app_id", "")
     app_secret = values.get("app_secret", "")
+    require_mention = values.get(
+        "require_mention", store.get(plugin, "require_mention", True)
+    )
     store.set_values(
         plugin,
         {
             "enabled": bool(enabled),
             "app_id": app_id,
             "app_secret": app_secret,
+            "require_mention": bool(require_mention),
         },
     )
     extra = dict(old_config.extra) if old_config and old_config.extra else {}
@@ -1826,6 +1839,7 @@ def _build_config_values(values: dict, old_config) -> "PlatformConfig":
         extra["app_id"] = app_id
     if app_secret:
         extra["app_secret"] = app_secret
+    extra["require_mention"] = bool(require_mention)
     return PlatformConfig(
         enabled=bool(enabled),
         platform=Platform.FEISHU,
