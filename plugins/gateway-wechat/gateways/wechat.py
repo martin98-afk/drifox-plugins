@@ -32,7 +32,6 @@ from app.gateway.base import (
     ChatInfo,
     MessageEvent,
     MessageType,
-    PlatformConfig,
     SendResult,
 )
 
@@ -218,14 +217,14 @@ class WechatAdapter(BasePlatformAdapter):
         - bot_token: iLink bot_token（扫码登录工具自动写入）
     """
 
-    platform = "wechat"
+    platform_id = "wechat"
     name = "微信"
     MAX_MESSAGE_LENGTH = MSG_CHUNK_LIMIT
 
-    def __init__(self, config: PlatformConfig, **kwargs):
-        super().__init__(config, **kwargs)
-
-        self._bot_token = config.secret or ""
+    def __init__(self) -> None:
+        super().__init__()
+        cfg = _config()
+        self._bot_token = cfg["bot_token"]
 
         # 连接资源
         self._http_client: Optional[Any] = None
@@ -943,54 +942,44 @@ class WechatAdapter(BasePlatformAdapter):
 # 避免模块顶层触发宿主副作用。
 
 
-def _build_config() -> "PlatformConfig":
-    """读 PluginConfigStore 构造微信配置"""
-    from app.gateway.base import PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+PLUGIN_NAME = "gateway-wechat"
 
-    store = PluginConfigStore()
-    return PlatformConfig(
-        enabled=bool(store.get("gateway-wechat", "enabled")),
-        platform="wechat",
-        bot_id=store.get("gateway-wechat", "bot_token") or "",
-        secret=store.get("gateway-wechat", "bot_token") or "",
-    )
+_CAPS: dict = {}
 
 
-def _write_config(config: "PlatformConfig") -> None:
-    """设置卡保存回调：PlatformConfig → PluginConfigStore"""
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+def _cap(cap_id: str):
+    """取宿主能力（按 manifest capabilities 裁剪；后台线程无 ctx 也可用）。"""
+    cap = _CAPS.get(cap_id)
+    if cap is None:
+        from app.plugins.sdk import caps_for
 
-    PluginConfigStore().set_values(
-        "gateway-wechat",
-        {
-            "enabled": config.enabled,
-            "bot_token": config.secret or "",
-        },
-    )
+        cap = caps_for(cap_id, plugin=PLUGIN_NAME, surface="ui")
+        if cap is None:
+            logger.warning(f"[{PLUGIN_NAME}] 能力不可用: {cap_id}（检查 manifest capabilities）")
+            return None
+        _CAPS[cap_id] = cap
+    return cap
 
 
-def _build_config_values(values: dict, old_config) -> "PlatformConfig":
-    """设置卡保存回调：表单值 → PluginConfigStore → PlatformConfig"""
-    from app.gateway.base import PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+def _config() -> dict:
+    """读本插件配置（plugin.config.read 能力，一次取全量）。"""
+    reader = _cap("plugin.config.read")
+    values = (reader() if reader else {}) or {}
+    return {
+        "enabled": bool(values.get("enabled")),
+        "bot_token": values.get("bot_token") or "",
+    }
 
-    store = PluginConfigStore()
-    enabled = values.get("enabled", store.get("gateway-wechat", "enabled"))
-    bot_token = values.get("bot_token", "") or store.get("gateway-wechat", "bot_token") or ""
-    store.set_values(
-        "gateway-wechat",
-        {
-            "enabled": bool(enabled),
-            "bot_token": bot_token,
-        },
-    )
-    return PlatformConfig(
-        enabled=bool(enabled),
-        platform="wechat",
-        bot_id=bot_token,
-        secret=bot_token,
-    )
+
+def _set_enabled(enabled: bool) -> None:
+    writer = _cap("plugin.config.write")
+    if writer is not None:
+        writer("enabled", bool(enabled))
+
+
+def _validate() -> tuple:
+    cfg = _config()
+    return bool(cfg["bot_token"]), "缺少 bot_token：请在设置卡点「扫码登录」（或手动粘贴）"
 
 
 def register(registry) -> None:
@@ -1000,15 +989,11 @@ def register(registry) -> None:
         GatewayPlatformDef(
             platform_id="wechat",
             display_name="微信",
-            adapter_factory=lambda cfg: WechatAdapter(cfg),
+            adapter_factory=WechatAdapter,
             check_requirements=check_wechat_requirements,
-            config_builder=_build_config,
-            config_writer=_write_config,
-            build_config_values=_build_config_values,
-            validate_config=lambda cfg: (
-                bool(cfg.secret),
-                "缺少 bot_token：请在设置卡点「扫码登录」（或手动粘贴）",
-            ),
+            is_enabled=lambda: _config()["enabled"],
+            set_enabled=_set_enabled,
+            validate=_validate,
             ui_order=10,
         )
     )

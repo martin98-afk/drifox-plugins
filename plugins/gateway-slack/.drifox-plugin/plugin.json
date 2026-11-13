@@ -8,7 +8,7 @@
         "zh": "Slack 网关"
     },
     "description": "Slack 平台适配器（社区插件，万物即插件 Phase E）：使用 Slack Web API 收发消息，支持 Block Kit 格式、长消息分片；基于 slack-sdk。",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "author": {
         "name": "DriFoxx Team"
     },
@@ -56,5 +56,10 @@
                 "slack_sdk==3.43.0"
             ]
         }
-    }
+    },
+    "capabilities": [
+        "plugin.config.read",
+        "plugin.config.write"
+    ],
+    "min_host_version": "0.7.3"
 }

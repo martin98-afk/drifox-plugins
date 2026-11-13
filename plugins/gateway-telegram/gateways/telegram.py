@@ -28,8 +28,6 @@ from app.gateway.base import (
     BasePlatformAdapter,
     MessageEvent,
     MessageType,
-    Platform,
-    PlatformConfig,
     SendResult,
 )
 
@@ -87,8 +85,10 @@ class TelegramAdapter(BasePlatformAdapter):
 
     MAX_MESSAGE_LENGTH = 4096  # Telegram 消息长度限制
 
-    def __init__(self, config: PlatformConfig):
-        super().__init__(config, Platform.TELEGRAM)
+    def __init__(self) -> None:
+        super().__init__()
+        cfg = _config()
+        self._token = cfg["token"]
         self._app = None
         self._bot = None
         self._polling_task = None
@@ -107,7 +107,7 @@ class TelegramAdapter(BasePlatformAdapter):
             self._last_error = "依赖不可用"
             return False
 
-        if not self.config.token:
+        if not self._token:
             logger.error("[Telegram] No bot token configured")
             self._last_error = "未配置 Bot Token"
             return False
@@ -116,7 +116,7 @@ class TelegramAdapter(BasePlatformAdapter):
             from telegram.ext import Application, MessageHandler
 
             # 创建应用
-            self._app = Application.builder().token(self.config.token).build()
+            self._app = Application.builder().token(self._token).build()
             self._bot = self._app.bot
 
             # 注册处理器
@@ -255,7 +255,7 @@ class TelegramAdapter(BasePlatformAdapter):
             chat_id=str(getattr(chat, "id", "")),
             user_id=str(getattr(user, "id", "")) if user else "",
             user_name=getattr(user, "full_name", "") if user else "",
-            platform=Platform.TELEGRAM,
+            platform="telegram",
             chat_type=chat_type,
             media_urls=self._extract_media_urls(message),
             media_types=self._extract_media_types(message),
@@ -660,85 +660,48 @@ class TelegramAdapter(BasePlatformAdapter):
 # ── Phase E 插件注册 ────────────────────────────────────
 # 配置读写回调走主程序 Settings（存量用户配置零迁移；Task 5 统一切 E1
 # PluginConfigStore 时仅改本块闭包，调用方不动）。闭包内延迟 import
-# Settings/PlatformConfig，避免模块顶层触发 PyQt5 / Settings 副作用。
+# 宿主契约不承载平台配置，避免模块顶层触发 Settings 副作用。
 
 
-def _build_config() -> "PlatformConfig":
-    """读 PluginConfigStore 构造 Telegram 配置（E1 契约：插件自包含存储）。
+PLUGIN_NAME = "gateway-telegram"
 
-    字段键：enabled / token / require_mention（plugin.json config_schema 声明）。
-    require_mention 在 extra dict 中保持原样（适配器 ``config.extra.get(...)``
-    已做 bool 兜底）。"""
-    from app.gateway.base import Platform, PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
-
-    store = PluginConfigStore()
-    return PlatformConfig(
-        enabled=bool(store.get("gateway-telegram", "enabled")),
-        platform=Platform.TELEGRAM,
-        token=store.get("gateway-telegram", "token") or "",
-        extra={"require_mention": bool(store.get("gateway-telegram", "require_mention"))},
-    )
+_CAPS: dict = {}
 
 
-def _write_config(config: "PlatformConfig") -> None:
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+def _cap(cap_id: str):
+    """取宿主能力（按 manifest capabilities 裁剪；后台线程无 ctx 也可用）。"""
+    cap = _CAPS.get(cap_id)
+    if cap is None:
+        from app.plugins.sdk import caps_for
 
-    PluginConfigStore().set_values(
-        "gateway-telegram",
-        {
-            "enabled": config.enabled,
-            "token": config.token or "",
-            "require_mention": (
-                bool(config.extra.get("require_mention", True))
-                if config.extra
-                else True
-            ),
-        },
-    )
+        cap = caps_for(cap_id, plugin=PLUGIN_NAME, surface="ui")
+        if cap is None:
+            logger.warning(f"[{PLUGIN_NAME}] 能力不可用: {cap_id}（检查 manifest capabilities）")
+            return None
+        _CAPS[cap_id] = cap
+    return cap
 
 
-def _build_config_values(values: dict, old_config) -> "PlatformConfig":
-    """设置卡保存回调：表单值 → PluginConfigStore → PlatformConfig。
-
-    enabled / require_mention 在主仓表单无对应输入控件（启用开关在状态行，
-    require_mention 仅插件自管 UI 才用），由 PluginConfigStore 兜底当前值：
-    values 缺则读 store 现有值（无则 schema 默认）。
-    """
-    from app.gateway.base import Platform, PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
-
-    store = PluginConfigStore()
-    plugin = "gateway-telegram"
-    enabled = values.get("enabled", store.get(plugin, "enabled"))
-    require_mention = values.get(
-        "require_mention", store.get(plugin, "require_mention")
-    )
-    token = values.get("token", "")
-    # 先落盘（让后续 store.get 即时可见新值；空串被 store 视为清除）
-    store.set_values(
-        plugin,
-        {
-            "enabled": bool(enabled),
-            "token": token,
-            "require_mention": _truthy(require_mention),
-        },
-    )
-    extra = dict(old_config.extra) if old_config and old_config.extra else {}
-    extra["require_mention"] = _truthy(require_mention)
-    return PlatformConfig(
-        enabled=bool(enabled),
-        platform=Platform.TELEGRAM,
-        token=token,
-        extra=extra,
-    )
+def _config() -> dict:
+    """读本插件配置（plugin.config.read 能力，一次取全量）。"""
+    reader = _cap("plugin.config.read")
+    values = (reader() if reader else {}) or {}
+    return {
+        "enabled": bool(values.get("enabled")),
+        "token": values.get("token") or "",
+        "require_mention": bool(values.get("require_mention", True)),
+    }
 
 
-def _truthy(v) -> bool:
-    """表单 truthy 判定（QLineEdit 文本 'true'/'false' → bool）。"""
-    if isinstance(v, bool):
-        return v
-    return str(v).strip().lower() in ("1", "true", "yes", "on")
+def _set_enabled(enabled: bool) -> None:
+    writer = _cap("plugin.config.write")
+    if writer is not None:
+        writer("enabled", bool(enabled))
+
+
+def _validate() -> tuple:
+    cfg = _config()
+    return bool(cfg["token"]), "Token 未配置"
 
 
 def register(registry) -> None:
@@ -748,12 +711,11 @@ def register(registry) -> None:
         GatewayPlatformDef(
             platform_id="telegram",
             display_name="Telegram",
-            adapter_factory=lambda cfg: TelegramAdapter(cfg),
+            adapter_factory=TelegramAdapter,
             check_requirements=check_telegram_requirements,
-            config_builder=_build_config,
-            config_writer=_write_config,
-            build_config_values=_build_config_values,
-            validate_config=lambda cfg: (bool(cfg.token), "Token 未配置"),
+            is_enabled=lambda: _config()["enabled"],
+            set_enabled=_set_enabled,
+            validate=_validate,
             ui_order=30,
         )
     )

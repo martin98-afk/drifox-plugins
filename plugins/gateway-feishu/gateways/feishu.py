@@ -23,8 +23,6 @@ from app.gateway.base import (
     BasePlatformAdapter,
     MessageEvent,
     MessageType,
-    Platform,
-    PlatformConfig,
     SendResult,
 )
 
@@ -262,17 +260,19 @@ class FeishuAdapter(BasePlatformAdapter):
     需要安装 lark-oapi: pip install lark-oapi
     """
 
+    platform_id = "feishu"
     MAX_MESSAGE_LENGTH = 6000
 
-    def __init__(self, config: PlatformConfig):
-        super().__init__(config, Platform.FEISHU)
+    def __init__(self) -> None:
+        super().__init__()
+        cfg = _config()
 
-        self._app_id = config.extra.get("app_id") or ""
-        self._app_secret = config.extra.get("app_secret") or ""
-        self._encrypt_key = config.extra.get("encrypt_key") or ""
-        self._verification_token = config.extra.get("verification_token") or ""
+        self._app_id = cfg["app_id"]
+        self._app_secret = cfg["app_secret"]
+        self._encrypt_key = cfg["encrypt_key"]
+        self._verification_token = cfg["verification_token"]
         # 群聊响应策略：默认只在被 @机器人 时回复（对齐 dsh-im mention 模式）
-        self._require_mention = config.extra.get("require_mention", True)
+        self._require_mention = cfg["require_mention"]
 
         self._ws_client = None
         self._running = False
@@ -316,8 +316,8 @@ class FeishuAdapter(BasePlatformAdapter):
             self._last_error = "依赖不可用"
             return False
 
-        # 从配置重新获取（确保最新）：走本插件的 config_builder，不再依赖网关内部模块
-        cfg = _build_config()
+        # 从配置重新获取（确保最新）：走本插件配置读取，不依赖宿主配置结构
+        cfg = _config()
         self._app_id = cfg.extra.get("app_id") or ""
         self._app_secret = cfg.extra.get("app_secret") or ""
         self._encrypt_key = cfg.extra.get("encrypt_key") or ""
@@ -626,7 +626,7 @@ class FeishuAdapter(BasePlatformAdapter):
                 chat_id=chat_id,
                 user_id=sender_id,
                 user_name=sender_id,
-                platform=Platform.FEISHU,
+                platform="feishu",
                 chat_type="group" if chat_type == "group" else "dm",
                 media_urls=[],
                 media_types=[],
@@ -884,7 +884,7 @@ class FeishuAdapter(BasePlatformAdapter):
                 chat_id=chat_id,
                 user_id=operator_id,
                 user_name=operator_id,
-                platform=Platform.FEISHU,
+                platform="feishu",
                 chat_type="dm",
                 media_urls=[],
                 media_types=[],
@@ -1822,75 +1822,51 @@ class FeishuAdapter(BasePlatformAdapter):
 
 
 # ── Phase E 插件注册 ────────────────────────────────────
-# 配置读写回调走主程序 Settings（存量用户配置零迁移；Task 5 统一切 E1
-# PluginConfigStore 时仅改本块闭包，调用方不动）。闭包内延迟 import
-# Settings/PlatformConfig，避免模块顶层触发 PyQt5 / Settings 副作用。
+# 配置由本插件自管（plugin.config.read/write 能力），宿主契约只留行为回调。
 
 
-def _build_config() -> "PlatformConfig":
-    """读 PluginConfigStore 构造飞书配置（E1 契约：插件自包含存储）"""
-    from app.gateway.base import Platform, PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+PLUGIN_NAME = "gateway-feishu"
 
-    store = PluginConfigStore()
-    return PlatformConfig(
-        enabled=bool(store.get("gateway-feishu", "enabled")),
-        platform=Platform.FEISHU,
-        extra={
-            "app_id": store.get("gateway-feishu", "app_id") or "",
-            "app_secret": store.get("gateway-feishu", "app_secret") or "",
-            "require_mention": bool(store.get("gateway-feishu", "require_mention", True)),
-        },
-    )
+_CAPS: dict = {}
 
 
-def _write_config(config: "PlatformConfig") -> None:
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+def _cap(cap_id: str):
+    """取宿主能力（按 manifest capabilities 裁剪；后台线程无 ctx 也可用）。"""
+    cap = _CAPS.get(cap_id)
+    if cap is None:
+        from app.plugins.sdk import caps_for
 
-    PluginConfigStore().set_values(
-        "gateway-feishu",
-        {
-            "enabled": config.enabled,
-            "app_id": (config.extra or {}).get("app_id") or "",
-            "app_secret": (config.extra or {}).get("app_secret") or "",
-            "require_mention": bool((config.extra or {}).get("require_mention", True)),
-        },
-    )
+        cap = caps_for(cap_id, plugin=PLUGIN_NAME, surface="ui")
+        if cap is None:
+            logger.warning(f"[{PLUGIN_NAME}] 能力不可用: {cap_id}（检查 manifest capabilities）")
+            return None
+        _CAPS[cap_id] = cap
+    return cap
 
 
-def _build_config_values(values: dict, old_config) -> "PlatformConfig":
-    """设置卡保存回调：表单值 → PluginConfigStore → PlatformConfig。"""
-    from app.gateway.base import Platform, PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+def _config() -> dict:
+    """读本插件配置（plugin.config.read 能力，一次取全量）。"""
+    reader = _cap("plugin.config.read")
+    values = (reader() if reader else {}) or {}
+    return {
+        "enabled": bool(values.get("enabled")),
+        "app_id": values.get("app_id") or "",
+        "app_secret": values.get("app_secret") or "",
+        "encrypt_key": values.get("encrypt_key") or "",
+        "verification_token": values.get("verification_token") or "",
+        "require_mention": bool(values.get("require_mention", True)),
+    }
 
-    store = PluginConfigStore()
-    plugin = "gateway-feishu"
-    enabled = values.get("enabled", store.get(plugin, "enabled"))
-    app_id = values.get("app_id", "")
-    app_secret = values.get("app_secret", "")
-    require_mention = values.get(
-        "require_mention", store.get(plugin, "require_mention", True)
-    )
-    store.set_values(
-        plugin,
-        {
-            "enabled": bool(enabled),
-            "app_id": app_id,
-            "app_secret": app_secret,
-            "require_mention": bool(require_mention),
-        },
-    )
-    extra = dict(old_config.extra) if old_config and old_config.extra else {}
-    if app_id:
-        extra["app_id"] = app_id
-    if app_secret:
-        extra["app_secret"] = app_secret
-    extra["require_mention"] = bool(require_mention)
-    return PlatformConfig(
-        enabled=bool(enabled),
-        platform=Platform.FEISHU,
-        extra=extra,
-    )
+
+def _set_enabled(enabled: bool) -> None:
+    writer = _cap("plugin.config.write")
+    if writer is not None:
+        writer("enabled", bool(enabled))
+
+
+def _validate() -> tuple:
+    cfg = _config()
+    return bool(cfg["app_id"] and cfg["app_secret"]), "AppID/Secret 未配置"
 
 
 def register(registry) -> None:
@@ -1900,15 +1876,11 @@ def register(registry) -> None:
         GatewayPlatformDef(
             platform_id="feishu",
             display_name="飞书",
-            adapter_factory=lambda cfg: FeishuAdapter(cfg),
+            adapter_factory=FeishuAdapter,
             check_requirements=check_feishu_requirements,
-            config_builder=_build_config,
-            config_writer=_write_config,
-            build_config_values=_build_config_values,
-            validate_config=lambda cfg: (
-                bool(cfg.extra.get("app_id") and cfg.extra.get("app_secret")),
-                "AppID/Secret 未配置",
-            ),
+            is_enabled=lambda: _config()["enabled"],
+            set_enabled=_set_enabled,
+            validate=_validate,
             ui_order=50,
         )
     )

@@ -25,8 +25,6 @@ from app.gateway.base import (
     ChatInfo,
     MessageEvent,
     MessageType,
-    Platform,
-    PlatformConfig,
     SendResult,
     get_cache_dir,
 )
@@ -122,15 +120,16 @@ class DingTalkAdapter(BasePlatformAdapter):
         - client_secret: 应用 AppSecret
     """
 
-    platform = Platform.DINGTALK
+    platform_id = "dingtalk"
     name = "DingTalk"
     MAX_MESSAGE_LENGTH = MAX_MESSAGE_LENGTH
 
-    def __init__(self, config: PlatformConfig, **kwargs):
-        super().__init__(config, **kwargs)
+    def __init__(self) -> None:
+        super().__init__()
 
-        self._client_id = config.client_id or ""
-        self._client_secret = config.client_secret or ""
+        cfg = _config()
+        self._client_id = cfg["client_id"]
+        self._client_secret = cfg["client_secret"]
 
         # Stream 客户端
         self._stream_client: Optional[Any] = None
@@ -315,7 +314,7 @@ class DingTalkAdapter(BasePlatformAdapter):
             chat_id=chat_id,
             user_id=sender_id,
             user_name=sender_nick,
-            platform=Platform.DINGTALK,
+            platform="dingtalk",
             chat_type=chat_type,
             media_urls=media_urls,
             media_types=media_types,
@@ -367,7 +366,7 @@ class DingTalkAdapter(BasePlatformAdapter):
             chat_id=chat_id,
             user_id=sender_id,
             user_name=sender_nick,
-            platform=Platform.DINGTALK,
+            platform="dingtalk",
             chat_type=chat_type,
             media_urls=media_urls,
             media_types=media_types,
@@ -916,60 +915,48 @@ def check_dingtalk_requirements() -> bool:
 # ── Phase E 插件注册 ────────────────────────────────────
 # 配置读写回调走主程序 Settings（存量用户配置零迁移；Task 5 统一切 E1
 # PluginConfigStore 时仅改本块闭包，调用方不动）。闭包内延迟 import
-# Settings/PlatformConfig，避免模块顶层触发 PyQt5 / Settings 副作用。
+# 宿主契约不承载平台配置，避免模块顶层触发 Settings 副作用。
 
 
-def _build_config() -> "PlatformConfig":
-    """读 PluginConfigStore 构造钉钉配置（E1 契约：插件自包含存储）"""
-    from app.gateway.base import Platform, PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+PLUGIN_NAME = "gateway-dingtalk"
 
-    store = PluginConfigStore()
-    return PlatformConfig(
-        enabled=bool(store.get("gateway-dingtalk", "enabled")),
-        platform=Platform.DINGTALK,
-        client_id=store.get("gateway-dingtalk", "client_id") or "",
-        client_secret=store.get("gateway-dingtalk", "client_secret") or "",
-    )
+_CAPS: dict = {}
 
 
-def _write_config(config: "PlatformConfig") -> None:
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+def _cap(cap_id: str):
+    """取宿主能力（按 manifest capabilities 裁剪；后台线程无 ctx 也可用）。"""
+    cap = _CAPS.get(cap_id)
+    if cap is None:
+        from app.plugins.sdk import caps_for
 
-    PluginConfigStore().set_values(
-        "gateway-dingtalk",
-        {
-            "enabled": config.enabled,
-            "client_id": config.client_id or "",
-            "client_secret": config.client_secret or "",
-        },
-    )
+        cap = caps_for(cap_id, plugin=PLUGIN_NAME, surface="ui")
+        if cap is None:
+            logger.warning(f"[{PLUGIN_NAME}] 能力不可用: {cap_id}（检查 manifest capabilities）")
+            return None
+        _CAPS[cap_id] = cap
+    return cap
 
 
-def _build_config_values(values: dict, old_config) -> "PlatformConfig":
-    """设置卡保存回调：表单值 → PluginConfigStore → PlatformConfig。"""
-    from app.gateway.base import Platform, PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+def _config() -> dict:
+    """读本插件配置（plugin.config.read 能力，一次取全量）。"""
+    reader = _cap("plugin.config.read")
+    values = (reader() if reader else {}) or {}
+    return {
+        "enabled": bool(values.get("enabled")),
+        "client_id": values.get("client_id") or "",
+        "client_secret": values.get("client_secret") or "",
+    }
 
-    store = PluginConfigStore()
-    plugin = "gateway-dingtalk"
-    enabled = values.get("enabled", store.get(plugin, "enabled"))
-    client_id = values.get("client_id", "")
-    client_secret = values.get("client_secret", "")
-    store.set_values(
-        plugin,
-        {
-            "enabled": bool(enabled),
-            "client_id": client_id,
-            "client_secret": client_secret,
-        },
-    )
-    return PlatformConfig(
-        enabled=bool(enabled),
-        platform=Platform.DINGTALK,
-        client_id=client_id,
-        client_secret=client_secret,
-    )
+
+def _set_enabled(enabled: bool) -> None:
+    writer = _cap("plugin.config.write")
+    if writer is not None:
+        writer("enabled", bool(enabled))
+
+
+def _validate() -> tuple:
+    cfg = _config()
+    return bool(cfg["client_id"] and cfg["client_secret"]), "ClientID/Secret 未配置"
 
 
 def register(registry) -> None:
@@ -979,15 +966,11 @@ def register(registry) -> None:
         GatewayPlatformDef(
             platform_id="dingtalk",
             display_name="钉钉",
-            adapter_factory=lambda cfg: DingTalkAdapter(cfg),
+            adapter_factory=DingTalkAdapter,
             check_requirements=check_dingtalk_requirements,
-            config_builder=_build_config,
-            config_writer=_write_config,
-            build_config_values=_build_config_values,
-            validate_config=lambda cfg: (
-                bool(cfg.client_id and cfg.client_secret),
-                "ClientID/Secret 未配置",
-            ),
+            is_enabled=lambda: _config()["enabled"],
+            set_enabled=_set_enabled,
+            validate=_validate,
             ui_order=20,
         )
     )

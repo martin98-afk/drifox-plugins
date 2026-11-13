@@ -24,8 +24,6 @@ from app.gateway.base import (
     ChatInfo,
     MessageEvent,
     MessageType,
-    Platform,
-    PlatformConfig,
     SendResult,
     get_cache_dir,
 )
@@ -62,16 +60,16 @@ class WeComAdapter(BasePlatformAdapter):
         - websocket_url: WebSocket 地址 (可选)
     """
 
-    platform = Platform.WECOM
+    platform_id = "wecom"
     name = "WeCom"
     MAX_MESSAGE_LENGTH = MAX_MESSAGE_LENGTH
 
-    def __init__(self, config: PlatformConfig, **kwargs):
-        super().__init__(config, **kwargs)
-
-        self._bot_id = config.bot_id or ""
-        self._secret = config.secret or ""
-        self._ws_url = config.websocket_url or DEFAULT_WS_URL
+    def __init__(self) -> None:
+        super().__init__()
+        cfg = _config()
+        self._bot_id = cfg["bot_id"]
+        self._secret = cfg["secret"]
+        self._ws_url = cfg["websocket_url"] or DEFAULT_WS_URL
 
         # WebSocket 连接
         self._session: Optional[Any] = None
@@ -408,7 +406,7 @@ class WeComAdapter(BasePlatformAdapter):
             chat_id=chat_id,
             user_id=sender_id,
             user_name=sender_id,
-            platform=Platform.WECOM,
+            platform="wecom",
             chat_type="group" if is_group else "dm",
             media_urls=media_urls,
             media_types=media_types,
@@ -823,72 +821,49 @@ def check_wecom_requirements() -> bool:
 
 
 # ── Phase E 插件注册 ────────────────────────────────────
-# 配置读写回调走主程序 Settings（存量用户配置零迁移；Task 5 统一切 E1
-# PluginConfigStore 时仅改本块闭包，调用方不动）。闭包内延迟 import
-# Settings/PlatformConfig，避免模块顶层触发 PyQt5 / Settings 副作用。
+# 配置由本插件自管（plugin.config.read/write 能力），宿主契约只留行为回调。
 
 
-def _build_config() -> "PlatformConfig":
-    """读 PluginConfigStore 构造企业微信配置（E1 契约：插件自包含存储）"""
-    from app.gateway.base import Platform, PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+PLUGIN_NAME = "gateway-wecom"
 
-    store = PluginConfigStore()
-    return PlatformConfig(
-        enabled=bool(store.get("gateway-wecom", "enabled")),
-        platform=Platform.WECOM,
-        bot_id=store.get("gateway-wecom", "bot_id") or "",
-        secret=store.get("gateway-wecom", "secret") or "",
-        websocket_url=(
-            store.get("gateway-wecom", "websocket_url")
-            or "wss://openws.work.weixin.qq.com"
-        ),
-    )
+_CAPS: dict = {}
 
 
-def _write_config(config: "PlatformConfig") -> None:
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+def _cap(cap_id: str):
+    """取宿主能力（按 manifest capabilities 裁剪；后台线程无 ctx 也可用）。"""
+    cap = _CAPS.get(cap_id)
+    if cap is None:
+        from app.plugins.sdk import caps_for
 
-    PluginConfigStore().set_values(
-        "gateway-wecom",
-        {
-            "enabled": config.enabled,
-            "bot_id": config.bot_id or "",
-            "secret": config.secret or "",
-            "websocket_url": (
-                config.websocket_url or "wss://openws.work.weixin.qq.com"
-            ),
-        },
-    )
+        cap = caps_for(cap_id, plugin=PLUGIN_NAME, surface="ui")
+        if cap is None:
+            logger.warning(f"[{PLUGIN_NAME}] 能力不可用: {cap_id}（检查 manifest capabilities）")
+            return None
+        _CAPS[cap_id] = cap
+    return cap
 
 
-def _build_config_values(values: dict, old_config) -> "PlatformConfig":
-    """设置卡保存回调：表单值 → PluginConfigStore → PlatformConfig。"""
-    from app.gateway.base import Platform, PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+def _config() -> dict:
+    """读本插件配置（plugin.config.read 能力，一次取全量）。"""
+    reader = _cap("plugin.config.read")
+    values = (reader() if reader else {}) or {}
+    return {
+        "enabled": bool(values.get("enabled")),
+        "bot_id": values.get("bot_id") or "",
+        "secret": values.get("secret") or "",
+        "websocket_url": values.get("websocket_url") or "",
+    }
 
-    store = PluginConfigStore()
-    plugin = "gateway-wecom"
-    enabled = values.get("enabled", store.get(plugin, "enabled"))
-    bot_id = values.get("bot_id", "")
-    secret = values.get("secret", "")
-    websocket_url = values.get("websocket_url", "")
-    store.set_values(
-        plugin,
-        {
-            "enabled": bool(enabled),
-            "bot_id": bot_id,
-            "secret": secret,
-            "websocket_url": websocket_url,
-        },
-    )
-    return PlatformConfig(
-        enabled=bool(enabled),
-        platform=Platform.WECOM,
-        bot_id=bot_id,
-        secret=secret,
-        websocket_url=websocket_url or "wss://openws.work.weixin.qq.com",
-    )
+
+def _set_enabled(enabled: bool) -> None:
+    writer = _cap("plugin.config.write")
+    if writer is not None:
+        writer("enabled", bool(enabled))
+
+
+def _validate() -> tuple:
+    cfg = _config()
+    return bool(cfg["bot_id"] and cfg["secret"]), "BotID/Secret 未配置"
 
 
 def register(registry) -> None:
@@ -898,15 +873,11 @@ def register(registry) -> None:
         GatewayPlatformDef(
             platform_id="wecom",
             display_name="企业微信",
-            adapter_factory=lambda cfg: WeComAdapter(cfg),
+            adapter_factory=WeComAdapter,
             check_requirements=check_wecom_requirements,
-            config_builder=_build_config,
-            config_writer=_write_config,
-            build_config_values=_build_config_values,
-            validate_config=lambda cfg: (
-                bool(cfg.bot_id and cfg.secret),
-                "BotID/Secret 未配置",
-            ),
+            is_enabled=lambda: _config()["enabled"],
+            set_enabled=_set_enabled,
+            validate=_validate,
             ui_order=10,
         )
     )

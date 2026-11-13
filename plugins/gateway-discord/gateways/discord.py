@@ -23,8 +23,6 @@ from app.gateway.base import (
     BasePlatformAdapter,
     MessageEvent,
     MessageType,
-    Platform,
-    PlatformConfig,
     SendResult,
 )
 
@@ -76,13 +74,15 @@ class DiscordAdapter(BasePlatformAdapter):
 
     MAX_MESSAGE_LENGTH = 2000  # Discord 消息长度限制
 
-    def __init__(self, config: PlatformConfig):
-        super().__init__(config, Platform.DISCORD)
+    def __init__(self) -> None:
+        super().__init__()
+        cfg = _config()
+        self._token = cfg["token"]
         self._client = None
         self._guilds = {}
 
         # 群组触发配置
-        self._require_mention = config.extra.get("require_mention", True)
+        self._require_mention = cfg["require_mention"]
 
         # 流式回复状态：chat_id -> {channel, message, last_edit, last_text}
         self._stream_states: Dict[str, Dict[str, Any]] = {}
@@ -94,7 +94,7 @@ class DiscordAdapter(BasePlatformAdapter):
             self._last_error = "依赖不可用"
             return False
 
-        if not self.config.token:
+        if not self._token:
             logger.error("[Discord] No bot token configured")
             self._last_error = "未配置 Bot Token"
             return False
@@ -123,7 +123,7 @@ class DiscordAdapter(BasePlatformAdapter):
                 self._connected = True
 
             # 登录
-            await self._client.start(self.config.token)
+            await self._client.start(self._token)
 
         except Exception as e:
             logger.error(f"[Discord] Failed to connect: {e}")
@@ -242,7 +242,7 @@ class DiscordAdapter(BasePlatformAdapter):
             chat_id=str(message.channel.id),
             user_id=str(message.author.id),
             user_name=user_name,
-            platform=Platform.DISCORD,
+            platform="discord",
             chat_type="dm" if isinstance(message.channel, discord.DMChannel) else "group",
             media_urls=media_urls,
             media_types=media_types,
@@ -507,74 +507,48 @@ class DiscordAdapter(BasePlatformAdapter):
 # ── Phase E 插件注册 ────────────────────────────────────
 # 配置读写回调走主程序 Settings（存量用户配置零迁移；Task 5 统一切 E1
 # PluginConfigStore 时仅改本块闭包，调用方不动）。闭包内延迟 import
-# Settings/PlatformConfig，避免模块顶层触发 PyQt5 / Settings 副作用。
+# 宿主契约不承载平台配置，避免模块顶层触发 Settings 副作用。
 
 
-def _build_config() -> "PlatformConfig":
-    """读 PluginConfigStore 构造 Discord 配置（E1 契约：插件自包含存储）"""
-    from app.gateway.base import Platform, PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+PLUGIN_NAME = "gateway-discord"
 
-    store = PluginConfigStore()
-    return PlatformConfig(
-        enabled=bool(store.get("gateway-discord", "enabled")),
-        platform=Platform.DISCORD,
-        token=store.get("gateway-discord", "token") or "",
-        extra={"require_mention": bool(store.get("gateway-discord", "require_mention"))},
-    )
+_CAPS: dict = {}
 
 
-def _write_config(config: "PlatformConfig") -> None:
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+def _cap(cap_id: str):
+    """取宿主能力（按 manifest capabilities 裁剪；后台线程无 ctx 也可用）。"""
+    cap = _CAPS.get(cap_id)
+    if cap is None:
+        from app.plugins.sdk import caps_for
 
-    PluginConfigStore().set_values(
-        "gateway-discord",
-        {
-            "enabled": config.enabled,
-            "token": config.token or "",
-            "require_mention": (
-                bool(config.extra.get("require_mention", True))
-                if config.extra
-                else True
-            ),
-        },
-    )
+        cap = caps_for(cap_id, plugin=PLUGIN_NAME, surface="ui")
+        if cap is None:
+            logger.warning(f"[{PLUGIN_NAME}] 能力不可用: {cap_id}（检查 manifest capabilities）")
+            return None
+        _CAPS[cap_id] = cap
+    return cap
 
 
-def _build_config_values(values: dict, old_config) -> "PlatformConfig":
-    """设置卡保存回调：表单值 → PluginConfigStore → PlatformConfig。"""
-    from app.gateway.base import Platform, PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
-
-    store = PluginConfigStore()
-    plugin = "gateway-discord"
-    enabled = values.get("enabled", store.get(plugin, "enabled"))
-    require_mention = values.get(
-        "require_mention", store.get(plugin, "require_mention")
-    )
-    token = values.get("token", "")
-    store.set_values(
-        plugin,
-        {
-            "enabled": bool(enabled),
-            "token": token,
-            "require_mention": _truthy(require_mention),
-        },
-    )
-    extra = dict(old_config.extra) if old_config and old_config.extra else {}
-    extra["require_mention"] = _truthy(require_mention)
-    return PlatformConfig(
-        enabled=bool(enabled),
-        platform=Platform.DISCORD,
-        token=token,
-        extra=extra,
-    )
+def _config() -> dict:
+    """读本插件配置（plugin.config.read 能力，一次取全量）。"""
+    reader = _cap("plugin.config.read")
+    values = (reader() if reader else {}) or {}
+    return {
+        "enabled": bool(values.get("enabled")),
+        "token": values.get("token") or "",
+        "require_mention": bool(values.get("require_mention", True)),
+    }
 
 
-def _truthy(v) -> bool:
-    if isinstance(v, bool):
-        return v
-    return str(v).strip().lower() in ("1", "true", "yes", "on")
+def _set_enabled(enabled: bool) -> None:
+    writer = _cap("plugin.config.write")
+    if writer is not None:
+        writer("enabled", bool(enabled))
+
+
+def _validate() -> tuple:
+    cfg = _config()
+    return bool(cfg["token"]), "Token 未配置"
 
 
 def register(registry) -> None:
@@ -584,12 +558,11 @@ def register(registry) -> None:
         GatewayPlatformDef(
             platform_id="discord",
             display_name="Discord",
-            adapter_factory=lambda cfg: DiscordAdapter(cfg),
+            adapter_factory=DiscordAdapter,
             check_requirements=check_discord_requirements,
-            config_builder=_build_config,
-            config_writer=_write_config,
-            build_config_values=_build_config_values,
-            validate_config=lambda cfg: (bool(cfg.token), "Token 未配置"),
+            is_enabled=lambda: _config()["enabled"],
+            set_enabled=_set_enabled,
+            validate=_validate,
             ui_order=40,
         )
     )
