@@ -29,7 +29,6 @@
         "model.config_for",
         "provider.list",
         "model.enumerate",
-        "model.config_for",
         "storage.data_dir"
     ],
     "keywords": [
