@@ -1886,9 +1886,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-context-insight-v1.1.0/context-insight-1.1.0-all.tar.gz",
-                    "sha256": "137bd8c7092392be8bc9f7b8cc203d2f02884c82a3d7fe5a3deca39089e9bb87",
-                    "size": 68832
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-context-insight-v1.1.1/context-insight-1.1.1-all.tar.gz",
+                    "sha256": "83b63c5c049c577fcf69997874b9b23dcc10d055185a4e6216f48fe9588e2621",
+                    "size": 71483
                 }
             }
         },
