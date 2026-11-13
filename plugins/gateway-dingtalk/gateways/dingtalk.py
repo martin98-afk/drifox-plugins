@@ -108,6 +108,7 @@ DINGTALK_TYPE_MAPPING = {
 # 重连退避
 RECONNECT_BACKOFF = [2, 5, 10, 30, 60]
 MAX_MESSAGE_LENGTH = 20000
+MAX_INBOUND_IMAGES = 10
 
 
 class DingTalkAdapter(BasePlatformAdapter):
@@ -135,6 +136,8 @@ class DingTalkAdapter(BasePlatformAdapter):
         self._stream_client: Optional[Any] = None
         self._stream_task: Optional[asyncio.Task] = None
         self._http_client: Optional[Any] = None
+        self._access_token: Optional[str] = None
+        self._access_token_expiry: float = 0.0
 
         # Session webhook 缓存
         self._session_webhooks: Dict[str, tuple] = {}  # chat_id -> (webhook, expire_time)
@@ -311,7 +314,7 @@ class DingTalkAdapter(BasePlatformAdapter):
             media_types=media_types,
         )
 
-        await self.handle_message(event)
+        await self._dispatch_event(event, media_urls, media_types)
 
     def _on_message_sync(self, message: Any) -> None:
         """同步处理收到的消息（供 ChatbotHandler 调用）"""
@@ -367,10 +370,84 @@ class DingTalkAdapter(BasePlatformAdapter):
         try:
             loop = asyncio.get_running_loop()
             # 当前线程已有运行中的事件循环 → 创建任务
-            asyncio.create_task(self.handle_message(event))
+            asyncio.create_task(self._dispatch_event(event, media_urls, media_types))
         except RuntimeError:
             # 当前线程无运行中的事件循环 → 用 asyncio.run 驱动
-            asyncio.run(self.handle_message(event))
+            asyncio.run(self._dispatch_event(event, media_urls, media_types))
+
+    async def _dispatch_event(self, event: MessageEvent, download_codes, media_types=None) -> None:
+        """下载入站图片后再交给宿主（钉钉给的是 downloadCode，不是 URL）。"""
+        types = list(media_types or [])
+        codes = [
+            code for index, code in enumerate(download_codes or [])
+            if index >= len(types) or types[index] == "image"
+        ]
+        if codes:
+            try:
+                paths = await self._download_by_codes(codes)
+                if paths:
+                    event.media_urls = paths
+                    event.media_types = ["image"] * len(paths)
+            except Exception as e:
+                logger.warning("[DingTalk] 入站图片下载失败: {}", e)
+        await self.handle_message(event)
+
+    async def _get_access_token(self) -> Optional[str]:
+        """获取钉钉企业内应用 accessToken（缓存至过期前 5 分钟）。"""
+        import time
+
+        now = time.time()
+        if self._access_token and now < self._access_token_expiry - 300:
+            return self._access_token
+        if not self._http_client or not self._client_id or not self._client_secret:
+            return None
+        response = await self._http_client.post(
+            "https://api.dingtalk.com/v1.0/oauth2/accessToken",
+            json={"appKey": self._client_id, "appSecret": self._client_secret},
+        )
+        data = response.json() if response.content else {}
+        token = data.get("accessToken")
+        if response.status_code == 200 and token:
+            self._access_token = token
+            self._access_token_expiry = now + int(data.get("expireIn") or 7200)
+            return token
+        logger.warning("[DingTalk] 获取 accessToken 失败: HTTP {} {}", response.status_code, data)
+        return None
+
+    async def _download_by_codes(self, codes) -> list:
+        """downloadCode → downloadUrl → 本地文件。"""
+        if not self._http_client:
+            return []
+        token = await self._get_access_token()
+        if not token:
+            return []
+        import hashlib
+
+        cache = get_cache_dir("dingtalk")
+        paths = []
+        for code in codes[:MAX_INBOUND_IMAGES]:
+            if not isinstance(code, str) or not code:
+                continue
+            response = await self._http_client.post(
+                "https://api.dingtalk.com/v1.0/robot/messageFiles/download",
+                headers={"x-acs-dingtalk-access-token": token},
+                json={"downloadCode": code, "robotCode": self._client_id},
+            )
+            data = response.json() if response.content else {}
+            url = data.get("downloadUrl")
+            if not url:
+                logger.warning("[DingTalk] 换取下载地址失败: {}", data)
+                continue
+            file_response = await self._http_client.get(url, timeout=30)
+            if file_response.status_code != 200 or not file_response.content:
+                logger.warning("[DingTalk] 图片下载失败 HTTP {}", file_response.status_code)
+                continue
+            digest = hashlib.sha1(code.encode("utf-8")).hexdigest()[:16]
+            target = cache / f"{digest}.jpg"
+            if not target.exists():
+                target.write_bytes(file_response.content)
+            paths.append(str(target))
+        return paths
 
     def _extract_text(self, message: Any) -> str:
         """提取文本内容"""

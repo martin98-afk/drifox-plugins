@@ -10,6 +10,8 @@ Discord 平台适配器（社区插件，万物即插件 Phase E）
 
 from __future__ import annotations
 
+import os as _os
+
 
 # 依赖注入已由宿主统一接管：PluginManager 扫描时注入 deps/ 与 deps/<platform>/
 # （平台目录优先，见 app/plugins/deps_loader.py），插件组件不再自理 sys.path。
@@ -25,6 +27,22 @@ from app.gateway.base import (
     PlatformConfig,
     SendResult,
 )
+
+MAX_INBOUND_IMAGES = 10
+
+
+def _cache_dir():
+    """入站图片缓存目录：优先宿主 get_cache_dir，缺失时退回默认数据目录。"""
+    try:
+        from app.gateway.base import get_cache_dir
+
+        return get_cache_dir("discord")
+    except Exception:
+        from pathlib import Path
+
+        fallback = Path.home() / ".drifox" / "gateway" / "cache" / "discord"
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback
 
 # 延迟导入
 DISCORD_AVAILABLE = False
@@ -139,6 +157,7 @@ class DiscordAdapter(BasePlatformAdapter):
 
         # 构建事件
         event = self._build_message_event(message, msg_type)
+        await self._attach_inbound_media(event, message)
         await self.handle_message(event)
 
     def _bot_mentioned(self, message) -> bool:
@@ -162,16 +181,31 @@ class DiscordAdapter(BasePlatformAdapter):
 
         return False
 
+    async def _attach_inbound_media(self, event: MessageEvent, message) -> None:
+        """把图片附件下载到本地缓存（宿主只认本地文件，不接受远端 URL）。"""
+        images = [
+            att for att in message.attachments
+            if (getattr(att, "content_type", "") or "").startswith("image/")
+        ]
+        paths = []
+        for attachment in images[:MAX_INBOUND_IMAGES]:
+            try:
+                suffix = _os.path.splitext(getattr(attachment, "filename", "") or "")[1] or ".png"
+                target = _cache_dir() / f"{getattr(attachment, 'id', 'img')}{suffix}"
+                if not target.exists():
+                    await attachment.save(target)
+                paths.append(str(target))
+            except Exception as e:
+                logger.warning("[Discord] 入站图片下载失败: {}", e)
+        if paths:
+            event.media_urls = paths
+            event.media_types = ["image"] * len(paths)
+
     def _build_message_event(self, message, msg_type: MessageType) -> MessageEvent:
         """构建消息事件"""
-        # 提取媒体
+        # 媒体由 _attach_inbound_media 下载后填本地路径（远端 URL 宿主无法使用）
         media_urls = []
         media_types = []
-
-        for attachment in message.attachments:
-            if attachment.url:
-                media_urls.append(attachment.url)
-                media_types.append(attachment.content_type or "file")
 
         # 用户名
         user_name = message.author.display_name or message.author.name

@@ -57,7 +57,22 @@ CONNECT_TIMEOUT = 20.0
 REQUEST_TIMEOUT = 15.0
 TOKEN_REFRESH_MARGIN = 120.0  # access_token 提前刷新余量（秒）
 RECONNECT_BACKOFF = [2, 5, 10, 30, 60]
-MAX_MESSAGE_LENGTH = 1800  # QQ 文本消息长度上限（保守值）
+MAX_MESSAGE_LENGTH = 1800
+MAX_INBOUND_IMAGES = 10
+
+
+def _cache_dir():
+    """入站附件缓存目录：优先宿主 get_cache_dir，缺失时退回默认数据目录。"""
+    try:
+        from app.gateway.base import get_cache_dir
+
+        return get_cache_dir("qq")
+    except Exception:
+        from pathlib import Path
+
+        fallback = Path.home() / ".drifox" / "gateway" / "cache" / "qq"
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback  # QQ 文本消息长度上限（保守值）
 
 # 流式合并（单聊 stream_messages append 模式）
 STREAM_MIN_INTERVAL = 1.2  # 分片最小间隔（官方建议 ≥500ms，留限流余量）
@@ -451,6 +466,36 @@ class QqAdapter(BasePlatformAdapter):
         finally:
             self._reconnecting = False
 
+    async def _attach_inbound_media(self, event: MessageEvent, attachments) -> None:
+        """下载 QQ 消息附件到本地缓存（URL 带时效签名，收到即取）。"""
+        if not attachments or not self._http_client:
+            return
+        import hashlib
+
+        paths = []
+        for attachment in attachments[:MAX_INBOUND_IMAGES]:
+            content_type = str((attachment or {}).get("content_type") or "")
+            if content_type and not content_type.startswith("image/"):
+                continue
+            url = str((attachment or {}).get("url") or "")
+            if not url.startswith("http"):
+                continue
+            try:
+                digest = hashlib.sha1(url.encode("utf-8")).hexdigest()[:16]
+                target = _cache_dir() / f"{digest}.jpg"
+                if not target.exists():
+                    response = await self._http_client.get(url, timeout=30)
+                    if response.status_code != 200 or not response.content:
+                        logger.warning("[QQ] 附件下载失败 HTTP {}", response.status_code)
+                        continue
+                    target.write_bytes(response.content)
+                paths.append(str(target))
+            except Exception as e:
+                logger.warning("[QQ] 入站附件下载失败: {}", e)
+        if paths:
+            event.media_urls = paths
+            event.media_types = ["image"] * len(paths)
+
     async def _heartbeat_loop(self) -> None:
         """心跳循环：每 heartbeat_interval 发 op=1"""
         try:
@@ -486,7 +531,8 @@ class QqAdapter(BasePlatformAdapter):
             user_name = sender
 
         text = str(data.get("content") or "").strip()
-        if not text:
+        attachments = data.get("attachments") or []
+        if not text and not attachments:
             logger.debug("[QQ] Empty message skipped ({})", event_type)
             return
 
@@ -497,9 +543,14 @@ class QqAdapter(BasePlatformAdapter):
             cleaned = re.sub(r"^(?:<@!\w+>|@\S+)\s*", "", text).strip()
             text = cleaned or text
 
+        has_image = any(
+            str((att or {}).get("content_type") or "").startswith("image/")
+            or str((att or {}).get("filename") or "").lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".gif"))
+            for att in attachments
+        )
         event = MessageEvent(
             text=text,
-            message_type=MessageType.TEXT,
+            message_type=MessageType.IMAGE if has_image else MessageType.TEXT,
             message_id=msg_id,
             chat_id=chat_id,
             user_id=sender,
@@ -516,6 +567,7 @@ class QqAdapter(BasePlatformAdapter):
                 self._finalize_stream_force(chat_id)
             self._current_msg_ids[chat_id] = msg_id
 
+        await self._attach_inbound_media(event, attachments)
         await self.handle_message(event)
 
     # ── 发送 ─────────────────────────────────────────────

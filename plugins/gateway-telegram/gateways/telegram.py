@@ -33,6 +33,22 @@ from app.gateway.base import (
     SendResult,
 )
 
+def _cache_dir():
+    """入站图片缓存目录：优先宿主 get_cache_dir，缺失时退回默认数据目录。"""
+    try:
+        from app.gateway.base import get_cache_dir
+
+        return get_cache_dir("telegram")
+    except Exception:
+        from pathlib import Path
+
+        fallback = Path.home() / ".drifox" / "gateway" / "cache" / "telegram"
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback
+
+
+MAX_INBOUND_IMAGES = 10
+
 # 延迟导入避免在没有安装时崩溃
 TELEGRAM_AVAILABLE = False
 Application = None
@@ -159,6 +175,7 @@ class TelegramAdapter(BasePlatformAdapter):
 
         # 构建事件
         event = self._build_message_event(msg, msg_type)
+        await self._attach_inbound_media(event, msg)
         await self.handle_message(event)
 
     def _is_group_chat(self, message) -> bool:
@@ -219,25 +236,29 @@ class TelegramAdapter(BasePlatformAdapter):
             metadata={"thread_id": thread_id_str} if thread_id_str else {},
         )
 
+    async def _attach_inbound_media(self, event: MessageEvent, message) -> None:
+        """把图片落到本地缓存（file_id 只在平台侧有效，宿主只认本地文件）。"""
+        photos = getattr(message, "photo", None)
+        if not photos or not self._bot:
+            return
+        photo = photos[-1]
+        file_id = getattr(photo, "file_id", "")
+        if not file_id:
+            return
+        try:
+            remote = await self._bot.get_file(file_id)
+            suffix = _os.path.splitext(getattr(remote, "file_path", "") or "")[1] or ".jpg"
+            target = _cache_dir() / f"{file_id[-16:]}{suffix}"
+            if not target.exists():
+                await remote.download_to_drive(custom_path=str(target))
+            event.media_urls = [str(target)]
+            event.media_types = ["image"]
+        except Exception as e:
+            logger.warning("[Telegram] 入站图片下载失败: {}", e)
+
     def _extract_media_urls(self, message) -> List[str]:
-        """提取媒体 URL"""
-        urls = []
-
-        if hasattr(message, "photo") and message.photo:
-            # 使用最大尺寸的照片
-            photo = message.photo[-1]
-            if hasattr(photo, "file_id"):
-                urls.append(f"file://telegram_photo:{photo.file_id}")
-
-        if hasattr(message, "video") and message.video:
-            if hasattr(message.video, "file_id"):
-                urls.append(f"file://telegram_video:{message.video.file_id}")
-
-        if hasattr(message, "voice") and message.voice:
-            if hasattr(message.voice, "file_id"):
-                urls.append(f"file://telegram_voice:{message.voice.file_id}")
-
-        return urls
+        """图片由 _attach_inbound_media 下载后填本地路径，这里不再给伪协议。"""
+        return []
 
     def _extract_media_types(self, message) -> List[str]:
         """提取媒体类型"""
