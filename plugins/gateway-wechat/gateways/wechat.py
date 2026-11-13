@@ -16,11 +16,14 @@ SDK 延迟导入纪律：模块顶层不 eager import 平台 SDK，复用宿主 
 from __future__ import annotations
 
 import asyncio
+import base64
+import hashlib
 import json
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import quote
 
 from loguru import logger
 
@@ -34,6 +37,10 @@ from app.gateway.base import (
 )
 
 DEFAULT_API_BASE = "https://ilinkai.weixin.qq.com"
+# 图片 CDN（iLink 图片以 AES-128-ECB 加密存放，需 aeskey 解密）
+IMAGE_CDN_BASE = "https://novac2c.cdn.weixin.qq.com/c2c"
+MAX_INBOUND_IMAGES = 10
+MAX_INBOUND_IMAGE_BYTES = 30 * 1024 * 1024
 
 # 配置常量
 LONG_POLL_TIMEOUT = 45.0  # getupdates 长轮询（服务端 hold 35s + 余量）
@@ -41,7 +48,7 @@ REQUEST_TIMEOUT = 15.0
 MAX_CONSECUTIVE_FAILURES = 3
 BACKOFF_DELAYS = [2, 5, 30]
 CONTEXT_TOKEN_TTL = 24 * 3600  # context_token 有效期（秒）
-MSG_CHUNK_LIMIT = 4000  # 单条消息文本上限
+MSG_CHUNK_LIMIT = 1800  # 单条文本上限（超出分条发，按自然段切）
 # ret=-2：context_token 失效（久未互动）或限流；前者需对方重新发消息，后者退避重试
 SEND_RETRY_DELAYS = [1.0, 3.0, 8.0]  # 分片限流退避（秒）
 
@@ -430,14 +437,16 @@ class WechatAdapter(BasePlatformAdapter):
         if ctx:
             self._context_tokens[from_user_id] = {"token": ctx, "ts": time.time()}
 
-        text = self._extract_text(msg.get("item_list"))
-        if not text.strip():
+        item_list = msg.get("item_list") or []
+        text = self._extract_text(item_list)
+        has_image = self._has_image(item_list)
+        if not text.strip() and not has_image:
             logger.debug(f"[Wechat] Non-text message skipped (from={from_user_id[:12]})")
             return
 
         event = MessageEvent(
             text=text.strip(),
-            message_type=MessageType.TEXT,
+            message_type=MessageType.IMAGE if has_image else MessageType.TEXT,
             message_id=str(msg.get("client_id") or uuid.uuid4()),
             chat_id=f"dm:{from_user_id}",
             user_id=from_user_id,
@@ -445,8 +454,137 @@ class WechatAdapter(BasePlatformAdapter):
             platform=self.platform,
             chat_type="dm",
         )
-        # 事件分发（poll_loop 已在事件循环内，create_task 安全）
-        asyncio.get_running_loop().create_task(self.handle_message(event))
+        # 事件分发（poll_loop 已在事件循环内，create_task 安全）；
+        # 有图时先下载解密再交给宿主，下载失败不阻断文本
+        asyncio.get_running_loop().create_task(self._dispatch_with_media(event, item_list))
+
+    # ── 入站图片 ────────────────────────────────────────
+
+    @staticmethod
+    def _has_image(item_list: List[Dict[str, Any]]) -> bool:
+        return any(
+            item.get("type") == ITEM_IMAGE or isinstance(item.get("image_item"), dict)
+            for item in item_list
+        )
+
+    async def _dispatch_with_media(
+        self, event: MessageEvent, item_list: List[Dict[str, Any]]
+    ) -> None:
+        """下载入站图片并填充 media_urls，再交给宿主 handler。"""
+        count = 0
+        for item in item_list:
+            if count >= MAX_INBOUND_IMAGES:
+                break
+            image_item = item.get("image_item")
+            if not isinstance(image_item, dict):
+                continue
+            try:
+                path = await self._download_image(image_item)
+            except Exception as e:
+                logger.warning(f"[Wechat] 入站图片下载失败: {e}")
+                path = None
+            if path:
+                event.media_urls.append(path)
+                event.media_types.append("image")
+                count += 1
+        await self.handle_message(event)
+
+    @staticmethod
+    def _parse_aes_key(image_item: Dict[str, Any]) -> Optional[bytes]:
+        """解析 iLink 图片 aeskey（16 字节）。两种编码：hex 明文或 base64。"""
+        direct = image_item.get("aeskey")
+        if isinstance(direct, str) and len(direct) == 32:
+            try:
+                return bytes.fromhex(direct)
+            except ValueError:
+                pass
+        media = image_item.get("media") or {}
+        encoded = media.get("aes_key")
+        if isinstance(encoded, str) and encoded:
+            try:
+                raw = base64.b64decode(encoded)
+            except Exception:
+                raw = b""
+            if len(raw) == 16:
+                return raw
+            if len(raw) == 32:
+                try:
+                    return bytes.fromhex(raw.decode("ascii"))
+                except (UnicodeDecodeError, ValueError):
+                    return None
+        return None
+
+    @staticmethod
+    def _decrypt_image(data: bytes, key: bytes) -> Optional[bytes]:
+        """AES-128-ECB 解密（PKCS7 padding）。依赖缺失或解密失败返回 None。"""
+        if not data or len(data) % 16:
+            return None
+        try:
+            from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
+            decryptor = Cipher(algorithms.AES(key), modes.ECB()).decryptor()
+            plain = decryptor.update(data) + decryptor.finalize()
+        except Exception as e:
+            logger.warning(f"[Wechat] 图片解密失败: {e}")
+            return None
+        if plain:
+            pad = plain[-1]
+            if 1 <= pad <= 16 and plain.endswith(bytes([pad]) * pad):
+                plain = plain[:-pad]
+        return plain or None
+
+    async def _download_image(self, image_item: Dict[str, Any]) -> Optional[str]:
+        """从 iLink CDN 下载并解密图片，返回本地路径；失败返回 None。"""
+        media = image_item.get("media") or {}
+        query = media.get("encrypt_query_param")
+        full_url = media.get("full_url")
+        if isinstance(query, str) and query:
+            url = f"{IMAGE_CDN_BASE}/download?encrypted_query_param={quote(query)}"
+        elif isinstance(full_url, str) and full_url:
+            url = full_url
+        else:
+            return None
+        if not self._http_client:
+            return None
+
+        response = await self._http_client.get(url, timeout=REQUEST_TIMEOUT)
+        if response.status_code != 200 or not response.content:
+            logger.warning(f"[Wechat] 图片下载失败 HTTP {response.status_code}")
+            return None
+        data = response.content
+        if len(data) > MAX_INBOUND_IMAGE_BYTES:
+            logger.warning(f"[Wechat] 图片超过 {MAX_INBOUND_IMAGE_BYTES // (1024 * 1024)}MB，跳过")
+            return None
+
+        key = self._parse_aes_key(image_item)
+        if key:
+            plain = self._decrypt_image(data, key)
+            if plain is None:
+                logger.warning("[Wechat] 图片解密失败，跳过")
+                return None
+            data = plain
+
+        digest = hashlib.sha1(data).hexdigest()[:16]
+        path = self._cache_dir() / f"{digest}{self._image_ext(data)}"
+        if not path.exists():
+            path.write_bytes(data)
+        return str(path)
+
+    def _cache_dir(self) -> Path:
+        """入站图片缓存目录（复用宿主 get_cache_dir）。"""
+        from app.gateway.base import get_cache_dir
+
+        return get_cache_dir("wechat")
+
+    @staticmethod
+    def _image_ext(data: bytes) -> str:
+        if data.startswith(b"\x89PNG\r\n\x1a\n"):
+            return ".png"
+        if data.startswith(b"GIF8"):
+            return ".gif"
+        if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+            return ".webp"
+        return ".jpg"
 
     # ── 发送 ────────────────────────────────────────────
 
@@ -483,10 +621,9 @@ class WechatAdapter(BasePlatformAdapter):
 
             rendered = render_markdown_plain(content)
             ok, err = True, None
-            chunks = [
-                rendered[i : i + MSG_CHUNK_LIMIT]
-                for i in range(0, max(len(rendered), 1), MSG_CHUNK_LIMIT)
-            ]
+            from app.gateway.text_split import split_message
+
+            chunks = split_message(rendered, MSG_CHUNK_LIMIT) or [rendered]
             for ci, chunk in enumerate(chunks):
                 body = {
                     "msg": {
