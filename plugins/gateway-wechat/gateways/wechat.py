@@ -48,7 +48,7 @@ REQUEST_TIMEOUT = 15.0
 MAX_CONSECUTIVE_FAILURES = 3
 BACKOFF_DELAYS = [2, 5, 30]
 CONTEXT_TOKEN_TTL = 24 * 3600  # context_token 有效期（秒）
-MSG_CHUNK_LIMIT = 1800  # 单条文本上限（超出分条发，按自然段切）
+MSG_CHUNK_LIMIT = 500  # 单条文本上限（微信阅读舒适区；超出按段落分条）
 # ret=-2：context_token 失效（久未互动）或限流；前者需对方重新发消息，后者退避重试
 SEND_RETRY_DELAYS = [1.0, 3.0, 8.0]  # 分片限流退避（秒）
 
@@ -680,7 +680,7 @@ class WechatAdapter(BasePlatformAdapter):
             ok, err = True, None
             from app.gateway.text_split import split_message
 
-            chunks = split_message(rendered, MSG_CHUNK_LIMIT) or [rendered]
+            chunks = split_message(rendered, MSG_CHUNK_LIMIT, prefer_paragraph=True) or [rendered]
             for ci, chunk in enumerate(chunks):
                 body = {
                     "msg": {
