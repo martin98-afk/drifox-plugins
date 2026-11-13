@@ -95,7 +95,7 @@ class TelegramAdapter(BasePlatformAdapter):
         self._update_id = None
 
         # 群组触发配置
-        self._require_mention = config.extra.get("require_mention", True)
+        self._require_mention = cfg["require_mention"]
 
         # 流式回复状态：chat_id -> {chat_id, message_id, last_edit, last_text}
         self._stream_states: Dict[str, Dict[str, Any]] = {}

@@ -318,10 +318,10 @@ class FeishuAdapter(BasePlatformAdapter):
 
         # 从配置重新获取（确保最新）：走本插件配置读取，不依赖宿主配置结构
         cfg = _config()
-        self._app_id = cfg.extra.get("app_id") or ""
-        self._app_secret = cfg.extra.get("app_secret") or ""
-        self._encrypt_key = cfg.extra.get("encrypt_key") or ""
-        self._verification_token = cfg.extra.get("verification_token") or ""
+        self._app_id = cfg["app_id"]
+        self._app_secret = cfg["app_secret"]
+        self._encrypt_key = cfg["encrypt_key"]
+        self._verification_token = cfg["verification_token"]
 
         if not self._app_id or not self._app_secret:
             logger.error("[Feishu] app_id and app_secret are required")
