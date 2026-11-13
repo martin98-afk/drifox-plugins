@@ -59,5 +59,14 @@
                 "placeholder": "前往企业微信管理后台创建"
             }
         ]
+    },
+    "dependencies": {
+        "pip": {
+            "default": [
+                "aiohttp==3.14.3",
+                "httpx==0.28.1",
+                "segno"
+            ]
+        }
     }
 }
