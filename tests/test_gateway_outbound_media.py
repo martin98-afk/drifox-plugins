@@ -11,6 +11,7 @@ send_file 把模型产出的本地附件发回平台。此前两插件分别返�
 """
 
 import asyncio
+import json
 import pytest
 import importlib.util
 import sys
@@ -148,6 +149,10 @@ class _FakeHttpClient:
 
     async def post(self, url, **kwargs):
         self.calls.append(("POST", url, kwargs))
+        return self.responses.pop(0)
+
+    async def request(self, method, url, **kwargs):
+        self.calls.append((method, url, kwargs))
         return self.responses.pop(0)
 
     async def get(self, url, **kwargs):
@@ -371,3 +376,100 @@ def test_feishu_missing_local_file(tmp_path):
     result = asyncio.run(adapter.send_file("oc_chat", str(tmp_path / "nope.pdf")))
     assert result.success is False
     assert client.calls == []
+
+
+# ==================== 飞书提问卡 ====================
+
+def test_feishu_send_question_renders_option_buttons():
+    """选择题渲染成按钮卡片，按钮 value 带 drifox_answer。"""
+    responses = [_FakeResponse({"code": 0, "data": {"message_id": "om_q"}})]
+    client = _FakeHttpClient(responses)
+    _mod, adapter = _feishu_adapter(client)
+    question = {
+        "question": "用哪个方案？",
+        "options": [
+            {"label": "方案A", "description": "快"},
+            {"label": "方案B", "description": "稳"},
+        ],
+    }
+    result = asyncio.run(adapter.send_question("oc_chat", question, 0, 1))
+
+    assert result.success is True
+    body = client.calls[0][2]["json"]
+    assert body["msg_type"] == "interactive"
+    card = json.loads(body["content"])
+    buttons = [e for e in card["elements"] if e.get("tag") == "action"][0]["actions"]
+    assert [b["value"]["drifox_answer"] for b in buttons] == ["方案A", "方案B"]
+    assert "用哪个方案？" in json.dumps(card, ensure_ascii=False)
+
+
+def test_feishu_send_question_skips_multi_select():
+    """多选题卡片无法表达多选后提交，必须返回失败让宿主退文本。"""
+    client = _FakeHttpClient([])
+    _mod, adapter = _feishu_adapter(client)
+    question = {"question": "要哪些？", "multiple": True, "options": [{"label": "A"}]}
+    result = asyncio.run(adapter.send_question("oc_chat", question, 0, 1))
+    assert result.success is False
+    assert client.calls == []
+
+
+def test_feishu_send_question_without_options_falls_back():
+    client = _FakeHttpClient([])
+    _mod, adapter = _feishu_adapter(client)
+    result = asyncio.run(adapter.send_question("oc_chat", {"question": "名字？"}, 0, 1))
+    assert result.success is False
+    assert client.calls == []
+
+
+def test_feishu_card_action_answer_injects_message():
+    """点作答按钮 → 把选项 label 当作用户消息注入宿主回环。"""
+    mod, adapter = _feishu_adapter(_FakeHttpClient([]))
+
+    injected = []
+
+    class _Loop:
+        def is_running(self):
+            return True
+
+    import asyncio as _aio
+
+    def _fake_run_coro(coro, loop):
+        injected.append(coro)
+        coro.close()
+
+    adapter._handler_loop = _Loop()
+
+    async def _handler(ev):
+        return None
+
+    adapter._message_handler = _handler
+
+    class _Ctx:
+        open_chat_id = "oc_chat"
+        open_message_id = "om_q"
+
+    class _Op:
+        open_id = "ou_user"
+
+    class _Action:
+        value = {"drifox_answer": "方案B"}
+
+    class _Event:
+        action = _Action()
+        context = _Ctx()
+        operator = _Op()
+
+    class _Data:
+        event = _Event()
+
+    # _card_toast 依赖 lark SDK 的响应类，测试里替换成占位
+    mod.FeishuAdapter._card_toast = staticmethod(lambda t, m: {"toast": {"type": t, "content": m}})
+    orig = _aio.run_coroutine_threadsafe
+    _aio.run_coroutine_threadsafe = _fake_run_coro
+    try:
+        resp = adapter._on_card_action(_Data())
+    finally:
+        _aio.run_coroutine_threadsafe = orig
+
+    assert resp["toast"]["type"] == "success"
+    assert len(injected) == 2  # 消息注入 + 卡片退役

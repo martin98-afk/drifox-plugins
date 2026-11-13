@@ -767,6 +767,8 @@ class FeishuAdapter(BasePlatformAdapter):
         client = self._http_client
         owns_client = client is None
         if client is None:
+            import httpx
+
             client = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
         try:
             response = await client.get(
@@ -824,9 +826,18 @@ class FeishuAdapter(BasePlatformAdapter):
 
             action = getattr(event, "action", None)
             value = getattr(action, "value", None)
-            cmd = value.get("drifox_cmd", "") if isinstance(value, dict) else ""
-            cmd = str(cmd).strip()
-            if not cmd.startswith("/"):
+            if not isinstance(value, dict):
+                return self._card_toast("error", "未知按钮指令")
+            # 两类按钮：提问卡作答（drifox_answer）与命令卡（drifox_cmd）
+            answer = str(value.get("drifox_answer", "") or "").strip()
+            cmd = str(value.get("drifox_cmd", "") or "").strip()
+            if answer:
+                text = answer
+                toast = f"✅ 已选择 {answer[:30]}"
+            elif cmd.startswith("/"):
+                text = cmd
+                toast = f"⏳ 已执行 {cmd[:40]}"
+            else:
                 return self._card_toast("error", "未知按钮指令")
 
             context = getattr(event, "context", None)
@@ -838,7 +849,7 @@ class FeishuAdapter(BasePlatformAdapter):
             operator_id = str(getattr(operator, "open_id", "") or "card_user") if operator else "card_user"
 
             ev = MessageEvent(
-                text=cmd,
+                text=text,
                 message_type=MessageType.TEXT,
                 message_id="",
                 chat_id=chat_id,
@@ -854,8 +865,15 @@ class FeishuAdapter(BasePlatformAdapter):
                 loop = self._handler_loop
                 if loop is not None and loop.is_running():
                     asyncio.run_coroutine_threadsafe(self._message_handler(ev), loop)
-                    logger.info("[Feishu] Card action injected: {}", cmd[:80])
-                    return self._card_toast("success", f"⏳ 已执行 {cmd[:40]}")
+                    logger.info("[Feishu] Card action injected: {}", text[:80])
+                    if answer:
+                        # 作答卡点击后退役按钮：否则重复点会被当成新的用户消息再发一轮
+                        msg_id = str(getattr(context, "open_message_id", "") or "")
+                        if msg_id:
+                            asyncio.run_coroutine_threadsafe(
+                                self._retire_question_card(msg_id, answer), loop
+                            )
+                    return self._card_toast("success", toast)
                 logger.error("[Feishu] Handler loop not running, card action dropped")
                 return self._card_toast("error", "处理循环不可用")
 
@@ -864,6 +882,30 @@ class FeishuAdapter(BasePlatformAdapter):
         except Exception as e:
             logger.error("[Feishu] Card action error: {}", e)
             return self._card_toast("error", "处理失败")
+
+    async def _retire_question_card(self, message_id: str, answer: str) -> None:
+        """把已作答的提问卡替换成静态回执（尽力而为，失败只记 debug）。
+
+        不退役的话卡片按钮仍然可点，重复点击会作为新消息再触发一轮对话。
+        """
+        try:
+            card = {
+                "config": {"wide_screen_mode": True},
+                "header": {
+                    "title": {"tag": "plain_text", "content": "✅ 已作答"},
+                    "template": "green",
+                },
+                "elements": [
+                    {"tag": "markdown", "content": f"你的选择：**{answer}**"},
+                ],
+            }
+            await self._api_request(
+                "PATCH",
+                f"im/v1/messages/{message_id}",
+                {"content": json.dumps(card, ensure_ascii=False)},
+            )
+        except Exception as e:
+            logger.debug("[Feishu] 提问卡退役失败（忽略）: {}", e)
 
     @staticmethod
     def _card_toast(toast_type: str, msg: str):
@@ -1102,6 +1144,8 @@ class FeishuAdapter(BasePlatformAdapter):
         client = self._http_client
         owns_client = client is None
         if client is None:
+            import httpx
+
             client = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
         try:
             response = await client.request(
@@ -1552,6 +1596,83 @@ class FeishuAdapter(BasePlatformAdapter):
         from app.gateway.text_split import split_message
 
         return split_message(content, self.MAX_MESSAGE_LENGTH)
+
+    async def send_question(
+        self, chat_id: str, question: dict, index: int, total: int
+    ) -> SendResult:
+        """把交互提问渲染成带按钮的卡片（点按钮即作答）。
+
+        按钮回传走 ``card.action.trigger``（``_on_card_action``），value 里带
+        ``drifox_answer``，与手敲文本同路进入宿主的待答状态机。
+        多选题卡片无法表达「多选后提交」，直接返回失败让宿主退回文本选项。
+        """
+        if question.get("multiple"):
+            return SendResult(success=False, error="多选题目走文本作答")
+        options = [
+            opt
+            for opt in (question.get("options") or [])
+            if str((opt or {}).get("label") or "").strip()
+        ][:4]
+        if not options:
+            return SendResult(success=False, error="无选项，走文本作答")
+        title = "🙋 需要你补充信息"
+        if total > 1:
+            title += f"（{index + 1}/{total}）"
+        body_parts = []
+        header = str(question.get("header") or "").strip()
+        if header:
+            body_parts.append(f"**{header}**")
+        body_parts.append(str(question.get("question") or "").strip())
+        detail = str(question.get("detail") or "").strip()
+        if detail:
+            body_parts.append(detail)
+
+        actions = []
+        for opt in options:
+            label = str(opt.get("label") or "").strip()
+            actions.append(
+                {
+                    "tag": "button",
+                    "text": {"tag": "plain_text", "content": label},
+                    "type": "default",
+                    "value": {"drifox_answer": label},
+                }
+            )
+
+        card = {
+            "config": {"wide_screen_mode": True},
+            "header": {"title": {"tag": "plain_text", "content": title}, "template": "blue"},
+            "elements": [
+                {"tag": "markdown", "content": "\n\n".join(body_parts)},
+                {"tag": "hr"},
+                {"tag": "action", "actions": actions},
+                {
+                    "tag": "note",
+                    "elements": [
+                        {"tag": "plain_text", "content": "点按钮直接作答，也可以回复文字或其他内容。"}
+                    ],
+                },
+            ],
+        }
+        return await self._send_card(chat_id, card)
+
+    async def _send_card(self, chat_id: str, card: dict) -> SendResult:
+        """发送 interactive 卡片（提问卡与命令卡共用出口）。"""
+        try:
+            resp = await self._api_request(
+                "POST",
+                "im/v1/messages?receive_id_type=chat_id",
+                {
+                    "receive_id": chat_id,
+                    "msg_type": "interactive",
+                    "content": json.dumps(card, ensure_ascii=False),
+                },
+            )
+            message_id = (resp.get("data") or {}).get("message_id")
+            return SendResult(success=True, message_id=message_id)
+        except Exception as e:
+            logger.warning("[Feishu] 卡片发送失败: {}", e)
+            return SendResult(success=False, error=str(e), retryable=True)
 
     async def send_image(self, chat_id: str, image_path: str, **kwargs) -> SendResult:
         """发送图片（im/v1/images 上传 → image 消息）"""
