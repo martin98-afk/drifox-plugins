@@ -958,7 +958,7 @@
             "display_name": {
                 "zh": "内置浏览器"
             },
-            "downloads": 94,
+            "downloads": 95,
             "keywords": [
                 "browser",
                 "web",
@@ -1722,7 +1722,7 @@
             "display_name": {
                 "zh": "CodeGraph 代码智能"
             },
-            "downloads": 9,
+            "downloads": 10,
             "dependencies": {
                 "pip": {
                     "default": [
@@ -1868,7 +1868,7 @@
             "display_name": {
                 "zh": "上下文洞察"
             },
-            "downloads": 3,
+            "downloads": 5,
             "keywords": [
                 "context",
                 "token",
@@ -1962,7 +1962,7 @@
             "display_name": {
                 "zh": "上下文用量统计"
             },
-            "downloads": 5,
+            "downloads": 6,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.png",
@@ -1999,7 +1999,7 @@
             "display_name": {
                 "zh": "Context7 文档检索"
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "docs",
                 "api",
@@ -2174,7 +2174,7 @@
             "display_name": {
                 "zh": "定时任务中心"
             },
-            "downloads": 56,
+            "downloads": 57,
             "keywords": [
                 "cron",
                 "schedule",
@@ -2349,7 +2349,7 @@
             "display_name": {
                 "zh": "DeepSeek 蜜罐"
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "theme",
                 "wallpaper-engine",
@@ -2392,7 +2392,7 @@
             "display_name": {
                 "zh": "桌面自动化"
             },
-            "downloads": 26,
+            "downloads": 28,
             "keywords": [
                 "desktop",
                 "automation",
@@ -2855,7 +2855,7 @@
             "display_name": {
                 "zh": "DSH 插件迁移"
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "dsh",
                 "deepseek-harness",
@@ -3093,7 +3093,7 @@
             "display_name": {
                 "zh": "Evolver 自进化"
             },
-            "downloads": 1,
+            "downloads": 2,
             "min_host_version": "0.5.0",
             "homepage": "https://evomap.ai",
             "icon": {
@@ -3182,7 +3182,7 @@
             "display_name": {
                 "zh": "示例插件"
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "example",
                 "template",
@@ -3445,7 +3445,7 @@
             "display_name": {
                 "zh": "技术工程专家包"
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "agents",
                 "experts",
@@ -3937,7 +3937,7 @@
             "display_name": {
                 "zh": "功能开发工作流"
             },
-            "downloads": 3,
+            "downloads": 5,
             "keywords": [
                 "development",
                 "architecture",
@@ -4023,7 +4023,7 @@
             "display_name": {
                 "zh": "多格式文件设计"
             },
-            "downloads": 11,
+            "downloads": 12,
             "keywords": [
                 "document",
                 "docx",
@@ -4112,6 +4112,7 @@
             "display_name": {
                 "zh": "对话悬浮窗"
             },
+            "downloads": 1,
             "keywords": [
                 "chat",
                 "floating",
@@ -4156,6 +4157,7 @@
             "display_name": {
                 "zh": "复星财富洞察"
             },
+            "downloads": 1,
             "keywords": [
                 "mcp",
                 "connector",
@@ -4325,6 +4327,7 @@
             "display_name": {
                 "zh": "富途牛牛行情交易"
             },
+            "downloads": 1,
             "keywords": [
                 "mcp",
                 "connector",
@@ -4401,7 +4404,7 @@
             "display_name": {
                 "zh": "钉钉网关"
             },
-            "downloads": 6,
+            "downloads": 9,
             "platforms": [
                 "windows",
                 "linux",
@@ -4473,7 +4476,7 @@
             "display_name": {
                 "zh": "Discord 网关"
             },
-            "downloads": 1,
+            "downloads": 2,
             "platforms": [
                 "windows",
                 "linux",
@@ -4542,7 +4545,7 @@
             "display_name": {
                 "zh": "飞书网关"
             },
-            "downloads": 58,
+            "downloads": 63,
             "platforms": [
                 "windows",
                 "linux",
@@ -4614,7 +4617,7 @@
             "display_name": {
                 "zh": "QQ 网关"
             },
-            "downloads": 17,
+            "downloads": 19,
             "dependencies": {
                 "pip": {
                     "default": [
@@ -4668,6 +4671,7 @@
             "display_name": {
                 "zh": "Slack 网关"
             },
+            "downloads": 1,
             "dependencies": {
                 "pip": {
                     "default": [
@@ -4708,6 +4712,7 @@
             "display_name": {
                 "zh": "Telegram 网关"
             },
+            "downloads": 1,
             "dependencies": {
                 "pip": {
                     "default": [
@@ -4757,7 +4762,7 @@
             "display_name": {
                 "zh": "微信网关"
             },
-            "downloads": 22,
+            "downloads": 27,
             "dependencies": {
                 "pip": {
                     "default": [
@@ -4798,7 +4803,7 @@
             "display_name": {
                 "zh": "企业微信网关"
             },
-            "downloads": 4,
+            "downloads": 5,
             "dependencies": {
                 "pip": {
                     "default": [
@@ -4897,7 +4902,7 @@
             "display_name": {
                 "zh": "Git 控制面板"
             },
-            "downloads": 97,
+            "downloads": 98,
             "keywords": [
                 "git",
                 "source-control",
@@ -4977,7 +4982,7 @@
             "display_name": {
                 "zh": "Git 工作流增强"
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "git",
                 "workflow",
@@ -5059,7 +5064,7 @@
             "display_name": {
                 "zh": "GitHub 仓库管理"
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "mcp",
                 "connector",
@@ -5226,6 +5231,7 @@
             "display_name": {
                 "zh": "GraphFlow 代码手术"
             },
+            "downloads": 1,
             "keywords": [
                 "code-graph",
                 "ast",
@@ -5720,7 +5726,7 @@
             "display_name": {
                 "zh": "IP 切换监控"
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "proxy",
                 "network",
@@ -6245,7 +6251,7 @@
             "display_name": {
                 "zh": "实时数据查询"
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "live-data",
                 "finance",
@@ -6559,7 +6565,7 @@
             "display_name": {
                 "zh": "MCP 服务器构建"
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "mcp",
                 "tool",
@@ -6616,7 +6622,7 @@
             "display_name": {
                 "zh": "会议纪要"
             },
-            "downloads": 16,
+            "downloads": 17,
             "keywords": [
                 "meeting",
                 "transcript",
@@ -8176,7 +8182,7 @@
             "display_name": {
                 "zh": "提示词增强"
             },
-            "downloads": 81,
+            "downloads": 82,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -8543,7 +8549,7 @@
             "display_name": {
                 "zh": "自进化工具集"
             },
-            "downloads": 28,
+            "downloads": 29,
             "keywords": [
                 "self-evolve",
                 "plugin",
@@ -8923,7 +8929,7 @@
             "display_name": {
                 "zh": "技能创作专家"
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "skill",
                 "agents",
@@ -9570,7 +9576,7 @@
             "display_name": {
                 "zh": "SuperClaude 开发框架"
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "development",
                 "code-quality",
@@ -9610,7 +9616,7 @@
             "display_name": {
                 "zh": "Superpowers 技能库"
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "skills",
                 "tdd",
@@ -9743,7 +9749,7 @@
             "display_name": {
                 "zh": "AI 私人教师"
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "teach",
                 "education",
@@ -10266,7 +10272,7 @@
             "display_name": {
                 "zh": "工具实现定位"
             },
-            "downloads": 7,
+            "downloads": 8,
             "keywords": [
                 "tool",
                 "locator",
@@ -10689,7 +10695,7 @@
             "display_name": {
                 "zh": "语音朗读"
             },
-            "downloads": 21,
+            "downloads": 22,
             "keywords": [
                 "voice",
                 "tts",
@@ -11037,7 +11043,7 @@
             "display_name": {
                 "zh": "PowerShell 工具"
             },
-            "downloads": 42,
+            "downloads": 43,
             "keywords": [
                 "powershell",
                 "windows",
@@ -11165,7 +11171,7 @@
             "display_name": {
                 "zh": "WorkBuddy 专家模式"
             },
-            "downloads": 10,
+            "downloads": 11,
             "keywords": [
                 "workbuddy",
                 "问答模式",
