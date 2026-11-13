@@ -161,6 +161,38 @@ def render_markdown_plain(md: str) -> str:
     return "\n".join(result).strip()
 
 
+def _split_text(text: str, limit: int, *, prefer_paragraph: bool = False) -> List[str]:
+    """长文本分片：优先空行/换行/空格边界，切点不早于 55% 上限，否则硬切。
+
+    宿主不再提供文本分片工具（E2 平台迁出方向），网关自包含实现；
+    规则与原 ``text_split.split_message`` 一致，保持分片行为不变。
+    """
+    body = (text or "").strip()
+    if not body:
+        return []
+    if limit <= 0 or len(body) <= limit:
+        return [body]
+
+    floor = int(limit * 0.55)
+    chunks: List[str] = []
+    remaining = body
+    while len(remaining) > limit:
+        cut = remaining.rfind("\n\n", 0, limit) if prefer_paragraph else -1
+        if cut < floor:
+            cut = remaining.rfind("\n", 0, limit)
+        if cut < floor:
+            cut = remaining.rfind(" ", 0, limit)
+        if cut < floor:
+            cut = limit
+        chunk = remaining[:cut].strip()
+        if chunk:
+            chunks.append(chunk)
+        remaining = remaining[cut:].lstrip()
+    if remaining:
+        chunks.append(remaining)
+    return chunks
+
+
 def check_wechat_requirements() -> bool:
     """检查微信网关依赖是否满足。
 
@@ -678,9 +710,7 @@ class WechatAdapter(BasePlatformAdapter):
 
             rendered = render_markdown_plain(content)
             ok, err = True, None
-            from app.gateway.text_split import split_message
-
-            chunks = split_message(rendered, MSG_CHUNK_LIMIT, prefer_paragraph=True) or [rendered]
+            chunks = _split_text(rendered, MSG_CHUNK_LIMIT, prefer_paragraph=True) or [rendered]
             for ci, chunk in enumerate(chunks):
                 body = {
                     "msg": {

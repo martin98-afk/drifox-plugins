@@ -78,7 +78,7 @@ def _write_config(values: dict) -> None:
 def _apply_gateway_toggle(enabled: bool) -> None:
     """开关切换 → 启停本插件注册的网关平台（manager 未初始化时交由启动期兜底）"""
     try:
-        from app.gateway.manager import get_platform_manager
+        from app.core.services.gateway_access import get_platform_manager
         from app.plugins.registries.gateway_platform_registry import GatewayPlatformRegistry
 
         mgr = get_platform_manager()

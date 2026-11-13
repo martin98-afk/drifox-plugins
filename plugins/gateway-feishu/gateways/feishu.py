@@ -316,10 +316,8 @@ class FeishuAdapter(BasePlatformAdapter):
             self._last_error = "依赖不可用"
             return False
 
-        # 从配置重新获取（确保最新）
-        from app.gateway.config import get_gateway_config
-
-        cfg = get_gateway_config().get_platform_config(Platform.FEISHU)
+        # 从配置重新获取（确保最新）：走本插件的 config_builder，不再依赖网关内部模块
+        cfg = _build_config()
         self._app_id = cfg.extra.get("app_id") or ""
         self._app_secret = cfg.extra.get("app_secret") or ""
         self._encrypt_key = cfg.extra.get("encrypt_key") or ""
@@ -379,6 +377,7 @@ class FeishuAdapter(BasePlatformAdapter):
 
         except Exception as e:
             logger.error("[Feishu] Failed to connect: {}", e)
+            self._last_error = f"连接失败: {e}"
             import traceback
 
             traceback.print_exc()
@@ -407,6 +406,7 @@ class FeishuAdapter(BasePlatformAdapter):
         抽成独立方法的原因：重连路径需在旧线程内换新线程，若在
         _run_feishu_client 里直接递归调用自身会线程套线程、无法退出。
         """
+        self._last_error = None  # 新一次连接尝试：旧错误作废，失败会重新写入
         self._feishu_thread = threading.Thread(
             target=self._run_feishu_client,
             name="FeishuWSClient",
@@ -472,6 +472,9 @@ class FeishuAdapter(BasePlatformAdapter):
                 "[Feishu] 被动断线重连达上限 {} 次，停止重连（需重启或重开关插件）",
                 self._max_reconnect_attempts,
             )
+            self._last_error = (
+                f"断线重连 {self._max_reconnect_attempts} 次仍失败，请手动重连"
+            )
             self._connected = False
             self._running = False
             return
@@ -492,6 +495,7 @@ class FeishuAdapter(BasePlatformAdapter):
             self._spawn_ws_thread()
         except Exception as e:
             logger.error("[Feishu] 重连失败: {}", e)
+            self._last_error = f"重连失败: {e}"
             self._connected = False
             self._running = False
 
@@ -1093,7 +1097,7 @@ class FeishuAdapter(BasePlatformAdapter):
             await self._api_request(
                 "PATCH",
                 f"cardkit/v1/cards/{card_id}/settings",
-                {"settings": {"streaming_mode": True}, "sequence": 1},
+                {"settings": json.dumps({"config": {"streaming_mode": True, "update_multi": True}}, ensure_ascii=False), "sequence": 1},
             )
         except Exception as e:
             logger.warning("[Feishu] start_stream failed: {}", e)
@@ -1109,7 +1113,7 @@ class FeishuAdapter(BasePlatformAdapter):
         sequence = int(state.get("sequence") or 0) + 1
         try:
             await self._api_request(
-                "POST",
+                "PUT",
                 f"cardkit/v1/cards/{state['card_id']}/elements/stream_md/content",
                 {"content": snapshot[: self._STREAM_CONTENT_LIMIT], "sequence": sequence},
             )
@@ -1129,7 +1133,7 @@ class FeishuAdapter(BasePlatformAdapter):
         sequence = int(state.get("sequence") or 0) + 1
         try:
             await self._api_request(
-                "POST",
+                "PUT",
                 f"cardkit/v1/cards/{card_id}/elements/stream_md/content",
                 {"content": (final or "")[: self._STREAM_CONTENT_LIMIT], "sequence": sequence},
             )
@@ -1137,7 +1141,7 @@ class FeishuAdapter(BasePlatformAdapter):
             await self._api_request(
                 "PATCH",
                 f"cardkit/v1/cards/{card_id}/settings",
-                {"settings": {"streaming_mode": False}, "sequence": sequence},
+                {"settings": json.dumps({"config": {"streaming_mode": False, "update_multi": True}}, ensure_ascii=False), "sequence": sequence},
             )
         except Exception as e:
             logger.warning("[Feishu] finish_stream failed: {}", e)
@@ -1617,10 +1621,34 @@ class FeishuAdapter(BasePlatformAdapter):
             return None
 
     def _split_message(self, content: str) -> List[str]:
-        """分割消息（自然边界优先，平台限制内尽量少切）"""
-        from app.gateway.text_split import split_message
+        """分割消息（自然边界优先，平台限制内尽量少切）
 
-        return split_message(content, self.MAX_MESSAGE_LENGTH)
+        宿主不再提供文本分片工具（E2 平台迁出方向），网关自包含实现：
+        切点优先换行，其次空格，都不行才硬切，且不早于 55% 上限以防孤片。
+        """
+        limit = self.MAX_MESSAGE_LENGTH
+        body = (content or "").strip()
+        if not body:
+            return []
+        if limit <= 0 or len(body) <= limit:
+            return [body]
+
+        floor = int(limit * 0.55)
+        chunks: List[str] = []
+        remaining = body
+        while len(remaining) > limit:
+            cut = remaining.rfind("\n", 0, limit)
+            if cut < floor:
+                cut = remaining.rfind(" ", 0, limit)
+            if cut < floor:
+                cut = limit
+            chunk = remaining[:cut].strip()
+            if chunk:
+                chunks.append(chunk)
+            remaining = remaining[cut:].lstrip()
+        if remaining:
+            chunks.append(remaining)
+        return chunks
 
     async def send_question(
         self, chat_id: str, question: dict, index: int, total: int

@@ -1,6 +1,17 @@
 # Changelog
 
 ## Unreleased
+### 🔧 gateway-feishu 1.9.0：修流式卡片两处 API 误用（流式不生效）
+- **症状**：飞书回复不走流式卡片，先收到「🤔 正在思考，请稍候...」再一次性整段发出；gateway.log 报 `start_stream failed: HTTP 400 code=9499 ... {"streaming_mode":true}`
+- **根因**：`cardkit/v1/cards/{id}/settings` 要求 `settings` 是 JSON 字符串、且内容包在 `config` 段，代码传的是裸对象；元素内容接口 `elements/{id}/content` 只接受 PUT，代码用 POST（404 page not found），开流后第一帧即熔断
+- **修复**：settings 改为 `json.dumps({"config": {"streaming_mode": ..., "update_multi": True}})`（`update_multi` 是流式必须项）；`update_stream` / `finish_stream` 的内容更新由 POST 改 PUT
+- **验证**：真实 app 实测建卡 200 → PATCH settings 200 → PUT content 200（连续两次，sequence 递增）→ 关闭流式 200
+### 🔧 gateway-feishu 1.9.0 / gateway-wechat 0.8.0 / gateway-qq 1.5.0 / gateway-dingtalk 1.5.0：适配 system-im 插件化，min_host_version 抬到 0.7.2
+- **症状**：宿主 v0.7.2 把 IM 网关抽成 `system-im` 系统插件后，已装的 gateway-* 插件连平台即报 `No module named 'app.gateway.config'`（飞书连接阶段）、点设置卡启停/扫码登录报 `No module named 'app.gateway.manager'`，平台恒不连接
+- **根因**：宿主重构把 `app/gateway/{config,manager,text_split}.py` 整体移入 `plugins/system-im/core/`，旧路径不留兼容层；四个插件仍按老路径 import
+- **修复**：平台管理器改走宿主稳定入口 `app.core.services.gateway_access.get_platform_manager`（经 `WindowServiceRegistry` 全局槽取服务，不触达插件内部模块）；飞书连接时重读配置改用本插件 `_build_config()`（旧路径最终调的就是它）；长文本分片（飞书/微信）改为插件自带实现，规则与 `system_im_core.text_split.split_message` 等价（微信保留 `prefer_paragraph`）；四个插件补 `min_host_version: 0.7.2`
+- **兼容**：`<0.7.2` 宿主会整插件拒载；slack / discord / telegram / wecom 只依赖未变的 `app.gateway.base`、`group_history`，不改
+- **验证**：`validate_plugins.py` 四个插件 OK；分片新实现与原实现 400 组样本对拍 0 差异；模块加载 + `_build_config()` + 分片调用冒烟通过
 ### 🔧 context-insight v1.1.1：索引增量扫描，打开插件不再全量解析会话
 - **症状**：每次打开洞察页或会话页都要遍历全库会话、把每个会话的完整消息读出来重算，本机 129 个会话约 2.1s，会话越多越慢
 - **根因**：`cached_summaries()` 首次调用恒空，UI 必然同步等一次全库扫描；`IndexWorker` 为判指纹对每条会话调 `session()` 读全量 messages；`pricing._norm_model` 没有缓存，单次扫描被调 97.8 万次、占 analyze 耗时 74%
