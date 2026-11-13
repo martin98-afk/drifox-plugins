@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import json
 import re
+import time
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
@@ -19,6 +21,12 @@ _CACHE: Optional[Dict[str, Any]] = None
 _CACHE_MTIME: float = 0.0
 _TABLE_CACHE: Dict[str, Tuple[float, float]] = {}
 _TABLE_MTIME: float = -1.0
+# 归一化名 → 价格（表变化时整体重建）
+_NORM_INDEX: Dict[str, Tuple[float, float]] = {}
+_NORM_INDEX_KEY: str = ""
+# 定价表文件探针节流：analyze 会成千上万次问价，不能每次都 stat 磁盘
+_LAST_PROBE: float = 0.0
+_PROBE_INTERVAL: float = 2.0
 _CANDIDATES = (
     Path(".drifox") / "cache" / "models_dev_cache.json",
     Path.home() / ".drifox" / "cache" / "models_dev_cache.json",
@@ -58,7 +66,10 @@ def _cache_paths() -> list[Path]:
 
 
 def _load_cache() -> Dict[str, Any]:
-    global _CACHE, _CACHE_MTIME
+    global _CACHE, _CACHE_MTIME, _LAST_PROBE
+    if _CACHE is not None and time.monotonic() - _LAST_PROBE < _PROBE_INTERVAL:
+        return _CACHE
+    _LAST_PROBE = time.monotonic()
     for path in _cache_paths():
         if not path.exists():
             continue
@@ -77,6 +88,7 @@ def _load_cache() -> Dict[str, Any]:
     return _CACHE
 
 
+@lru_cache(maxsize=8192)
 def _norm_model(name: str) -> str:
     text = (name or "").strip().lower()
     if "/" in text:
@@ -126,24 +138,32 @@ def _lookup_table() -> Dict[str, Tuple[float, float]]:
     return table
 
 
-def price_for(model: str) -> Tuple[float, float, bool]:
-    """返回 (input_price, output_price, known)，单位 USD / 1M tokens。"""
+def _norm_index() -> Dict[str, Tuple[float, float]]:
+    """归一化名 → 价格。同归一化名取最短原始 id，与旧版候选排序口径一致。"""
+    global _NORM_INDEX, _NORM_INDEX_KEY
     table = _lookup_table()
+    key = f"{_CACHE_MTIME}|{len(table)}"
+    if _NORM_INDEX and _NORM_INDEX_KEY == key:
+        return _NORM_INDEX
+    index: Dict[str, Tuple[float, float]] = {}
+    for mid, price in sorted(table.items(), key=lambda kv: len(kv[0])):
+        index.setdefault(_norm_model(mid), price)
+    _NORM_INDEX, _NORM_INDEX_KEY = index, key
+    return index
+
+
+@lru_cache(maxsize=4096)
+def _price_cached(model: str, mtime: float) -> Tuple[float, float, bool]:
+    index = _norm_index()
     norm = _norm_model(model)
     if norm:
-        if norm in table:
-            price = table[norm]
+        price = index.get(norm)
+        if price is not None:
             return price[0], price[1], True
-        # 前缀/包含匹配：models.dev 的 id 常带日期与版本后缀
-        candidates = [
-            (mid, price)
-            for mid, price in table.items()
-            if _norm_model(mid) == norm or _norm_model(mid).startswith(norm + "-") or norm.startswith(_norm_model(mid) + "-")
-        ]
-        if candidates:
-            candidates.sort(key=lambda x: len(x[0]))
-            price = candidates[0][1]
-            return price[0], price[1], True
+        # 前缀匹配：models.dev 的 id 常带日期与版本后缀
+        for mid_norm, price in index.items():
+            if mid_norm.startswith(norm + "-") or norm.startswith(mid_norm + "-"):
+                return price[0], price[1], True
 
     for key, price in _FALLBACK.items():
         if key in norm or norm in key:
@@ -151,9 +171,15 @@ def price_for(model: str) -> Tuple[float, float, bool]:
     return 0.0, 0.0, False
 
 
-def context_limit_for(model: str) -> int:
-    """模型上下文窗口（models.dev），未知返回 0。"""
-    data = _load_cache()
+def price_for(model: str) -> Tuple[float, float, bool]:
+    """返回 (input_price, output_price, known)，单位 USD / 1M tokens。"""
+    _lookup_table()  # 同步 _CACHE_MTIME，表变则缓存键变
+    return _price_cached(model or "", _CACHE_MTIME)
+
+
+@lru_cache(maxsize=4096)
+def _context_limit_cached(model: str, mtime: float) -> int:
+    data = _CACHE or {}
     norm = _norm_model(model)
     for section in ("model_capabilities", "model_capabilities_partitioned"):
         block = data.get(section)
@@ -174,3 +200,9 @@ def context_limit_for(model: str) -> int:
                 if isinstance(entry, dict):
                     return int(entry.get("context_limit") or 0)
     return 0
+
+
+def context_limit_for(model: str) -> int:
+    """模型上下文窗口（models.dev），未知返回 0。"""
+    _load_cache()
+    return _context_limit_cached(model or "", _CACHE_MTIME)

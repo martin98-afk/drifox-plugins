@@ -35,7 +35,7 @@ from .cards import (
 )
 from .charts import TrendChart
 from .trend import TrendList
-from .collector import DetailWorker, cached_summaries, IndexWorker
+from .collector import DetailWorker, IndexWorker, cached_summaries, scan_state
 from .fleet import FleetWidget
 from .fmt import fmt_cost, fmt_int, fmt_k
 from .scrollbars import scrollbar_style
@@ -548,7 +548,9 @@ class ContextPanel(QWidget):
         }
         caps = self._ctx.get("capabilities") or {}
         summaries = cached_summaries()
-        if not summaries and not self._index_requested:
+        scanning, scan_age = scan_state()
+        # 磁盘快照已在 cached_summaries() 里加载，首帧直接用；后台只做节流增量刷新
+        if not scanning and scan_age > 15 and not self._index_requested:
             history = caps.get("session.history") if hasattr(caps, "get") else None
             if history:
                 self._index_requested = True

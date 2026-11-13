@@ -1,7 +1,7 @@
 {
   "name": "context-insight",
   "description": "上下文洞察 — 透视会话上下文组成、逐请求演进、压缩事件、工具/技能/命令台账与多 Agent 编队；全页洞察面板内含会话上下文与 /context 命令",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "author": {
     "name": "DriFox Contributors"
   },

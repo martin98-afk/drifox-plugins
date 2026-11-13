@@ -18,6 +18,7 @@
 - 工具定义份额：活跃会话用引擎冻结的 tools schema；历史会话用「最后一次 API prompt_tokens − 内容估算」的差额桶。
 - 展示为“≈”的步骤是本地估算；带 `token_usage` 的步骤以 API 值为准，并把分类等比锚定到该值。
 - 成本按宿主 `models.dev` 缓存的价格估算，未知模型显示 `—` / 近似值。
+- 跨会话索引落盘在 `plugin_data/context-insight/index.json`：以轻量列表的 `last_time + message_count` 作指纹，命中即复用旧摘要（只用列表字段刷新标题/项目/团队归属），只有新增或内容变化的会话才重新解析消息；打开插件先渲染磁盘快照，后台再做增量校验。
 
 ## 结构
 

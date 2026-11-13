@@ -7,7 +7,7 @@ from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional, Tuple
 
 from loguru import logger
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -24,7 +24,7 @@ from PyQt5.QtWidgets import (
 from .analyzer import CATEGORY_COLORS, CATEGORY_LABELS, CATEGORY_ORDER
 from .cards import LedgerCard
 from .charts import BarChart, DonutChart, Heatmap, StackedBar
-from .collector import IndexWorker
+from .collector import IndexWorker, cached_summaries, scan_state
 from .fmt import day_list, fmt_cost, fmt_int, fmt_k, fmt_ts
 from .panel import ContextPanel
 from .plugin_config import get_config, set_data_root
@@ -437,7 +437,7 @@ class InsightsPage(QWidget):
             card.set_palette_obj(p)
 
     # ── 扫描 ──
-    def _start_scan(self) -> None:
+    def _start_scan(self, force: bool = False) -> None:
         if self._loading:
             return
         caps = self._ctx.get("capabilities") or {}
@@ -446,8 +446,23 @@ class InsightsPage(QWidget):
             self._status.setText("宿主未提供 session.history 能力")
             self._empty.set_text("无法读取会话历史：缺少 session.history 能力")
             return
+        # 磁盘快照先上屏：缓存命中时零等待，后台再做增量校验
+        snapshot = cached_summaries()
+        if snapshot:
+            self._summaries = snapshot
+            self._status.setText(f"已载入 {len(snapshot)} 个会话")
+            self._render_all()
+        scanning, scan_age = scan_state()
+        if scanning or (not force and snapshot and scan_age < 15):
+            if not snapshot:
+                self._status.setText("扫描中…")
+                self._empty.set_text("正在扫描会话库…")
+                # 别的页发起的扫描：轮询等它落地，否则本页会停在空态
+                self._await_scan()
+            return
         self._loading = True
-        self._empty.set_text("正在扫描会话库…")
+        if not snapshot:
+            self._empty.set_text("正在扫描会话库…")
         self._status.setText("扫描中…")
         worker = IndexWorker(history, self)
         worker.progress.connect(self._on_progress)
@@ -456,6 +471,19 @@ class InsightsPage(QWidget):
         worker.finished.connect(self._on_scan_done)
         self._worker = worker
         worker.start()
+
+    def _await_scan(self, tries: int = 30) -> None:
+        """等外部发起的扫描结束，再拿内存快照渲染。"""
+        scanning, _ = scan_state()
+        if not scanning:
+            snapshot = cached_summaries()
+            if snapshot:
+                self._summaries = snapshot
+                self._status.setText(f"已载入 {len(snapshot)} 个会话")
+                self._render_all()
+            return
+        if tries > 0:
+            QTimer.singleShot(400, lambda: self._await_scan(tries - 1))
 
     def _on_scan_done(self) -> None:
         self._loading = False
@@ -736,7 +764,7 @@ class InsightsPage(QWidget):
             self._session_panel.set_context_provider(self._provider)
             self._session_panel.show_card()
         else:
-            self._start_scan()
+            self._start_scan(force=True)
 
     def _on_range(self, key: str) -> None:
         self._range = key

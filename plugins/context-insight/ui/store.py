@@ -112,3 +112,39 @@ def messages_from_record(record: Dict[str, Any]) -> List[Dict[str, Any]]:
     if not isinstance(raw, list):
         return []
     return [m for m in raw if isinstance(m, dict)]
+
+# ── 轻量条目口径（增量扫描用，避免为判指纹而读全量 messages） ──
+
+def entry_fingerprint(entry: Dict[str, Any]) -> str:
+    """轻量条目的内容指纹。
+
+    ``session.history.list()`` 的轻量条目已带 ``last_time`` / ``message_count``，
+    足以判断会话内容是否变化；缺失这两项时返回空串，调用方回退全量读取。
+    """
+    entry = entry or {}
+    updated = str(entry.get("last_time") or entry.get("saved_at") or "")
+    count = entry.get("message_count")
+    if not updated or count is None:
+        return ""
+    return f"{updated}|{_int_of(count)}"
+
+def meta_from_entry(entry: Dict[str, Any]) -> Dict[str, Any]:
+    """轻量条目 → 摘要里可直接覆盖的元数据字段。
+
+    这些字段只影响展示口径，与消息内容无关；内容未变时直接覆盖旧摘要，
+    不必重新解析会话。
+    """
+    entry = entry or {}
+    saved = str(entry.get("saved_at") or "")
+    return {
+        "title": str(entry.get("title") or ""),
+        "project": str(entry.get("project") or "默认项目"),
+        "worktree_path": str(entry.get("worktree_path") or ""),
+        "created_at": saved,
+        "updated_at": str(entry.get("last_time") or saved),
+        "message_count": _int_of(entry.get("message_count")),
+        "agent_name": str(entry.get("agent_name") or ""),
+        "team_run_id": str(entry.get("team_run_id") or ""),
+        "team_name": str(entry.get("team_name") or ""),
+        "team_members": str(entry.get("team_members") or ""),
+    }

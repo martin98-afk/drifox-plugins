@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+### 🔧 context-insight v1.1.1：索引增量扫描，打开插件不再全量解析会话
+- **症状**：每次打开洞察页或会话页都要遍历全库会话、把每个会话的完整消息读出来重算，本机 129 个会话约 2.1s，会话越多越慢
+- **根因**：`cached_summaries()` 首次调用恒空，UI 必然同步等一次全库扫描；`IndexWorker` 为判指纹对每条会话调 `session()` 读全量 messages；`pricing._norm_model` 没有缓存，单次扫描被调 97.8 万次、占 analyze 耗时 74%
+- **修复**：轻量列表的 `last_time + message_count` 直接作内容指纹，命中即复用旧摘要、零全量读取；标题/项目/团队归属等元数据单独覆盖到旧摘要，不触发重算；首帧先渲染磁盘 `index.json` 快照，后台再增量校验（15 秒节流，手动刷新强制绕过）；洞察页与会话页扫描互斥，不再并发全库扫；`_norm_model` 加 lru_cache 并预建归一化价格索引，价格表探测 2 秒节流
+- **实测**：129 会话库再次打开 2126ms → 6~19ms，首轮冷扫 2126ms → 948ms，单会话 analyze 均值 9.8ms → 5.5ms
+- **兼容**：索引 version 升 3，升级后首次打开会全量重算一次
+- **验证**：新增 `tests/test_context_insight_incremental.py` 5 例（首轮全读 / 次轮零读 / 内容变化只重算该条 / 仅改标题不重算且标题已更新 / 无指纹保守回退 / 索引落盘可复用）；缓存摘要与实时重算数值 0 处差异；`validate_plugins.py` context-insight OK
 ### ✨ context-insight v1.1.0：编队 tab 新增团队消息轨迹泳道图（复刻 dsh-context pulse 语义）
 - **形态**：每个团队成员一条横泳道，任务/回复邮件按时间沿 x 轴展开，贝塞尔弧线从发件人泳道连到收件人泳道；泳道头像点击筛选、事件点点击在条带下方展开详情、hover 出摘要 tooltip；横滚默认锚到最新，主题/字号随宿主缩放
 - **数据源**：宿主 TeamManager 邮箱——`team.read` 白名单新增 `get_mailbox_mails`（DriFox 0.7.3+，源码主程序已同步改 `facets.py`），逐成员聚合 task/reply 邮件归一成事件流
