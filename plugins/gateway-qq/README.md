@@ -3,6 +3,7 @@
 QQ 机器人适配器（QQ 开放平台），DriFox Gateway 插件。
 
 ## 功能
+- **入站文件（v1.4.0）**：附件不再只取图片，非图片按文件交给模型
 - **入站图片（v1.3.0）**：消息 attachments 里的图片按 content_type 过滤后下载到本地缓存（URL 带时效签名，收到即取）
 
 - WebSocket 长连接接入 QQ 机器人开放平台（`wss://api.sgroup.qq.com/websocket`）
