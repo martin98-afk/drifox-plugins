@@ -267,8 +267,19 @@ class WechatAdapter(BasePlatformAdapter):
         logger.info("[Wechat] Disconnected")
 
     async def _cleanup(self) -> None:
-        """清理资源"""
+        """清理资源（幂等）。
+
+        同时停掉轮询：只置 _connected=False 再关 client 时，旧 _poll_loop
+        仍在跑 → 每轮 _api_post 撞上 NoneType.post（历史日志
+        「Poll failed x3: 'NoneType' object has no attribute 'post'」）。
+        """
         self._connected = False
+        self._running = False
+        task = self._poll_task
+        self._poll_task = None
+        current = asyncio.current_task()
+        if task is not None and not task.done() and task is not current:
+            task.cancel()
         self._save_cursor()
         if self._http_client:
             await self._http_client.aclose()
@@ -291,6 +302,8 @@ class WechatAdapter(BasePlatformAdapter):
 
     async def _api_post(self, endpoint: str, body: Dict[str, Any], timeout: float = REQUEST_TIMEOUT) -> Dict[str, Any]:
         """POST iLink 接口；HTTP 非 2xx 或业务 ret!=0 抛异常"""
+        if self._http_client is None:
+            raise RuntimeError("微信连接未就绪（http client 未初始化）")
         url = f"{DEFAULT_API_BASE}/{endpoint}"
         resp = await self._http_client.post(url, json=body, headers=self._api_headers(), timeout=timeout)
         if resp.status_code >= 400:
@@ -361,6 +374,10 @@ class WechatAdapter(BasePlatformAdapter):
         consecutive = 0
         try:
             while self._running:
+                if self._http_client is None:
+                    logger.warning("[Wechat] http client 已释放，停止轮询")
+                    self._running = False
+                    return
                 msgs, expired, err = await self._poll_once()
 
                 if expired:
