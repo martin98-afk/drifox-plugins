@@ -367,6 +367,8 @@ class WechatAdapter(BasePlatformAdapter):
             self._save_cursor()
 
         msgs = data.get("msgs") or []
+        if msgs:
+            logger.info(f"[Wechat] getupdates 收到 {len(msgs)} 条消息")
         return (msgs, False, None)
 
     async def _poll_loop(self) -> None:
@@ -449,6 +451,11 @@ class WechatAdapter(BasePlatformAdapter):
         if not from_user_id or from_user_id.endswith("@im.bot"):
             return
 
+        logger.info(
+            f"[Wechat] 入站消息 from={from_user_id[:16]} "
+            f"items={len(msg.get('item_list') or [])} keys={sorted(msg.keys())[:10]}"
+        )
+
         # 被动回复凭据
         ctx = msg.get("context_token")
         if ctx:
@@ -519,6 +526,10 @@ class WechatAdapter(BasePlatformAdapter):
                     event.media_urls.append(path)
                     event.media_types.append(kind)
                     count += 1
+        logger.info(
+            f"[Wechat] 投递宿主: text={bool(event.text)} media={len(event.media_urls)} "
+            f"handler={self._message_handler is not None}"
+        )
         await self.handle_message(event)
 
     @staticmethod
