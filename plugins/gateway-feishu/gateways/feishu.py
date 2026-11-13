@@ -17,7 +17,7 @@ import asyncio
 import json
 import logging
 import threading
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from app.gateway.base import (
     BasePlatformAdapter,
@@ -27,6 +27,35 @@ from app.gateway.base import (
     PlatformConfig,
     SendResult,
 )
+
+# 入站图片上限（超过直接跳过并记日志，不阻断整条消息）
+MAX_INBOUND_IMAGES = 10
+MAX_INBOUND_IMAGE_BYTES = 30 * 1024 * 1024
+
+
+def _cache_dir():
+    """入站图片缓存目录：优先宿主 get_cache_dir，缺失时退回默认数据目录。"""
+    try:
+        from app.gateway.base import get_cache_dir
+
+        return get_cache_dir("feishu")
+    except Exception:
+        from pathlib import Path
+
+        fallback = Path.home() / ".drifox" / "gateway" / "cache" / "feishu"
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback
+
+
+def _image_ext(data: bytes) -> str:
+    """按魔数判图片扩展名（.png/.jpg/.gif/.webp，默认 .jpg）。"""
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return ".png"
+    if data.startswith(b"GIF8"):
+        return ".gif"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return ".webp"
+    return ".jpg"
 
 # 走 loguru：宿主的日志系统只给 loguru 配 sink，标准 logging 的输出会被丢弃，
 # 导致本插件的 [Feishu] 运行日志完全不落盘（连接/消息/handler 丢失均不可见）。
@@ -224,7 +253,7 @@ class FeishuAdapter(BasePlatformAdapter):
     需要安装 lark-oapi: pip install lark-oapi
     """
 
-    MAX_MESSAGE_LENGTH = 2000
+    MAX_MESSAGE_LENGTH = 6000
 
     def __init__(self, config: PlatformConfig):
         super().__init__(config, Platform.FEISHU)
@@ -255,6 +284,9 @@ class FeishuAdapter(BasePlatformAdapter):
 
         # 共享 HTTP 客户端：连接复用，避免每次 send 新建 AsyncClient
         self._http_client: Optional[httpx.AsyncClient] = None
+
+        # 流式回复状态：stream_key(message_id) -> {chat_id, ts}
+        self._stream_states: Dict[str, Dict[str, Any]] = {}
 
     def set_message_handler(self, handler) -> None:
         """设置消息处理器"""
@@ -496,16 +528,8 @@ class FeishuAdapter(BasePlatformAdapter):
             msg_type = str(getattr(message, "message_type", "text") or "text")
             content_str = str(getattr(message, "content", "") or "")
 
-            # 解析 content JSON 字符串
-            text = ""
-            try:
-                if content_str:
-                    content_data = json.loads(content_str)
-                    if isinstance(content_data, dict):
-                        text = content_data.get("text", "") or content_data.get("content", "") or ""
-            except (json.JSONDecodeError, TypeError):
-                # 如果不是 JSON，直接作为文本
-                text = content_str
+            # 解析 content JSON：文本 + 图片 key（单图 image 消息、post 富文本混排）
+            text, image_keys = self._parse_message_content(content_str)
 
             # @提及处理：飞书群聊 @机器人 发命令时 text 形如 "@_user_1 /model"
             # （机器占位符格式），前缀会让宿主 startswith("/") 判定失败、命令被
@@ -554,15 +578,21 @@ class FeishuAdapter(BasePlatformAdapter):
                         or ""
                     )
 
-            # 跳过空消息
-            if not text and not message_id:
-                logger.debug("[Feishu] Empty message skipped")
+            # 跳过空消息（无文本也无图片，如表情包/语音）
+            if not text and not image_keys:
+                logger.debug("[Feishu] Empty message skipped: msg_type={}", msg_type)
                 return
 
             # 构建 MessageEvent
             event = MessageEvent(
                 text=text,
-                message_type=MessageType.TEXT if msg_type == "text" else MessageType.FILE,
+                message_type=(
+                    MessageType.IMAGE
+                    if image_keys
+                    else MessageType.TEXT
+                    if msg_type == "text"
+                    else MessageType.FILE
+                ),
                 message_id=message_id,
                 chat_id=chat_id,
                 user_id=sender_id,
@@ -574,8 +604,9 @@ class FeishuAdapter(BasePlatformAdapter):
             )
 
             logger.info(
-                "[Feishu] 消息待分发: text={!r} handler_set={} loop_running={}",
+                "[Feishu] 消息待分发: text={!r} images={} handler_set={} loop_running={}",
                 text[:50],
+                len(image_keys),
                 self._message_handler is not None,
                 (self._handler_loop is not None and self._handler_loop.is_running()),
             )
@@ -583,11 +614,11 @@ class FeishuAdapter(BasePlatformAdapter):
                 try:
                     # 重要：WS client 回调运行在 WS 线程的事件循环中，
                     # 不能在此调用 asyncio.run()，会触发 RuntimeError。
-                    # 使用独立的 handler_loop 来调度消息处理。
+                    # 下载图片与消息处理都投递到独立 handler_loop。
                     loop = self._handler_loop
                     if loop is not None and loop.is_running():
                         asyncio.run_coroutine_threadsafe(
-                            self._message_handler(event),
+                            self._download_and_dispatch(event, message_id, image_keys),
                             loop,
                         )
                         logger.info(
@@ -606,6 +637,136 @@ class FeishuAdapter(BasePlatformAdapter):
             traceback.print_exc()
 
     # ==================== 卡片按钮回传（card.action.trigger） ====================
+
+    # ==================== 入站图片 ====================
+
+    @staticmethod
+    def _parse_message_content(content_str: str) -> Tuple[str, List[str]]:
+        """解析消息 content（JSON 字符串）→ (文本, 图片 key 列表)。
+
+        覆盖 ``image`` 单图消息、``post`` 富文本混排（img/text/a 元素），
+        其余类型退化为纯文本；解析失败按原文当文本处理（旧行为）。
+        """
+        if not content_str:
+            return "", []
+        try:
+            data = json.loads(content_str)
+        except (json.JSONDecodeError, TypeError):
+            return content_str, []
+        if not isinstance(data, dict):
+            return "", []
+
+        image_key = data.get("image_key")
+        if isinstance(image_key, str) and image_key:
+            text = data.get("text")
+            return (text if isinstance(text, str) else ""), [image_key]
+
+        blocks = data.get("content")
+        if isinstance(blocks, list):
+            lines: List[str] = []
+            keys: List[str] = []
+            title = data.get("title")
+            if isinstance(title, str) and title.strip():
+                lines.append(title.strip())
+            for paragraph in blocks:
+                if not isinstance(paragraph, list):
+                    continue
+                segment: List[str] = []
+                for element in paragraph:
+                    if not isinstance(element, dict):
+                        continue
+                    tag = str(element.get("tag") or "").lower()
+                    if tag == "img":
+                        key = element.get("image_key")
+                        if isinstance(key, str) and key:
+                            keys.append(key)
+                    elif tag in ("text", "a", "link"):
+                        segment.append(str(element.get("text") or ""))
+                line = "".join(segment).strip()
+                if line:
+                    lines.append(line)
+            return "\n".join(lines), keys
+
+        text = data.get("text")
+        return (text if isinstance(text, str) else ""), []
+
+    async def _download_and_dispatch(
+        self, event: MessageEvent, message_id: str, image_keys: List[str]
+    ) -> None:
+        """下载入站图片并填充 media_urls，再交给宿主 handler。
+
+        下载失败不阻断消息：文本照常送，图片缺哪张记哪张。
+        """
+        if image_keys:
+            try:
+                for key in image_keys[:MAX_INBOUND_IMAGES]:
+                    path = await self._download_resource(message_id, key, "image")
+                    if path:
+                        event.media_urls.append(path)
+                        event.media_types.append("image")
+            except Exception as e:
+                logger.warning("[Feishu] 入站图片下载失败: {}", e)
+        if self._message_handler:
+            try:
+                await self._message_handler(event)
+            except Exception as e:
+                logger.error("[Feishu] Handle message error: {}", e)
+
+    async def _download_resource(
+        self, message_id: str, file_key: str, resource_type: str = "image"
+    ) -> Optional[str]:
+        """下载消息资源到本地缓存，返回路径；失败返回 None。
+
+        需要租户权限 ``im:message:readonly``（拉取单聊/群组消息资源）。
+        飞书未提供仅限图片的更窄权限，文件下载走同一接口（type=file）。
+        """
+        if not message_id or not file_key:
+            return None
+        token = await self._get_access_token()
+        if not token:
+            logger.warning("[Feishu] 下载资源失败：无 access token")
+            return None
+
+        client = self._http_client
+        owns_client = client is None
+        if client is None:
+            client = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
+        try:
+            response = await client.get(
+                f"https://open.feishu.cn/open-apis/im/v1/messages/{message_id}/resources/{file_key}",
+                params={"type": resource_type},
+                headers={"Authorization": f"Bearer {token}"},
+            )
+            if response.status_code != 200:
+                logger.warning(
+                    "[Feishu] 资源下载失败 HTTP {}: {}",
+                    response.status_code,
+                    response.text[:200],
+                )
+                return None
+            data = response.content
+            if not data:
+                return None
+            if len(data) > MAX_INBOUND_IMAGE_BYTES:
+                logger.warning(
+                    "[Feishu] 图片超过 {}MB，已跳过: {}",
+                    MAX_INBOUND_IMAGE_BYTES // (1024 * 1024),
+                    len(data),
+                )
+                return None
+            import hashlib
+
+            digest = hashlib.sha1(data).hexdigest()[:16]
+            path = _cache_dir() / f"{digest}{_image_ext(data)}"
+            if not path.exists():
+                path.write_bytes(data)
+            return str(path)
+        except Exception as e:
+            logger.warning("[Feishu] 资源下载异常: {}", e)
+            return None
+        finally:
+            if owns_client:
+                await client.aclose()
 
     def _on_card_action(self, data: Any) -> Any:
         """处理交互卡片按钮点击：取出按钮携带的命令并注入消息回环。
@@ -779,6 +940,147 @@ class FeishuAdapter(BasePlatformAdapter):
         self._token_expiry = 0.0
 
         logger.info("[Feishu] Disconnected")
+
+    # ==================== 流式回复（CardKit 卡片） ====================
+
+    # CardKit 流式卡片模板：固定 element_id=stream_md，供逐次追加内容
+    _STREAM_CARD_TEMPLATE = {
+        "schema": "2.0",
+        "config": {"streaming_mode": True, "update_multi": True},
+        "body": {
+            "elements": [
+                {"tag": "markdown", "element_id": "stream_md", "content": ""},
+            ]
+        },
+    }
+    _STREAM_CONTENT_LIMIT = 30000  # cardkit 元素内容上限内留余量
+
+    def supports_streaming(self, chat_id: str) -> bool:
+        """飞书走 CardKit 流式卡片：过程可见，不必等全量生成完再发。"""
+        return True
+
+    async def start_stream(self, chat_id: str) -> Optional[str]:
+        """建流式卡片并发出，返回 stream_key=``cardkit:<card_id>``；失败返回 None。"""
+        try:
+            created = await self._api_request(
+                "POST",
+                "cardkit/v1/cards",
+                {
+                    "type": "card_json",
+                    "data": json.dumps(self._STREAM_CARD_TEMPLATE, ensure_ascii=False),
+                },
+            )
+            card_id = str((created.get("data") or {}).get("card_id") or "")
+            if not card_id:
+                raise RuntimeError("cardkit 未返回 card_id")
+            await self._api_request(
+                "POST",
+                "im/v1/messages?receive_id_type=chat_id",
+                {
+                    "receive_id": chat_id,
+                    "msg_type": "interactive",
+                    "content": json.dumps({"type": "card", "data": {"card_id": card_id}}),
+                },
+            )
+            await self._api_request(
+                "PATCH",
+                f"cardkit/v1/cards/{card_id}/settings",
+                {"settings": {"streaming_mode": True}, "sequence": 1},
+            )
+        except Exception as e:
+            logger.warning("[Feishu] start_stream failed: {}", e)
+            return None
+        self._stream_states[chat_id] = {"card_id": card_id, "sequence": 1}
+        return f"cardkit:{card_id}"
+
+    async def update_stream(self, stream_key: str, snapshot: str) -> bool:
+        """把可见快照写进卡片；连续失败即熔断，返回 False 让上层放弃流式。"""
+        state_key, state = self._resolve_stream_state(stream_key)
+        if state is None or state.get("failed"):
+            return False
+        sequence = int(state.get("sequence") or 0) + 1
+        try:
+            await self._api_request(
+                "POST",
+                f"cardkit/v1/cards/{state['card_id']}/elements/stream_md/content",
+                {"content": snapshot[: self._STREAM_CONTENT_LIMIT], "sequence": sequence},
+            )
+        except Exception as e:
+            state["failed"] = True
+            logger.debug("[Feishu] stream update failed, fallback to final send: {}", e)
+            return False
+        state["sequence"] = sequence
+        return True
+
+    async def finish_stream(self, stream_key: str, final: str) -> SendResult:
+        """写入最终全文并关闭流式模式，然后清理状态。"""
+        state_key, state = self._resolve_stream_state(stream_key)
+        if state is None:
+            return SendResult(success=False, error="unknown stream")
+        card_id = state["card_id"]
+        sequence = int(state.get("sequence") or 0) + 1
+        try:
+            await self._api_request(
+                "POST",
+                f"cardkit/v1/cards/{card_id}/elements/stream_md/content",
+                {"content": (final or "")[: self._STREAM_CONTENT_LIMIT], "sequence": sequence},
+            )
+            sequence += 1
+            await self._api_request(
+                "PATCH",
+                f"cardkit/v1/cards/{card_id}/settings",
+                {"settings": {"streaming_mode": False}, "sequence": sequence},
+            )
+        except Exception as e:
+            logger.warning("[Feishu] finish_stream failed: {}", e)
+            self._stream_states.pop(state_key, None)
+            return SendResult(success=False, error=str(e))
+        self._stream_states.pop(state_key, None)
+        return SendResult(success=True, message_id=stream_key)
+
+    def _resolve_stream_state(self, key: str):
+        """按 chat_id 或 ``cardkit:<card_id>`` 定位流状态，兼容两种调用口径。"""
+        state = self._stream_states.get(key)
+        if state is not None:
+            return key, state
+        if key.startswith("cardkit:"):
+            card_id = key.split(":", 1)[1]
+            for state_key, candidate in self._stream_states.items():
+                if candidate.get("card_id") == card_id:
+                    return state_key, candidate
+        return key, None
+
+    async def _api_request(self, method: str, endpoint: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """调用飞书 OpenAPI，返回解析后的 JSON；非 0 code 抛异常。
+
+        统一出口便于测试替换，也避免每处重复拼 token 与 header。
+        """
+        token = await self._get_access_token()
+        if not token:
+            raise RuntimeError("no access token")
+        client = self._http_client
+        owns_client = client is None
+        if client is None:
+            client = httpx.AsyncClient(timeout=httpx.Timeout(30.0))
+        try:
+            response = await client.request(
+                method,
+                f"https://open.feishu.cn/open-apis/{endpoint}",
+                headers={
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+            )
+            data = response.json() if response.content else {}
+            if response.status_code != 200 or data.get("code") not in (0, None):
+                raise RuntimeError(
+                    f"HTTP {response.status_code} code={data.get('code')} msg={data.get('msg')}"
+                )
+            return data
+        finally:
+            if owns_client:
+                await client.aclose()
 
     async def send(
         self,
@@ -1205,26 +1507,10 @@ class FeishuAdapter(BasePlatformAdapter):
             return None
 
     def _split_message(self, content: str) -> List[str]:
-        """分割消息"""
-        if len(content) <= self.MAX_MESSAGE_LENGTH:
-            return [content]
+        """分割消息（自然边界优先，平台限制内尽量少切）"""
+        from app.gateway.text_split import split_message
 
-        chunks = []
-        paragraphs = content.split("\n\n")
-        current = ""
-
-        for para in paragraphs:
-            if len(current) + len(para) + 2 <= self.MAX_MESSAGE_LENGTH:
-                current += ("\n\n" if current else "") + para
-            else:
-                if current:
-                    chunks.append(current)
-                current = para
-
-        if current:
-            chunks.append(current)
-
-        return chunks if chunks else [content]
+        return split_message(content, self.MAX_MESSAGE_LENGTH)
 
     async def send_image(self, chat_id: str, image_path: str, **kwargs) -> SendResult:
         """发送图片"""
