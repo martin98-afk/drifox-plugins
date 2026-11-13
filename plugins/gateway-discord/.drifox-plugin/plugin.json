@@ -76,5 +76,5 @@
         "plugin.config.read",
         "plugin.config.write"
     ],
-    "min_host_version": "0.7.3"
+    "min_host_version": "0.7.2"
 }

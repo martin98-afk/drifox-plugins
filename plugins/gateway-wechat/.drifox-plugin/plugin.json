@@ -15,7 +15,7 @@
     "homepage": "https://github.com/martin98-afk/drifox-plugins2",
     "license": "MIT",
     "type": "user",
-    "min_host_version": "0.7.3",
+    "min_host_version": "0.7.2",
     "capabilities": [
         "ui.notify",
         "plugin.config.read",
