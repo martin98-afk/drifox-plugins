@@ -155,6 +155,10 @@ class TelegramAdapter(BasePlatformAdapter):
 
         msg = update.message
 
+        # 群消息先留档（含没 @机器人 的），被叫住时才有前文可参考
+        if self._is_group_chat(msg):
+            self._capture_group_message(msg)
+
         # 检查群组触发规则
         if self._is_group_chat(msg) and self._require_mention:
             if not self._message_mentions_bot(msg):
@@ -180,6 +184,25 @@ class TelegramAdapter(BasePlatformAdapter):
         event = self._build_message_event(msg, msg_type)
         await self._attach_inbound_media(event, msg)
         await self.handle_message(event)
+
+    def _capture_group_message(self, message) -> None:
+        """群消息留档到宿主存档（失败不影响消息处理）。"""
+        try:
+            from app.gateway.group_history import get_group_history_store
+
+            chat = getattr(message, "chat", None)
+            sender = getattr(message, "from_user", None)
+            get_group_history_store().capture(
+                "telegram",
+                str(getattr(chat, "id", "") or ""),
+                text=getattr(message, "text", "") or getattr(message, "caption", "") or "",
+                user_id=str(getattr(sender, "id", "") or ""),
+                user_name=(getattr(sender, "full_name", "") or "") if sender else "",
+                message_id=str(getattr(message, "message_id", "") or ""),
+                chat_type="group",
+            )
+        except Exception as e:
+            logger.debug(f"[Telegram] 群消息留档失败: {e}")
 
     def _is_group_chat(self, message) -> bool:
         """检查是否为群组聊天"""

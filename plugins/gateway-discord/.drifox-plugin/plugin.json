@@ -8,7 +8,7 @@
         "zh": "Discord 网关"
     },
     "description": "Discord 机器人平台适配器（社区插件，万物即插件 Phase E）：频道/私聊/线程/Slash Command/媒体，基于 discord.py。",
-    "version": "1.4.0",
+    "version": "1.5.0",
     "author": {
         "name": "DriFoxx Team"
     },

@@ -171,3 +171,50 @@ def test_group_mention_of_other_bot_is_skipped(monkeypatch):
     other = _Obj(key="_user_1", name="张三", mentioned_type="user")
     data = _make_data("group", "@_user_1 你好", [other])
     assert _run_message(monkeypatch, mod, adapter, data) == 0
+
+
+# ==================== 群消息留档 ====================
+
+
+def _install_group_history_recorder(monkeypatch):
+    calls = []
+
+    class _Store:
+        def capture(self, platform, chat_id, **kwargs):
+            calls.append((platform, chat_id, kwargs))
+            return True
+
+    mod = types.ModuleType("app.gateway.group_history")
+    mod.get_group_history_store = lambda: _Store()
+    monkeypatch.setitem(sys.modules, "app.gateway.group_history", mod)
+    return calls
+
+
+def test_group_message_without_mention_is_archived(monkeypatch):
+    """没 @机器人 的群消息也要留档，否则被叫住时看不到前文。"""
+    mod = _load_feishu()
+    adapter = _make_adapter(mod, require_mention=True)
+    calls = _install_group_history_recorder(monkeypatch)
+    assert _run_message(monkeypatch, mod, adapter, _make_data("group", "随便聊聊")) == 0
+    platform, chat_id, kwargs = calls[0]
+    assert (platform, chat_id) == ("feishu", "c1")
+    assert kwargs["text"] == "随便聊聊"
+    assert kwargs["chat_type"] == "group"
+    assert kwargs["message_id"] == "m1"
+
+
+def test_group_mention_text_is_archived_without_placeholder(monkeypatch):
+    mod = _load_feishu()
+    adapter = _make_adapter(mod, require_mention=True)
+    calls = _install_group_history_recorder(monkeypatch)
+    data = _make_data("group", "@_user_1 帮我看下", [_bot_mention()])
+    assert _run_message(monkeypatch, mod, adapter, data) == 1
+    assert calls[0][2]["text"] == "帮我看下"
+
+
+def test_dm_is_not_archived(monkeypatch):
+    mod = _load_feishu()
+    adapter = _make_adapter(mod, require_mention=True)
+    calls = _install_group_history_recorder(monkeypatch)
+    assert _run_message(monkeypatch, mod, adapter, _make_data("p2p", "你好")) == 1
+    assert calls == []

@@ -548,6 +548,18 @@ class FeishuAdapter(BasePlatformAdapter):
             # 占位符；@人的占位符换成 @真实名字（语义不丢）。
             import re as _re
 
+            # 提取 sender_id（群消息留档与事件构造都要用，故前置）
+            sender_id = ""
+            if sender is not None:
+                sender_id_obj = getattr(sender, "sender_id", None)
+                if sender_id_obj is not None:
+                    sender_id = (
+                        getattr(sender_id_obj, "open_id", "")
+                        or getattr(sender_id_obj, "user_id", "")
+                        or getattr(sender_id_obj, "union_id", "")
+                        or ""
+                    )
+
             mentions = getattr(message, "mentions", None) or []
             bot_keys = {
                 m.key
@@ -557,11 +569,18 @@ class FeishuAdapter(BasePlatformAdapter):
             name_by_key = {
                 m.key: f"@{m.name}" for m in mentions if getattr(m, "key", None)
             }
-            if str(getattr(message, "chat_type", "p2p") or "p2p") == "group" \
-                    and self._require_mention and not bot_keys:
-                # 群里没 @机器人：不响应，避免抢话（与 telegram/discord 一致）
-                logger.debug("[Feishu] 群消息未 @机器人，跳过: chat_id={}", chat_id)
-                return
+            if str(getattr(message, "chat_type", "p2p") or "p2p") == "group":
+                # 群消息先留档（含没 @机器人 的），被叫住时才有前文可参考
+                self._capture_group_message(
+                    chat_id=chat_id,
+                    message_id=message_id,
+                    text=_re.sub(r"@_user_\d+", "", text).strip(),
+                    user_id=sender_id,
+                )
+                if self._require_mention and not bot_keys:
+                    # 群里没 @机器人：不响应，避免抢话（与 telegram/discord 一致）
+                    logger.debug("[Feishu] 群消息未 @机器人，跳过: chat_id={}", chat_id)
+                    return
             lead = _re.match(r"^(@_user_\d+)\s*", text)
             if lead and (not mentions or lead.group(1) in bot_keys):
                 # 开头的机器人提及剥掉（mentions 缺失时防御性剥，@_user_N
@@ -581,18 +600,6 @@ class FeishuAdapter(BasePlatformAdapter):
             _m = _re.match(r"^@\S+\s+(/\S+.*)$", text)
             if _m:
                 text = _m.group(1).strip()
-
-            # 提取 sender_id
-            sender_id = ""
-            if sender is not None:
-                sender_id_obj = getattr(sender, "sender_id", None)
-                if sender_id_obj is not None:
-                    sender_id = (
-                        getattr(sender_id_obj, "open_id", "")
-                        or getattr(sender_id_obj, "user_id", "")
-                        or getattr(sender_id_obj, "union_id", "")
-                        or ""
-                    )
 
             # 跳过空消息（无文本、无图片、无文件，如表情包/语音）
             if not text and not image_keys and not file_items:
@@ -653,6 +660,17 @@ class FeishuAdapter(BasePlatformAdapter):
             import traceback
 
             traceback.print_exc()
+
+    def _capture_group_message(self, **fields) -> None:
+        """群消息留档到宿主存档（失败不影响消息处理）。"""
+        try:
+            from app.gateway.group_history import get_group_history_store
+
+            get_group_history_store().capture(
+                "feishu", fields.pop("chat_id"), chat_type="group", **fields
+            )
+        except Exception as e:
+            logger.debug("[Feishu] 群消息留档失败: {}", e)
 
     # ==================== 卡片按钮回传（card.action.trigger） ====================
 

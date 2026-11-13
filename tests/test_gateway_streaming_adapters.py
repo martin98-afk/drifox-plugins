@@ -123,6 +123,21 @@ def _load(plugin: str, module_name: str):
     return mod
 
 
+def _install_group_history_recorder(monkeypatch):
+    """把宿主群历史模块换成记录器（插件延迟 import 的正是这个路径）。"""
+    calls = []
+
+    class _Store:
+        def capture(self, platform, chat_id, **kwargs):
+            calls.append((platform, chat_id, kwargs))
+            return True
+
+    mod = types.ModuleType("app.gateway.group_history")
+    mod.get_group_history_store = lambda: _Store()
+    monkeypatch.setitem(sys.modules, "app.gateway.group_history", mod)
+    return calls
+
+
 def _new(mod, cls_name, **attrs):
     obj = getattr(mod, cls_name).__new__(getattr(mod, cls_name))
     for key, value in attrs.items():
@@ -415,3 +430,43 @@ def test_slack_stream_falls_back_when_api_rejected():
 
     adapter = _new(mod, "SlackAdapter", _client=_RejectClient(), _stream_states={})
     assert asyncio.run(adapter.start_stream("C123")) is None
+
+
+# ==================== 群消息采集（@ 门之前留档） ====================
+
+
+def test_telegram_archives_group_message(monkeypatch):
+    mod = _load("gateway-telegram", "gw_telegram")
+    adapter = _new(mod, "TelegramAdapter", _bot=None, _stream_states={})
+    calls = _install_group_history_recorder(monkeypatch)
+    msg = types.SimpleNamespace(
+        chat=types.SimpleNamespace(id=-100123),
+        from_user=types.SimpleNamespace(id=7, full_name="张三"),
+        text="你好",
+        caption=None,
+        message_id=55,
+    )
+    adapter._capture_group_message(msg)
+    platform, chat_id, kwargs = calls[0]
+    assert (platform, chat_id) == ("telegram", "-100123")
+    assert kwargs["text"] == "你好"
+    assert kwargs["user_name"] == "张三"
+    assert kwargs["message_id"] == "55"
+    assert kwargs["chat_type"] == "group"
+
+
+def test_discord_archives_group_message(monkeypatch):
+    mod = _load("gateway-discord", "gw_discord")
+    adapter = _new(mod, "DiscordAdapter", _client=None, _stream_states={})
+    calls = _install_group_history_recorder(monkeypatch)
+    msg = types.SimpleNamespace(
+        channel=types.SimpleNamespace(id=999, guild=object()),
+        author=types.SimpleNamespace(id=3, display_name="李四", name="lisi"),
+        content="在吗",
+        id=77,
+    )
+    adapter._capture_group_message(msg)
+    platform, chat_id, kwargs = calls[0]
+    assert (platform, chat_id) == ("discord", "999")
+    assert kwargs["user_name"] == "李四"
+    assert kwargs["message_id"] == "77"

@@ -131,6 +131,8 @@ class DiscordAdapter(BasePlatformAdapter):
 
     async def _handle_message(self, message):
         """处理收到的消息"""
+        import discord  # 局部导入：模块顶层不 eager import 平台 SDK
+
         # 忽略机器人消息
         if message.author.bot:
             return
@@ -142,6 +144,10 @@ class DiscordAdapter(BasePlatformAdapter):
             discord.MessageType.reply,
         ):
             return
+
+        # 群消息先留档（含没 @机器人 的），被叫住时才有前文可参考
+        if getattr(message.channel, "guild", None) is not None:
+            self._capture_group_message(message)
 
         # 检查是否需要 @ 机器人
         if self._require_mention and not self._bot_mentioned(message):
@@ -162,6 +168,23 @@ class DiscordAdapter(BasePlatformAdapter):
         event = self._build_message_event(message, msg_type)
         await self._attach_inbound_media(event, message)
         await self.handle_message(event)
+
+    def _capture_group_message(self, message) -> None:
+        """群消息留档到宿主存档（失败不影响消息处理）。"""
+        try:
+            from app.gateway.group_history import get_group_history_store
+
+            get_group_history_store().capture(
+                "discord",
+                str(message.channel.id),
+                text=message.content or "",
+                user_id=str(message.author.id),
+                user_name=message.author.display_name or message.author.name,
+                message_id=str(message.id),
+                chat_type="group",
+            )
+        except Exception as e:
+            logger.debug(f"[Discord] 群消息留档失败: {e}")
 
     def _bot_mentioned(self, message) -> bool:
         """检查消息是否 @ 机器人"""
