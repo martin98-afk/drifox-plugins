@@ -16,7 +16,6 @@ import pytest
 import importlib.util
 import sys
 import types
-from enum import Enum
 from pathlib import Path
 
 _PLUGINS_DIR = Path(__file__).resolve().parent.parent / "plugins"
@@ -29,21 +28,10 @@ def _build_fake_app_modules():
     gateway = types.ModuleType("app.gateway")
     base = types.ModuleType("app.gateway.base")
 
-    class Platform(str, Enum):
-        FEISHU = "feishu"
-        WECHAT = "wechat"
-
     class MessageType:
         TEXT = 1
         IMAGE = 2
         FILE = 3
-
-    class PlatformConfig:
-        def __init__(self, enabled: bool = True, extra: dict | None = None, secret: str = "", **kwargs):
-            self.enabled = enabled
-            self.extra = extra or {}
-            self.secret = secret
-            self.bot_id = kwargs.get("bot_id", "")
 
     class SendResult:
         def __init__(self, success, message_id=None, error=None, retryable=False):
@@ -63,9 +51,7 @@ def _build_fake_app_modules():
                 setattr(self, k, v)
 
     class BasePlatformAdapter:
-        def __init__(self, config, platform=None, **kwargs):
-            self.config = config
-            self.platform = platform
+        def __init__(self):
             self.name = "test"
             self._running = True
             self._connected = True
@@ -81,9 +67,7 @@ def _build_fake_app_modules():
         async def handle_message(self, event):
             pass
 
-    base.Platform = Platform
     base.MessageType = MessageType
-    base.PlatformConfig = PlatformConfig
     base.SendResult = SendResult
     base.MessageEvent = MessageEvent
     base.ChatInfo = ChatInfo
@@ -97,7 +81,7 @@ def _build_fake_app_modules():
 @pytest.fixture(autouse=True)
 def _isolated_host_stubs():
     """本文件独占 app.gateway.base stub：全量跑时其他测试文件的简化版会覆盖它，
-    导致本插件 import 失败或 PlatformConfig 不收 secret。进出各装一次并还原。"""
+    导致插件 import 失败或基类行为不一致。进出各装一次并还原。"""
     stubs = _build_fake_app_modules()
     keys = list(stubs)
     saved = {k: sys.modules.get(k) for k in keys}
@@ -167,8 +151,8 @@ class _FakeHttpClient:
 
 def _wechat_adapter(http_client):
     mod = _load("wechat_gw_outbound", _PLUGINS_DIR / "gateway-wechat" / "gateways" / "wechat.py")
-    cfg = sys.modules["app.gateway.base"].PlatformConfig(secret="token")
-    adapter = mod.WechatAdapter(cfg)
+    mod._config = lambda: {"enabled": True, "bot_token": "token"}
+    adapter = mod.WechatAdapter()
     adapter._http_client = http_client
     adapter._context_tokens["u1"] = {"token": "ctx-1", "ts": __import__("time").time()}
     return mod, adapter
@@ -282,10 +266,15 @@ def test_wechat_aes_key_base64_roundtrip(tmp_path):
 
 def _feishu_adapter(http_client):
     mod = _load("feishu_gw_outbound", _PLUGINS_DIR / "gateway-feishu" / "gateways" / "feishu.py")
-    cfg = sys.modules["app.gateway.base"].PlatformConfig(
-        extra={"app_id": "id", "app_secret": "secret"}
-    )
-    adapter = mod.FeishuAdapter(cfg)
+    mod._config = lambda: {
+        "enabled": True,
+        "app_id": "id",
+        "app_secret": "secret",
+        "encrypt_key": "",
+        "verification_token": "",
+        "require_mention": True,
+    }
+    adapter = mod.FeishuAdapter()
     adapter._http_client = http_client
     adapter._connected = True
     adapter._token = "tkn"

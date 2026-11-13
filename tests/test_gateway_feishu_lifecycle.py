@@ -56,9 +56,7 @@ def _install_fake_app_modules() -> None:
                 setattr(self, k, v)
 
     class BasePlatformAdapter:
-        def __init__(self, config, platform):
-            self.config = config
-            self.platform = platform
+        def __init__(self):
             self.name = "test"
             self._running = False
             self._connected = False
@@ -132,6 +130,15 @@ def _load_feishu_module():
 
 
 feishu_gw = _load_feishu_module()
+# 新契约：FeishuAdapter() 无参，内部走模块级 _config()；测试注入固定配置
+feishu_gw._config = lambda: {
+    "enabled": True,
+    "app_id": "id",
+    "app_secret": "secret",
+    "encrypt_key": "",
+    "verification_token": "",
+    "require_mention": True,
+}
 
 
 class FakeWSClient:
@@ -168,7 +175,7 @@ def _wait_until(predicate, timeout: float = 15.0) -> bool:
 
 def test_disconnect_stops_ws_thread_and_loops():
     """disconnect() 必须真正停掉 ws 线程/loop/handler loop（回归：旧实现全泄漏）"""
-    adapter = feishu_gw.FeishuAdapter(feishu_gw.PlatformConfig(extra={}))
+    adapter = feishu_gw.FeishuAdapter()
     fake = FakeWSClient()
     adapter._ws_client = fake
     adapter._running = True
@@ -208,7 +215,7 @@ def test_disconnect_stops_ws_thread_and_loops():
 
 def test_disconnect_is_idempotent():
     """disconnect 可重入（二次调用不抛异常、不残留）"""
-    adapter = feishu_gw.FeishuAdapter(feishu_gw.PlatformConfig(extra={}))
+    adapter = feishu_gw.FeishuAdapter()
     fake = FakeWSClient()
     adapter._ws_client = fake
     adapter._running = True
@@ -230,7 +237,7 @@ def test_disconnect_is_idempotent():
 
 def test_connect_defensive_cleanup_when_thread_alive(monkeypatch):
     """connect() 重入防御：上一轮线程仍存活时先彻底断开再重连（防连接叠加）"""
-    adapter = feishu_gw.FeishuAdapter(feishu_gw.PlatformConfig(extra={}))
+    adapter = feishu_gw.FeishuAdapter()
     fake = FakeWSClient()
     adapter._ws_client = fake
     adapter._running = True

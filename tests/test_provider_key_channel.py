@@ -6,12 +6,11 @@
 已入系统凭证库）。插件把密文当 Bearer token 发出 → 401
 `log in fail: Please carry the API secret key`。
 
-演进（能力池收敛）：磁盘扫描（json.load app.config）与
-`main_widget._valid_configs` 内存兜底已全部删除，取配置只走宿主内存态两路——
-1. ctx["services"]["get_provider_config"]（窗口上下文注入）；
-2. 能力池 model.config（pool_for(...).legacy("get_provider_config",
-   "model.config")，caps_for 解析到活跃窗口；两者同签名：无参 = 当前会话
-   模型，带参 = 五级匹配指定服务商/模型）。
+演进（能力池收敛）：取配置唯一通道是宿主能力池——
+`pool["model.config_for"]`（按名解析指定服务商/模型，query 为
+「服务商:模型」或单值）/ `pool["model.config"]`（无参 = 当前会话
+模型）；pool_for 解析到活跃窗口。ctx["services"]["get_provider_config"]
+窗口上下文注入与磁盘扫描均已删除。
 
 本测试 mock 能力池 / 宿主服务验证该通道（不落任何磁盘配置文件）；
 用 importlib 按 DriFox 实际插件加载方式加载模块（目录名带连字符）。
@@ -104,40 +103,53 @@ def _install_sdk(monkeypatch, pool):
 
 
 class _FakePool:
-    """能力池替身：legacy(旧服务键, 能力 id) 返回注入的 model.config 解析器"""
+    """能力池替身：下标访问 model.config_for / model.config 取注入的解析器
 
-    def __init__(self, resolve=None, legacy_error: Exception = None):
+    与源码一致：插件经 pool["model.config_for"](query) 按名解析、
+    pool["model.config"]() 取当前会话；能力被拒 = 下标访问抛异常。
+    """
+
+    def __init__(self, resolve=None, cap_error: Exception = None):
         self._resolve = resolve
-        self._legacy_error = legacy_error
+        self._cap_error = cap_error
 
     def __contains__(self, cap_id):
-        return cap_id == "model.config"
+        return self._cap_error is None and cap_id in (
+            "model.config",
+            "model.config_for",
+        )
 
-    def legacy(self, key, cap_id):
-        if self._legacy_error is not None:
-            raise self._legacy_error
-        assert cap_id == "model.config"
+    def __getitem__(self, cap_id):
+        if self._cap_error is not None:
+            raise self._cap_error
+        if cap_id not in ("model.config", "model.config_for"):
+            raise KeyError(cap_id)
         return self._resolve
 
 
 def _make_pool_resolve(valid: dict, current_id: str = "cid1"):
-    """mock 宿主 model.config 语义：无参 = 当前会话；带参 = 五级匹配指定服务商"""
+    """mock 宿主能力语义：model.config_for(query) 按名匹配指定服务商/模型；
+    model.config() 无参 = 当前会话模型。未命中返回 {}（源码判空 → None）"""
 
-    def resolve(provider: str = "", model: str = ""):
-        cfg = None
-        if not provider:
-            cfg = valid.get(current_id)
-        elif provider in valid:
-            cfg = valid[provider]
+    def _match(provider: str):
+        if provider in valid:
+            return valid[provider]
+        for info in valid.values():
+            if isinstance(info, dict) and provider in (
+                info.get("display_name"),
+                info.get("provider_name"),
+                info.get("name"),
+            ):
+                return info
+        return None
+
+    def resolve(*args):
+        if not args:
+            cfg, model = valid.get(current_id), ""
         else:
-            for info in valid.values():
-                if isinstance(info, dict) and provider in (
-                    info.get("display_name"),
-                    info.get("provider_name"),
-                    info.get("name"),
-                ):
-                    cfg = info
-                    break
+            query = str(args[0] or "")
+            provider, _, model = query.partition(":")
+            cfg = _match(provider or model)
         if not isinstance(cfg, dict) or not cfg:
             return {}
         out = dict(cfg)
@@ -178,28 +190,22 @@ def gp():
 # ── prompt-enhancer ──
 
 
-def test_pe_prefers_host_service_plaintext(pe):
-    """宿主服务可用时取到明文 key（不经能力池）"""
-    services = {
-        "get_provider_config": lambda provider="", model="": {
-            "API_KEY": _MEM_PLAIN,
-            "API_URL": "https://api.example.com/v1",
-            "模型名称": model or "MiniMax-M3",
-        }
-    }
-    cfg = pe._get_llm_config("MiniMax", "MiniMax-M2.7", services)
+def test_pe_prefers_host_service_plaintext(pe, monkeypatch):
+    """override 指名服务商 → 能力池 model.config_for 取内存态明文（不经磁盘）"""
+    _install_sdk(monkeypatch, _FakePool(_make_pool_resolve(_host_valid_configs())))
+    cfg = pe._get_llm_config("MiniMax", "MiniMax-M2.7")
     assert cfg is not None
     assert cfg["API_KEY"] == _MEM_PLAIN
     assert cfg["模型名称"] == "MiniMax-M2.7"
 
 
 def test_pe_fallback_pool_plaintext(pe, monkeypatch):
-    """无 services（上下文未注入）→ 能力池 model.config 兜底，同样取内存态明文"""
+    """override 缺省 → 能力池 model.config 无参取当前会话模型，同样内存态明文"""
     _install_sdk(monkeypatch, _FakePool(_make_pool_resolve(_host_valid_configs())))
-    cfg = pe._get_llm_config("MiniMax", "MiniMax-M2.7")
+    cfg = pe._get_llm_config()
     assert cfg is not None
     assert cfg["API_KEY"] == _MEM_PLAIN
-    assert cfg["模型名称"] == "MiniMax-M2.7"
+    assert cfg["模型名称"] == "MiniMax-M3"
 
 
 def test_pe_pool_unavailable_returns_none(pe, monkeypatch):
@@ -212,7 +218,7 @@ def test_pe_pool_unavailable_returns_none(pe, monkeypatch):
 def test_pe_pool_denied_returns_none(pe, monkeypatch):
     """能力被拒（legacy 抛异常）→ None（能力不可用时下拉空/调用方提示配置）"""
     _install_sdk(
-        monkeypatch, _FakePool(legacy_error=RuntimeError("capability denied"))
+        monkeypatch, _FakePool(cap_error=RuntimeError("capability denied"))
     )
     assert pe._get_llm_config("MiniMax") is None
 
@@ -223,16 +229,25 @@ def test_pe_unknown_provider_not_silently_switched(pe, monkeypatch):
     assert pe._get_llm_config("不存在的服务商") is None
 
 
-def test_pe_empty_key_provider_is_valid(pe):
+def test_pe_empty_key_provider_is_valid(pe, monkeypatch):
     """免鉴权服务商（空 key）也是有效配置，不能因 key 为空被拒"""
-    services = {
-        "get_provider_config": lambda provider="", model="": {
-            "API_KEY": "",
-            "API_URL": "https://opencode.ai/zen/v1",
-            "模型名称": "deepseek-v4-flash-free",
-        }
-    }
-    cfg = pe._get_llm_config("OpenCode Zen", "deepseek-v4-flash-free", services)
+    _install_sdk(
+        monkeypatch,
+        _FakePool(
+            _make_pool_resolve(
+                {
+                    "zen": {
+                        "provider_name": "OpenCode Zen",
+                        "display_name": "OpenCode Zen",
+                        "API_URL": "https://opencode.ai/zen/v1",
+                        "API_KEY": "",
+                        "模型名称": "deepseek-v4-flash-free",
+                    }
+                }
+            )
+        ),
+    )
+    cfg = pe._get_llm_config("OpenCode Zen", "deepseek-v4-flash-free")
     assert cfg is not None
     assert cfg["API_KEY"] == ""
 
@@ -240,25 +255,22 @@ def test_pe_empty_key_provider_is_valid(pe):
 # ── git-panel ──
 
 
-def test_gp_prefers_host_service_plaintext(gp):
-    services = {
-        "get_provider_config": lambda provider="", model="": {
-            "API_KEY": _MEM_PLAIN,
-            "API_URL": "https://api.example.com/v1",
-            "模型名称": model or "MiniMax-M3",
-        }
-    }
-    cfg = gp.get_llm_config("MiniMax", "MiniMax-M2.7", services)
+def test_gp_prefers_host_service_plaintext(gp, monkeypatch):
+    """override 指名服务商 → 能力池 model.config_for 取内存态明文"""
+    _install_sdk(monkeypatch, _FakePool(_make_pool_resolve(_host_valid_configs())))
+    cfg = gp.get_llm_config("MiniMax", "MiniMax-M2.7")
     assert cfg is not None
     assert cfg["API_KEY"] == _MEM_PLAIN
     assert cfg["模型名称"] == "MiniMax-M2.7"
 
 
 def test_gp_fallback_pool_plaintext(gp, monkeypatch):
+    """override 缺省 → 能力池 model.config 无参取当前会话模型，内存态明文"""
     _install_sdk(monkeypatch, _FakePool(_make_pool_resolve(_host_valid_configs())))
-    cfg = gp.get_llm_config("MiniMax", "MiniMax-M2.7")
+    cfg = gp.get_llm_config()
     assert cfg is not None
     assert cfg["API_KEY"] == _MEM_PLAIN
+    assert cfg["模型名称"] == "MiniMax-M3"
 
 
 def test_gp_pool_unavailable_returns_none(gp, monkeypatch):
@@ -272,15 +284,25 @@ def test_gp_unknown_provider_not_silently_switched(gp, monkeypatch):
     assert gp.get_llm_config("不存在的服务商") is None
 
 
-def test_gp_empty_key_provider_is_valid(gp):
-    services = {
-        "get_provider_config": lambda provider="", model="": {
-            "API_KEY": "",
-            "API_URL": "https://opencode.ai/zen/v1",
-            "模型名称": "deepseek-v4-flash-free",
-        }
-    }
-    cfg = gp.get_llm_config("OpenCode Zen", "deepseek-v4-flash-free", services)
+def test_gp_empty_key_provider_is_valid(gp, monkeypatch):
+    """免鉴权服务商（空 key）也是有效配置，不能因 key 为空被拒"""
+    _install_sdk(
+        monkeypatch,
+        _FakePool(
+            _make_pool_resolve(
+                {
+                    "zen": {
+                        "provider_name": "OpenCode Zen",
+                        "display_name": "OpenCode Zen",
+                        "API_URL": "https://opencode.ai/zen/v1",
+                        "API_KEY": "",
+                        "模型名称": "deepseek-v4-flash-free",
+                    }
+                }
+            )
+        ),
+    )
+    cfg = gp.get_llm_config("OpenCode Zen", "deepseek-v4-flash-free")
     assert cfg is not None
     assert cfg["API_KEY"] == ""
 

@@ -108,13 +108,15 @@ class FakeExecutor:
         return False
 
 
-def _fake_services():
+def _fake_pool():
+    """能力池 fake：新契约下 scheduler._dispatch 按 pool["能力名"] 下标取用"""
     return {
-        "create_engine_session": lambda *a, **k: None,
-        "get_agent_prompt": lambda name: "",
-        "get_tools_schema": lambda name: [],
-        "get_workdir": lambda: "D:/work",
-        "set_workdir": lambda wd: None,
+        "engine.session": lambda *a, **k: None,
+        "agent.read": lambda name: "",
+        "model.schema": lambda name: [],
+        "model.config_for": lambda query: None,
+        "workdir.read": lambda: "D:/work",
+        "workdir.write": lambda wd: None,
     }
 
 
@@ -125,8 +127,9 @@ def _make_scheduler(monkeypatch, qapp):
     tmp = Path(tempfile.mkdtemp())
     store = CronStore(base_dir=tmp / "cron")
     sched = CronScheduler(store=store)
-    sched.set_services(_fake_services())
-    monkeypatch.setattr(sched, "_resolve_services", lambda: _fake_services())
+    # 新契约：services 已删（12edbe9db 迁移能力池），执行上下文统一走 pool
+    fake_pool = _fake_pool()
+    monkeypatch.setattr(sched, "_pool", lambda: fake_pool)
     monkeypatch.setattr(sched, "_resolve_model_override", lambda job: None)
     fake = FakeExecutor()
     monkeypatch.setattr("crontasks_core.scheduler.CronExecutor", lambda *a, **k: fake)

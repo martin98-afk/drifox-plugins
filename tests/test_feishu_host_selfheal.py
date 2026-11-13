@@ -64,9 +64,7 @@ def _install_fake_app_modules() -> None:
                 setattr(self, k, v)
 
     class BasePlatformAdapter:
-        def __init__(self, config, platform):
-            self.config = config
-            self.platform = platform
+        def __init__(self):
             self.name = "test"
             self._running = False
             self._connected = False
@@ -268,10 +266,17 @@ def test_bridge_idempotent():
 # ══════════════════════════════════════════════════════════════
 def _make_adapter():
     m = _load_module()
-    cfg = sys.modules["app.gateway.base"].PlatformConfig(
-        enabled=True, extra={"app_id": "cli_test", "app_secret": "secret_test"}
-    )
-    return m, m.FeishuAdapter(cfg)
+    cfg = {
+        "enabled": True,
+        "app_id": "cli_test",
+        "app_secret": "secret_test",
+        "encrypt_key": "",
+        "verification_token": "",
+        "require_mention": True,
+    }
+    # 新契约：FeishuAdapter() 无参，内部走模块级 _config()；测试注入固定配置
+    m._config = lambda: dict(cfg)
+    return m, m.FeishuAdapter()
 
 
 def test_reconnect_spawns_new_thread():
