@@ -1868,7 +1868,7 @@
             "display_name": {
                 "zh": "上下文洞察"
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "context",
                 "token",
@@ -4404,7 +4404,7 @@
             "display_name": {
                 "zh": "钉钉网关"
             },
-            "downloads": 9,
+            "downloads": 10,
             "platforms": [
                 "windows",
                 "linux",
@@ -4545,7 +4545,7 @@
             "display_name": {
                 "zh": "飞书网关"
             },
-            "downloads": 63,
+            "downloads": 65,
             "platforms": [
                 "windows",
                 "linux",
@@ -4762,7 +4762,7 @@
             "display_name": {
                 "zh": "微信网关"
             },
-            "downloads": 27,
+            "downloads": 28,
             "dependencies": {
                 "pip": {
                     "default": [
@@ -4803,7 +4803,7 @@
             "display_name": {
                 "zh": "企业微信网关"
             },
-            "downloads": 5,
+            "downloads": 6,
             "dependencies": {
                 "pip": {
                     "default": [
@@ -4902,7 +4902,7 @@
             "display_name": {
                 "zh": "Git 控制面板"
             },
-            "downloads": 98,
+            "downloads": 100,
             "keywords": [
                 "git",
                 "source-control",
@@ -8054,6 +8054,7 @@
             "display_name": {
                 "zh": "演示文稿生成"
             },
+            "downloads": 1,
             "keywords": [
                 "ppt",
                 "pptx",
