@@ -47,6 +47,15 @@ def _cache_dir():
         return fallback
 
 
+def _safe_file_name(name: str) -> str:
+    """保留扩展名的安全文件名（去掉路径分隔符与控制字符）。"""
+    import re as _re
+
+    base = str(name or "").replace("\\", "/").split("/")[-1].strip()
+    base = _re.sub(r"[\x00-\x1f\x7f]", "", base)
+    return base[:80]
+
+
 def _image_ext(data: bytes) -> str:
     """按魔数判图片扩展名（.png/.jpg/.gif/.webp，默认 .jpg）。"""
     if data.startswith(b"\x89PNG\r\n\x1a\n"):
@@ -529,7 +538,7 @@ class FeishuAdapter(BasePlatformAdapter):
             content_str = str(getattr(message, "content", "") or "")
 
             # 解析 content JSON：文本 + 图片 key（单图 image 消息、post 富文本混排）
-            text, image_keys = self._parse_message_content(content_str)
+            text, image_keys, file_items = self._parse_message_content(content_str)
 
             # @提及处理：飞书群聊 @机器人 发命令时 text 形如 "@_user_1 /model"
             # （机器占位符格式），前缀会让宿主 startswith("/") 判定失败、命令被
@@ -578,8 +587,8 @@ class FeishuAdapter(BasePlatformAdapter):
                         or ""
                     )
 
-            # 跳过空消息（无文本也无图片，如表情包/语音）
-            if not text and not image_keys:
+            # 跳过空消息（无文本、无图片、无文件，如表情包/语音）
+            if not text and not image_keys and not file_items:
                 logger.debug("[Feishu] Empty message skipped: msg_type={}", msg_type)
                 return
 
@@ -589,6 +598,8 @@ class FeishuAdapter(BasePlatformAdapter):
                 message_type=(
                     MessageType.IMAGE
                     if image_keys
+                    else MessageType.FILE
+                    if file_items
                     else MessageType.TEXT
                     if msg_type == "text"
                     else MessageType.FILE
@@ -618,7 +629,7 @@ class FeishuAdapter(BasePlatformAdapter):
                     loop = self._handler_loop
                     if loop is not None and loop.is_running():
                         asyncio.run_coroutine_threadsafe(
-                            self._download_and_dispatch(event, message_id, image_keys),
+                            self._download_and_dispatch(event, message_id, image_keys, file_items),
                             loop,
                         )
                         logger.info(
@@ -641,25 +652,32 @@ class FeishuAdapter(BasePlatformAdapter):
     # ==================== 入站图片 ====================
 
     @staticmethod
-    def _parse_message_content(content_str: str) -> Tuple[str, List[str]]:
-        """解析消息 content（JSON 字符串）→ (文本, 图片 key 列表)。
+    def _parse_message_content(content_str: str) -> Tuple[str, List[str], List[Tuple[str, str]]]:
+        """解析消息 content（JSON 字符串）→ (文本, 图片 key 列表, 文件列表)。
+
+        文件列表元素为 ``(file_key, file_name)``。
 
         覆盖 ``image`` 单图消息、``post`` 富文本混排（img/text/a 元素），
         其余类型退化为纯文本；解析失败按原文当文本处理（旧行为）。
         """
         if not content_str:
-            return "", []
+            return "", [], []
         try:
             data = json.loads(content_str)
         except (json.JSONDecodeError, TypeError):
-            return content_str, []
+            return content_str, [], []
         if not isinstance(data, dict):
-            return "", []
+            return "", [], []
 
         image_key = data.get("image_key")
         if isinstance(image_key, str) and image_key:
             text = data.get("text")
-            return (text if isinstance(text, str) else ""), [image_key]
+            return (text if isinstance(text, str) else ""), [image_key], []
+
+        file_key = data.get("file_key")
+        if isinstance(file_key, str) and file_key:
+            name = data.get("file_name")
+            return "", [], [(file_key, name if isinstance(name, str) else "")]
 
         blocks = data.get("content")
         if isinstance(blocks, list):
@@ -685,13 +703,17 @@ class FeishuAdapter(BasePlatformAdapter):
                 line = "".join(segment).strip()
                 if line:
                     lines.append(line)
-            return "\n".join(lines), keys
+            return "\n".join(lines), keys, []
 
         text = data.get("text")
-        return (text if isinstance(text, str) else ""), []
+        return (text if isinstance(text, str) else ""), [], []
 
     async def _download_and_dispatch(
-        self, event: MessageEvent, message_id: str, image_keys: List[str]
+        self,
+        event: MessageEvent,
+        message_id: str,
+        image_keys: List[str],
+        file_items: Optional[List[Tuple[str, str]]] = None,
     ) -> None:
         """下载入站图片并填充 media_urls，再交给宿主 handler。
 
@@ -706,6 +728,17 @@ class FeishuAdapter(BasePlatformAdapter):
                         event.media_types.append("image")
             except Exception as e:
                 logger.warning("[Feishu] 入站图片下载失败: {}", e)
+        if file_items:
+            try:
+                for file_key, file_name in file_items[:MAX_INBOUND_IMAGES]:
+                    path = await self._download_resource(
+                        message_id, file_key, "file", display_name=file_name
+                    )
+                    if path:
+                        event.media_urls.append(path)
+                        event.media_types.append("file")
+            except Exception as e:
+                logger.warning("[Feishu] 入站文件下载失败: {}", e)
         if self._message_handler:
             try:
                 await self._message_handler(event)
@@ -713,7 +746,11 @@ class FeishuAdapter(BasePlatformAdapter):
                 logger.error("[Feishu] Handle message error: {}", e)
 
     async def _download_resource(
-        self, message_id: str, file_key: str, resource_type: str = "image"
+        self,
+        message_id: str,
+        file_key: str,
+        resource_type: str = "image",
+        display_name: str = "",
     ) -> Optional[str]:
         """下载消息资源到本地缓存，返回路径；失败返回 None。
 
@@ -757,7 +794,11 @@ class FeishuAdapter(BasePlatformAdapter):
             import hashlib
 
             digest = hashlib.sha1(data).hexdigest()[:16]
-            path = _cache_dir() / f"{digest}{_image_ext(data)}"
+            safe_name = _safe_file_name(display_name)
+            if safe_name:
+                path = _cache_dir() / f"{digest[:8]}_{safe_name}"
+            else:
+                path = _cache_dir() / f"{digest}{_image_ext(data)}"
             if not path.exists():
                 path.write_bytes(data)
             return str(path)

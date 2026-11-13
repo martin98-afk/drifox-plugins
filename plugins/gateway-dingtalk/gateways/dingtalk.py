@@ -379,15 +379,15 @@ class DingTalkAdapter(BasePlatformAdapter):
         """下载入站图片后再交给宿主（钉钉给的是 downloadCode，不是 URL）。"""
         types = list(media_types or [])
         codes = [
-            code for index, code in enumerate(download_codes or [])
-            if index >= len(types) or types[index] == "image"
+            (code, "image" if index >= len(types) or types[index] == "image" else "file")
+            for index, code in enumerate(download_codes or [])
         ]
         if codes:
             try:
-                paths = await self._download_by_codes(codes)
+                paths, kinds = await self._download_by_codes(codes)
                 if paths:
                     event.media_urls = paths
-                    event.media_types = ["image"] * len(paths)
+                    event.media_types = kinds
             except Exception as e:
                 logger.warning("[DingTalk] 入站图片下载失败: {}", e)
         await self.handle_message(event)
@@ -414,18 +414,18 @@ class DingTalkAdapter(BasePlatformAdapter):
         logger.warning("[DingTalk] 获取 accessToken 失败: HTTP {} {}", response.status_code, data)
         return None
 
-    async def _download_by_codes(self, codes) -> list:
-        """downloadCode → downloadUrl → 本地文件。"""
+    async def _download_by_codes(self, codes) -> tuple:
+        """downloadCode → downloadUrl → 本地文件。返回 (路径列表, 类型列表)。"""
         if not self._http_client:
-            return []
+            return [], []
         token = await self._get_access_token()
         if not token:
             return []
         import hashlib
 
         cache = get_cache_dir("dingtalk")
-        paths = []
-        for code in codes[:MAX_INBOUND_IMAGES]:
+        paths, kinds = [], []
+        for code, kind in codes[:MAX_INBOUND_IMAGES]:
             if not isinstance(code, str) or not code:
                 continue
             response = await self._http_client.post(
@@ -443,11 +443,13 @@ class DingTalkAdapter(BasePlatformAdapter):
                 logger.warning("[DingTalk] 图片下载失败 HTTP {}", file_response.status_code)
                 continue
             digest = hashlib.sha1(code.encode("utf-8")).hexdigest()[:16]
-            target = cache / f"{digest}.jpg"
+            suffix = ".jpg" if kind == "image" else ".bin"
+            target = cache / f"{digest}{suffix}"
             if not target.exists():
                 target.write_bytes(file_response.content)
             paths.append(str(target))
-        return paths
+            kinds.append(kind)
+        return paths, kinds
 
     def _extract_text(self, message: Any) -> str:
         """提取文本内容"""

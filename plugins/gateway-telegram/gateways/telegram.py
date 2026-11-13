@@ -237,24 +237,36 @@ class TelegramAdapter(BasePlatformAdapter):
         )
 
     async def _attach_inbound_media(self, event: MessageEvent, message) -> None:
-        """把图片落到本地缓存（file_id 只在平台侧有效，宿主只认本地文件）。"""
+        """把图片/文件落到本地缓存（file_id 只在平台侧有效，宿主只认本地文件）。"""
+        if not self._bot:
+            return
+        items = []
         photos = getattr(message, "photo", None)
-        if not photos or not self._bot:
-            return
-        photo = photos[-1]
-        file_id = getattr(photo, "file_id", "")
-        if not file_id:
-            return
-        try:
-            remote = await self._bot.get_file(file_id)
-            suffix = _os.path.splitext(getattr(remote, "file_path", "") or "")[1] or ".jpg"
-            target = _cache_dir() / f"{file_id[-16:]}{suffix}"
-            if not target.exists():
-                await remote.download_to_drive(custom_path=str(target))
-            event.media_urls = [str(target)]
-            event.media_types = ["image"]
-        except Exception as e:
-            logger.warning("[Telegram] 入站图片下载失败: {}", e)
+        if photos:
+            items.append((photos[-1], "image", ""))
+        document = getattr(message, "document", None)
+        if document:
+            items.append((document, "file", getattr(document, "file_name", "") or ""))
+        paths, kinds = [], []
+        for media, kind, name in items[:MAX_INBOUND_IMAGES]:
+            file_id = getattr(media, "file_id", "")
+            if not file_id:
+                continue
+            try:
+                remote = await self._bot.get_file(file_id)
+                suffix = _os.path.splitext(
+                    name or getattr(remote, "file_path", "") or ""
+                )[1] or (".jpg" if kind == "image" else ".bin")
+                target = _cache_dir() / f"{file_id[-16:]}{suffix}"
+                if not target.exists():
+                    await remote.download_to_drive(custom_path=str(target))
+                paths.append(str(target))
+                kinds.append(kind)
+            except Exception as e:
+                logger.warning("[Telegram] 入站 {} 下载失败: {}", kind, e)
+        if paths:
+            event.media_urls = paths
+            event.media_types = kinds
 
     def _extract_media_urls(self, message) -> List[str]:
         """图片由 _attach_inbound_media 下载后填本地路径，这里不再给伪协议。"""

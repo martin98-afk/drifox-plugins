@@ -384,7 +384,7 @@ class WeComAdapter(BasePlatformAdapter):
                 url = file_info.get("url", "")
                 if url:
                     media_urls.append(url)
-                    media_types.append(filename)
+                    media_types.append("file")
 
         if not text and not media_urls:
             logger.debug("[WeCom] Empty message skipped")
@@ -405,34 +405,38 @@ class WeComAdapter(BasePlatformAdapter):
             metadata={"reply_to": reply_text} if reply_text else {},
         )
 
-        await self._attach_inbound_media(event, media_urls)
+        await self._attach_inbound_media(event, media_urls, media_types)
         await self.handle_message(event)
 
-    async def _attach_inbound_media(self, event: MessageEvent, urls) -> None:
-        """把图片 URL 下载到本地缓存（宿主只认本地文件）。"""
+    async def _attach_inbound_media(self, event: MessageEvent, urls, kinds=None) -> None:
+        """把媒体 URL 下载到本地缓存（宿主只认本地文件）。"""
         if not urls or not self._http_client:
             return
         import hashlib
 
-        paths = []
-        for url in urls[:MAX_INBOUND_IMAGES]:
+        kinds = list(kinds or [])
+        paths, out_kinds = [], []
+        for index, url in enumerate(urls[:MAX_INBOUND_IMAGES]):
             if not isinstance(url, str) or not url.startswith("http"):
                 continue
+            kind = "image" if index >= len(kinds) or kinds[index] == "image" else "file"
             try:
                 digest = hashlib.sha1(url.encode("utf-8")).hexdigest()[:16]
-                target = get_cache_dir("wecom") / f"{digest}.jpg"
+                suffix = ".jpg" if kind == "image" else ".bin"
+                target = get_cache_dir("wecom") / f"{digest}{suffix}"
                 if not target.exists():
                     response = await self._http_client.get(url, timeout=30)
                     if response.status_code != 200 or not response.content:
-                        logger.warning("[WeCom] 图片下载失败 HTTP {}", response.status_code)
+                        logger.warning("[WeCom] {} 下载失败 HTTP {}", kind, response.status_code)
                         continue
                     target.write_bytes(response.content)
                 paths.append(str(target))
+                out_kinds.append(kind)
             except Exception as e:
-                logger.warning("[WeCom] 入站图片下载失败: {}", e)
+                logger.warning("[WeCom] 入站 {} 下载失败: {}", kind, e)
         if paths:
             event.media_urls = paths
-            event.media_types = ["image"] * len(paths)
+            event.media_types = out_kinds
 
     async def _heartbeat_loop(self) -> None:
         """心跳循环"""

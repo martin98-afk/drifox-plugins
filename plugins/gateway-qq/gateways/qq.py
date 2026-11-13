@@ -17,6 +17,7 @@ SDK 延迟导入纪律：模块顶层不 eager import 平台 SDK，复用宿主 
 from __future__ import annotations
 
 import asyncio
+import os as _os
 import json
 import time
 from typing import Any, Dict, Optional
@@ -473,16 +474,18 @@ class QqAdapter(BasePlatformAdapter):
         import hashlib
 
         paths = []
+        kinds = []
         for attachment in attachments[:MAX_INBOUND_IMAGES]:
             content_type = str((attachment or {}).get("content_type") or "")
-            if content_type and not content_type.startswith("image/"):
-                continue
+            is_image = content_type.startswith("image/")
             url = str((attachment or {}).get("url") or "")
             if not url.startswith("http"):
                 continue
             try:
                 digest = hashlib.sha1(url.encode("utf-8")).hexdigest()[:16]
-                target = _cache_dir() / f"{digest}.jpg"
+                filename = str((attachment or {}).get("filename") or "")
+                suffix = _os.path.splitext(filename)[1] or (".jpg" if is_image else ".bin")
+                target = _cache_dir() / f"{digest}{suffix}"
                 if not target.exists():
                     response = await self._http_client.get(url, timeout=30)
                     if response.status_code != 200 or not response.content:
@@ -490,11 +493,12 @@ class QqAdapter(BasePlatformAdapter):
                         continue
                     target.write_bytes(response.content)
                 paths.append(str(target))
+                kinds.append("image" if is_image else "file")
             except Exception as e:
                 logger.warning("[QQ] 入站附件下载失败: {}", e)
         if paths:
             event.media_urls = paths
-            event.media_types = ["image"] * len(paths)
+            event.media_types = kinds
 
     async def _heartbeat_loop(self) -> None:
         """心跳循环：每 heartbeat_interval 发 op=1"""

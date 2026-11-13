@@ -182,24 +182,23 @@ class DiscordAdapter(BasePlatformAdapter):
         return False
 
     async def _attach_inbound_media(self, event: MessageEvent, message) -> None:
-        """把图片附件下载到本地缓存（宿主只认本地文件，不接受远端 URL）。"""
-        images = [
-            att for att in message.attachments
-            if (getattr(att, "content_type", "") or "").startswith("image/")
-        ]
-        paths = []
-        for attachment in images[:MAX_INBOUND_IMAGES]:
+        """把附件下载到本地缓存（宿主只认本地文件，不接受远端 URL）。"""
+        paths, kinds = [], []
+        for attachment in message.attachments[:MAX_INBOUND_IMAGES]:
+            is_image = (getattr(attachment, "content_type", "") or "").startswith("image/")
             try:
-                suffix = _os.path.splitext(getattr(attachment, "filename", "") or "")[1] or ".png"
-                target = _cache_dir() / f"{getattr(attachment, 'id', 'img')}{suffix}"
+                filename = getattr(attachment, "filename", "") or ""
+                suffix = _os.path.splitext(filename)[1] or (".png" if is_image else ".bin")
+                target = _cache_dir() / f"{getattr(attachment, 'id', 'file')}{suffix}"
                 if not target.exists():
                     await attachment.save(target)
                 paths.append(str(target))
+                kinds.append("image" if is_image else "file")
             except Exception as e:
-                logger.warning("[Discord] 入站图片下载失败: {}", e)
+                logger.warning("[Discord] 入站附件下载失败: {}", e)
         if paths:
             event.media_urls = paths
-            event.media_types = ["image"] * len(paths)
+            event.media_types = kinds
 
     def _build_message_event(self, message, msg_type: MessageType) -> MessageEvent:
         """构建消息事件"""

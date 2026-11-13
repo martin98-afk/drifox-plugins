@@ -457,13 +457,20 @@ class WechatAdapter(BasePlatformAdapter):
         item_list = msg.get("item_list") or []
         text = self._extract_text(item_list)
         has_image = self._has_image(item_list)
-        if not text.strip() and not has_image:
+        has_file = self._has_file(item_list)
+        if not text.strip() and not has_image and not has_file:
             logger.debug(f"[Wechat] Non-text message skipped (from={from_user_id[:12]})")
             return
 
         event = MessageEvent(
             text=text.strip(),
-            message_type=MessageType.IMAGE if has_image else MessageType.TEXT,
+            message_type=(
+                MessageType.IMAGE
+                if has_image
+                else MessageType.FILE
+                if has_file
+                else MessageType.TEXT
+            ),
             message_id=str(msg.get("client_id") or uuid.uuid4()),
             chat_id=f"dm:{from_user_id}",
             user_id=from_user_id,
@@ -484,26 +491,34 @@ class WechatAdapter(BasePlatformAdapter):
             for item in item_list
         )
 
+    @staticmethod
+    def _has_file(item_list: List[Dict[str, Any]]) -> bool:
+        return any(
+            item.get("type") == ITEM_FILE or isinstance(item.get("file_item"), dict)
+            for item in item_list
+        )
+
     async def _dispatch_with_media(
         self, event: MessageEvent, item_list: List[Dict[str, Any]]
     ) -> None:
-        """下载入站图片并填充 media_urls，再交给宿主 handler。"""
+        """下载入站图片/文件并填充 media_urls，再交给宿主 handler。"""
         count = 0
         for item in item_list:
             if count >= MAX_INBOUND_IMAGES:
                 break
-            image_item = item.get("image_item")
-            if not isinstance(image_item, dict):
-                continue
-            try:
-                path = await self._download_image(image_item)
-            except Exception as e:
-                logger.warning(f"[Wechat] 入站图片下载失败: {e}")
-                path = None
-            if path:
-                event.media_urls.append(path)
-                event.media_types.append("image")
-                count += 1
+            for field, kind in (("image_item", "image"), ("file_item", "file")):
+                payload = item.get(field)
+                if not isinstance(payload, dict):
+                    continue
+                try:
+                    path = await self._download_media(payload, kind)
+                except Exception as e:
+                    logger.warning(f"[Wechat] 入站 {kind} 下载失败: {e}")
+                    path = None
+                if path:
+                    event.media_urls.append(path)
+                    event.media_types.append(kind)
+                    count += 1
         await self.handle_message(event)
 
     @staticmethod
@@ -550,9 +565,9 @@ class WechatAdapter(BasePlatformAdapter):
                 plain = plain[:-pad]
         return plain or None
 
-    async def _download_image(self, image_item: Dict[str, Any]) -> Optional[str]:
-        """从 iLink CDN 下载并解密图片，返回本地路径；失败返回 None。"""
-        media = image_item.get("media") or {}
+    async def _download_media(self, payload: Dict[str, Any], kind: str = "image") -> Optional[str]:
+        """从 iLink CDN 下载并解密媒体，返回本地路径；失败返回 None。"""
+        media = payload.get("media") or {}
         query = media.get("encrypt_query_param")
         full_url = media.get("full_url")
         if isinstance(query, str) and query:
@@ -566,23 +581,28 @@ class WechatAdapter(BasePlatformAdapter):
 
         response = await self._http_client.get(url, timeout=REQUEST_TIMEOUT)
         if response.status_code != 200 or not response.content:
-            logger.warning(f"[Wechat] 图片下载失败 HTTP {response.status_code}")
+            logger.warning(f"[Wechat] {kind} 下载失败 HTTP {response.status_code}")
             return None
         data = response.content
         if len(data) > MAX_INBOUND_IMAGE_BYTES:
-            logger.warning(f"[Wechat] 图片超过 {MAX_INBOUND_IMAGE_BYTES // (1024 * 1024)}MB，跳过")
+            logger.warning(f"[Wechat] {kind} 超过 {MAX_INBOUND_IMAGE_BYTES // (1024 * 1024)}MB，跳过")
             return None
 
-        key = self._parse_aes_key(image_item)
+        key = self._parse_aes_key(payload)
         if key:
             plain = self._decrypt_image(data, key)
             if plain is None:
-                logger.warning("[Wechat] 图片解密失败，跳过")
+                logger.warning(f"[Wechat] {kind} 解密失败，跳过")
                 return None
             data = plain
 
         digest = hashlib.sha1(data).hexdigest()[:16]
-        path = self._cache_dir() / f"{digest}{self._image_ext(data)}"
+        name = payload.get("file_name") or payload.get("filename") or ""
+        safe_name = self._safe_name(name)
+        if safe_name:
+            path = self._cache_dir() / f"{digest[:8]}_{safe_name}"
+        else:
+            path = self._cache_dir() / f"{digest}{self._image_ext(data)}"
         if not path.exists():
             path.write_bytes(data)
         return str(path)
@@ -592,6 +612,15 @@ class WechatAdapter(BasePlatformAdapter):
         from app.gateway.base import get_cache_dir
 
         return get_cache_dir("wechat")
+
+    @staticmethod
+    def _safe_name(name: str) -> str:
+        """保留扩展名的安全文件名（去掉路径分隔符与控制字符）。"""
+        import re as _re
+
+        base = str(name or "").replace("\\", "/").split("/")[-1].strip()
+        base = _re.sub(r"[\x00-\x1f\x7f]", "", base)
+        return base[:80]
 
     @staticmethod
     def _image_ext(data: bytes) -> str:
