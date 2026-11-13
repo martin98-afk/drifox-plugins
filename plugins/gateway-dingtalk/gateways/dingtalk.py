@@ -145,6 +145,11 @@ class DingTalkAdapter(BasePlatformAdapter):
         # 重连退避
         self._backoff_idx = 0
 
+        # 流式回复：chat_id -> dm/group（决定卡片投放空间）
+        self._chat_types: Dict[str, str] = {}
+        # 流式状态：chat_id -> {out_track_id, chat_type, last_edit, last_text}
+        self._stream_states: Dict[str, Dict[str, Any]] = {}
+
     async def connect(self) -> bool:
         """连接到钉钉 Stream"""
         if not self._client_id or not self._client_secret:
@@ -281,6 +286,8 @@ class DingTalkAdapter(BasePlatformAdapter):
 
         chat_id = conversation_id or sender_id
         chat_type = "group" if is_group else "dm"
+        if chat_id:
+            self._chat_types[chat_id] = chat_type
 
         # 存储 session webhook
         session_webhook = getattr(message, "session_webhook", None) or ""
@@ -332,6 +339,8 @@ class DingTalkAdapter(BasePlatformAdapter):
 
         chat_id = conversation_id or sender_id
         chat_type = "group" if is_group else "dm"
+        if chat_id:
+            self._chat_types[chat_id] = chat_type
 
         # 存储 session webhook
         session_webhook = getattr(message, "session_webhook", None) or ""
@@ -514,6 +523,168 @@ class DingTalkAdapter(BasePlatformAdapter):
                                 msg_type = MessageType.AUDIO
 
         return msg_type, media_urls, media_types
+
+    # ── 流式回复（AI Card：v1.0/card/instances/createAndDeliver + v1.0/card/streaming） ──
+
+    # 钉钉官方 AI 卡片模板（dsh-im 同款公共模板），无需用户在后台自建
+    _AI_CARD_TEMPLATE_ID = "02fcf2f4-5e02-4a85-b672-46d1f715543e.schema"
+    _STREAM_EDIT_INTERVAL = 0.8
+    _CARD_CONTENT_LIMIT = 20000
+
+    def supports_streaming(self, chat_id: str) -> bool:
+        """收到过该会话的消息才有投放目标（私聊 senderId / 群 openConversationId）。"""
+        return chat_id in self._chat_types
+
+    async def start_stream(self, chat_id: str) -> Optional[str]:
+        """创建并投放 AI 卡片（带思考文案），返回 stream_key=``dd:<chat_id>:<outTrackId>``。
+
+        卡片接口需要额外权限，任何失败都返回 None，由宿主回退普通消息。
+        """
+        chat_type = self._chat_types.get(chat_id)
+        if not chat_type:
+            return None
+        token = await self._get_access_token()
+        if not token or not self._http_client:
+            return None
+
+        out_track_id = f"drifox_{uuid.uuid4().hex}"
+        initial_text = "💭 正在思考…"
+        body = {
+            "outTrackId": out_track_id,
+            "userIdType": 1,
+            "cardTemplateId": self._AI_CARD_TEMPLATE_ID,
+            "cardData": self._card_data(initial_text, "2"),
+            "callbackType": "STREAM",
+            "imGroupOpenSpaceModel": {"supportForward": True},
+            "imRobotOpenSpaceModel": {"supportForward": True},
+        }
+        if chat_type == "group":
+            body["openSpaceId"] = f"dtv1.card//IM_GROUP.{chat_id}"
+            body["imGroupOpenDeliverModel"] = {"robotCode": self._client_id}
+        else:
+            body["openSpaceId"] = f"dtv1.card//IM_ROBOT.{chat_id}"
+            body["imRobotOpenDeliverModel"] = {
+                "spaceType": "IM_ROBOT",
+                "robotCode": self._client_id,
+                "extension": {"dynamicSummary": "true"},
+            }
+        try:
+            response = await self._http_client.post(
+                "https://api.dingtalk.com/v1.0/card/instances/createAndDeliver",
+                headers={"x-acs-dingtalk-access-token": token},
+                json=body,
+            )
+            if response.status_code != 200:
+                logger.debug(
+                    "[DingTalk] AI 卡片不可用，回退普通消息: HTTP {} {}",
+                    response.status_code,
+                    response.text[:200],
+                )
+                return None
+        except Exception as e:
+            logger.debug("[DingTalk] AI 卡片创建失败，回退普通消息: {}", e)
+            return None
+
+        self._stream_states[chat_id] = {
+            "out_track_id": out_track_id,
+            "chat_type": chat_type,
+            "last_edit": 0.0,
+            "last_text": initial_text,
+        }
+        return f"dd:{chat_id}:{out_track_id}"
+
+    async def update_stream(self, stream_key: str, snapshot: str) -> bool:
+        """把可见快照推给 AI 卡片；单次失败不致命（finish 会发最终全文）。"""
+        state = self._stream_state(stream_key)
+        if state is None:
+            return False
+        import time as _time
+
+        now = _time.monotonic()
+        if now - float(state.get("last_edit") or 0.0) < self._STREAM_EDIT_INTERVAL:
+            return True
+        text = (snapshot or "").strip()
+        if not text or text == state.get("last_text"):
+            return True
+        try:
+            await self._push_card_stream(state, text, finalize=False)
+        except Exception as e:
+            logger.debug("[DingTalk] 卡片流式更新跳过: {}", e)
+            return True
+        state["last_edit"] = now
+        state["last_text"] = text
+        return True
+
+    async def finish_stream(self, stream_key: str, final: str) -> SendResult:
+        """关闭流式组件并落最终态（flowStatus=3），然后清理状态。"""
+        state = self._stream_state(stream_key)
+        if state is None:
+            return SendResult(success=False, error="unknown stream")
+        chat_id = str(stream_key.split(":", 2)[1])
+        text = (final or "（无输出）").strip() or "（无输出）"
+        try:
+            await self._push_card_stream(state, text, finalize=True)
+            # 落最终态：模板的 finished 样式与完整内容
+            token = await self._get_access_token()
+            if token and self._http_client:
+                await self._http_client.put(
+                    "https://api.dingtalk.com/v1.0/card/instances",
+                    headers={"x-acs-dingtalk-access-token": token},
+                    json={
+                        "outTrackId": state["out_track_id"],
+                        "cardData": self._card_data(text, "3"),
+                        "cardUpdateOptions": {"updateCardDataByKey": True},
+                    },
+                )
+            return SendResult(success=True, message_id=state["out_track_id"])
+        except Exception as e:
+            logger.warning("[DingTalk] finish_stream failed: {}", e)
+            return SendResult(success=False, error=str(e))
+        finally:
+            self._stream_states.pop(chat_id, None)
+
+    async def _push_card_stream(self, state: Dict[str, Any], text: str, finalize: bool) -> None:
+        """推一帧 v1.0/card/streaming（全量内容）。"""
+        token = await self._get_access_token()
+        if not token or not self._http_client:
+            raise RuntimeError("no access token")
+        response = await self._http_client.put(
+            "https://api.dingtalk.com/v1.0/card/streaming",
+            headers={"x-acs-dingtalk-access-token": token},
+            json={
+                "outTrackId": state["out_track_id"],
+                "guid": uuid.uuid4().hex,
+                "key": "msgContent",
+                "content": text[: self._CARD_CONTENT_LIMIT],
+                "isFull": True,
+                "isFinalize": finalize,
+                "isError": False,
+            },
+        )
+        if response.status_code != 200:
+            raise RuntimeError(f"HTTP {response.status_code}: {response.text[:200]}")
+
+    @staticmethod
+    def _card_data(text: str, flow_status: str) -> Dict[str, Any]:
+        """AI 卡片模板数据（msgContent 只放正文，order 固定单元素）。"""
+        return {
+            "cardParamMap": {
+                "flowStatus": flow_status,
+                "msgContent": text,
+                "staticMsgContent": "",
+                "sys_full_json_obj": json.dumps({"order": ["msgContent"]}),
+                "config": json.dumps({"autoLayout": True}),
+            }
+        }
+
+    def _stream_state(self, stream_key: str) -> Optional[Dict[str, Any]]:
+        """解析 ``dd:<chat_id>:<outTrackId>`` 定位流状态。"""
+        if not stream_key or not stream_key.startswith("dd:"):
+            return None
+        parts = stream_key.split(":", 2)
+        if len(parts) != 3:
+            return None
+        return self._stream_states.get(parts[1])
 
     async def send(self, chat_id: str, content: str, **kwargs) -> SendResult:
         """发送消息"""

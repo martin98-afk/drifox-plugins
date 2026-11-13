@@ -84,6 +84,9 @@ class DiscordAdapter(BasePlatformAdapter):
         # 群组触发配置
         self._require_mention = config.extra.get("require_mention", True)
 
+        # 流式回复状态：chat_id -> {channel, message, last_edit, last_text}
+        self._stream_states: Dict[str, Dict[str, Any]] = {}
+
     async def connect(self) -> bool:
         """连接到 Discord"""
         if not check_discord_requirements():
@@ -369,6 +372,94 @@ class DiscordAdapter(BasePlatformAdapter):
                         pass
             except Exception:
                 pass  # Typing failures are non-fatal
+
+    # ── 流式回复（编辑占位消息，对齐 dsh-im editable-message-stream） ──
+
+    _STREAM_EDIT_INTERVAL = 1.1  # Discord 编辑限流：5 次/5 秒
+
+    def supports_streaming(self, chat_id: str) -> bool:
+        """Discord 可编辑自发的消息，所有频道都支持打字机式输出。"""
+        return self._client is not None
+
+    async def start_stream(self, chat_id: str) -> Optional[str]:
+        """发占位消息，返回 stream_key=``dc:<chat_id>:<message_id>``；失败返回 None。"""
+        if not self._client:
+            return None
+        try:
+            channel = self._client.get_channel(int(chat_id))
+            if not channel:
+                return None
+            msg = await channel.send(content="💭 正在思考…")
+        except Exception as e:
+            logger.warning(f"[Discord] start_stream failed: {e}")
+            return None
+        self._stream_states[str(chat_id)] = {
+            "channel": channel,
+            "message": msg,
+            "last_edit": 0.0,
+            "last_text": "💭 正在思考…",
+        }
+        return f"dc:{chat_id}:{msg.id}"
+
+    async def update_stream(self, stream_key: str, snapshot: str) -> bool:
+        """把可见快照写进占位消息；单次失败不致命（finish 会补最终全文）。"""
+        state = self._stream_state(stream_key)
+        if state is None:
+            return False
+        import time as _time
+
+        now = _time.monotonic()
+        if now - float(state.get("last_edit") or 0.0) < self._STREAM_EDIT_INTERVAL:
+            return True  # 让宿主继续推，最终由 finish_stream 收口
+        text = (snapshot or "").strip()
+        if not text or text == state.get("last_text"):
+            return True
+        text = text[: self.MAX_MESSAGE_LENGTH]
+        try:
+            await state["message"].edit(content=text)
+        except Exception as e:
+            logger.debug(f"[Discord] stream edit skipped: {e}")
+            return True  # 单次编辑失败不放弃整条流，最终 finish 兜底
+        state["last_edit"] = now
+        state["last_text"] = text
+        return True
+
+    async def finish_stream(self, stream_key: str, final: str) -> SendResult:
+        """写入最终全文，超长分段补发，然后清理流状态。"""
+        state = self._stream_state(stream_key)
+        if state is None:
+            return SendResult(success=False, error="unknown stream")
+        chat_id = str(stream_key.split(":", 2)[1])
+        message = state["message"]
+        channel = state["channel"]
+        try:
+            parts = []
+            for chunk in self._split_message(final or "（无输出）"):
+                while len(chunk) > self.MAX_MESSAGE_LENGTH:
+                    parts.append(chunk[: self.MAX_MESSAGE_LENGTH])
+                    chunk = chunk[self.MAX_MESSAGE_LENGTH:]
+                if chunk:
+                    parts.append(chunk)
+            await message.edit(content=parts[0])
+            last_id = message.id
+            for part in parts[1:]:
+                msg = await channel.send(content=part)
+                last_id = msg.id
+            return SendResult(success=True, message_id=str(last_id))
+        except Exception as e:
+            logger.warning(f"[Discord] finish_stream failed: {e}")
+            return SendResult(success=False, error=str(e))
+        finally:
+            self._stream_states.pop(chat_id, None)
+
+    def _stream_state(self, stream_key: str) -> Optional[Dict[str, Any]]:
+        """解析 ``dc:<chat_id>:<message_id>`` 定位流状态。"""
+        if not stream_key or not stream_key.startswith("dc:"):
+            return None
+        parts = stream_key.split(":", 2)
+        if len(parts) != 3:
+            return None
+        return self._stream_states.get(parts[1])
 
     async def get_chat_info(self, chat_id: str) -> Dict[str, Any]:
         """获取聊天信息"""

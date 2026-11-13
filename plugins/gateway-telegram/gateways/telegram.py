@@ -97,6 +97,9 @@ class TelegramAdapter(BasePlatformAdapter):
         # 群组触发配置
         self._require_mention = config.extra.get("require_mention", True)
 
+        # 流式回复状态：chat_id -> {chat_id, message_id, last_edit, last_text}
+        self._stream_states: Dict[str, Dict[str, Any]] = {}
+
     async def connect(self) -> bool:
         """连接到 Telegram Bot API"""
         if not check_telegram_requirements():
@@ -496,6 +499,124 @@ class TelegramAdapter(BasePlatformAdapter):
                 await self._bot.send_chat_action(**kwargs)
             except Exception:
                 pass  # Typing failures are non-fatal
+
+    # ── 流式回复（编辑占位消息，对齐 dsh-im editable-message-stream） ──
+
+    _STREAM_EDIT_INTERVAL = 0.9  # Telegram 编辑限流：约每 chat 1 次/秒
+
+    def supports_streaming(self, chat_id: str) -> bool:
+        """Telegram 可编辑自己发的消息，所有会话都能打字机式输出。"""
+        return self._bot is not None
+
+    async def start_stream(self, chat_id: str) -> Optional[str]:
+        """发占位消息，返回 stream_key=``tg:<chat_id>:<message_id>``；失败返回 None。"""
+        if not self._bot:
+            return None
+        try:
+            msg = await self._bot.send_message(chat_id=int(chat_id), text="💭 正在思考…")
+        except Exception as e:
+            logger.warning(f"[Telegram] start_stream failed: {e}")
+            return None
+        self._stream_states[str(chat_id)] = {
+            "chat_id": int(chat_id),
+            "message_id": msg.message_id,
+            "last_edit": 0.0,
+            "last_text": "💭 正在思考…",
+        }
+        return f"tg:{chat_id}:{msg.message_id}"
+
+    async def update_stream(self, stream_key: str, snapshot: str) -> bool:
+        """把可见快照写进占位消息；单次失败不致命（finish 会补最终全文）。"""
+        state = self._stream_state(stream_key)
+        if state is None:
+            return False
+        import time as _time
+
+        now = _time.monotonic()
+        if now - float(state.get("last_edit") or 0.0) < self._STREAM_EDIT_INTERVAL:
+            return True  # 让宿主继续推，最终由 finish_stream 收口
+        text = (snapshot or "").strip()
+        if not text or text == state.get("last_text"):
+            return True
+        # 流式中途走纯文本：半截 Markdown 转 HTML 易产生未闭合标签 → 400
+        text = text[: self.MAX_MESSAGE_LENGTH]
+        try:
+            await self._bot.edit_message_text(
+                chat_id=state["chat_id"], message_id=state["message_id"], text=text
+            )
+        except Exception as e:
+            if self._is_not_modified(e):
+                return True
+            logger.debug(f"[Telegram] stream edit skipped: {e}")
+            return True  # 单次编辑失败不放弃整条流，最终 finish 兜底
+        state["last_edit"] = now
+        state["last_text"] = text
+        return True
+
+    async def finish_stream(self, stream_key: str, final: str) -> SendResult:
+        """写入最终全文（HTML），超长分段补发，然后清理流状态。"""
+        state = self._stream_state(stream_key)
+        if state is None:
+            return SendResult(success=False, error="unknown stream")
+        chat_id = state["chat_id"]
+        message_id = state["message_id"]
+        try:
+            # SDK 缺失或 HTML 解析失败时退纯文本，保证最终内容仍能送达
+            try:
+                from telegram.constants import ParseMode
+
+                parse_mode = ParseMode.HTML
+            except Exception:
+                parse_mode = None
+
+            parts = self._split_telegram(final or "（无输出）", 3800)
+            last_id = message_id
+            html_kwargs = {
+                "chat_id": chat_id,
+                "message_id": message_id,
+                "text": self._format_telegram_text(parts[0]),
+            }
+            if parse_mode:
+                html_kwargs["parse_mode"] = parse_mode
+            try:
+                await self._bot.edit_message_text(**html_kwargs)
+            except Exception as e:
+                if not self._is_not_modified(e):
+                    # HTML 解析失败或格式越界 → 纯文本重试，保证最终内容送达
+                    await self._bot.edit_message_text(
+                        chat_id=chat_id,
+                        message_id=message_id,
+                        text=parts[0][: self.MAX_MESSAGE_LENGTH],
+                    )
+            for part in parts[1:]:
+                send_kwargs = {
+                    "chat_id": chat_id,
+                    "text": self._format_telegram_text(part),
+                }
+                if parse_mode:
+                    send_kwargs["parse_mode"] = parse_mode
+                msg = await self._bot.send_message(**send_kwargs)
+                last_id = msg.message_id
+            return SendResult(success=True, message_id=str(last_id))
+        except Exception as e:
+            logger.warning(f"[Telegram] finish_stream failed: {e}")
+            return SendResult(success=False, error=str(e))
+        finally:
+            self._stream_states.pop(str(chat_id), None)
+
+    def _stream_state(self, stream_key: str) -> Optional[Dict[str, Any]]:
+        """解析 ``tg:<chat_id>:<message_id>`` 定位流状态。"""
+        if not stream_key or not stream_key.startswith("tg:"):
+            return None
+        parts = stream_key.split(":", 2)
+        if len(parts) != 3:
+            return None
+        return self._stream_states.get(parts[1])
+
+    @staticmethod
+    def _is_not_modified(exc: Exception) -> bool:
+        """Telegram 内容未变化时会报 400，视为成功。"""
+        return "message is not modified" in str(exc).lower()
 
     async def get_chat_info(self, chat_id: str) -> Dict[str, Any]:
         """获取聊天信息"""

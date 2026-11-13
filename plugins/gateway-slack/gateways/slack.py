@@ -47,6 +47,8 @@ class SlackAdapter(BasePlatformAdapter):
         self._bot_token = config.extra.get("bot_token") or os.getenv("SLACK_BOT_TOKEN")
         self._app_token = config.extra.get("app_token") or os.getenv("SLACK_APP_TOKEN")
         self._client = None
+        # 流式状态：chat_id -> {ts, last_edit, last_text}
+        self._stream_states: Dict[str, Dict[str, Any]] = {}
 
     async def connect(self) -> bool:
         """连接到 Slack"""
@@ -83,6 +85,96 @@ class SlackAdapter(BasePlatformAdapter):
 
         self._connected = False
         logger.info("[Slack] Disconnected")
+
+    # ── 流式回复（Slack 官方 chat.startStream / appendStream / stopStream） ──
+
+    _STREAM_EDIT_INTERVAL = 1.0
+
+    def supports_streaming(self, chat_id: str) -> bool:
+        """Slack 原生流式 API，需要 chat:write；调用失败由宿主回退普通消息。"""
+        return self._client is not None
+
+    async def start_stream(self, chat_id: str) -> Optional[str]:
+        """开流，返回 stream_key=``sl:<chat_id>:<ts>``；失败返回 None。"""
+        if not self._client:
+            return None
+        try:
+            response = self._client.api_call(
+                "chat.startStream",
+                json={"channel": chat_id, "markdown_text": "💭 正在思考…"},
+            )
+            ts = response.get("ts") if response else None
+        except Exception as e:
+            logger.debug("[Slack] startStream 不可用，回退普通消息: {}", e)
+            return None
+        if not ts:
+            return None
+        self._stream_states[chat_id] = {
+            "ts": ts,
+            "last_edit": 0.0,
+            "last_text": "💭 正在思考…",
+        }
+        return f"sl:{chat_id}:{ts}"
+
+    async def update_stream(self, stream_key: str, snapshot: str) -> bool:
+        """追加流式内容（全量 markdown_text）；单次失败不致命。"""
+        state = self._stream_state(stream_key)
+        if state is None or not self._client:
+            return False
+        import time as _time
+
+        now = _time.monotonic()
+        if now - float(state.get("last_edit") or 0.0) < self._STREAM_EDIT_INTERVAL:
+            return True
+        text = (snapshot or "").strip()
+        if not text or text == state.get("last_text"):
+            return True
+        try:
+            self._client.api_call(
+                "chat.appendStream",
+                json={
+                    "channel": str(stream_key.split(":", 2)[1]),
+                    "ts": state["ts"],
+                    "markdown_text": text[: self.MAX_MESSAGE_LENGTH],
+                },
+            )
+        except Exception as e:
+            logger.debug("[Slack] appendStream 跳过: {}", e)
+            return True
+        state["last_edit"] = now
+        state["last_text"] = text
+        return True
+
+    async def finish_stream(self, stream_key: str, final: str) -> SendResult:
+        """收流并落最终内容，然后清理状态。"""
+        state = self._stream_state(stream_key)
+        if state is None or not self._client:
+            return SendResult(success=False, error="unknown stream")
+        chat_id = str(stream_key.split(":", 2)[1])
+        try:
+            self._client.api_call(
+                "chat.stopStream",
+                json={
+                    "channel": chat_id,
+                    "ts": state["ts"],
+                    "markdown_text": (final or "（无输出）")[: self.MAX_MESSAGE_LENGTH],
+                },
+            )
+            return SendResult(success=True, message_id=state["ts"])
+        except Exception as e:
+            logger.warning("[Slack] stopStream failed: {}", e)
+            return SendResult(success=False, error=str(e))
+        finally:
+            self._stream_states.pop(chat_id, None)
+
+    def _stream_state(self, stream_key: str) -> Optional[Dict[str, Any]]:
+        """解析 ``sl:<chat_id>:<ts>`` 定位流状态。"""
+        if not stream_key or not stream_key.startswith("sl:"):
+            return None
+        parts = stream_key.split(":", 2)
+        if len(parts) != 3:
+            return None
+        return self._stream_states.get(parts[1])
 
     async def send(
         self,

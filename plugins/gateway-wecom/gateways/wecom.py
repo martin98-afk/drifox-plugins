@@ -85,6 +85,11 @@ class WeComAdapter(BasePlatformAdapter):
         # 响应管理
         self._pending_responses: Dict[str, asyncio.Future] = {}
 
+        # 流式回复：chat_id -> 回调帧 req_id（被动回复必须在 24h 内用同一 req_id）
+        self._reply_req_ids: Dict[str, str] = {}
+        # 流式状态：chat_id -> {stream_id, req_id, last_edit, last_text}
+        self._stream_states: Dict[str, Dict[str, Any]] = {}
+
         # 设备 ID
         self._device_id = uuid.uuid4().hex
 
@@ -319,6 +324,11 @@ class WeComAdapter(BasePlatformAdapter):
         if not chat_id:
             return
 
+        # 记录回调帧 req_id：流式回复（aibot_respond_msg）必须透传它
+        callback_req_id = str((payload.get("headers") or {}).get("req_id") or "")
+        if callback_req_id:
+            self._reply_req_ids[chat_id] = callback_req_id
+
         is_group = str(body.get("chattype", "")).lower() == "group"
         msgtype = str(body.get("msgtype", "")).lower()
 
@@ -489,6 +499,114 @@ class WeComAdapter(BasePlatformAdapter):
         if current:
             chunks.append(current)
         return chunks or [content]
+
+    # ── 流式回复（aibot_respond_msg + stream，对齐 dsh-im stream-supervisor 精简版） ──
+
+    _STREAM_EDIT_INTERVAL = 2.5  # 会话限流 30 条/分钟，流式更新必须稀疏
+    _STREAM_CONTENT_BYTES = 20000  # 单帧上限 20480 字节，留余量
+
+    def supports_streaming(self, chat_id: str) -> bool:
+        """有回调帧 req_id 才能被动流式回复（主动推送没有流式通道）。"""
+        return chat_id in self._reply_req_ids
+
+    async def start_stream(self, chat_id: str) -> Optional[str]:
+        """发首帧流式消息（企微要求 5 秒内响应），返回 stream_key。"""
+        req_id = self._reply_req_ids.get(chat_id)
+        if not req_id:
+            return None
+        stream_id = self._new_req_id("stream")
+        try:
+            await self._send_stream_frame(req_id, stream_id, "💭 正在思考…", finish=False)
+        except Exception as e:
+            logger.warning("[WeCom] start_stream failed: {}", e)
+            return None
+        self._stream_states[chat_id] = {
+            "stream_id": stream_id,
+            "req_id": req_id,
+            "last_edit": 0.0,
+            "last_text": "💭 正在思考…",
+        }
+        return f"wc:{chat_id}:{stream_id}"
+
+    async def update_stream(self, stream_key: str, snapshot: str) -> bool:
+        """刷新流式内容（全量替换）；单次失败不致命，finish 会发最终全文。"""
+        state = self._stream_state(stream_key)
+        if state is None:
+            return False
+        import time as _time
+
+        now = _time.monotonic()
+        if now - float(state.get("last_edit") or 0.0) < self._STREAM_EDIT_INTERVAL:
+            return True
+        text = (snapshot or "").strip()
+        if not text or text == state.get("last_text"):
+            return True
+        try:
+            await self._send_stream_frame(
+                state["req_id"], state["stream_id"], text, finish=False
+            )
+        except Exception as e:
+            logger.debug("[WeCom] stream update skipped: {}", e)
+            return True
+        state["last_edit"] = now
+        state["last_text"] = text
+        return True
+
+    async def finish_stream(self, stream_key: str, final: str) -> SendResult:
+        """发 finish=true 的最终全文，超长部分用主动消息补发。"""
+        state = self._stream_state(stream_key)
+        if state is None:
+            return SendResult(success=False, error="unknown stream")
+        chat_id = str(stream_key.split(":", 2)[1])
+        chunks = self._split_message(final or "（无输出）")
+        try:
+            await self._send_stream_frame(
+                state["req_id"], state["stream_id"], chunks[0], finish=True
+            )
+            for chunk in chunks[1:]:
+                await self.send(chat_id, chunk)
+            return SendResult(success=True, message_id=state["stream_id"])
+        except Exception as e:
+            logger.warning("[WeCom] finish_stream failed: {}", e)
+            return SendResult(success=False, error=str(e))
+        finally:
+            self._stream_states.pop(chat_id, None)
+
+    async def _send_stream_frame(
+        self, req_id: str, stream_id: str, content: str, finish: bool
+    ) -> None:
+        """发送一帧 aibot_respond_msg（stream 类型）。"""
+        await self._send_json(
+            {
+                "cmd": CMD_RESPONSE,
+                "headers": {"req_id": req_id},
+                "body": {
+                    "msgtype": "stream",
+                    "stream": {
+                        "id": stream_id,
+                        "finish": finish,
+                        "content": self._truncate_utf8(content, self._STREAM_CONTENT_BYTES),
+                    },
+                },
+            }
+        )
+
+    def _stream_state(self, stream_key: str) -> Optional[Dict[str, Any]]:
+        """解析 ``wc:<chat_id>:<stream_id>`` 定位流状态。"""
+        if not stream_key or not stream_key.startswith("wc:"):
+            return None
+        parts = stream_key.split(":", 2)
+        if len(parts) != 3:
+            return None
+        return self._stream_states.get(parts[1])
+
+    @staticmethod
+    def _truncate_utf8(text: str, limit_bytes: int) -> str:
+        """按 UTF-8 字节数截断，不切坏多字节字符。"""
+        raw = (text or "").encode("utf-8")
+        if len(raw) <= limit_bytes:
+            return text or ""
+        return raw[:limit_bytes].decode("utf-8", "ignore")
 
     async def send(self, chat_id: str, content: str, **kwargs) -> SendResult:
         """发送消息"""

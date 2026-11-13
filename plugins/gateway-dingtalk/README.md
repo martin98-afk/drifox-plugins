@@ -5,6 +5,7 @@
 从 DriFox 主程序迁出，平台适配器独立成社区插件。
 
 ## 功能
+- **流式回复（v1.4.0）**：AI Card（`card/instances/createAndDeliver` + `card/streaming`）原位刷新，无卡片权限时自动回退普通消息
 - **入站文件（v1.3.0）**：downloadCode 按媒体类型分流下载
 - **入站图片（v1.2.0）**：downloadCode 经 `/v1.0/robot/messageFiles/download` 换下载地址后落盘（新增 accessToken 缓存）
 
