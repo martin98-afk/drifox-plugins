@@ -1554,12 +1554,93 @@ class FeishuAdapter(BasePlatformAdapter):
         return split_message(content, self.MAX_MESSAGE_LENGTH)
 
     async def send_image(self, chat_id: str, image_path: str, **kwargs) -> SendResult:
-        """发送图片"""
-        return SendResult(success=False, error="Not implemented")
+        """发送图片（im/v1/images 上传 → image 消息）"""
+        return await self._send_artifact(chat_id, image_path, kind="image")
 
     async def send_file(self, chat_id: str, file_path: str, **kwargs) -> SendResult:
-        """发送文件"""
-        return SendResult(success=False, error="Not implemented")
+        """发送文件（im/v1/files 上传 → file 消息）"""
+        return await self._send_artifact(chat_id, file_path, kind="file")
+
+    async def _send_artifact(self, chat_id: str, file_path: str, kind: str) -> SendResult:
+        """上传本地文件到飞书并发送为 image/file 原生消息。
+
+        协议参考 dsh-im feishu-channel.mjs：图片走 im/v1/images（image_type=message），
+        文件走 im/v1/files（file_type=stream），再用返回的 image_key/file_key
+        发对应 msg_type 消息。230049 是「结果不确定」错误码，官方建议同 uuid 重试一次。
+        """
+        from pathlib import Path
+
+        if not self._connected:
+            return SendResult(success=False, error="Not connected", retryable=True)
+        p = Path(file_path)
+        if not p.is_file():
+            return SendResult(success=False, error=f"文件不存在: {file_path}", retryable=False)
+        token = await self._get_access_token()
+        if not token:
+            return SendResult(success=False, error="Failed to get access token", retryable=True)
+        client = self._http_client
+        owns_client = client is None
+        if client is None:
+            import httpx
+
+            client = httpx.AsyncClient(timeout=httpx.Timeout(60.0))
+        headers = {"Authorization": f"Bearer {token}"}
+        try:
+            data = p.read_bytes()
+            if kind == "image":
+                upload = await client.post(
+                    "https://open.feishu.cn/open-apis/im/v1/images",
+                    headers=headers,
+                    data={"image_type": "message"},
+                    files={"image": (p.name, data, "application/octet-stream")},
+                )
+            else:
+                upload = await client.post(
+                    "https://open.feishu.cn/open-apis/im/v1/files",
+                    headers=headers,
+                    data={"file_type": "stream", "file_name": p.name},
+                    files={"file": (p.name, data, "application/octet-stream")},
+                )
+            upload_data = upload.json() if upload.content else {}
+            if upload.status_code != 200 or upload_data.get("code") != 0:
+                return SendResult(
+                    success=False,
+                    error=f"上传失败 HTTP {upload.status_code} code={upload_data.get('code')} msg={upload_data.get('msg')}",
+                    retryable=upload.status_code >= 500,
+                )
+            payload = upload_data.get("data") or {}
+            key = payload.get("image_key") if kind == "image" else payload.get("file_key")
+            if not key:
+                return SendResult(success=False, error="上传响应缺少 image_key/file_key", retryable=False)
+            content = json.dumps({"image_key": key} if kind == "image" else {"file_key": key})
+            body = {"receive_id": chat_id, "msg_type": kind, "content": content}
+            url = "https://open.feishu.cn/open-apis/im/v1/messages"
+            resp = await client.post(
+                url, params={"receive_id_type": "chat_id"}, headers=headers, json=body
+            )
+            resp_data = resp.json() if resp.content else {}
+            if resp_data.get("code") == 230049:
+                # 官方文档：结果不确定，同 payload 重试一次由服务端去重
+                logger.warning("[Feishu] 消息发送结果不确定（230049），重试一次")
+                resp = await client.post(
+                    url, params={"receive_id_type": "chat_id"}, headers=headers, json=body
+                )
+                resp_data = resp.json() if resp.content else {}
+            if resp.status_code != 200 or resp_data.get("code") not in (0, None):
+                return SendResult(
+                    success=False,
+                    error=f"发送失败 HTTP {resp.status_code} code={resp_data.get('code')} msg={resp_data.get('msg')}",
+                    retryable=True,
+                )
+            message_id = (resp_data.get("data") or {}).get("message_id")
+            logger.info("[Feishu] {} 已发送: {}", "图片" if kind == "image" else "文件", p.name)
+            return SendResult(success=True, message_id=message_id)
+        except Exception as e:
+            logger.error("[Feishu] Send artifact failed: {}", e, exc_info=True)
+            return SendResult(success=False, error=str(e), retryable=True)
+        finally:
+            if owns_client:
+                await client.aclose()
 
     async def get_chat_info(self, chat_id: str) -> Dict[str, Any]:
         """获取聊天信息"""

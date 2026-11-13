@@ -732,6 +732,171 @@ class WechatAdapter(BasePlatformAdapter):
             logger.error(f"[Wechat] Send failed: {e}", exc_info=True)
             return SendResult(success=False, error=str(e), retryable=True)
 
+    # ── 媒体发送（图片/文件）──────────────────────────
+    # 协议参考 dsh-im weixin-api.mjs：getuploadurl 申请上传参数 → CDN 以
+    # AES-128-ECB(PKCS7) 加密上传 → 响应头 x-encrypted-param 作下载凭据 →
+    # sendmessage 带 image_item/file_item。media_type: 1=图片 3=文件。
+    MEDIA_TYPE_IMAGE = 1
+    MEDIA_TYPE_FILE = 3
+    MAX_OUTBOUND_MEDIA_BYTES = 30 * 1024 * 1024
+
+    @staticmethod
+    def _padded_size(size: int) -> int:
+        """AES-ECB + PKCS7 加密后的密文字节数（等价 Node 的 ceil((n+1)/16)*16）。"""
+        return (size // 16 + 1) * 16
+
+    async def _upload_media(
+        self, raw: bytes, user_id: str, media_type: int
+    ) -> Tuple[Dict[str, Any], int]:
+        """上传媒体到 iLink CDN，返回 (media 描述, 密文字节数)。失败抛异常。"""
+        import os
+
+        from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
+        file_key = os.urandom(16).hex()
+        aes_key = os.urandom(16)
+        cipher_size = self._padded_size(len(raw))
+        up = await self._api_post(
+            "ilink/bot/getuploadurl",
+            {
+                "filekey": file_key,
+                "media_type": media_type,
+                "to_user_id": user_id,
+                "rawsize": len(raw),
+                "rawfilemd5": hashlib.md5(raw).hexdigest(),
+                "filesize": cipher_size,
+                "no_need_thumb": True,
+                "aeskey": aes_key.hex(),
+                "base_info": {"channel_version": "1.0.0"},
+            },
+            timeout=30.0,
+        )
+        upload_url = up.get("upload_full_url")
+        if not upload_url:
+            param = up.get("upload_param")
+            if not param:
+                raise RuntimeError("getuploadurl 未返回上传地址")
+            upload_url = f"{IMAGE_CDN_BASE}/upload?encrypted_query_param={quote(param)}&filekey={file_key}"
+        encryptor = Cipher(algorithms.AES(aes_key), modes.ECB()).encryptor()
+        # cryptography 的 ECB 不做填充，需手工补 PKCS7（Node createCipheriv 自动填充）
+        pad = 16 - (len(raw) % 16)
+        padded = raw + bytes([pad]) * pad
+        ciphertext = encryptor.update(padded) + encryptor.finalize()
+        resp = await self._http_client.post(
+            upload_url,
+            content=ciphertext,
+            headers={
+                "Content-Type": "application/octet-stream",
+                "Content-Length": str(len(ciphertext)),
+            },
+            timeout=60.0,
+        )
+        if resp.status_code != 200:
+            raise RuntimeError(f"CDN 上传失败 HTTP {resp.status_code}: {resp.text[:200]}")
+        download_param = resp.headers.get("x-encrypted-param")
+        if not download_param:
+            raise RuntimeError("CDN 上传响应缺少 x-encrypted-param")
+        # 参考实现对 aeskey hex 串做 base64（入站 _parse_aes_key 兼容此编码）
+        media = {
+            "encrypt_query_param": download_param,
+            "aes_key": base64.b64encode(aes_key.hex().encode()).decode(),
+            "encrypt_type": 1,
+        }
+        return media, cipher_size
+
+    async def _post_item(self, chat_id: str, item: Dict[str, Any]) -> SendResult:
+        """发单条 item 消息（图片/文件共用），带限流退避与会话失效判定。"""
+        _, user_id = chat_id.split(":", 1) if ":" in chat_id else ("dm", chat_id)
+        ctx = self._get_context_token(chat_id)
+        if not ctx:
+            return SendResult(
+                success=False,
+                error="需要对方先发消息（24h 被动回复窗口）",
+                retryable=False,
+            )
+        body = {
+            "msg": {
+                "from_user_id": "",
+                "to_user_id": user_id,
+                "client_id": str(uuid.uuid4()),
+                "message_type": MSG_TYPE_BOT,
+                "message_state": MSG_STATE_FINISH,
+                "item_list": [item],
+                "context_token": ctx,
+            },
+            "base_info": {"channel_version": "1.0.0"},
+        }
+        for delay in [0.0] + SEND_RETRY_DELAYS:
+            if delay:
+                await asyncio.sleep(delay)
+            try:
+                await self._api_post("ilink/bot/sendmessage", body)
+                return SendResult(success=True)
+            except Exception as e:
+                msg = str(e)
+                if self._is_session_expired(e):
+                    self._last_error = "bot_token 已失效，请重新扫码登录"
+                    self._connected = False
+                    return SendResult(success=False, error=msg[:200], retryable=False)
+                if "prepare failed" in msg:
+                    logger.warning("[Wechat] context_token 失效（对方久未发消息）")
+                    return SendResult(
+                        success=False,
+                        error="回复窗口已失效：请让对方重新发一条消息再试",
+                        retryable=False,
+                    )
+                if "ret=-2" in msg:
+                    continue
+                return SendResult(success=False, error=msg[:200], retryable=True)
+        return SendResult(success=False, error="发送失败（限流重试耗尽）", retryable=True)
+
+    async def _send_media(self, chat_id: str, file_path: str, media_type: int) -> SendResult:
+        if not self._http_client:
+            return SendResult(success=False, error="Not connected", retryable=True)
+        # 先查回复窗口：没有 context_token 时上传也没用，别白传一遍文件
+        if not self._get_context_token(chat_id):
+            return SendResult(
+                success=False,
+                error="需要对方先发消息（24h 被动回复窗口）",
+                retryable=False,
+            )
+        try:
+            p = Path(file_path)
+            if not p.is_file():
+                return SendResult(success=False, error=f"文件不存在: {file_path}", retryable=False)
+            raw = p.read_bytes()
+            if len(raw) > self.MAX_OUTBOUND_MEDIA_BYTES:
+                limit = self.MAX_OUTBOUND_MEDIA_BYTES // (1024 * 1024)
+                return SendResult(success=False, error=f"文件超过 {limit}MB 上限", retryable=False)
+            _, user_id = chat_id.split(":", 1) if ":" in chat_id else ("dm", chat_id)
+            media, cipher_size = await self._upload_media(raw, user_id, media_type)
+            if media_type == self.MEDIA_TYPE_IMAGE:
+                item = {
+                    "type": ITEM_IMAGE,
+                    "image_item": {"media": media, "mid_size": cipher_size},
+                }
+            else:
+                item = {
+                    "type": ITEM_FILE,
+                    "file_item": {
+                        "media": media,
+                        "file_name": p.name,
+                        "len": str(len(raw)),
+                    },
+                }
+            return await self._post_item(chat_id, item)
+        except Exception as e:
+            logger.error("[Wechat] Send media failed: {}", e, exc_info=True)
+            return SendResult(success=False, error=str(e)[:200], retryable=True)
+
+    async def send_image(self, chat_id: str, image_path: str, **kwargs) -> SendResult:
+        """发送图片（原生 image_item）"""
+        return await self._send_media(chat_id, image_path, self.MEDIA_TYPE_IMAGE)
+
+    async def send_file(self, chat_id: str, file_path: str, **kwargs) -> SendResult:
+        """发送文件（原生 file_item）"""
+        return await self._send_media(chat_id, file_path, self.MEDIA_TYPE_FILE)
+
     async def get_chat_info(self, chat_id: str) -> ChatInfo:
         """获取聊天信息（iLink 不提供资料反查，返回占位）"""
         _, user_id = chat_id.split(":", 1) if ":" in chat_id else ("dm", chat_id)

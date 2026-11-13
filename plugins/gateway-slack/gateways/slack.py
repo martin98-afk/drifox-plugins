@@ -219,6 +219,24 @@ class SlackAdapter(BasePlatformAdapter):
             logger.error("[Slack] Send image failed: {}", e)
             return SendResult(success=False, error=str(e))
 
+    async def send_file(self, chat_id: str, file_path: str, **kwargs) -> SendResult:
+        """发送文件（files_upload_v2）"""
+        if not self._client:
+            return SendResult(success=False, error="Not connected")
+        try:
+            response = self._client.files_upload_v2(
+                channel=chat_id,
+                file=file_path,
+                title=kwargs.get("caption") or None,
+            )
+            return SendResult(
+                success=bool(response.get("ok", True)),
+                message_id=(response.get("file") or {}).get("id", ""),
+            )
+        except Exception as e:
+            logger.error("[Slack] Send file failed: {}", e)
+            return SendResult(success=False, error=str(e))
+
     async def send_typing(self, chat_id: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         """发送 typing 状态"""
         if self._client:

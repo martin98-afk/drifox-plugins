@@ -344,6 +344,21 @@ class DiscordAdapter(BasePlatformAdapter):
             logger.error(f"[Discord] Send image failed: {e}", exc_info=True)
             return SendResult(success=False, error=str(e))
 
+    async def send_file(self, chat_id: str, file_path: str, **kwargs) -> SendResult:
+        """发送文件（discord.File 附件上传）"""
+        if not self._client:
+            return SendResult(success=False, error="Not connected")
+        try:
+            import discord
+            channel = self._client.get_channel(int(chat_id))
+            if not channel:
+                return SendResult(success=False, error=f"Channel {chat_id} not found")
+            msg = await channel.send(file=discord.File(file_path))
+            return SendResult(success=True, message_id=str(msg.id))
+        except Exception as e:
+            logger.error(f"[Discord] Send file failed: {e}", exc_info=True)
+            return SendResult(success=False, error=str(e))
+
     async def send_typing(self, chat_id: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         """发送 typing 状态"""
         if self._client:

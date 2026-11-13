@@ -482,6 +482,10 @@ class TelegramAdapter(BasePlatformAdapter):
             logger.error(f"[Telegram] Send document failed: {e}")
             return SendResult(success=False, error=str(e))
 
+    async def send_file(self, chat_id: str, file_path: str, **kwargs) -> SendResult:
+        """发送文件（宿主统一口径 send_file，委托 send_document）"""
+        return await self.send_document(chat_id, file_path, **kwargs)
+
     async def send_typing(self, chat_id: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         """发送 typing 状态"""
         if self._bot:
