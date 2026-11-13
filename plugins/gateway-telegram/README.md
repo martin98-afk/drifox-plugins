@@ -5,6 +5,7 @@ Telegram 机器人平台适配器（社区插件，万物即插件 Phase E）：
 从 DriFox 主程序迁出，平台适配器独立成社区插件。
 
 ## 功能
+- **入站图片（v1.1.0）**：photo 消息用 file_id 下载到本地缓存后交给模型；原来的 `file://telegram_photo:` 伪协议宿主无法识别，已移除
 
 - 注册平台适配器到 DriFox GatewayRegistry
 - 通过 `check_requirements()` 自检依赖是否可用

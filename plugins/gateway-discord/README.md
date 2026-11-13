@@ -5,6 +5,7 @@ Discord 机器人平台适配器（社区插件，万物即插件 Phase E）：�
 从 DriFox 主程序迁出，平台适配器独立成社区插件。
 
 ## 功能
+- **入站图片（v1.1.0）**：image 附件用 attachment.save 落盘后交给模型；不再把远端 URL 直接塞给宿主
 
 - 注册平台适配器到 DriFox GatewayRegistry
 - 通过 `check_requirements()` 自检依赖是否可用

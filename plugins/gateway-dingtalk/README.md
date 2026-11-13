@@ -5,6 +5,7 @@
 从 DriFox 主程序迁出，平台适配器独立成社区插件。
 
 ## 功能
+- **入站图片（v1.2.0）**：downloadCode 经 `/v1.0/robot/messageFiles/download` 换下载地址后落盘（新增 accessToken 缓存）
 
 - 注册平台适配器到 DriFox GatewayRegistry
 - 通过 `check_requirements()` 自检依赖是否可用
