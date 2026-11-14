@@ -2398,7 +2398,9 @@
                 "automation",
                 "screenshot",
                 "mouse",
-                "keyboard"
+                "keyboard",
+                "ui-automation",
+                "accessibility"
             ],
             "dependencies": {
                 "pip": {
@@ -2421,19 +2423,19 @@
             },
             "tarball": {
                 "darwin": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.0.4/desktop-automation-1.0.4-darwin.tar.gz",
-                    "sha256": "51caf74e0e1ee714428dcf04f4b8c06a57cf0ce630868d2885662ca68fc1ac99",
-                    "size": 1047862
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.1.0/desktop-automation-1.1.0-darwin.tar.gz",
+                    "sha256": "dd8ec8db256439cb94fae0d3d695aceae0ae132104902d2ed1e5ee0e1e506823",
+                    "size": 1068703
                 },
                 "linux": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.0.4/desktop-automation-1.0.4-linux.tar.gz",
-                    "sha256": "9b3afbc77d110b95e9092043c2e39b851aabce403b9c32b8358153fc4a1614a8",
-                    "size": 148518
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.1.0/desktop-automation-1.1.0-linux.tar.gz",
+                    "sha256": "3b4437fe329a113cf0cc7f9169e3cc59d8694e8b93435a3e60e60dddd737c72a",
+                    "size": 168308
                 },
                 "win32": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.0.4/desktop-automation-1.0.4-win32.tar.gz",
-                    "sha256": "9b3afbc77d110b95e9092043c2e39b851aabce403b9c32b8358153fc4a1614a8",
-                    "size": 148518
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.1.0/desktop-automation-1.1.0-win32.tar.gz",
+                    "sha256": "3b4437fe329a113cf0cc7f9169e3cc59d8694e8b93435a3e60e60dddd737c72a",
+                    "size": 168308
                 }
             }
         },
@@ -5620,6 +5622,47 @@
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-huggingface-v1.0.0/huggingface-1.0.0-all.tar.gz",
                     "sha256": "0270bfd68b19ed117aedeb495f83d6f168561dde5ccff02f420b10ee9104abca",
                     "size": 14638
+                }
+            }
+        },
+        {
+            "name": "hyperframes",
+            "description": "HTML 代码渲染视频 — HeyGen HyperFrames 官方技能全量移植，9 个技能覆盖渲染契约、剪辑时间线、450+ 预制组件库、媒体与配音、字幕、风格复刻、视频反解、Remotion 迁移与放映模式。",
+            "version": "0.9.44",
+            "author": "HeyGen",
+            "license": "Apache-2.0",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/hyperframes",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "display_name": {
+                "zh": "HTML 视频渲染"
+            },
+            "keywords": [
+                "video",
+                "hyperframes",
+                "html",
+                "gsap",
+                "render",
+                "mp4",
+                "captions",
+                "motion-graphics"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://hyperframes.heygen.com",
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-hyperframes-v0.9.44/hyperframes-0.9.44-all.tar.gz",
+                    "sha256": "30bc1f149a356c0cc505accb3d860b15212e7c0cf149200e4a7eef6d5305dfaa",
+                    "size": 1953236
                 }
             }
         },
