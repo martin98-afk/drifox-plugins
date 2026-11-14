@@ -1,38 +1,125 @@
-# example 主题 — 最小参考主题
+# example 主题 — 最小参考主题（105 键标准结构，浅色中性灰蓝）
 # 派生新主题时复制本目录，改 name / id / colors 即可。
 name: 示例主题
 id: example
-
+mode: light
 window:
   gradient_start: rgba(245, 245, 250, 255)
   gradient_end: rgba(220, 222, 230, 255)
-
-background:
-  chat_list:
+backgrounds:
+  window:
     image: :/icons/fox_bg.png
     opacity: 0.05
     enabled: true
-
+  sidebar:
+    color: rgba(250, 250, 252, 170)
+    enabled: true
+  scene:
+    color: rgba(0, 0, 0, 0)
+    enabled: true
 colors:
-  # 基础 token
-  card_bg: rgba(255, 255, 255, 232)
-  card_bg_solid: rgba(255, 255, 255, 250)
-  content_bg: '#fafbfc'
-  border: '#d0d4dc'
-  border_accent: '#5b8def'
-  text_primary: '#1a1a1a'
-  text_secondary: rgba(26, 26, 26, 0.72)
-  text_muted: '#6a6e7a'
-  accent: '#5b8def'
-  search_highlight: '#B45309'
-  accent_warm: '#ff9a3c'
-  hover_bg: rgba(91, 141, 239, 0.10)
-  selected_bg: rgba(91, 141, 239, 0.22)
-  capsule_bg: rgba(255, 255, 255, 220)
-  capsule_border: rgba(208, 212, 220, 220)
-
-  # 扩展 token
+  accent: '#275784'
+  accent_warm: '#A9713A'
+  agent_btn_bg_active: rgba(223, 142, 29, 0.18)
+  agent_btn_separator: rgba(172, 176, 190, 153)
+  agent_btn_text: '#8c8fa1'
+  agent_btn_text_active: '#275784'
+  archived_card_bg: rgba(254, 100, 11, 0.08)
+  archived_card_border: rgba(47, 95, 140, 0.22)
+  assistant_card_accent: '#fe640b'
+  assistant_card_bg: rgba(204, 208, 218, 158)
+  assistant_card_muted: '#8c8fa1'
+  assistant_card_text: '#4c4f69'
+  border: '#acb0be'
+  border_accent: '#275784'
+  branch_label_bg: rgba(136, 57, 239, 0.14)
+  branch_label_border: rgba(136, 57, 239, 0.3)
+  button_text_on_accent: '#dce0e8'
+  capsule_bg: rgba(230, 233, 239, 199)
+  capsule_border: rgba(172, 176, 190, 217)
+  card_bg: rgba(204, 208, 218, 235)
+  card_bg_dim: rgba(47, 95, 140, 0.05)
+  card_bg_solid: rgba(204, 208, 218, 250)
+  card_placeholder_text: '#8c8fa1'
+  content_bg: '#eff1f5'
+  divider_color: rgba(76, 79, 105, 0.07)
+  glow_ambient_alpha: 110
+  glow_ambient_blur: 36
+  glow_primary_alpha: 195
+  glow_primary_blur: 26
+  hover_bg: rgba(47, 95, 140, 0.10)
+  hover_bg_strong: rgba(47, 95, 140, 0.16)
+  input_bg_end: rgba(204, 208, 218, 178)
+  input_bg_start: rgba(230, 233, 239, 178)
+  input_border: '#acb0be'
+  input_focus_bg_end: rgba(204, 208, 218, 235)
+  input_focus_bg_start: rgba(230, 233, 239, 235)
+  input_focus_border: '#275784'
+  input_focus_text: '#4c4f69'
+  input_placeholder: rgba(76, 79, 105, 0.42)
+  input_text: '#4c4f69'
+  realtime_accent: '#8839ef'
+  realtime_accent_warm: '#fe640b'
+  realtime_bg: rgba(230, 233, 239, 242)
+  realtime_border: '#1e66f5'
+  realtime_error: '#d20f39'
+  realtime_success: '#40a02b'
+  realtime_tag_bg: rgba(4, 165, 229, 0.15)
+  realtime_tag_border: rgba(4, 165, 229, 0.32)
+  realtime_text: '#4c4f69'
+  realtime_text_secondary: rgba(76, 79, 105, 0.7)
+  ring_compacted: '#8839ef'
+  ring_danger: '#d20f39'
+  ring_normal: '#1e66f5'
+  ring_warning: '#df8e1d'
+  scrollbar_handle_bg: rgba(76, 79, 105, 0.2)
+  scrollbar_handle_hover_bg: rgba(47, 95, 140, 0.45)
+  search_highlight: '#B4460F'
+  selected_bg: rgba(47, 95, 140, 0.22)
+  send_btn_end: '#24496C'
+  send_btn_hover_end: '#275784'
+  send_btn_hover_start: '#3E74A6'
+  send_btn_radius: 10
+  send_btn_start: '#275784'
+  status_archive_bg: rgba(136, 57, 239, 0.78)
+  status_danger_bg: rgba(210, 15, 57, 0.8)
+  status_danger_bg_dark: '#e64553'
+  status_info: '#04a5e5'
+  success_dark: '#40a02b'
+  syntax_error: '#d20f39'
+  syntax_result: '#fe640b'
+  syntax_step: '#179299'
+  syntax_success: '#40a02b'
+  syntax_tool: '#df8e1d'
+  system_accent: '#8839ef'
+  system_border: '#acb0be'
+  tag_accent: '#8839ef'
+  tag_accent_text: '#7287fd'
+  tag_green: '#40a02b'
+  tag_green_text: '#179299'
+  tag_orange: '#fe640b'
+  tag_orange_text: '#dc8a78'
+  tag_purple: '#8839ef'
+  tag_purple_text: '#7287fd'
+  text_muted: '#8c8fa1'
+  text_primary: '#4c4f69'
+  text_secondary: rgba(76, 79, 105, 0.72)
+  timeline_line: '#acb0be'
+  timeline_line_progress: '#40a02b'
+  timeline_node: '#9ca0b0'
+  timeline_node_hover: '#1e66f5'
+  timeline_node_selected: '#fe640b'
+  timeline_node_visible: '#40a02b'
+  titlebar_scrim: rgba(250, 250, 252, 210)
+  tool_title: '#FFA500'
+  tool_title_mcp: '#00BCD4'
+  tool_title_subagent: '#9C27B0'
+  toolbar_bg: rgba(47, 95, 140, 0.06)
+  toolbar_strip_bg: rgba(230, 233, 239, 184)
+  toolbar_strip_border: '#acb0be'
+  user_card_accent: '#04a5e5'
+  user_card_bg: rgba(188, 192, 204, 158)
+  user_card_muted: '#6c6f85'
+  user_card_text: '#4c4f69'
+  window_bg: rgba(136, 57, 239, 0.04)
   input_glow_preset: subtle
-  toolbar_bg: rgba(255, 255, 255, 0.05)
-  divider_color: rgba(0, 0, 0, 0.06)
-  hover_bg_strong: rgba(0, 0, 0, 0.08)

@@ -1,0 +1,29 @@
+{
+    "name": "we-combo-pack",
+    "display_name": {
+        "zh": "搭配实验 · 5 套"
+    },
+    "description": "5 套搭配样板：整窗动画、对话区动画、侧栏分景、透明前景、侧栏共享画布。侧栏动画与多区共享画布为全仓首例。",
+    "version": "0.1.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "license": "MIT",
+    "type": "user",
+    "keywords": [
+        "theme",
+        "wallpaper-engine",
+        "layout",
+        "combo",
+        "主题",
+        "搭配"
+    ],
+    "components": {
+        "themes": true
+    },
+    "min_host_version": "0.6.15",
+    "icon": {
+        "light": "icon.png",
+        "dark": "icon_dark.png"
+    }
+}

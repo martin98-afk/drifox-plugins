@@ -119,3 +119,7 @@ colors:
   archived_card_bg: 'rgba(254, 100, 11, 0.08)'
   archived_card_border: 'rgba(254, 100, 11, 0.22)'
   input_glow_preset: 'breath'
+  titlebar_scrim: rgba(255, 255, 255, 0.60)
+  tool_title: '#FFA500'
+  tool_title_mcp: '#00BCD4'
+  tool_title_subagent: '#9C27B0'

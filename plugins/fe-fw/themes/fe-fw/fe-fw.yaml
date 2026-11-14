@@ -136,3 +136,11 @@ colors:
   branch_label_bg: "rgba(155, 127, 224, 0.15)"
   branch_label_border: "rgba(155, 127, 224, 0.32)"
   window_bg: "rgba(155, 127, 224, 0.04)"
+  titlebar_scrim: rgba(0, 0, 0, 0.58)
+  tool_title: '#FFA500'
+  tool_title_mcp: '#00BCD4'
+  tool_title_subagent: '#9C27B0'
+  status_danger_bg_dark: '#8B4A4A'
+  success_dark: '#3D7A5A'
+  tag_green: '#34d399'
+  tag_green_text: '#6ee7b7'

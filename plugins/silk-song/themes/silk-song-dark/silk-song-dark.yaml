@@ -13,7 +13,7 @@ backgrounds:
     animation:
       src: ../../assets/chat.webp
       canvas: shared
-      fps: 15
+      fps: 10
       fit: cover
       opacity: 1.0
     enabled: true
@@ -123,3 +123,11 @@ colors:
   branch_label_bg: rgba(168, 92, 56, 36)
   branch_label_border: rgba(168, 92, 56, 76)
   window_bg: rgba(168, 92, 56, 10)
+  titlebar_scrim: rgba(0, 0, 0, 0.58)
+  tool_title: '#FFA500'
+  tool_title_mcp: '#00BCD4'
+  tool_title_subagent: '#9C27B0'
+  status_danger_bg_dark: '#8B4A4A'
+  success_dark: '#3D7A5A'
+  tag_green: '#34d399'
+  tag_green_text: '#6ee7b7'

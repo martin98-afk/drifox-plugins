@@ -16,13 +16,11 @@ background:
 backgrounds:
   chat:
     # 素材出处：HanaAgent (liliMozi/openhanako) LeavesOverlay，Apache-2.0
-    # 已转成动画 WebP（黑白树影、白色透明、暗部压底），Qt 内置解码
-    animation:
-      src: ../leaves-overlay.webp
-      blend: overlay
-      position: top
-      fps: 12
-      opacity: 0.28
+    # 原为动画 WebP，实测 72 帧逐帧完全相同（假动画），已改为静态 PNG（保留 alpha）
+    # 静态图路径不读 blend / position（只对 animation 生效），已一并去掉。
+    # 素材是 RGB 全黑 + alpha 树影遮罩，普通 alpha 混合 = 压暗，与原来 blend: overlay 等效。
+    image: ../leaves-overlay.png
+    opacity: 0.28
 colors:
   card_bg: rgba(254, 249, 238, 238)
   card_bg_solid: rgba(254, 249, 238, 252)
@@ -126,3 +124,11 @@ colors:
   branch_label_border: rgba(184, 134, 11, 0.22)
   window_bg: rgba(184, 134, 11, 0.04)
   input_glow_preset: "subtle"
+  titlebar_scrim: rgba(255, 255, 255, 0.60)
+  tool_title: '#FFA500'
+  tool_title_mcp: '#00BCD4'
+  tool_title_subagent: '#9C27B0'
+  status_danger_bg_dark: '#8B4A4A'
+  success_dark: '#10b981'
+  tag_green: '#10b981'
+  tag_green_text: '#059669'

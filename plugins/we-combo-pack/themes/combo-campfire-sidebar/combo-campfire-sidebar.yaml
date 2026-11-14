@@ -1,0 +1,142 @@
+# 搭配样板 5/5（新缺口）：window.animation（整窗）+ sidebar.animation（窄幅独立）双区动画。
+# 全仓首个「侧栏动画」组合。两区用**不同素材**，所以 canvas 必须 independent：
+#   shared 会按整窗画布求值，两区缩放比不同就会错位；independent 各按自身矩形 fit/cover。
+# 侧栏素材是从源 3840x2160 裁出火光区（crop 960x2160 @x=1280）转的 480x1080 窄幅，
+# 保证「看得见火在动」，而不是整窗图被裁到只剩左侧暗角。
+# 接缝：426 帧 / 35.5s / 接缝 MAE 0.87 vs 相邻中位 0.51（ratio 1.71），可直接循环。
+# 侧栏 color 半透明罩保文字可读；window / sidebar 不支持 blur / dim（_apply_area_bg 不读）。
+name: 篝火夜话·侧栏共享画布
+id: combo-campfire-sidebar
+mode: dark
+window:
+  gradient_start: rgba(8, 6, 5, 255)
+  gradient_end: rgba(18, 13, 10, 255)
+backgrounds:
+  window:
+    animation:
+      src: ../../assets/combo-campfire-sidebar/chat.webp
+      canvas: shared
+      fps: 10
+      fit: cover
+      position: center
+      opacity: 1.0
+    enabled: true
+  sidebar:
+    animation:
+      src: ../../assets/combo-campfire-sidebar/campfire-sidebar.webp
+      canvas: independent
+      fps: 12
+      fit: cover
+      position: center
+      opacity: 0.9
+    color: rgba(10, 8, 6, 172)
+    enabled: true
+  scene:
+    color: rgba(0, 0, 0, 0)
+    enabled: true
+colors:
+  card_bg: rgba(18, 13, 10, 236)
+  card_bg_solid: rgba(18, 13, 10, 250)
+  content_bg: '#120d0a'
+  border: '#382f29'
+  border_accent: '#e68130'
+  text_primary: '#f0e2d2'
+  text_secondary: rgba(240, 226, 210, 0.74)
+  text_muted: '#857970'
+  accent: '#c8702a'
+  search_highlight: '#e68130'
+  accent_warm: '#d2b84d'
+  hover_bg: rgba(200, 112, 42, 0.12)
+  selected_bg: rgba(200, 112, 42, 0.3)
+  capsule_bg: rgba(18, 13, 10, 190)
+  capsule_border: rgba(56, 47, 41, 205)
+  toolbar_bg: rgba(31, 84, 115, 15)
+  divider_color: rgba(255, 255, 255, 15)
+  hover_bg_strong: rgba(31, 84, 115, 41)
+  scrollbar_handle_bg: rgba(255, 255, 255, 36)
+  scrollbar_handle_hover_bg: rgba(31, 84, 115, 115)
+  card_placeholder_text: '#857970'
+  button_text_on_accent: '#ffffff'
+  status_info: '#3fcde0'
+  status_danger_bg: rgba(224, 68, 63, 217)
+  status_archive_bg: rgba(224, 145, 63, 204)
+  card_bg_dim: rgba(31, 84, 115, 13)
+  archived_card_bg: rgba(133, 151, 158, 31)
+  archived_card_border: rgba(133, 151, 158, 56)
+  syntax_step: '#3fcde0'
+  syntax_tool: '#e0913f'
+  syntax_success: '#3fe04f'
+  syntax_error: '#e0443f'
+  syntax_result: '#993fe0'
+  tag_accent: '#c8702a'
+  tag_accent_text: '#e68130'
+  tag_purple: '#993fe0'
+  tag_purple_text: '#b879e9'
+  tag_orange: '#e0913f'
+  tag_orange_text: '#e9b279'
+  user_card_bg: rgba(66, 53, 43, 200)
+  user_card_accent: '#e68130'
+  user_card_text: '#f0e2d2'
+  user_card_muted: '#85979e'
+  assistant_card_bg: rgba(51, 48, 37, 200)
+  assistant_card_accent: '#d2b84d'
+  assistant_card_text: '#f0e2d2'
+  assistant_card_muted: '#85979e'
+  agent_btn_text: '#857970'
+  agent_btn_text_active: '#e68130'
+  agent_btn_bg_active: rgba(200, 112, 42, 0.22)
+  agent_btn_separator: rgba(16, 36, 48, 160)
+  input_bg_start: rgba(18, 13, 10, 200)
+  input_bg_end: rgba(8, 6, 5, 200)
+  input_focus_bg_start: rgba(18, 13, 10, 236)
+  input_focus_bg_end: rgba(8, 6, 5, 236)
+  input_text: '#f0e2d2'
+  input_focus_text: '#ffffff'
+  input_border: '#382f29'
+  input_focus_border: '#e68130'
+  input_placeholder: rgba(240, 226, 210, 0.4)
+  glow_primary_alpha: 165
+  glow_primary_blur: 26
+  glow_ambient_alpha: 90
+  glow_ambient_blur: 34
+  toolbar_strip_bg: rgba(18, 13, 10, 190)
+  toolbar_strip_border: '#382f29'
+  realtime_border: '#e68130'
+  realtime_accent: '#e68130'
+  realtime_accent_warm: '#d2b84d'
+  realtime_success: '#3fe04f'
+  realtime_error: '#e0443f'
+  realtime_bg: rgba(18, 13, 10, 244)
+  realtime_text: '#f0e2d2'
+  realtime_text_secondary: rgba(240, 226, 210, 0.7)
+  realtime_tag_bg: rgba(200, 112, 42, 0.15)
+  realtime_tag_border: rgba(200, 112, 42, 0.3)
+  system_border: '#382f29'
+  system_accent: '#c8702a'
+  send_btn_start: '#e68130'
+  send_btn_end: '#8c4e1d'
+  send_btn_hover_start: '#fa8c34'
+  send_btn_hover_end: '#c8702a'
+  send_btn_radius: 17
+  timeline_node: '#80746b'
+  timeline_node_hover: '#e68130'
+  timeline_node_visible: '#3fe04f'
+  timeline_node_selected: '#343275'
+  timeline_line: '#382f29'
+  timeline_line_progress: '#e68130'
+  ring_normal: '#c8702a'
+  ring_warning: '#e0913f'
+  ring_danger: '#e0443f'
+  ring_compacted: '#ba77d9'
+  branch_label_bg: rgba(200, 112, 42, 0.15)
+  branch_label_border: rgba(200, 112, 42, 0.3)
+  window_bg: rgba(200, 112, 42, 0.04)
+  status_danger_bg_dark: '#8B4A4A'
+  success_dark: '#3D7A5A'
+  tag_green: '#34d399'
+  tag_green_text: '#6ee7b7'
+  titlebar_scrim: rgba(8, 6, 5, 0.55)
+  tool_title: '#d2b84d'
+  tool_title_mcp: '#00BCD4'
+  tool_title_subagent: '#ba77d9'
+  input_glow_preset: breath
