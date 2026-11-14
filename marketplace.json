@@ -4902,7 +4902,7 @@
             "display_name": {
                 "zh": "Git 控制面板"
             },
-            "downloads": 100,
+            "downloads": 101,
             "keywords": [
                 "git",
                 "source-control",
@@ -9344,7 +9344,7 @@
             "display_name": {
                 "zh": "SSH 远程工具包"
             },
-            "downloads": 32,
+            "downloads": 33,
             "platforms": [
                 "windows",
                 "linux",

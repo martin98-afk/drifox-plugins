@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1794614621.4683597,
+  "fetched_at": 1794639013.3883126,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -111,7 +111,7 @@
     "gateway-wechat": 28,
     "gateway-wecom": 6,
     "git-dashboard": 20,
-    "git-panel": 100,
+    "git-panel": 101,
     "git-status": 3,
     "git-workflow": 4,
     "gitee": 0,
@@ -215,7 +215,7 @@
     "sometimes-happy": 2,
     "speak-up": 1,
     "square": 0,
-    "ssh-toolkit": 32,
+    "ssh-toolkit": 33,
     "stripe": 0,
     "sunny-shores": 3,
     "sunset-glow": 4,
