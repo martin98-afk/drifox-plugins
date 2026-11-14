@@ -93,52 +93,28 @@ function Write-Err([string]$msg) {
 # ── 工具函数 ────────────────────────────────────────────────────
 function Get-Rect($el) {
     try {
-        $r = $null
-        try { $r = $el.Cached.BoundingRectangle } catch { $r = $null }
-        if ($null -eq $r -or $r.IsEmpty) {
-            try { $r = $el.Current.BoundingRectangle } catch { return $null }
-        }
-        if ($null -eq $r -or $r.IsEmpty) { return $null }
+        $r = $el.Current.BoundingRectangle
+        if ($r.IsEmpty) { return $null }
         return @([int]$r.X, [int]$r.Y, [int]$r.Width, [int]$r.Height)
     } catch { return $null }
 }
 
-# CacheRequest 生效期间用 Cached 属性（一次批量传输），未缓存时回退 Current
+# 全部走 Current：CacheRequest 在 Qt 上实测更慢（2.7s -> 27s）且移除后
+# Cached 属性访问会抛异常，双重开销直接失控（-> 79s）。不要为「理论上更快」买单。
 function Get-ElName($el) {
-    try {
-        $v = $null
-        try { $v = $el.Cached.Name } catch { $v = $null }
-        if ($null -eq $v) { try { $v = $el.Current.Name } catch { $v = "" } }
-        return [string]$v
-    } catch { return "" }
+    try { return [string]$el.Current.Name } catch { return "" }
 }
 
 function Get-ElClass($el) {
-    try {
-        $v = $null
-        try { $v = $el.Cached.ClassName } catch { $v = $null }
-        if ($null -eq $v) { try { $v = $el.Current.ClassName } catch { $v = "" } }
-        return [string]$v
-    } catch { return "" }
+    try { return [string]$el.Current.ClassName } catch { return "" }
 }
 
 function Get-ElRole($el) {
-    try {
-        $ct = $null
-        try { $ct = $el.Cached.ControlType } catch { $ct = $null }
-        if ($null -eq $ct) { try { $ct = $el.Current.ControlType } catch { $ct = $null } }
-        if ($null -eq $ct) { return "" }
-        return ([string]$ct.ProgrammaticName).Replace("ControlType.", "")
-    } catch { return "" }
+    try { return ([string]$el.Current.ControlType.ProgrammaticName).Replace("ControlType.", "") } catch { return "" }
 }
 
 function Get-ElOffscreen($el) {
-    try {
-        $v = $null
-        try { $v = $el.Cached.IsOffscreen } catch { $v = $null }
-        if ($null -eq $v) { try { $v = $el.Current.IsOffscreen } catch { $v = $false } }
-        return [bool]$v
-    } catch { return $false }
+    try { return [bool]$el.Current.IsOffscreen } catch { return $false }
 }
 
 function Get-Actions($el) {
@@ -261,10 +237,7 @@ function Get-ElementInfo($el, $winRect, $find) {
             }
         }
         $r = $null
-        try { $r = $el.Cached.BoundingRectangle } catch { $r = $null }
-        if ($null -eq $r -or $r.IsEmpty) {
-            try { $r = $el.Current.BoundingRectangle } catch { return @{ ok = $false } }
-        }
+        try { $r = $el.Current.BoundingRectangle } catch { return @{ ok = $false } }
         if ($null -eq $r -or $r.IsEmpty) { return @{ ok = $false } }
         if ($r.Width -le 1 -or $r.Height -le 1) { return @{ ok = $false } }
         $role = Get-ElRole $el

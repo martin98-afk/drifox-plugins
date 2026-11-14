@@ -113,6 +113,32 @@ scripts/uia.ps1        UIA 桥：PowerShell + 系统自带 .NET UIAutomationClie
 `uia.ps1` 每次调用起一个进程（约 1~1.5 秒），代价换来零第三方依赖：
 不需要 comtypes / pywinauto / uiautomation，插件保持自包含。
 
+## 元素直连定位（推荐用法）
+
+不必先 `ui_tree` 拿整棵树再引序号，`mouse` / `keyboard` 支持直接按「窗口 + 元素名」定位：
+
+```text
+mouse(action="click", app="HyperFrames", name="关闭标签页")
+keyboard(action="set_value", app="记事本", name="文本编辑器", text="你好")
+```
+
+规则：
+- 精确名字优先，模糊匹配次之（找「点击」不会先命中「点击折叠/展开」）
+- 同名多个直接拒绝并列出候选，不猜
+- 实测：Chromium 窗口 154ms 命中
+
+## 性能实测
+
+| 场景 | 耗时 |
+|---|---|
+| 常驻进程单次空操作 | 0-1ms（对比每次起进程 500ms） |
+| Chromium 窗口读树 | 208-777ms |
+| Qt 窗口读树（元素多时） | 1.6-6.8s |
+| 直连定位（精确名字） | 154-250ms |
+
+进程常驻后，省掉的是每次约 500ms 的 PowerShell 启动 + 程序集加载。剩下的主要是 UIA 遍历本身，
+取决于目标应用的 provider 实现和元素数量，省不掉。
+
 ## 已知限制与实测踩坑
 
 这些不是理论推测，是开发时实测出来的：
@@ -140,6 +166,13 @@ scripts/uia.ps1        UIA 桥：PowerShell + 系统自带 .NET UIAutomationClie
 
 6. **UIA 动作能否执行取决于目标应用。** Qt 应用支持 Invoke/Value（实测可点击、可写值、可读回）；
    WinForms 不支持；WPF 通常支持。失败时自动退化为坐标 + 键盘，不会静默失败。
+
+7. **CacheRequest 在 Qt 上是负优化。** 微软文档推荐的批量属性缓存，实测在 Qt 应用上让遍历
+   从 2.7s 变成 27s（provider 要为缓存视图重建整棵树）。已移除，不要重新加上。
+
+8. **自绘 UI 完全读不到。** 实测 ToDesk、UU 加速器这类自绘界面返回 0 个元素，
+   游戏全屏窗口同理。这类目标只能用纯坐标点击，元素树对它没有意义。
+
 
 ## 依赖
 

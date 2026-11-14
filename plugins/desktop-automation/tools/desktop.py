@@ -270,6 +270,12 @@ def _uia_call(op: str, timeout: int = 20, **kwargs) -> dict:
         server = _SERVER
     res = server.call(op, timeout, payload)
     if res is not None:
+        # 目标应用重绘时 UIA 会偶发「无法识别的错误」，重试一次通常就过
+        err = str(res.get("error") or "")
+        if not res.get("ok") and ("无法识别" in err or "unrecognized" in err.lower()):
+            res2 = server.call(op, timeout, payload)
+            if res2 is not None:
+                return res2
         return res
     return _uia_call_once(op, timeout, **kwargs)
 
@@ -321,13 +327,13 @@ def _to_cursor(x: float, y: float) -> tuple:
     return int(round(x / s)), int(round(y / s))
 
 
-def _locate_by_name(app: str, name: str):
+def _locate_by_name(app: str, name: str, pid=None):
     """按「窗口 + 元素名」直接定位，省掉模型先拿整棵树再引序号的两步流程。
 
-    返回 (element, snapshot, error)。
-    多个同名元素时返回错误并附候选，避免误点。
+    窗口优先用 pid：标题会随文档名/会话名变，pid 不会。
+    返回 (element, snapshot, error)。多个同名元素时返回错误并附候选，避免误点。
     """
-    res = _uia_call("snapshot", app=app, find=name, max_elements=12, timeout=25)
+    res = _uia_call("snapshot", app=app or None, pid=pid, find=name, max_elements=12, timeout=25)
     if not res.get("ok"):
         return None, None, res.get("error", "定位失败")
     data = res.get("data") or {}
@@ -610,7 +616,8 @@ _MOUSE_SCHEMA = {
                 },
                 "snapshot_id": {"type": "string", "description": "ui_tree 返回的快照 id，与 element 配套使用"},
                 "app": {"type": "string", "description": "窗口标题或进程名片段。与 name 一起用可跳过 ui_tree，一步定位并操作"},
-                "name": {"type": "string", "description": "元素名字（模糊匹配，如 '发送'、'确定'）。同名多个时会报错并列出候选"},
+                "pid": {"type": "integer", "description": "目标窗口进程 ID（比 app 稳，窗口标题会变）"},
+                "name": {"type": "string", "description": "元素名字（精确优先，模糊次之）。同名多个时会报错并列出候选"},
                 "button": {"type": "string", "enum": ["left", "right", "middle"], "description": "鼠标按钮(默认left)"},
                 "clicks": {"type": "integer", "description": "点击次数(默认1),double_click固定2次"},
                 "dx": {"type": "integer", "description": "scroll水平滚动"},
@@ -639,11 +646,12 @@ def _mouse_impl(tool_ctx, **kwargs):
     snapshot_id = kwargs.get("snapshot_id") or ""
     app_q = (kwargs.get("app") or "").strip()
     name_q = (kwargs.get("name") or "").strip()
+    pid_q = kwargs.get("pid")
     el = None
     snap = None
-    if element is None and app_q and name_q:
+    if element is None and name_q and (pid_q or app_q):
         # 直连定位：一步完成「找窗口 + 找元素 + 点击」
-        el, snap, locate_err = _locate_by_name(app_q, name_q)
+        el, snap, locate_err = _locate_by_name(app_q, name_q, pid=pid_q)
         if locate_err:
             return ToolResult(False, error=locate_err)
         element = 0
@@ -755,7 +763,8 @@ _KEYBOARD_SCHEMA = {
                 "element": {"type": "integer", "description": "set_value 时的目标元素序号（来自 ui_tree）"},
                 "snapshot_id": {"type": "string", "description": "set_value 时配套的快照 id"},
                 "app": {"type": "string", "description": "窗口标题或进程名片段。与 name 一起用可跳过 ui_tree"},
-                "name": {"type": "string", "description": "目标元素名字（模糊匹配）"},
+                "pid": {"type": "integer", "description": "目标窗口进程 ID（比 app 稳）"},
+                "name": {"type": "string", "description": "目标元素名字（精确优先，模糊次之）"},
             },
             "required": ["action"],
         },
@@ -809,10 +818,11 @@ def _keyboard_impl(tool_ctx, **kwargs):
     snapshot_id = kwargs.get("snapshot_id") or ""
     app_q = (kwargs.get("app") or "").strip()
     name_q = (kwargs.get("name") or "").strip()
+    pid_q = kwargs.get("pid")
     try:
         kb = _pynput_kb.Controller()
-        if element is None and app_q and name_q:
-            el_located, snap_located, locate_err = _locate_by_name(app_q, name_q)
+        if element is None and name_q and (pid_q or app_q):
+            el_located, snap_located, locate_err = _locate_by_name(app_q, name_q, pid=pid_q)
             if locate_err:
                 return ToolResult(False, error=locate_err)
             element = 0
