@@ -450,7 +450,11 @@ if ($Op -eq "snapshot") {
         if (-not [string]::IsNullOrEmpty($find)) {
             $exactCond = New-Object System.Windows.Automation.PropertyCondition($UIA::NameProperty, $find)
             $exact = $w.FindAll($TS::Descendants, $exactCond)
-            if ($exact.Count -gt 0) { $raw = $exact }
+            # 注意 Count 判断：FindAll 返回空集合时若直接赋值，会让下面
+            # 「null 才走全量」的判断失效，导致完全不遍历、空手而归。
+            $exactCount = 0
+            if ($null -ne $exact) { $exactCount = $exact.Count }
+            if ($exactCount -gt 0) { $raw = $exact }
         }
         if ($null -eq $raw) {
             $raw = $w.FindAll($TS::Descendants, $condTrue)
