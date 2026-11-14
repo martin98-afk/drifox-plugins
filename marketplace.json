@@ -1166,7 +1166,7 @@
             "display_name": {
                 "zh": "Caveman 极简输出"
             },
-            "downloads": 7,
+            "downloads": 8,
             "keywords": [
                 "productivity",
                 "communication",
@@ -1593,7 +1593,7 @@
             "display_name": {
                 "zh": "代码简化"
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "refactor",
                 "simplify",
@@ -2392,7 +2392,7 @@
             "display_name": {
                 "zh": "桌面自动化"
             },
-            "downloads": 28,
+            "downloads": 29,
             "keywords": [
                 "desktop",
                 "automation",
@@ -3366,6 +3366,7 @@
             "display_name": {
                 "zh": "内容创作专家包"
             },
+            "downloads": 1,
             "keywords": [
                 "agents",
                 "experts",
@@ -3447,7 +3448,7 @@
             "display_name": {
                 "zh": "技术工程专家包"
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "agents",
                 "experts",
@@ -3689,6 +3690,7 @@
             "display_name": {
                 "zh": "产品设计专家包"
             },
+            "downloads": 1,
             "keywords": [
                 "agents",
                 "experts",
