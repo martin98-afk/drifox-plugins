@@ -1,0 +1,30 @@
+{
+    "name": "hyperframes",
+    "display_name": {
+        "zh": "HTML 视频渲染"
+    },
+    "description": "HTML 代码渲染视频 — HeyGen HyperFrames 官方技能全量移植，9 个技能覆盖渲染契约、剪辑时间线、450+ 预制组件库、媒体与配音、字幕、风格复刻、视频反解、Remotion 迁移与放映模式。",
+    "version": "0.9.44",
+    "author": {
+        "name": "HeyGen",
+        "url": "https://hyperframes.heygen.com"
+    },
+    "homepage": "https://hyperframes.heygen.com",
+    "repository": "https://github.com/heygen-com/hyperframes",
+    "license": "Apache-2.0",
+    "type": "user",
+    "min_host_version": "0.5.0",
+    "keywords": [
+        "video",
+        "hyperframes",
+        "html",
+        "gsap",
+        "render",
+        "mp4",
+        "captions",
+        "motion-graphics"
+    ],
+    "components": {
+        "skills": true
+    }
+}
