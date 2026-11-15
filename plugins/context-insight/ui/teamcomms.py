@@ -20,6 +20,11 @@ from .plugin_config import plugin_data_dir
 # 单 run 快照事件上限（对齐 dsh-context 的 bounded 思路）
 SNAPSHOT_MAX_EVENTS = 2000
 
+# 宿主 TeamManager 目录键：create_team 起（0.7.3+）全链路只落 DEFAULT_TEAM
+# 目录（"default"），团队名退化为 team_label 展示字段，成员/邮件归属按
+# run_id 过滤。会话记录里的 team_name 是展示名，不能再当目录键查询。
+_TEAM_DIR_KEY = "default"
+
 
 def snapshot_path(team_run_id: str) -> Path:
     safe = "".join(c for c in (team_run_id or "unknown") if c.isalnum() or c in "-_")
@@ -54,21 +59,29 @@ def normalize_mail(mail: Dict[str, Any], mailbox_owner_agent: str) -> Optional[D
     }
 
 
-def gather_team_comms(team_read: Any, team_name: str) -> Dict[str, Any]:
+def gather_team_comms(team_read: Any, run_id: str = "") -> Dict[str, Any]:
     """聚合一个团队的成员名单与全部邮箱事件。
 
-    team_read 是 team.read 能力面（只读代理）。任何成员读取失败都降级跳过，
-    不让单个邮箱坏文件废掉整图。
+    team_read 是 team.read 能力面（只读代理）。查询一律走宿主
+    DEFAULT_TEAM 目录（_TEAM_DIR_KEY），run_id 非空时按 run 过滤成员。
+    任何成员读取失败都降级跳过，不让单个邮箱坏文件废掉整图。
     """
     getter = team_read.get if hasattr(team_read, "get") else lambda name: getattr(team_read, name, None)
 
-    def call(name: str, *args: Any) -> Any:
+    def call(name: str, *args: Any, **kwargs: Any) -> Any:
         fn = getter(name)
-        return fn(*args) if callable(fn) else None
+        return fn(*args, **kwargs) if callable(fn) else None
 
     members: List[Dict[str, Any]] = []
     try:
-        raw = call("get_members", team_name) or []
+        if run_id:
+            try:
+                raw = call("get_members", _TEAM_DIR_KEY, run_id=run_id) or []
+            except TypeError:
+                # 能力面/宿主不接受 run_id 关键字时退化为全量
+                raw = call("get_members", _TEAM_DIR_KEY) or []
+        else:
+            raw = call("get_members", _TEAM_DIR_KEY) or []
     except Exception:
         raw = []
     for item in raw:
@@ -77,7 +90,7 @@ def gather_team_comms(team_read: Any, team_name: str) -> Dict[str, Any]:
 
     leader = ""
     try:
-        leader_wid = call("get_leader_window_id", team_name) or ""
+        leader_wid = call("get_leader_window_id", _TEAM_DIR_KEY) or ""
     except Exception:
         leader_wid = ""
     for member in members:
@@ -93,7 +106,7 @@ def gather_team_comms(team_read: Any, team_name: str) -> Dict[str, Any]:
         if not wid:
             continue
         try:
-            mails = call("get_mailbox_mails", wid, team_name) or []
+            mails = call("get_mailbox_mails", wid, _TEAM_DIR_KEY) or []
         except Exception:
             continue
         for mail in mails if isinstance(mails, list) else []:

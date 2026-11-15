@@ -585,8 +585,7 @@ class ContextPanel(QWidget):
         team_read = caps.get("team.read") if hasattr(caps, "get") else None
         if team_read is not None:
             getter = team_read.get if hasattr(team_read, "get") else lambda name: getattr(team_read, name, None)
-            team_name = meta.team_name or "default"
-            gathered = gather_team_comms(team_read, team_name)
+            gathered = gather_team_comms(team_read, run_id=meta.team_run_id or "")
             live_events = gathered.get("events") or []
             run_id = meta.team_run_id or ""
             if run_id:
