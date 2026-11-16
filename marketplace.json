@@ -2392,7 +2392,7 @@
             "display_name": {
                 "zh": "桌面自动化"
             },
-            "downloads": 31,
+            "downloads": 32,
             "keywords": [
                 "desktop",
                 "automation",
@@ -4766,7 +4766,7 @@
             "display_name": {
                 "zh": "微信网关"
             },
-            "downloads": 29,
+            "downloads": 34,
             "dependencies": {
                 "pip": {
                     "default": [
@@ -7449,7 +7449,7 @@
             "display_name": {
                 "zh": "女娲 Skill 造人术"
             },
-            "downloads": 12,
+            "downloads": 13,
             "keywords": [
                 "skill",
                 "agents",
