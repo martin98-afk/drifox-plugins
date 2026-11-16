@@ -18,9 +18,14 @@ from pathlib import Path
 from loguru import logger
 
 try:  # qfluentwidgets 由 DriFox 运行时提供
-    from qfluentwidgets import ExpandSettingCard
-except Exception:  # noqa: BLE001
+    from qfluentwidgets import ExpandSettingCard, isDarkTheme, qconfig
+except Exception:  # noqa: BLE001  测试/裸环境回退：按浅色处理，无主题切换订阅
     ExpandSettingCard = None  # type: ignore
+
+    def isDarkTheme():  # type: ignore
+        return False
+
+    qconfig = None  # type: ignore
 
 from PyQt5.QtCore import QObject, QRunnable, Qt, QThreadPool, pyqtProperty, pyqtSignal
 from PyQt5.QtGui import QFont
@@ -66,6 +71,16 @@ _DOT_STATES = {
     "probing": (_DOT_IDLE, "正在检测可达性…"),
     "unknown": (_DOT_IDLE, "未连接"),
 }
+
+def _theme_text_colors():
+    """按当前深浅主题返回 (主文字色, 次要文字色)。
+
+    插件禁 import app/（Colors token 不可达），色值对齐宿主内置主题口径：
+    深色 #ffffff / rgba(255,255,255,0.6)，浅色取 lumia 口径 #0f172a / 0.60 alpha。
+    """
+    if isDarkTheme():
+        return "#ffffff", "rgba(255, 255, 255, 0.6)"
+    return "#0f172a", "rgba(15, 23, 42, 0.60)"
 
 try:  # 跟随用户统一字体设置（宿主可选增强，失败回退应用字体）
     from app.utils.utils import get_unified_font as _host_font
@@ -176,8 +191,13 @@ class _ElidedLabel(QLabel):
         super().setText(self.fontMetrics().elidedText(self._full, Qt.ElideMiddle, w))
 
 
-def _hint_label(text, color="gray"):
-    """空态/错误态提示：一行灰字或红字，自动换行，不弹窗。"""
+def _hint_label(text, color=None):
+    """空态/错误态提示：一行灰字或红字，自动换行，不弹窗。
+
+    color 缺省按当前主题次要文字色（旧写死 gray 在深色主题下发暗）。
+    """
+    if color is None:
+        color = _theme_text_colors()[1]
     lb = QLabel(text)
     lb.setFont(_ui_font(10))
     lb.setWordWrap(True)
@@ -328,10 +348,24 @@ class _ConnectionsCard(_CARD_BASE):
         # 顶部摘要：总数 + 活跃数（展开时刷新）
         self._summary = QLabel("")
         self._summary.setFont(_ui_font(10))
-        self._summary.setStyleSheet("color: gray;")
+        self._apply_summary_style()
         self.viewLayout.addWidget(self._summary)
         self.viewLayout.addLayout(self._list_layout)
 
+        # 主题深浅切换：重建列表行并重刷摘要样式（行样式按 isDarkTheme 分支取色）。
+        # 宿主对插件设置卡无 refresh_style 派发链（只覆盖浮动卡），卡片自理；
+        # qconfig.themeChanged 仅深↔浅真切换时发射，同深/同浅主题互切不发射
+        # （isDarkTheme 结果不变，无需刷新），接收者销毁时 Qt 自动断连。
+        if qconfig is not None:
+            qconfig.themeChanged.connect(self._on_theme_switched)
+
+        self._reload()
+
+    def _apply_summary_style(self):
+        self._summary.setStyleSheet(f"color: {_theme_text_colors()[1]};")
+
+    def _on_theme_switched(self, *args):
+        self._apply_summary_style()
         self._reload()
 
     # ── 数据渲染 ──
@@ -358,7 +392,6 @@ class _ConnectionsCard(_CARD_BASE):
             self._summary.setText("")
             hint = _hint_label(
                 "还没有保存的连接。直接对 AI 说「连到 root@1.2.3.4」，连上后会自动出现在这里。",
-                "gray",
             )
             self._list_layout.addWidget(hint)
             return
@@ -445,6 +478,7 @@ class _ConnectionsCard(_CARD_BASE):
             "#sshConnRow { background: rgba(128,128,128,0.07); border-radius: 6px; }"
             "#sshConnRow:hover { background: rgba(128,128,128,0.13); }"
         )
+        primary, secondary = _theme_text_colors()
         lay = QHBoxLayout(w)
         lay.setContentsMargins(12, 8, 10, 8)
         lay.setSpacing(10)
@@ -465,6 +499,7 @@ class _ConnectionsCard(_CARD_BASE):
         title_row.setSpacing(8)
         name_label = QLabel(name)
         name_label.setFont(_ui_font(11, bold=True))
+        name_label.setStyleSheet(f"color: {primary};")
         name_label.setTextInteractionFlags(Qt.TextSelectableByMouse)
         title_row.addWidget(name_label, 0)
         title_row.addStretch(1)
@@ -472,7 +507,7 @@ class _ConnectionsCard(_CARD_BASE):
         brief = " · ".join(x for x in (last, f"{count} 次" if count else "") if x)
         brief_label = QLabel(brief)
         brief_label.setFont(_ui_font(9))
-        brief_label.setStyleSheet("color: gray;")
+        brief_label.setStyleSheet(f"color: {secondary};")
         title_row.addWidget(brief_label, 0)
         text_col.addLayout(title_row)
 
@@ -484,7 +519,7 @@ class _ConnectionsCard(_CARD_BASE):
             parts.append(note)
         meta = _ElidedLabel(" · ".join(parts))
         meta.setFont(_ui_font(10))
-        meta.setStyleSheet("color: gray;")
+        meta.setStyleSheet(f"color: {secondary};")
         meta.setTextInteractionFlags(Qt.TextSelectableByMouse)
         text_col.addWidget(meta)
 
@@ -495,9 +530,9 @@ class _ConnectionsCard(_CARD_BASE):
         btn.setFixedHeight(26)
         btn.setCursor(Qt.PointingHandCursor)
         btn.setStyleSheet(
-            "QPushButton { background: transparent;"
-            " border: 1px solid rgba(128,128,128,0.35); border-radius: 4px;"
-            " padding: 2px 14px; color: gray; }"
+            f"QPushButton {{ background: transparent;"
+            f" border: 1px solid rgba(128,128,128,0.35); border-radius: 4px;"
+            f" padding: 2px 14px; color: {secondary}; }}"
             "QPushButton:hover { border-color: #e5484d; color: #e5484d;"
             " background: rgba(229,72,77,0.08); }"
         )
