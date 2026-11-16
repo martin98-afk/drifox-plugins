@@ -4747,7 +4747,7 @@
         {
             "name": "gateway-wechat",
             "description": "微信机器人适配器（iLink 官方接口）：设置卡扫码登录、长轮询收发单聊消息；无需公众号配置，复用宿主 httpx。",
-            "version": "0.9.0",
+            "version": "0.9.1",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [
@@ -4782,9 +4782,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-wechat-v0.9.0/gateway-wechat-0.9.0-default.tar.gz",
-                    "sha256": "e36b268089f1ece3d44c78191ec34768926f412bd020dbf6b17208d9291e4130",
-                    "size": 94207
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-wechat-v0.9.1/gateway-wechat-0.9.1-default.tar.gz",
+                    "sha256": "c74cb9b983207910488ef3af655f049311c85af5fa762220895ef8930d45dbdb",
+                    "size": 94379
                 }
             }
         },
