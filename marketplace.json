@@ -2392,7 +2392,7 @@
             "display_name": {
                 "zh": "桌面自动化"
             },
-            "downloads": 30,
+            "downloads": 31,
             "keywords": [
                 "desktop",
                 "automation",
@@ -4288,7 +4288,7 @@
             "display_name": {
                 "zh": "前端开发增强"
             },
-            "downloads": 6,
+            "downloads": 7,
             "keywords": [
                 "frontend",
                 "a11y",
@@ -4621,7 +4621,7 @@
             "display_name": {
                 "zh": "QQ 网关"
             },
-            "downloads": 19,
+            "downloads": 20,
             "dependencies": {
                 "pip": {
                     "default": [
@@ -4766,7 +4766,7 @@
             "display_name": {
                 "zh": "微信网关"
             },
-            "downloads": 28,
+            "downloads": 29,
             "dependencies": {
                 "pip": {
                     "default": [
@@ -9435,7 +9435,7 @@
             "display_name": {
                 "zh": "SSH 远程工具包"
             },
-            "downloads": 33,
+            "downloads": 35,
             "platforms": [
                 "windows",
                 "linux",
@@ -9668,7 +9668,7 @@
             "display_name": {
                 "zh": "SuperClaude 开发框架"
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "development",
                 "code-quality",
@@ -10724,7 +10724,7 @@
             "display_name": {
                 "zh": "语音输入"
             },
-            "downloads": 48,
+            "downloads": 49,
             "keywords": [
                 "voice",
                 "dictation",
