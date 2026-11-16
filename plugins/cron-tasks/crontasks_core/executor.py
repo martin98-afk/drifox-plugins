@@ -52,7 +52,7 @@ class CronExecutor(QThread):
     def __init__(self, parent=None):
         super().__init__(parent)
         self._job: Optional[CronJob] = None
-        self._services: Optional[Dict[str, Any]] = None
+        self._create_session: Optional[Any] = None  # 能力池 engine.session 闭包（scheduler 预取）
         self._system_prompt: str = ""
         self._tools: Optional[List[Dict]] = None
         self._model_override: Optional[Dict[str, Any]] = None
@@ -66,14 +66,14 @@ class CronExecutor(QThread):
     def configure(
         self,
         job: CronJob,
-        services: Dict[str, Any],
+        create_session: Any = None,
         system_prompt: str = "",
         tools: Optional[List[Dict]] = None,
         model_config_override: Optional[Dict[str, Any]] = None,
         timeout_seconds: int = 0,
     ):
         self._job = job
-        self._services = services
+        self._create_session = create_session
         self._system_prompt = system_prompt
         self._tools = tools
         self._model_override = model_config_override
@@ -117,7 +117,7 @@ class CronExecutor(QThread):
         job = self._job
         started = time.monotonic()
         self._started_at = started
-        if job is None or not self._services:
+        if job is None or not callable(self._create_session):
             self._emit({"job_id": "", "status": "error", "error": "executor 未配置"})
             return
 
@@ -127,9 +127,9 @@ class CronExecutor(QThread):
         def _turn_worker():
             """daemon 工作线程：跑 session.turn()（其内部 wait 可能永不醒）"""
             try:
-                create_session = self._services.get("create_engine_session")
+                create_session = self._create_session
                 if not callable(create_session):
-                    holder["error"] = "主程序未提供 create_engine_session 服务"
+                    holder["error"] = "宿主未提供 engine.session 能力"
                     return
                 # hook_policy_id="cron_selective"：hook 节点白名单可配置
                 # （<app_data>/plugin_data/cron-tasks/hook_policy.json，

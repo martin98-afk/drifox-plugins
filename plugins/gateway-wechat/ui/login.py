@@ -89,7 +89,7 @@ def save_bot_token(token: str) -> str:
         if not bool(store.get(PLUGIN_NAME, "enabled")):
             logger.info("[wechat_login] token 已写入（网关未启用，开启开关后连接）")
             return "登录成功，token 已保存。打开上方开关即可连接。"
-        from app.gateway.manager import get_platform_manager
+        from app.core.services.gateway_access import get_platform_manager
 
         mgr = get_platform_manager()
         if mgr is None:
@@ -116,7 +116,7 @@ def wait_gateway_connected(timeout: float = 30.0, cancel_check=None) -> bool:
 
         if not bool(PluginConfigStore().get(PLUGIN_NAME, "enabled")):
             return True
-        from app.gateway.manager import get_platform_manager
+        from app.core.services.gateway_access import get_platform_manager
 
         mgr = get_platform_manager()
         if mgr is None or not mgr.get_status().get("running"):

@@ -166,6 +166,19 @@ class AutoLoopController:
         running_card.set_max_tokens(config.max_tokens)
         running_card.set_task(config.task_prompt)
 
+        # 模型配置：services 旧键 get_model_config 已随能力池 LEGACY_MAP 退役
+        # （投影循环不再产出该键，取之即 KeyError），改走 model.config 能力
+        # 显式调用（无参 = 本窗口当前模型配置，含明文 key；签名与旧 getter 兼容）。
+        # 放在锁定 UI 之前：能力缺失时直接中止，无需回滚独占模式与运行卡。
+        from app.plugins.sdk import pool_for
+
+        _pool = pool_for(plugin=PLUGIN_ID, surface="ui")
+        model_config_getter = _pool["model.config"] if _pool is not None and "model.config" in _pool else None
+        if model_config_getter is None:
+            logger.error("[AutoLoop] model.config capability unavailable; start aborted")
+            services.get("notify", lambda *_: None)("AutoLoop", "宿主未提供 model.config 能力，无法启动（请升级 DriFox）")
+            return
+
         # 锁定 UI（独占模式）
         services.get("enter_exclusive_ui_mode", lambda _s: None)(PLUGIN_ID)
 
@@ -175,7 +188,7 @@ class AutoLoopController:
         worker = AutoLoopWorker()
         worker.configure(
             config=config,
-            model_config_getter=services["get_model_config"],
+            model_config_getter=model_config_getter,
             tool_executor=services.get("get_tool_executor")(),
             tools_schema=services.get("get_tools_schema", lambda _n: [])("auto_loop"),
             agent_system_prompt_getter=services.get("get_agent_prompt", lambda _n: ""),

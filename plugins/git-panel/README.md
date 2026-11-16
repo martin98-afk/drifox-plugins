@@ -149,6 +149,8 @@ cfg = ctx["services"]["get_provider_config"]("MiniMax", "MiniMax-M2.7")
 或空串（`keyring` 模式密钥已入系统凭证库），拿去发请求会得到
 `401 log in fail: Please carry the API secret key`。只有主程序内存态持有明文。
 
-磁盘文件仍可读**非密钥字段**（`provider_name` / `模型列表` 等），用于渲染
-「服务商:模型名」下拉选项；密钥字段一律走服务。旧版主程序无该服务时，
-回退遍历 `main_widget._valid_configs`（同为内存态，同样不碰磁盘）。
+服务商/模型两级下拉走能力池 `provider.list` / `model.enumerate`（内存态，不含
+密钥）；能力不可用（旧宿主 / 无活跃窗口）时下拉为空，已存配置保留不丢。取完整
+配置（含明文 key）优先 `ctx["services"]["get_provider_config"]`，无上下文时走
+能力池 `model.config`（`pool_for(...).legacy("get_provider_config", "model.config")`，
+两者同签名）。绝不读磁盘 `app.config`。

@@ -5,6 +5,7 @@ Slack 平台适配器（社区插件，万物即插件 Phase E）：使用 Slack
 从 DriFox 主程序迁出，平台适配器独立成社区插件。
 
 ## 功能
+- **流式回复（v1.2.0）**：官方 `chat.startStream` / `chat.appendStream` / `chat.stopStream`，scope 不足时自动回退普通消息
 
 - 注册平台适配器到 DriFox GatewayRegistry
 - 通过 `check_requirements()` 自检依赖是否可用

@@ -188,7 +188,16 @@ class TaskWorker(QThread):
         self._agent_name = COLUMN_META.get(self._column, {}).get("agent", "")
         self._log_file = log_file
 
-        self._model_config_getter = services.get("get_model_config")
+        # get_model_config 旧键已随能力池 LEGACY_MAP 退役（投影循环不再产出
+        # 该键，get 恒为 None），改走 model.config 能力显式调用（无参 = 绑定
+        # 窗口当前模型配置，含明文 key；签名与旧 getter 兼容）。能力缺失抛错
+        # 由 controller 的 configure try/except 捕获并 notify。
+        from app.plugins.sdk import pool_for
+
+        _pool = pool_for(plugin="taskboard", surface="ui")
+        if _pool is None or "model.config" not in _pool:
+            raise RuntimeError("宿主未提供 model.config 能力，无法处理任务（请升级 DriFox）")
+        self._model_config_getter = _pool["model.config"]
         self._tool_executor = services.get("get_tool_executor", lambda: None)()
         self._tools_schema = services.get("get_tools_schema", lambda _n: [])(self._agent_name)
         self._agent_prompt_getter = services.get("get_agent_prompt")

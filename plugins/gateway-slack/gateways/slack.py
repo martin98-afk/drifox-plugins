@@ -26,8 +26,6 @@ from loguru import logger
 
 from app.gateway.base import (
     BasePlatformAdapter,
-    Platform,
-    PlatformConfig,
     SendResult,
 )
 
@@ -41,12 +39,14 @@ class SlackAdapter(BasePlatformAdapter):
 
     MAX_MESSAGE_LENGTH = 4000
 
-    def __init__(self, config: PlatformConfig):
-        super().__init__(config, Platform.SLACK)
-
-        self._bot_token = config.extra.get("bot_token") or os.getenv("SLACK_BOT_TOKEN")
-        self._app_token = config.extra.get("app_token") or os.getenv("SLACK_APP_TOKEN")
+    def __init__(self) -> None:
+        super().__init__()
+        cfg = _config()
+        self._bot_token = cfg["bot_token"] or os.getenv("SLACK_BOT_TOKEN")
+        self._app_token = cfg["app_token"] or os.getenv("SLACK_APP_TOKEN")
         self._client = None
+        # 流式状态：chat_id -> {ts, last_edit, last_text}
+        self._stream_states: Dict[str, Dict[str, Any]] = {}
 
     async def connect(self) -> bool:
         """连接到 Slack"""
@@ -83,6 +83,96 @@ class SlackAdapter(BasePlatformAdapter):
 
         self._connected = False
         logger.info("[Slack] Disconnected")
+
+    # ── 流式回复（Slack 官方 chat.startStream / appendStream / stopStream） ──
+
+    _STREAM_EDIT_INTERVAL = 1.0
+
+    def supports_streaming(self, chat_id: str) -> bool:
+        """Slack 原生流式 API，需要 chat:write；调用失败由宿主回退普通消息。"""
+        return self._client is not None
+
+    async def start_stream(self, chat_id: str) -> Optional[str]:
+        """开流，返回 stream_key=``sl:<chat_id>:<ts>``；失败返回 None。"""
+        if not self._client:
+            return None
+        try:
+            response = self._client.api_call(
+                "chat.startStream",
+                json={"channel": chat_id, "markdown_text": "💭 正在思考…"},
+            )
+            ts = response.get("ts") if response else None
+        except Exception as e:
+            logger.debug("[Slack] startStream 不可用，回退普通消息: {}", e)
+            return None
+        if not ts:
+            return None
+        self._stream_states[chat_id] = {
+            "ts": ts,
+            "last_edit": 0.0,
+            "last_text": "💭 正在思考…",
+        }
+        return f"sl:{chat_id}:{ts}"
+
+    async def update_stream(self, stream_key: str, snapshot: str) -> bool:
+        """追加流式内容（全量 markdown_text）；单次失败不致命。"""
+        state = self._stream_state(stream_key)
+        if state is None or not self._client:
+            return False
+        import time as _time
+
+        now = _time.monotonic()
+        if now - float(state.get("last_edit") or 0.0) < self._STREAM_EDIT_INTERVAL:
+            return True
+        text = (snapshot or "").strip()
+        if not text or text == state.get("last_text"):
+            return True
+        try:
+            self._client.api_call(
+                "chat.appendStream",
+                json={
+                    "channel": str(stream_key.split(":", 2)[1]),
+                    "ts": state["ts"],
+                    "markdown_text": text[: self.MAX_MESSAGE_LENGTH],
+                },
+            )
+        except Exception as e:
+            logger.debug("[Slack] appendStream 跳过: {}", e)
+            return True
+        state["last_edit"] = now
+        state["last_text"] = text
+        return True
+
+    async def finish_stream(self, stream_key: str, final: str) -> SendResult:
+        """收流并落最终内容，然后清理状态。"""
+        state = self._stream_state(stream_key)
+        if state is None or not self._client:
+            return SendResult(success=False, error="unknown stream")
+        chat_id = str(stream_key.split(":", 2)[1])
+        try:
+            self._client.api_call(
+                "chat.stopStream",
+                json={
+                    "channel": chat_id,
+                    "ts": state["ts"],
+                    "markdown_text": (final or "（无输出）")[: self.MAX_MESSAGE_LENGTH],
+                },
+            )
+            return SendResult(success=True, message_id=state["ts"])
+        except Exception as e:
+            logger.warning("[Slack] stopStream failed: {}", e)
+            return SendResult(success=False, error=str(e))
+        finally:
+            self._stream_states.pop(chat_id, None)
+
+    def _stream_state(self, stream_key: str) -> Optional[Dict[str, Any]]:
+        """解析 ``sl:<chat_id>:<ts>`` 定位流状态。"""
+        if not stream_key or not stream_key.startswith("sl:"):
+            return None
+        parts = stream_key.split(":", 2)
+        if len(parts) != 3:
+            return None
+        return self._stream_states.get(parts[1])
 
     async def send(
         self,
@@ -219,6 +309,24 @@ class SlackAdapter(BasePlatformAdapter):
             logger.error("[Slack] Send image failed: {}", e)
             return SendResult(success=False, error=str(e))
 
+    async def send_file(self, chat_id: str, file_path: str, **kwargs) -> SendResult:
+        """发送文件（files_upload_v2）"""
+        if not self._client:
+            return SendResult(success=False, error="Not connected")
+        try:
+            response = self._client.files_upload_v2(
+                channel=chat_id,
+                file=file_path,
+                title=kwargs.get("caption") or None,
+            )
+            return SendResult(
+                success=bool(response.get("ok", True)),
+                message_id=(response.get("file") or {}).get("id", ""),
+            )
+        except Exception as e:
+            logger.error("[Slack] Send file failed: {}", e)
+            return SendResult(success=False, error=str(e))
+
     async def send_typing(self, chat_id: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         """发送 typing 状态"""
         if self._client:
@@ -252,70 +360,52 @@ class SlackAdapter(BasePlatformAdapter):
 # ── Phase E 插件注册 ────────────────────────────────────
 # 配置读写回调走主程序 Settings（存量用户配置零迁移；Task 5 统一切 E1
 # PluginConfigStore 时仅改本块闭包，调用方不动）。闭包内延迟 import
-# Settings/PlatformConfig，避免模块顶层触发 PyQt5 / Settings 副作用。
+# 宿主契约不承载平台配置，避免模块顶层触发 Settings 副作用。
 #
 # check_requirements：原 extra.py 无 Slack 依赖检查函数（构造时缺包由
 # __init__ 兜底为 None + try/except 容忍），此处按主控指令内联 lambda: True；
 # 缺包时由 connect() 内 try/except 自然失败。
 
 
-def _build_config() -> "PlatformConfig":
-    """读 PluginConfigStore 构造 Slack 配置（E1 契约：插件自包含存储）"""
-    from app.gateway.base import Platform, PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+PLUGIN_NAME = "gateway-slack"
 
-    store = PluginConfigStore()
-    return PlatformConfig(
-        enabled=bool(store.get("gateway-slack", "enabled")),
-        platform=Platform.SLACK,
-        extra={
-            "bot_token": store.get("gateway-slack", "bot_token") or "",
-            "app_token": store.get("gateway-slack", "app_token") or "",
-        },
-    )
+_CAPS: dict = {}
 
 
-def _write_config(config: "PlatformConfig") -> None:
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+def _cap(cap_id: str):
+    """取宿主能力（按 manifest capabilities 裁剪；后台线程无 ctx 也可用）。"""
+    cap = _CAPS.get(cap_id)
+    if cap is None:
+        from app.plugins.sdk import caps_for
 
-    PluginConfigStore().set_values(
-        "gateway-slack",
-        {
-            "enabled": config.enabled,
-            "bot_token": (config.extra or {}).get("bot_token") or "",
-            "app_token": (config.extra or {}).get("app_token") or "",
-        },
-    )
+        cap = caps_for(cap_id, plugin=PLUGIN_NAME, surface="ui")
+        if cap is None:
+            logger.warning(f"[{PLUGIN_NAME}] 能力不可用: {cap_id}（检查 manifest capabilities）")
+            return None
+        _CAPS[cap_id] = cap
+    return cap
 
 
-def _build_config_values(values: dict, old_config) -> "PlatformConfig":
-    """设置卡保存回调：表单值 → PluginConfigStore → PlatformConfig。"""
-    from app.gateway.base import Platform, PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+def _config() -> dict:
+    """读本插件配置（plugin.config.read 能力，一次取全量）。"""
+    reader = _cap("plugin.config.read")
+    values = (reader() if reader else {}) or {}
+    return {
+        "enabled": bool(values.get("enabled")),
+        "bot_token": values.get("bot_token") or "",
+        "app_token": values.get("app_token") or "",
+    }
 
-    store = PluginConfigStore()
-    plugin = "gateway-slack"
-    enabled = values.get("enabled", store.get(plugin, "enabled"))
-    bot_token = values.get("bot_token", "")
-    app_token = values.get("app_token", "")
-    store.set_values(
-        plugin,
-        {
-            "enabled": bool(enabled),
-            "bot_token": bot_token,
-            "app_token": app_token,
-        },
-    )
-    extra = dict(old_config.extra) if old_config and old_config.extra else {}
-    if bot_token:
-        extra["bot_token"] = bot_token
-    if app_token:
-        extra["app_token"] = app_token
-    return PlatformConfig(
-        enabled=bool(enabled),
-        platform=Platform.SLACK,
-        extra=extra,
-    )
+
+def _set_enabled(enabled: bool) -> None:
+    writer = _cap("plugin.config.write")
+    if writer is not None:
+        writer("enabled", bool(enabled))
+
+
+def _validate() -> tuple:
+    cfg = _config()
+    return bool(cfg["bot_token"]), "Bot Token 未配置"
 
 
 def register(registry) -> None:
@@ -325,15 +415,11 @@ def register(registry) -> None:
         GatewayPlatformDef(
             platform_id="slack",
             display_name="Slack",
-            adapter_factory=lambda cfg: SlackAdapter(cfg),
+            adapter_factory=SlackAdapter,
             check_requirements=lambda: True,
-            config_builder=_build_config,
-            config_writer=_write_config,
-            build_config_values=_build_config_values,
-            validate_config=lambda cfg: (
-                bool(cfg.extra.get("bot_token")),
-                "Bot Token 未配置",
-            ),
+            is_enabled=lambda: _config()["enabled"],
+            set_enabled=_set_enabled,
+            validate=_validate,
             ui_order=60,
         )
     )

@@ -5,7 +5,7 @@ EP3 迁移：LLM 调用经宿主 create_engine_session（EngineSession 契约）
 不再自建 openai client 直发（非流式直发会被只支持流式的服务商 400 拒绝，
 且绕过 Transport 层丢失伪装头/协议适配/max_tokens 钳制/智能重试）：
 
-1. ChessCard 经 ctx 拿 main_widget + services
+1. start_ai_move() 主线程预取能力池 engine.session 闭包传入任务
 2. _resolve_side_config() 按红/黑方选择解析模型配置（关思考 + 低温度）
 3. _AIMoveTask.run() 调 _one_shot_ask() → session.turn() 拿响应
 4. parse_move() 拆 JSON 走法；_is_legal() 校验
@@ -210,68 +210,61 @@ def _strip_thinking(text: str) -> str:
 # ── 模型配置 ──
 
 
+def _pool_resolve_config(provider: str = "", model: str = "") -> Optional[Dict[str, Any]]:
+    """能力池解析完整模型配置（含明文 key）；不可用返回 None。
+
+    model.config_for 按名五级解析（「服务商:模型 / 服务商 / 模型名」，
+    capability_type 缺省 chat）；provider/model 均空时走 model.config
+    无参调用沿用当前会话模型。旧 model.config 带参是 config_id 匹配、
+    空 config_id 忽略 model，语义不符，不走。
+    """
+    try:
+        from app.plugins.sdk import pool_for
+
+        pool = pool_for(plugin="chinese-chess", surface="ui")
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"[chinese-chess] 取能力池失败: {e}")
+        return None
+    if pool is None:
+        return None
+    try:
+        if provider or model:
+            resolve = pool["model.config_for"]
+            if not callable(resolve):
+                return None
+            query = f"{provider}:{model}" if provider and model else (provider or model)
+            cfg = resolve(query)
+        else:
+            resolve = pool["model.config"]
+            if not callable(resolve):
+                return None
+            cfg = resolve()
+    except Exception as e:  # noqa: BLE001
+        logger.warning(f"[chinese-chess] 模型配置解析失败: {e}")
+        return None
+    # 「配置非空」判据：免鉴权服务商 API_KEY 本就为空；服务返回空
+    # （服务商不存在 / 宿主未就绪）→ None，指名的 provider 失效不串别的服务商
+    return cfg if isinstance(cfg, dict) and cfg else None
+
+
 def _get_llm_config(
-    main_widget,
     provider: str = "",
     model: str = "",
-    services: Optional[Dict[str, Any]] = None,
 ) -> Optional[Dict[str, Any]]:
     """取模型配置（API_KEY / API_URL / 模型名称）。
 
-    唯一正确通道 services["get_provider_config"]（宿主内存态明文 + 模型
-    默认参数）；旧宿主兜底遍历 main_widget._valid_configs。
+    唯一正确通道是宿主内存态：能力池 model.config_for（按名五级解析）/
+    model.config（无参 = 当前会话模型）。
     绝不读 app.config 磁盘文件——密钥模式下 API_KEY 是密文。
 
     provider/model 为空时沿用主程序当前会话模型；提供时用指定服务商，
     且显式指名的 provider 失效时不静默串到别的服务商（返 None）。
     """
-    if isinstance(services, dict):
-        get_cfg = services.get("get_provider_config")
-        if callable(get_cfg):
-            try:
-                cfg = get_cfg(provider, model)
-            except Exception as e:  # noqa: BLE001
-                logger.warning(f"[chinese-chess] get_provider_config 调用失败: {e}")
-                cfg = None
-            # 判据是「配置非空」非「key 非空」：免鉴权服务商 API_KEY 本就为空
-            if isinstance(cfg, dict) and cfg:
-                return dict(cfg)
-            if provider:
-                return None
-
-    valid = getattr(main_widget, "_valid_configs", None)
-    if not isinstance(valid, dict) or not valid:
-        return None
-    if provider:
-        # 按 config_id / display_name / provider_name 匹配（与主程序五级解析同序）
-        cfg = None
-        if provider in valid:
-            cfg = dict(valid[provider])
-        else:
-            for _cid, info in valid.items():
-                if isinstance(info, dict) and provider in (
-                    info.get("display_name"),
-                    info.get("provider_name"),
-                    info.get("name"),
-                ):
-                    cfg = dict(info)
-                    break
-        if cfg is None:
-            return None
-    else:
-        name = getattr(main_widget, "_current_provider_name", None) or ""
-        raw = valid.get(name)
-        cfg = dict(raw) if isinstance(raw, dict) else None
-        if cfg is None:
-            return None
-    if model:
-        cfg["模型名称"] = model
-    return cfg
+    cfg = _pool_resolve_config(provider, model)
+    return dict(cfg) if cfg else None
 
 
 def _resolve_side_config(
-    main_widget,
-    services: Optional[Dict[str, Any]],
     side: str,
     card,
 ) -> Optional[Dict[str, Any]]:
@@ -288,38 +281,10 @@ def _resolve_side_config(
         # 旧格式兼容：「Provider:Model」合并值
         provider, model = model.split(":", 1)
         provider, model = provider.strip(), model.strip()
-    cfg = _get_llm_config(main_widget, provider, model, services)
+    cfg = _get_llm_config(provider, model)
     if not cfg:
         return None
     return {**cfg, "温度": 0.3, "思考模式": False}
-
-
-def _resolve_main_widget(card) -> Optional[Any]:
-    """从 ChessCard 实例尽量找到 main_widget（多级兜底）。
-
-    优先级：ctx["main_widget"] → card.parent() 链遍历找拥有
-    _valid_configs 属性的祖先 → None
-    """
-    # 1) 上下文 provider
-    provider = getattr(card, "_context_provider", None)
-    if callable(provider):
-        try:
-            ctx = provider() or {}
-            mw = ctx.get("main_widget")
-            if mw is not None:
-                return mw
-        except Exception:
-            pass
-
-    # 2) 父链兜底：找带 _valid_configs 的祖先 QWidget
-    cur = getattr(card, "parent", lambda: None)()
-    for _ in range(15):  # 限深防止死循环
-        if cur is None:
-            break
-        if hasattr(cur, "_valid_configs"):
-            return cur
-        cur = cur.parent() if hasattr(cur, "parent") else None
-    return None
 
 
 # ── 后台任务 ──
@@ -367,7 +332,7 @@ class _AIMoveTask(QRunnable):
         prompt_suffix: Optional[str] = None,
         side_cn: Optional[str] = None,
         model_name: Optional[str] = None,
-        services: Optional[Dict[str, Any]] = None,
+        create_session: Any = None,
     ):
         super().__init__()
         # 深拷贝棋盘，避免主线程修改影响后台任务
@@ -379,7 +344,7 @@ class _AIMoveTask(QRunnable):
         self.history = list(history or [])
         self.llm_config = llm_config
         self.signals = signals
-        self.services = services or {}
+        self.create_session = create_session  # 主线程预取的 engine.session 闭包
         self.max_retries = max_retries if max_retries is not None else self.MAX_RETRY_ATTEMPTS - 1
         self.prompt_suffix = prompt_suffix  # 可选：追加到 system prompt 末尾的额外约束
         self._lock = threading.Lock()
@@ -487,10 +452,10 @@ class _AIMoveTask(QRunnable):
         Raises:
             RuntimeError / TimeoutError — 供 run() 计入重试。
         """
-        create = (self.services or {}).get("create_engine_session")
+        create = self.create_session
         if not callable(create):
             raise RuntimeError(
-                "主程序未提供 create_engine_session 服务，请升级 DriFox ≥ 0.5.10"
+                "宿主未提供 engine.session 能力，请升级 DriFox"
             )
 
         # 解析失败重试：prompt 强化追加（明确"仅输出标准 JSON"）
@@ -564,21 +529,7 @@ def start_ai_move(card):
 
     返回 True = 任务已派发；False = 缺少上下文/模型配置。
     """
-    main_widget = _resolve_main_widget(card)
-    if main_widget is None:
-        logger.warning("[chinese-chess] 未找到 main_widget，LLM 不可用")
-        return False
-
-    # 上下文 services（EP3 契约：get_provider_config / create_engine_session）
-    services: Dict[str, Any] = {}
-    ctx_provider = getattr(card, "_context_provider", None)
-    if callable(ctx_provider):
-        try:
-            services = (ctx_provider() or {}).get("services") or {}
-        except Exception as e:  # noqa: BLE001
-            logger.debug(f"[chinese-chess] 读取上下文 services 失败: {e}")
-
-    llm_config = _resolve_side_config(main_widget, services, card._side_to_move, card)
+    llm_config = _resolve_side_config(card._side_to_move, card)
     if not llm_config:
         logger.warning("[chinese-chess] 未找到模型配置，LLM 不可用")
         return False
@@ -615,6 +566,18 @@ def start_ai_move(card):
     side_cn_now = "红" if card._side_to_move == RED else "黑"
     model_now = llm_config.get("模型名称", "unknown")
 
+    # 主线程预取 engine.session 闭包（工作线程内不再解析能力，避免跨线程读 QWidget）
+    try:
+        from app.plugins.sdk import pool_for
+
+        _pool = pool_for(plugin="chinese-chess", surface="ui")
+        create_session = (
+            _pool["engine.session"] if _pool is not None and "engine.session" in _pool else None
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.debug(f"[chinese-chess] 取 engine.session 失败: {e}")
+        create_session = None
+
     task = _AIMoveTask(
         board=card._board,
         side=card._side_to_move,
@@ -624,10 +587,10 @@ def start_ai_move(card):
         max_retries=1,
         side_cn=side_cn_now,
         model_name=model_now,
-        services=services,
+        create_session=create_session,
     )
 
-    pool = getattr(main_widget, "_gen_thread_pool", None) or QThreadPool.globalInstance()
+    pool = QThreadPool.globalInstance()
     pool.start(task)
     card._ai_task = task
     return True

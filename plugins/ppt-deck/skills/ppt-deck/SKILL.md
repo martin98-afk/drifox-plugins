@@ -1,6 +1,6 @@
 ---
 name: ppt-deck
-description: "把一句话或一篇 Markdown 文档变成完整演示文稿：独立 HTML 网页放映 + 可编辑 PPTX 导出。内置 5 套视觉主题（Swiss Pulse / Velvet Standard / Data Drift / Soft Signal / Maximalist Type）、页间转场与要点入场动画，中英双语。用于用户要 PPT、slides、deck、keynote、演示文稿、幻灯片、汇报、提案、路演、培训材料，或要把文档转成演示的场景。Turn one sentence or a Markdown document into a complete deck: standalone HTML slideshow plus editable PPTX export."
+description: "把一句话或一篇 Markdown 文档变成完整演示文稿：独立 HTML 网页放映 + 可编辑 PPTX 导出。内置 5 套视觉主题（Swiss Pulse / Velvet Standard / Data Drift / Soft Signal / Maximalist Type）与 16 套版式参考库（咨询简报 / 杂志 / 发布会 / 工程蓝图等，192 页预览）、页间转场与要点入场动画，中英双语。用于用户要 PPT、slides、deck、keynote、演示文稿、幻灯片、汇报、提案、路演、培训材料，或要把文档转成演示的场景。Turn one sentence or a Markdown document into a complete deck: standalone HTML slideshow plus editable PPTX export."
 ---
 
 <!-- 运行环境（原 dsh frontmatter 的 compatibility/allowed-tools 字段）：Node ^22.19.0 或 >=24.0.0；
@@ -38,6 +38,7 @@ description: "把一句话或一篇 Markdown 文档变成完整演示文稿：�
    → 写大纲与正文前先读 `references/copywriting.md`。
 3. **Theme 主题**：调 `ppt_themes`（DSH）或 `node scripts/build-deck.mjs --list-themes`（跨 harness）。
    → 拿不准选哪套时读 `references/themes.md` 的情绪决策树。
+   → 需要更具体的版式参照（咨询报告 / 杂志 / 发布会这类），读 `references/templates/README.md` 选 1 套，再看它的 `design.md` 与 2–3 张 `pages/*.jpg`；只借版式关系，不引入新 theme ID。
 4. **Build 生成**：
    - DSH 内：调 `ppt_create`，大纲写成 Markdown 传 `content`（推荐），或传结构化 `slides`。
    - 跨 harness：`node <skill-dir>/scripts/build-deck.mjs --title "标题" --content deck.md --theme data --lang zh --out dist`。
@@ -52,6 +53,7 @@ description: "把一句话或一篇 Markdown 文档变成完整演示文稿：�
 | --- | --- | --- |
 | 写大纲 / 正文前 | `references/copywriting.md` | 叙事骨架、单页规则、双语规则 |
 | 选主题拿不准 | `references/themes.md` | 5 套主题色板 + 情绪决策树 |
+| 需要更具体的版式参照 | `references/templates/README.md` | 16 套模板的配色/栅格/12 页结构 + 192 张预览索引 |
 | 用表格/金句/备注/结构化 slides | `references/syntax.md` | Markdown 解析、进阶语法、slides JSON、motion 开关 |
 | 图片/图表/模板/品牌/编辑/渲染 | `references/advanced.md` | 参数、限制、草稿与成品、收据语义 |
 | 数字溯源与现场推演 | `references/data.md` | 来源绑定、公式、更新预览与离线参数回存 |

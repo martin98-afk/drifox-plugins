@@ -266,13 +266,13 @@ if _UI_AVAILABLE:
         # ── 回显 ────────────────────────────────────────────
 
         def _echo(self) -> None:
-            from app.plugins.managers.plugin_config_store import PluginConfigStore
+            from app.plugins.sdk import caps_for
 
-            store = PluginConfigStore()
-            provider = str(store.get(PLUGIN_NAME, "provider") or "auto")
-            sf_key = str(store.get(PLUGIN_NAME, "siliconflow_api_key") or "")
-            sf_model = str(store.get(PLUGIN_NAME, "siliconflow_model") or "") or _DEFAULT_MODEL
-            mm_key = str(store.get(PLUGIN_NAME, "minimax_api_key") or "")
+            read = caps_for("plugin.config.read")
+            provider = str(read("provider", "") or "auto")
+            sf_key = str(read("siliconflow_api_key", "") or "")
+            sf_model = str(read("siliconflow_model", "") or "") or _DEFAULT_MODEL
+            mm_key = str(read("minimax_api_key", "") or "")
 
             index = self._provider_combo.findData(provider)
             self._provider_combo.blockSignals(True)
@@ -295,7 +295,7 @@ if _UI_AVAILABLE:
             self._sf_model.blockSignals(False)
             self._move_cursor_to_start(self._sf_model)
 
-            host_provider = str(store.get(PLUGIN_NAME, HOST_PROVIDER_KEY) or "").strip()
+            host_provider = str(read(HOST_PROVIDER_KEY, "") or "").strip()
             source_index = self._source_combo.findData(host_provider) if host_provider else 0
             if host_provider and source_index < 0:
                 self._source_combo.addItem(
@@ -405,27 +405,20 @@ if _UI_AVAILABLE:
         # ── 恢复默认 / 存储 ─────────────────────────────────
 
         def _on_reset(self) -> None:
-            from app.plugins.managers.plugin_config_store import PluginConfigStore
+            from app.plugins.sdk import caps_for
 
-            PluginConfigStore().set_values(
-                PLUGIN_NAME,
-                {
-                    "provider": "",
-                    "siliconflow_api_key": "",
-                    "siliconflow_model": "",
-                    "minimax_api_key": "",
-                    HOST_PROVIDER_KEY: "",
-                },
-            )
+            write = caps_for("plugin.config.write")
+            for key in ("provider", "siliconflow_model", "siliconflow_api_key", "minimax_api_key", HOST_PROVIDER_KEY):
+                write(key, "")  # api_key 是 password 字段，存储层自动清密钥库
             self._test_result.setText("")
             self._echo()
 
         @staticmethod
         def _save(key: str, value: str) -> None:
             try:
-                from app.plugins.managers.plugin_config_store import PluginConfigStore
+                from app.plugins.sdk import caps_for
 
-                PluginConfigStore().set_values(PLUGIN_NAME, {key: value})
+                caps_for("plugin.config.write")(key, value)
             except Exception as e:  # noqa: BLE001 — 写盘失败不影响界面操作
                 logger.warning(f"[voice-input] 配置保存失败({key}): {e}")
 

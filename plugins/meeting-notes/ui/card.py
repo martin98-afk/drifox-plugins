@@ -63,8 +63,10 @@ PLUGIN_NAME = "meeting-notes"
 # 每轮只做一次布尔判断，缩小间隔能明显降低「结束后才动起来」的体感延迟。
 _IDLE_POLL_MS = 150
 
-# 增量精转：录音中每攒够这么久就后台精转一段（秒）
-_REFINE_SEGMENT_SEC = 600
+# 增量精转：录音中每攒够这么久就后台精转一段（秒）。
+# 取 300 折中：段内声纹聚类窗充裕（跨段编号无映射，段越长错乱越少），
+# 且精转覆盖比旧值 600 快一倍。片长见 config.DEFAULT_CHUNK_SEC。
+_REFINE_SEGMENT_SEC = 300
 # 不足这么长的尾巴不单独精转（秒）
 _MIN_REFINE_SEC = 30
 
@@ -1204,7 +1206,7 @@ class MeetingNotesCard(QWidget):
     def _maybe_refine_async(self, force_final: bool = False) -> bool:
         """攒够一段就送精转，返回是否启动了任务。
 
-        录音中每攒够 10 分钟转一段；会议结束时把剩余部分（≥30 秒）一次转完。
+        录音中每攒够 5 分钟转一段；会议结束时把剩余部分（≥30 秒）一次转完。
         这样「结束会议」最多只需等最后一段，而不是整场音频。
         """
         m = self._meeting

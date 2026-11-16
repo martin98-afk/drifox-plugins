@@ -10,7 +10,7 @@
 设计约束：
 - 不导入 app.core 内部模块
 - 游戏逻辑通过 ui/game_logic 模块（纯 Python）
-- AI 调用通过 ui/ai_engine（读 main_widget._valid_configs 拿模型配置）
+- AI 调用通过 ui/ai_engine（经宿主 services / 能力池拿模型配置）
 """
 
 from typing import Any, Callable, Optional

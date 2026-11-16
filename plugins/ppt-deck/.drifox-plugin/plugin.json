@@ -3,12 +3,12 @@
     "display_name": {
         "zh": "演示文稿生成"
     },
-    "description": "演示文稿生成 — 一句话或一篇文档变成独立 HTML 网页放映加可编辑 PPTX，5 套视觉主题、页间转场与要点动画，中英双语，支持数据溯源与逐页 PNG/PDF 渲染。",
+    "description": "演示文稿生成 — 一句话或一篇文档变成独立 HTML 网页放映加可编辑 PPTX，5 套视觉主题 + 16 套版式参考库（192 页预览），中英双语，支持数据溯源与逐页 PNG/PDF 渲染。",
     "icon": {
         "light": "icon.svg",
         "dark": "icon_dark.svg"
     },
-    "version": "1.0.0",
+    "version": "1.1.0",
     "author": {
         "name": "dsh-ppt"
     },

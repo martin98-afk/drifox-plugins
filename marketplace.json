@@ -921,7 +921,7 @@
             "display_name": {
                 "zh": "打砖块游戏"
             },
-            "downloads": 6,
+            "downloads": 7,
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
@@ -958,7 +958,7 @@
             "display_name": {
                 "zh": "内置浏览器"
             },
-            "downloads": 93,
+            "downloads": 95,
             "keywords": [
                 "browser",
                 "web",
@@ -999,7 +999,7 @@
             "display_name": {
                 "zh": "日历"
             },
-            "downloads": 31,
+            "downloads": 32,
             "keywords": [
                 "calendar",
                 "date",
@@ -1122,7 +1122,7 @@
             "display_name": {
                 "zh": "Catppuccin 主题"
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "theme",
                 "catppuccin",
@@ -1166,7 +1166,7 @@
             "display_name": {
                 "zh": "Caveman 极简输出"
             },
-            "downloads": 7,
+            "downloads": 8,
             "keywords": [
                 "productivity",
                 "communication",
@@ -1593,7 +1593,7 @@
             "display_name": {
                 "zh": "代码简化"
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "refactor",
                 "simplify",
@@ -1722,7 +1722,7 @@
             "display_name": {
                 "zh": "CodeGraph 代码智能"
             },
-            "downloads": 9,
+            "downloads": 10,
             "dependencies": {
                 "pip": {
                     "default": [
@@ -1846,6 +1846,53 @@
             }
         },
         {
+            "name": "context-insight",
+            "description": "上下文洞察 — 透视会话上下文组成、逐请求演进、压缩事件、工具/技能/命令台账与多 Agent 编队；全页洞察面板内含会话上下文与 /context 命令",
+            "version": "1.1.2",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui",
+                "stats"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/context-insight",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true,
+                "hooks": true
+            },
+            "display_name": {
+                "zh": "上下文洞察"
+            },
+            "downloads": 8,
+            "keywords": [
+                "context",
+                "token",
+                "insight",
+                "dashboard",
+                "compaction",
+                "agent"
+            ],
+            "min_host_version": "0.7.3",
+            "api_version": 2,
+            "homepage": "https://github.com/martin98-afk/DriFox",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-context-insight-v1.1.2/context-insight-1.1.2-all.tar.gz",
+                    "sha256": "c27998d8a7864f67eaf73454c20864d0ce48f5c5d3f6f9d2e4509cf40a7aa757",
+                    "size": 71748
+                }
+            }
+        },
+        {
             "name": "context-stats",
             "description": "欢迎卡片用量统计 — 在欢迎卡片新增「📊 用量」tab，用 echarts 展示模型上下文（token）用量与消息量趋势",
             "version": "0.1.1",
@@ -1867,7 +1914,7 @@
             "display_name": {
                 "zh": "欢迎卡片用量统计"
             },
-            "downloads": 27,
+            "downloads": 28,
             "keywords": [
                 "welcome",
                 "stats",
@@ -1915,7 +1962,7 @@
             "display_name": {
                 "zh": "上下文用量统计"
             },
-            "downloads": 5,
+            "downloads": 6,
             "homepage": "https://github.com/martin98-afk/DriFox",
             "icon": {
                 "light": "icon.png",
@@ -1952,7 +1999,7 @@
             "display_name": {
                 "zh": "Context7 文档检索"
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "docs",
                 "api",
@@ -2127,7 +2174,7 @@
             "display_name": {
                 "zh": "定时任务中心"
             },
-            "downloads": 56,
+            "downloads": 57,
             "keywords": [
                 "cron",
                 "schedule",
@@ -2173,7 +2220,7 @@
             "display_name": {
                 "zh": "赛博朋克 · Somi"
             },
-            "downloads": 20,
+            "downloads": 21,
             "keywords": [
                 "theme",
                 "wallpaper-engine",
@@ -2302,7 +2349,7 @@
             "display_name": {
                 "zh": "DeepSeek 蜜罐"
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "theme",
                 "wallpaper-engine",
@@ -2326,8 +2373,8 @@
         },
         {
             "name": "desktop-automation",
-            "description": "桌面自动化工具（mouse / keyboard / screenshot）—— 通过 pynput + mss 控制桌面，从 DriFox 主程序迁出（工具插件化）",
-            "version": "1.0.4",
+            "description": "桌面自动化工具（ui_tree / mouse / keyboard / screenshot）—— 无障碍元素树定位 + pynput/mss 坐标控制，从 DriFox 主程序迁出（工具插件化）",
+            "version": "1.1.0",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -2345,13 +2392,15 @@
             "display_name": {
                 "zh": "桌面自动化"
             },
-            "downloads": 26,
+            "downloads": 30,
             "keywords": [
                 "desktop",
                 "automation",
                 "screenshot",
                 "mouse",
-                "keyboard"
+                "keyboard",
+                "ui-automation",
+                "accessibility"
             ],
             "dependencies": {
                 "pip": {
@@ -2374,19 +2423,86 @@
             },
             "tarball": {
                 "darwin": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.0.4/desktop-automation-1.0.4-darwin.tar.gz",
-                    "sha256": "51caf74e0e1ee714428dcf04f4b8c06a57cf0ce630868d2885662ca68fc1ac99",
-                    "size": 1047862
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.1.0/desktop-automation-1.1.0-darwin.tar.gz",
+                    "sha256": "dd8ec8db256439cb94fae0d3d695aceae0ae132104902d2ed1e5ee0e1e506823",
+                    "size": 1068703
                 },
                 "linux": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.0.4/desktop-automation-1.0.4-linux.tar.gz",
-                    "sha256": "9b3afbc77d110b95e9092043c2e39b851aabce403b9c32b8358153fc4a1614a8",
-                    "size": 148518
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.1.0/desktop-automation-1.1.0-linux.tar.gz",
+                    "sha256": "3b4437fe329a113cf0cc7f9169e3cc59d8694e8b93435a3e60e60dddd737c72a",
+                    "size": 168308
                 },
                 "win32": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.0.4/desktop-automation-1.0.4-win32.tar.gz",
-                    "sha256": "9b3afbc77d110b95e9092043c2e39b851aabce403b9c32b8358153fc4a1614a8",
-                    "size": 148518
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-desktop-automation-v1.1.0/desktop-automation-1.1.0-win32.tar.gz",
+                    "sha256": "3b4437fe329a113cf0cc7f9169e3cc59d8694e8b93435a3e60e60dddd737c72a",
+                    "size": 168308
+                }
+            }
+        },
+        {
+            "name": "diagnostics-pack",
+            "description": "一键打包 DriFox 诊断信息：最近日志、崩溃现场（dump/堆栈）、系统与插件清单、脱敏后的配置，输出 zip 便于排查与回传。含 /diag 命令、AI 工具与设置卡。",
+            "version": "0.1.0",
+            "author": "DriFoxx Team",
+            "license": "MIT",
+            "categories": [
+                "ui",
+                "tool"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/diagnostics-pack",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true,
+                "tools": true,
+                "ui": true,
+                "agents": false,
+                "skills": false,
+                "hooks": false,
+                "mcp": false,
+                "lsp": false,
+                "themes": false,
+                "providers": false,
+                "team_templates": false,
+                "model_adapters": false,
+                "loop_policies": false,
+                "storages": false,
+                "serializers": false,
+                "gateways": false,
+                "engines": false
+            },
+            "display_name": {
+                "zh": "诊断包"
+            },
+            "keywords": [
+                "diagnostics",
+                "crash",
+                "logs",
+                "support",
+                "诊断",
+                "崩溃",
+                "日志"
+            ],
+            "platforms": [
+                "windows",
+                "linux",
+                "darwin"
+            ],
+            "min_host_version": "0.6.11",
+            "api_version": 2,
+            "homepage": "https://github.com/martin98-afk/drifox-plugins",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-diagnostics-pack-v0.1.0/diagnostics-pack-0.1.0-all.tar.gz",
+                    "sha256": "4d1839954b871e6c6a4075162dccb625e7ac78cbabd9ae05de66953252c6c1ae",
+                    "size": 18178
                 }
             }
         },
@@ -2741,7 +2857,7 @@
             "display_name": {
                 "zh": "DSH 插件迁移"
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "dsh",
                 "deepseek-harness",
@@ -2979,7 +3095,7 @@
             "display_name": {
                 "zh": "Evolver 自进化"
             },
-            "downloads": 1,
+            "downloads": 2,
             "min_host_version": "0.5.0",
             "homepage": "https://evomap.ai",
             "icon": {
@@ -3068,7 +3184,7 @@
             "display_name": {
                 "zh": "示例插件"
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "example",
                 "template",
@@ -3250,6 +3366,7 @@
             "display_name": {
                 "zh": "内容创作专家包"
             },
+            "downloads": 1,
             "keywords": [
                 "agents",
                 "experts",
@@ -3331,7 +3448,7 @@
             "display_name": {
                 "zh": "技术工程专家包"
             },
-            "downloads": 2,
+            "downloads": 4,
             "keywords": [
                 "agents",
                 "experts",
@@ -3573,6 +3690,7 @@
             "display_name": {
                 "zh": "产品设计专家包"
             },
+            "downloads": 1,
             "keywords": [
                 "agents",
                 "experts",
@@ -3823,7 +3941,7 @@
             "display_name": {
                 "zh": "功能开发工作流"
             },
-            "downloads": 3,
+            "downloads": 5,
             "keywords": [
                 "development",
                 "architecture",
@@ -3909,7 +4027,7 @@
             "display_name": {
                 "zh": "多格式文件设计"
             },
-            "downloads": 10,
+            "downloads": 12,
             "keywords": [
                 "document",
                 "docx",
@@ -3998,6 +4116,7 @@
             "display_name": {
                 "zh": "对话悬浮窗"
             },
+            "downloads": 1,
             "keywords": [
                 "chat",
                 "floating",
@@ -4042,6 +4161,7 @@
             "display_name": {
                 "zh": "复星财富洞察"
             },
+            "downloads": 1,
             "keywords": [
                 "mcp",
                 "connector",
@@ -4211,6 +4331,7 @@
             "display_name": {
                 "zh": "富途牛牛行情交易"
             },
+            "downloads": 1,
             "keywords": [
                 "mcp",
                 "connector",
@@ -4252,7 +4373,7 @@
             "display_name": {
                 "zh": "2048 游戏"
             },
-            "downloads": 8,
+            "downloads": 10,
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
@@ -4268,7 +4389,7 @@
         {
             "name": "gateway-dingtalk",
             "description": "钉钉 (DingTalk) Stream 模式适配器（社区插件，万物即插件 Phase E）：实时消息收发，支持群/单聊/媒体；基于 dingtalk-stream SDK。设置卡支持扫码登录（官方设备注册接口，免开放平台配置）。",
-            "version": "1.1.1",
+            "version": "1.6.0",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [
@@ -4287,7 +4408,7 @@
             "display_name": {
                 "zh": "钉钉网关"
             },
-            "downloads": 6,
+            "downloads": 10,
             "platforms": [
                 "windows",
                 "linux",
@@ -4315,7 +4436,7 @@
                     ]
                 }
             },
-            "min_host_version": "0.6.10",
+            "min_host_version": "0.7.2",
             "api_version": 2,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
@@ -4324,26 +4445,26 @@
             },
             "tarball": {
                 "darwin": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-dingtalk-v1.1.1/gateway-dingtalk-1.1.1-darwin.tar.gz",
-                    "sha256": "c3df669abb6b1c879fbd8364279177972c72fa9e519ad19c3b5ab33d25f3f6a7",
-                    "size": 2203849
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-dingtalk-v1.6.0/gateway-dingtalk-1.6.0-darwin.tar.gz",
+                    "sha256": "697321d05eb102690953c198d9454636dd8384011fd0b4a7aa12cded43ebeca9",
+                    "size": 2206381
                 },
                 "linux": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-dingtalk-v1.1.1/gateway-dingtalk-1.1.1-linux.tar.gz",
-                    "sha256": "c63ca242bce6e1ec6ed3531e5d52fc035181c29ca614df3f49bc97767dd852fd",
-                    "size": 3385612
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-dingtalk-v1.6.0/gateway-dingtalk-1.6.0-linux.tar.gz",
+                    "sha256": "ae4f63cfb754a08381d489815db33ff564e1aa2a4ec14b710cad64a3c82bb6cc",
+                    "size": 3388382
                 },
                 "win32": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-dingtalk-v1.1.1/gateway-dingtalk-1.1.1-win32.tar.gz",
-                    "sha256": "849a805a807b7da66e6e4e25f60c088c5c0dcc13823f9007286ae16fc5976700",
-                    "size": 1624475
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-dingtalk-v1.6.0/gateway-dingtalk-1.6.0-win32.tar.gz",
+                    "sha256": "d4580276519432b4d59550882915950d9358f3a317588db3b2f59691e852b6b1",
+                    "size": 1627832
                 }
             }
         },
         {
             "name": "gateway-discord",
             "description": "Discord 机器人平台适配器（社区插件，万物即插件 Phase E）：频道/私聊/线程/Slash Command/媒体，基于 discord.py。",
-            "version": "1.0.0",
+            "version": "1.6.0",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [],
@@ -4359,7 +4480,7 @@
             "display_name": {
                 "zh": "Discord 网关"
             },
-            "downloads": 1,
+            "downloads": 2,
             "platforms": [
                 "windows",
                 "linux",
@@ -4382,6 +4503,7 @@
                     ]
                 }
             },
+            "min_host_version": "0.7.2",
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -4389,26 +4511,26 @@
             },
             "tarball": {
                 "darwin": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-discord-v1.0.0/gateway-discord-1.0.0-darwin.tar.gz",
-                    "sha256": "e10068e8b478b74ad96bd2ee7971610ea8e4e13f3bc404ca67e829ef4825ee0b",
-                    "size": 2430407
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-discord-v1.6.0/gateway-discord-1.6.0-darwin.tar.gz",
+                    "sha256": "527197993628c9c2777f8efed0d63ee3b0573ce920749bedbd1654553153db8e",
+                    "size": 2389496
                 },
                 "linux": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-discord-v1.0.0/gateway-discord-1.0.0-linux.tar.gz",
-                    "sha256": "e2927f6b46a743734f30ee20dc4831142bc1da0bd4a1473fcf7ce7128dbb0b88",
-                    "size": 3711604
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-discord-v1.6.0/gateway-discord-1.6.0-linux.tar.gz",
+                    "sha256": "2c407b65a00052f6b6e14d49df8e51df5c61ee77be5101968cf6c8a9a2ecef35",
+                    "size": 3670483
                 },
                 "win32": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-discord-v1.0.0/gateway-discord-1.0.0-win32.tar.gz",
-                    "sha256": "24e8a63444bc4f7b2038fb097f84c2140c5de7f703e41339790fb14ef5b49e80",
-                    "size": 1965517
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-discord-v1.6.0/gateway-discord-1.6.0-win32.tar.gz",
+                    "sha256": "794e6db3df6d713533c9c0c5e7bfc83ff8d09b311f4758f9563afcc3c92b69d1",
+                    "size": 1924047
                 }
             }
         },
         {
             "name": "gateway-feishu",
             "description": "飞书 (Feishu/Lark) WebSocket 模式适配器（社区插件，万物即插件 Phase E）：实时消息收发，基于 lark-oapi SDK。设置卡支持扫码创建/更新应用并自动申请消息权限（官方设备授权端点）。",
-            "version": "1.3.1",
+            "version": "1.10.1",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [
@@ -4427,7 +4549,7 @@
             "display_name": {
                 "zh": "飞书网关"
             },
-            "downloads": 57,
+            "downloads": 65,
             "platforms": [
                 "windows",
                 "linux",
@@ -4453,6 +4575,7 @@
                     ]
                 }
             },
+            "min_host_version": "0.7.2",
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -4460,26 +4583,26 @@
             },
             "tarball": {
                 "darwin": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-feishu-v1.3.1/gateway-feishu-1.3.1-darwin.tar.gz",
-                    "sha256": "35fbf28de0e1c23ac624b92ccbc8880eaf29f3e7def6dd5fd7e1df829e7e8c4e",
-                    "size": 6145604
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-feishu-v1.10.1/gateway-feishu-1.10.1-darwin.tar.gz",
+                    "sha256": "9341b5ce3c074ed1e8fe56e1bba69cd25b8b87cccbf8058e69f098d495022da7",
+                    "size": 6153651
                 },
                 "linux": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-feishu-v1.3.1/gateway-feishu-1.3.1-linux.tar.gz",
-                    "sha256": "ec98a456ae06e0b21b999fb1dd10d20039bcae99669ca1067e9ff086dc7c308c",
-                    "size": 5803852
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-feishu-v1.10.1/gateway-feishu-1.10.1-linux.tar.gz",
+                    "sha256": "809b9caccfeb3201f2f2e0f989c5fe0f1bef63ef655c2ac6ef6576087c22cc05",
+                    "size": 5810031
                 },
                 "win32": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-feishu-v1.3.1/gateway-feishu-1.3.1-win32.tar.gz",
-                    "sha256": "5ee0f1cc364e7c0d0b82638a768e8e3cc3915a0bce2e608a45a9e4b4a781b37e",
-                    "size": 5202508
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-feishu-v1.10.1/gateway-feishu-1.10.1-win32.tar.gz",
+                    "sha256": "e1a1dadf392501298260a02a03f1633b633abaee59c5fc6a1255e849310c2779",
+                    "size": 5209424
                 }
             }
         },
         {
             "name": "gateway-qq",
             "description": "QQ 机器人适配器（QQ 开放平台）：WebSocket 长连接收发群聊/单聊消息；不依赖第三方 SDK，复用宿主 aiohttp/httpx。设置卡支持扫码绑定机器人（官方绑定任务接口，凭据本地解密）。",
-            "version": "1.2.2",
+            "version": "1.6.0",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [
@@ -4498,15 +4621,18 @@
             "display_name": {
                 "zh": "QQ 网关"
             },
-            "downloads": 16,
+            "downloads": 19,
             "dependencies": {
                 "pip": {
                     "default": [
+                        "aiohttp==3.14.3",
+                        "httpx==0.28.1",
                         "segno",
                         "cryptography"
                     ]
                 }
             },
+            "min_host_version": "0.7.2",
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -4514,26 +4640,26 @@
             },
             "tarball": {
                 "darwin": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-qq-v1.2.2/gateway-qq-1.2.2-darwin.tar.gz",
-                    "sha256": "03f79b56a30c0ef3cc99576bcb2ef3743a0bc7255d4540e38676e93fb13a9380",
-                    "size": 4076254
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-qq-v1.6.0/gateway-qq-1.6.0-darwin.tar.gz",
+                    "sha256": "843a6d5a1872d043fc8999ac866fc465d5511af84615f76f4f13e1199af09431",
+                    "size": 5401384
                 },
                 "linux": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-qq-v1.2.2/gateway-qq-1.2.2-linux.tar.gz",
-                    "sha256": "2778e424be2ae53bbb884afb0c6640836fb7213bfa7ad3926cd797ca6b38b0bb",
-                    "size": 4778952
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-qq-v1.6.0/gateway-qq-1.6.0-linux.tar.gz",
+                    "sha256": "b05a32fdbc627b79ef2a8e0bd754ad28d3767f7f1c1c89321eb8639c14b256b4",
+                    "size": 8002399
                 },
                 "win32": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-qq-v1.2.2/gateway-qq-1.2.2-win32.tar.gz",
-                    "sha256": "29267a062344df3bc8dcaea68776dfa4c2c5972ae17a93d8d1b3a8227a192515",
-                    "size": 3987308
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-qq-v1.6.0/gateway-qq-1.6.0-win32.tar.gz",
+                    "sha256": "871b9e3d4a016b5f5a44582684b45c7fdd44af6a02bfcb6e04bc14031a701820",
+                    "size": 5265643
                 }
             }
         },
         {
             "name": "gateway-slack",
             "description": "Slack 平台适配器（社区插件，万物即插件 Phase E）：使用 Slack Web API 收发消息，支持 Block Kit 格式、长消息分片；基于 slack-sdk。",
-            "version": "1.0.1",
+            "version": "1.3.0",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [],
@@ -4549,6 +4675,7 @@
             "display_name": {
                 "zh": "Slack 网关"
             },
+            "downloads": 1,
             "dependencies": {
                 "pip": {
                     "default": [
@@ -4556,6 +4683,7 @@
                     ]
                 }
             },
+            "min_host_version": "0.7.2",
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -4563,16 +4691,16 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-slack-v1.0.1/gateway-slack-1.0.1-default.tar.gz",
-                    "sha256": "44f6af2c3945612c04387f26c9834658aadc85a42970d8cc145c5efec5496c34",
-                    "size": 251975
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-slack-v1.3.0/gateway-slack-1.3.0-default.tar.gz",
+                    "sha256": "f8f80f246c20b193e16fc1e7d3e7d16b4f3f7929f87600b541b208842b1077bc",
+                    "size": 253015
                 }
             }
         },
         {
             "name": "gateway-telegram",
             "description": "Telegram 机器人平台适配器（社区插件，万物即插件 Phase E）：私聊/群组/论坛主题/媒体/命令，基于 python-telegram-bot 长轮询。",
-            "version": "1.0.1",
+            "version": "1.6.1",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [],
@@ -4588,6 +4716,7 @@
             "display_name": {
                 "zh": "Telegram 网关"
             },
+            "downloads": 1,
             "dependencies": {
                 "pip": {
                     "default": [
@@ -4601,6 +4730,7 @@
                     ]
                 }
             },
+            "min_host_version": "0.7.2",
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -4608,16 +4738,16 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-telegram-v1.0.1/gateway-telegram-1.0.1-default.tar.gz",
-                    "sha256": "0010943ca878b4e03fd61b5b58a87d760d52efead79a854928c52c20fc908cf3",
-                    "size": 1040612
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-telegram-v1.6.1/gateway-telegram-1.6.1-default.tar.gz",
+                    "sha256": "7aba4f18d0136da51998e504715cb399636706cdda1af076a68c4e229761dce4",
+                    "size": 997883
                 }
             }
         },
         {
             "name": "gateway-wechat",
             "description": "微信机器人适配器（iLink 官方接口）：设置卡扫码登录、长轮询收发单聊消息；无需公众号配置，复用宿主 httpx。",
-            "version": "0.3.2",
+            "version": "0.9.0",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [
@@ -4636,7 +4766,7 @@
             "display_name": {
                 "zh": "微信网关"
             },
-            "downloads": 21,
+            "downloads": 28,
             "dependencies": {
                 "pip": {
                     "default": [
@@ -4644,7 +4774,7 @@
                     ]
                 }
             },
-            "min_host_version": "0.6.12",
+            "min_host_version": "0.7.2",
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
                 "light": "icon.svg",
@@ -4652,16 +4782,16 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-wechat-v0.3.2/gateway-wechat-0.3.2-default.tar.gz",
-                    "sha256": "5df6efea1636b617e1cf65dc01e2a0f0e685b90a028f2f4c76be49b8a88ade9c",
-                    "size": 89562
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-wechat-v0.9.0/gateway-wechat-0.9.0-default.tar.gz",
+                    "sha256": "e36b268089f1ece3d44c78191ec34768926f412bd020dbf6b17208d9291e4130",
+                    "size": 94207
                 }
             }
         },
         {
             "name": "gateway-wecom",
             "description": "企业微信 (WeCom) AI Bot 适配器（社区插件，万物即插件 Phase E）：通过 WebSocket 长连接与 AI Bot Gateway 通信；不依赖第三方 SDK，复用宿主 aiohttp/httpx。",
-            "version": "1.0.2",
+            "version": "1.4.0",
             "author": "DriFoxx Team",
             "license": "MIT",
             "categories": [],
@@ -4677,8 +4807,17 @@
             "display_name": {
                 "zh": "企业微信网关"
             },
-            "downloads": 4,
-            "min_host_version": "0.6.10",
+            "downloads": 6,
+            "dependencies": {
+                "pip": {
+                    "default": [
+                        "aiohttp==3.14.3",
+                        "httpx==0.28.1",
+                        "segno"
+                    ]
+                }
+            },
+            "min_host_version": "0.7.2",
             "api_version": 2,
             "homepage": "https://github.com/martin98-afk/drifox-plugins2",
             "icon": {
@@ -4686,10 +4825,20 @@
                 "dark": "icon_dark.svg"
             },
             "tarball": {
-                "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-wecom-v1.0.2/gateway-wecom-1.0.2-all.tar.gz",
-                    "sha256": "3c12a237f0b0b2e31074ef9d9d5df4a1bf10c9ec342e3800d743c4f48cc3e7ed",
-                    "size": 10580
+                "darwin": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-wecom-v1.4.0/gateway-wecom-1.4.0-darwin.tar.gz",
+                    "sha256": "e0051db02f22c42a907e2bcb1fd260d2a0f5459524934e6b87e527902529d300",
+                    "size": 1802300
+                },
+                "linux": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-wecom-v1.4.0/gateway-wecom-1.4.0-linux.tar.gz",
+                    "sha256": "3c49ea88d669c5071bcd3e19ecf6f5d932e69a32a257229aa607b940b477a945",
+                    "size": 3309132
+                },
+                "win32": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-gateway-wecom-v1.4.0/gateway-wecom-1.4.0-win32.tar.gz",
+                    "sha256": "e717558040df712af4961b86b7d1962040ff9d6865d45b0a8e6c05d2a8e30e5d",
+                    "size": 1362708
                 }
             }
         },
@@ -4757,7 +4906,7 @@
             "display_name": {
                 "zh": "Git 控制面板"
             },
-            "downloads": 95,
+            "downloads": 101,
             "keywords": [
                 "git",
                 "source-control",
@@ -4837,7 +4986,7 @@
             "display_name": {
                 "zh": "Git 工作流增强"
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "git",
                 "workflow",
@@ -4919,7 +5068,7 @@
             "display_name": {
                 "zh": "GitHub 仓库管理"
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "mcp",
                 "connector",
@@ -5086,6 +5235,7 @@
             "display_name": {
                 "zh": "GraphFlow 代码手术"
             },
+            "downloads": 1,
             "keywords": [
                 "code-graph",
                 "ast",
@@ -5478,6 +5628,47 @@
             }
         },
         {
+            "name": "hyperframes",
+            "description": "HTML 代码渲染视频 — HeyGen HyperFrames 官方技能全量移植，9 个技能覆盖渲染契约、剪辑时间线、450+ 预制组件库、媒体与配音、字幕、风格复刻、视频反解、Remotion 迁移与放映模式。",
+            "version": "0.9.44",
+            "author": "HeyGen",
+            "license": "Apache-2.0",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/hyperframes",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "display_name": {
+                "zh": "HTML 视频渲染"
+            },
+            "keywords": [
+                "video",
+                "hyperframes",
+                "html",
+                "gsap",
+                "render",
+                "mp4",
+                "captions",
+                "motion-graphics"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://hyperframes.heygen.com",
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-hyperframes-v0.9.44/hyperframes-0.9.44-all.tar.gz",
+                    "sha256": "30bc1f149a356c0cc505accb3d860b15212e7c0cf149200e4a7eef6d5305dfaa",
+                    "size": 1953236
+                }
+            }
+        },
+        {
             "name": "intercom",
             "description": "Intercom — 查询 Intercom 的会话、联系人与客服数据。",
             "version": "1.0.0",
@@ -5580,7 +5771,7 @@
             "display_name": {
                 "zh": "IP 切换监控"
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "proxy",
                 "network",
@@ -5890,7 +6081,7 @@
             "display_name": {
                 "zh": "Kim Service 技能合集"
             },
-            "downloads": 10,
+            "downloads": 11,
             "keywords": [
                 "prompt",
                 "optimizer",
@@ -6105,7 +6296,7 @@
             "display_name": {
                 "zh": "实时数据查询"
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "live-data",
                 "finance",
@@ -6237,7 +6428,7 @@
             "display_name": {
                 "zh": "magpie 网关"
             },
-            "downloads": 14,
+            "downloads": 15,
             "keywords": [
                 "magpie",
                 "网关",
@@ -6419,7 +6610,7 @@
             "display_name": {
                 "zh": "MCP 服务器构建"
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "mcp",
                 "tool",
@@ -6442,7 +6633,7 @@
         {
             "name": "meeting-notes",
             "description": "语音会议纪要：连续分片录音转写，硅基流动 Diarize 模型区分说话人，会后整段复转提升准确度，再由系统大模型生成结构化纪要与待办；本地会议管理，支持重命名说话人与导出 Markdown",
-            "version": "0.2.0",
+            "version": "0.2.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -6476,7 +6667,7 @@
             "display_name": {
                 "zh": "会议纪要"
             },
-            "downloads": 4,
+            "downloads": 17,
             "keywords": [
                 "meeting",
                 "transcript",
@@ -6492,7 +6683,7 @@
                 "darwin",
                 "linux"
             ],
-            "min_host_version": "0.6.12",
+            "min_host_version": "0.6.10",
             "api_version": 2,
             "icon": {
                 "light": "icon.svg",
@@ -6500,9 +6691,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-meeting-notes-v0.2.0/meeting-notes-0.2.0-all.tar.gz",
-                    "sha256": "8d09cc10b148536b1e55eebd69d6e09d0a5fd0156b0314f586a555ed71f24eda",
-                    "size": 160574
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-meeting-notes-v0.2.1/meeting-notes-0.2.1-all.tar.gz",
+                    "sha256": "3d7d71591121cca8f585d53cbb06711aa61217181d31ca208ce7bc47f5652998",
+                    "size": 160841
                 }
             }
         },
@@ -7051,6 +7242,7 @@
             "display_name": {
                 "zh": "多模态服务商"
             },
+            "downloads": 2,
             "keywords": [
                 "provider",
                 "multimodal",
@@ -7887,8 +8079,8 @@
         },
         {
             "name": "ppt-deck",
-            "description": "演示文稿生成 — 一句话或一篇文档变成独立 HTML 网页放映加可编辑 PPTX，5 套视觉主题、页间转场与要点动画，中英双语，支持数据溯源与逐页 PNG/PDF 渲染。",
-            "version": "1.0.0",
+            "description": "演示文稿生成 — 一句话或一篇文档变成独立 HTML 网页放映加可编辑 PPTX，5 套视觉主题 + 16 套版式参考库（192 页预览），中英双语，支持数据溯源与逐页 PNG/PDF 渲染。",
+            "version": "1.1.0",
             "author": "dsh-ppt",
             "license": "MIT",
             "categories": [
@@ -7907,6 +8099,7 @@
             "display_name": {
                 "zh": "演示文稿生成"
             },
+            "downloads": 1,
             "keywords": [
                 "ppt",
                 "pptx",
@@ -7922,9 +8115,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-ppt-deck-v1.0.0/ppt-deck-1.0.0-all.tar.gz",
-                    "sha256": "b9bfcba3eed1fa71c3d2c84a36b34ccf47142ce779df930a09e00b177198e856",
-                    "size": 100764
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-ppt-deck-v1.1.0/ppt-deck-1.1.0-all.tar.gz",
+                    "sha256": "0881536686f529748dc6c84299ff24187f55146b8c5797d103e37f6358c19369",
+                    "size": 9963881
                 }
             }
         },
@@ -8035,7 +8228,7 @@
             "display_name": {
                 "zh": "提示词增强"
             },
-            "downloads": 80,
+            "downloads": 82,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -8044,7 +8237,7 @@
                 "提示词",
                 "优化"
             ],
-            "min_host_version": "0.6.12",
+            "min_host_version": "0.6.10",
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
@@ -8135,7 +8328,7 @@
             "display_name": {
                 "zh": "快速截图"
             },
-            "downloads": 44,
+            "downloads": 45,
             "keywords": [
                 "screenshot",
                 "clipboard",
@@ -8402,7 +8595,7 @@
             "display_name": {
                 "zh": "自进化工具集"
             },
-            "downloads": 28,
+            "downloads": 29,
             "keywords": [
                 "self-evolve",
                 "plugin",
@@ -8782,7 +8975,7 @@
             "display_name": {
                 "zh": "技能创作专家"
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "skill",
                 "agents",
@@ -9196,7 +9389,7 @@
             "display_name": {
                 "zh": "SSH 远程工具包"
             },
-            "downloads": 31,
+            "downloads": 33,
             "platforms": [
                 "windows",
                 "linux",
@@ -9429,7 +9622,7 @@
             "display_name": {
                 "zh": "SuperClaude 开发框架"
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "development",
                 "code-quality",
@@ -9469,7 +9662,7 @@
             "display_name": {
                 "zh": "Superpowers 技能库"
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "skills",
                 "tdd",
@@ -9567,7 +9760,7 @@
                 "并行任务",
                 "对话引擎"
             ],
-            "min_host_version": "0.5.0",
+            "min_host_version": "0.6.10",
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
                 "light": "icons/board.svg",
@@ -9602,7 +9795,7 @@
             "display_name": {
                 "zh": "AI 私人教师"
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "teach",
                 "education",
@@ -9863,7 +10056,7 @@
             "display_name": {
                 "zh": "最后生还者主题"
             },
-            "downloads": 9,
+            "downloads": 11,
             "keywords": [
                 "theme",
                 "the-last-of-us",
@@ -10125,7 +10318,7 @@
             "display_name": {
                 "zh": "工具实现定位"
             },
-            "downloads": 7,
+            "downloads": 8,
             "keywords": [
                 "tool",
                 "locator",
@@ -10451,7 +10644,7 @@
         {
             "name": "voice-input",
             "description": "输入框工具栏语音听写按钮：点击开始录音，再次点击结束并把识别文字插入输入框光标处。纯云端识别：硅基流动（免费模型，默认）与 MiniMax 双引擎可配，云端失败自动互为备用",
-            "version": "0.7.0",
+            "version": "0.7.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -10485,7 +10678,7 @@
             "display_name": {
                 "zh": "语音输入"
             },
-            "downloads": 40,
+            "downloads": 48,
             "keywords": [
                 "voice",
                 "dictation",
@@ -10498,23 +10691,23 @@
                 "windows",
                 "darwin"
             ],
-            "min_host_version": "0.6.12",
+            "min_host_version": "0.7.2",
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-voice-input-v0.7.0/voice-input-0.7.0-all.tar.gz",
-                    "sha256": "f75ac8f964c7f72b0c1845d1eddef0c11679a5a4e55acba3ad9869109347f8cb",
-                    "size": 136514
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-voice-input-v0.7.1/voice-input-0.7.1-all.tar.gz",
+                    "sha256": "2deccf62308c1321ae7ebf66d56a28b9d4f7edb2e81b9c8b5692fc179e82cfb5",
+                    "size": 136797
                 }
             }
         },
         {
             "name": "voice-reply",
             "description": "消息卡片页脚「朗读」按钮：点击播报本条 AI 回复。双引擎：本地系统语音（Windows SAPI5 / macOS say，免费零配置，默认）+ OpenAI 兼容在线 TTS API（默认预填硅基流动 CosyVoice2，可指向任意兼容服务）",
-            "version": "1.8.0",
+            "version": "1.8.1",
             "author": "DriFox",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -10548,7 +10741,7 @@
             "display_name": {
                 "zh": "语音朗读"
             },
-            "downloads": 16,
+            "downloads": 22,
             "keywords": [
                 "voice",
                 "tts",
@@ -10562,16 +10755,16 @@
                 "windows",
                 "darwin"
             ],
-            "min_host_version": "0.6.12",
+            "min_host_version": "0.7.2",
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-voice-reply-v1.8.0/voice-reply-1.8.0-all.tar.gz",
-                    "sha256": "4fbf2a055ed102ff5ca4a349c4511f5b4f2bd1e30a5ce30c27bb81ab46e9a91d",
-                    "size": 128204
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-voice-reply-v1.8.1/voice-reply-1.8.1-all.tar.gz",
+                    "sha256": "a8f6ebfb8e90148c15ab7947ac42cacb8b3f14af1a64a2fc1d2dda99ef2d8dd4",
+                    "size": 128599
                 }
             }
         },
@@ -10777,7 +10970,7 @@
                 "恢复",
                 "同步"
             ],
-            "min_host_version": "0.6.10",
+            "min_host_version": "0.7.2",
             "api_version": 2,
             "homepage": "https://github.com/martin98-afk/drifox-plugins",
             "icon": {
@@ -10896,7 +11089,7 @@
             "display_name": {
                 "zh": "PowerShell 工具"
             },
-            "downloads": 41,
+            "downloads": 43,
             "keywords": [
                 "powershell",
                 "windows",
@@ -11024,7 +11217,7 @@
             "display_name": {
                 "zh": "WorkBuddy 专家模式"
             },
-            "downloads": 10,
+            "downloads": 11,
             "keywords": [
                 "workbuddy",
                 "问答模式",

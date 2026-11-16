@@ -16,11 +16,14 @@ SDK 延迟导入纪律：模块顶层不 eager import 平台 SDK，复用宿主 
 from __future__ import annotations
 
 import asyncio
+import base64
+import hashlib
 import json
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import quote
 
 from loguru import logger
 
@@ -29,11 +32,14 @@ from app.gateway.base import (
     ChatInfo,
     MessageEvent,
     MessageType,
-    PlatformConfig,
     SendResult,
 )
 
 DEFAULT_API_BASE = "https://ilinkai.weixin.qq.com"
+# 图片 CDN（iLink 图片以 AES-128-ECB 加密存放，需 aeskey 解密）
+IMAGE_CDN_BASE = "https://novac2c.cdn.weixin.qq.com/c2c"
+MAX_INBOUND_IMAGES = 10
+MAX_INBOUND_IMAGE_BYTES = 30 * 1024 * 1024
 
 # 配置常量
 LONG_POLL_TIMEOUT = 45.0  # getupdates 长轮询（服务端 hold 35s + 余量）
@@ -41,7 +47,7 @@ REQUEST_TIMEOUT = 15.0
 MAX_CONSECUTIVE_FAILURES = 3
 BACKOFF_DELAYS = [2, 5, 30]
 CONTEXT_TOKEN_TTL = 24 * 3600  # context_token 有效期（秒）
-MSG_CHUNK_LIMIT = 4000  # 单条消息文本上限
+MSG_CHUNK_LIMIT = 500  # 单条文本上限（微信阅读舒适区；超出按段落分条）
 # ret=-2：context_token 失效（久未互动）或限流；前者需对方重新发消息，后者退避重试
 SEND_RETRY_DELAYS = [1.0, 3.0, 8.0]  # 分片限流退避（秒）
 
@@ -154,6 +160,38 @@ def render_markdown_plain(md: str) -> str:
     return "\n".join(result).strip()
 
 
+def _split_text(text: str, limit: int, *, prefer_paragraph: bool = False) -> List[str]:
+    """长文本分片：优先空行/换行/空格边界，切点不早于 55% 上限，否则硬切。
+
+    宿主不再提供文本分片工具（E2 平台迁出方向），网关自包含实现；
+    规则与原 ``text_split.split_message`` 一致，保持分片行为不变。
+    """
+    body = (text or "").strip()
+    if not body:
+        return []
+    if limit <= 0 or len(body) <= limit:
+        return [body]
+
+    floor = int(limit * 0.55)
+    chunks: List[str] = []
+    remaining = body
+    while len(remaining) > limit:
+        cut = remaining.rfind("\n\n", 0, limit) if prefer_paragraph else -1
+        if cut < floor:
+            cut = remaining.rfind("\n", 0, limit)
+        if cut < floor:
+            cut = remaining.rfind(" ", 0, limit)
+        if cut < floor:
+            cut = limit
+        chunk = remaining[:cut].strip()
+        if chunk:
+            chunks.append(chunk)
+        remaining = remaining[cut:].lstrip()
+    if remaining:
+        chunks.append(remaining)
+    return chunks
+
+
 def check_wechat_requirements() -> bool:
     """检查微信网关依赖是否满足。
 
@@ -179,14 +217,14 @@ class WechatAdapter(BasePlatformAdapter):
         - bot_token: iLink bot_token（扫码登录工具自动写入）
     """
 
-    platform = "wechat"
+    platform_id = "wechat"
     name = "微信"
     MAX_MESSAGE_LENGTH = MSG_CHUNK_LIMIT
 
-    def __init__(self, config: PlatformConfig, **kwargs):
-        super().__init__(config, **kwargs)
-
-        self._bot_token = config.secret or ""
+    def __init__(self) -> None:
+        super().__init__()
+        cfg = _config()
+        self._bot_token = cfg["bot_token"]
 
         # 连接资源
         self._http_client: Optional[Any] = None
@@ -260,8 +298,19 @@ class WechatAdapter(BasePlatformAdapter):
         logger.info("[Wechat] Disconnected")
 
     async def _cleanup(self) -> None:
-        """清理资源"""
+        """清理资源（幂等）。
+
+        同时停掉轮询：只置 _connected=False 再关 client 时，旧 _poll_loop
+        仍在跑 → 每轮 _api_post 撞上 NoneType.post（历史日志
+        「Poll failed x3: 'NoneType' object has no attribute 'post'」）。
+        """
         self._connected = False
+        self._running = False
+        task = self._poll_task
+        self._poll_task = None
+        current = asyncio.current_task()
+        if task is not None and not task.done() and task is not current:
+            task.cancel()
         self._save_cursor()
         if self._http_client:
             await self._http_client.aclose()
@@ -284,6 +333,8 @@ class WechatAdapter(BasePlatformAdapter):
 
     async def _api_post(self, endpoint: str, body: Dict[str, Any], timeout: float = REQUEST_TIMEOUT) -> Dict[str, Any]:
         """POST iLink 接口；HTTP 非 2xx 或业务 ret!=0 抛异常"""
+        if self._http_client is None:
+            raise RuntimeError("微信连接未就绪（http client 未初始化）")
         url = f"{DEFAULT_API_BASE}/{endpoint}"
         resp = await self._http_client.post(url, json=body, headers=self._api_headers(), timeout=timeout)
         if resp.status_code >= 400:
@@ -347,6 +398,8 @@ class WechatAdapter(BasePlatformAdapter):
             self._save_cursor()
 
         msgs = data.get("msgs") or []
+        if msgs:
+            logger.info(f"[Wechat] getupdates 收到 {len(msgs)} 条消息")
         return (msgs, False, None)
 
     async def _poll_loop(self) -> None:
@@ -354,6 +407,10 @@ class WechatAdapter(BasePlatformAdapter):
         consecutive = 0
         try:
             while self._running:
+                if self._http_client is None:
+                    logger.warning("[Wechat] http client 已释放，停止轮询")
+                    self._running = False
+                    return
                 msgs, expired, err = await self._poll_once()
 
                 if expired:
@@ -425,19 +482,33 @@ class WechatAdapter(BasePlatformAdapter):
         if not from_user_id or from_user_id.endswith("@im.bot"):
             return
 
+        logger.info(
+            f"[Wechat] 入站消息 from={from_user_id[:16]} "
+            f"items={len(msg.get('item_list') or [])} keys={sorted(msg.keys())[:10]}"
+        )
+
         # 被动回复凭据
         ctx = msg.get("context_token")
         if ctx:
             self._context_tokens[from_user_id] = {"token": ctx, "ts": time.time()}
 
-        text = self._extract_text(msg.get("item_list"))
-        if not text.strip():
+        item_list = msg.get("item_list") or []
+        text = self._extract_text(item_list)
+        has_image = self._has_image(item_list)
+        has_file = self._has_file(item_list)
+        if not text.strip() and not has_image and not has_file:
             logger.debug(f"[Wechat] Non-text message skipped (from={from_user_id[:12]})")
             return
 
         event = MessageEvent(
             text=text.strip(),
-            message_type=MessageType.TEXT,
+            message_type=(
+                MessageType.IMAGE
+                if has_image
+                else MessageType.FILE
+                if has_file
+                else MessageType.TEXT
+            ),
             message_id=str(msg.get("client_id") or uuid.uuid4()),
             chat_id=f"dm:{from_user_id}",
             user_id=from_user_id,
@@ -445,8 +516,163 @@ class WechatAdapter(BasePlatformAdapter):
             platform=self.platform,
             chat_type="dm",
         )
-        # 事件分发（poll_loop 已在事件循环内，create_task 安全）
-        asyncio.get_running_loop().create_task(self.handle_message(event))
+        # 事件分发（poll_loop 已在事件循环内，create_task 安全）；
+        # 有图时先下载解密再交给宿主，下载失败不阻断文本
+        asyncio.get_running_loop().create_task(self._dispatch_with_media(event, item_list))
+
+    # ── 入站图片 ────────────────────────────────────────
+
+    @staticmethod
+    def _has_image(item_list: List[Dict[str, Any]]) -> bool:
+        return any(
+            item.get("type") == ITEM_IMAGE or isinstance(item.get("image_item"), dict)
+            for item in item_list
+        )
+
+    @staticmethod
+    def _has_file(item_list: List[Dict[str, Any]]) -> bool:
+        return any(
+            item.get("type") == ITEM_FILE or isinstance(item.get("file_item"), dict)
+            for item in item_list
+        )
+
+    async def _dispatch_with_media(
+        self, event: MessageEvent, item_list: List[Dict[str, Any]]
+    ) -> None:
+        """下载入站图片/文件并填充 media_urls，再交给宿主 handler。"""
+        count = 0
+        for item in item_list:
+            if count >= MAX_INBOUND_IMAGES:
+                break
+            for field, kind in (("image_item", "image"), ("file_item", "file")):
+                payload = item.get(field)
+                if not isinstance(payload, dict):
+                    continue
+                try:
+                    path = await self._download_media(payload, kind)
+                except Exception as e:
+                    logger.warning(f"[Wechat] 入站 {kind} 下载失败: {e}")
+                    path = None
+                if path:
+                    event.media_urls.append(path)
+                    event.media_types.append(kind)
+                    count += 1
+        logger.info(
+            f"[Wechat] 投递宿主: text={bool(event.text)} media={len(event.media_urls)} "
+            f"handler={self._message_handler is not None}"
+        )
+        await self.handle_message(event)
+
+    @staticmethod
+    def _parse_aes_key(image_item: Dict[str, Any]) -> Optional[bytes]:
+        """解析 iLink 图片 aeskey（16 字节）。两种编码：hex 明文或 base64。"""
+        direct = image_item.get("aeskey")
+        if isinstance(direct, str) and len(direct) == 32:
+            try:
+                return bytes.fromhex(direct)
+            except ValueError:
+                pass
+        media = image_item.get("media") or {}
+        encoded = media.get("aes_key")
+        if isinstance(encoded, str) and encoded:
+            try:
+                raw = base64.b64decode(encoded)
+            except Exception:
+                raw = b""
+            if len(raw) == 16:
+                return raw
+            if len(raw) == 32:
+                try:
+                    return bytes.fromhex(raw.decode("ascii"))
+                except (UnicodeDecodeError, ValueError):
+                    return None
+        return None
+
+    @staticmethod
+    def _decrypt_image(data: bytes, key: bytes) -> Optional[bytes]:
+        """AES-128-ECB 解密（PKCS7 padding）。依赖缺失或解密失败返回 None。"""
+        if not data or len(data) % 16:
+            return None
+        try:
+            from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
+            decryptor = Cipher(algorithms.AES(key), modes.ECB()).decryptor()
+            plain = decryptor.update(data) + decryptor.finalize()
+        except Exception as e:
+            logger.warning(f"[Wechat] 图片解密失败: {e}")
+            return None
+        if plain:
+            pad = plain[-1]
+            if 1 <= pad <= 16 and plain.endswith(bytes([pad]) * pad):
+                plain = plain[:-pad]
+        return plain or None
+
+    async def _download_media(self, payload: Dict[str, Any], kind: str = "image") -> Optional[str]:
+        """从 iLink CDN 下载并解密媒体，返回本地路径；失败返回 None。"""
+        media = payload.get("media") or {}
+        query = media.get("encrypt_query_param")
+        full_url = media.get("full_url")
+        if isinstance(query, str) and query:
+            url = f"{IMAGE_CDN_BASE}/download?encrypted_query_param={quote(query)}"
+        elif isinstance(full_url, str) and full_url:
+            url = full_url
+        else:
+            return None
+        if not self._http_client:
+            return None
+
+        response = await self._http_client.get(url, timeout=REQUEST_TIMEOUT)
+        if response.status_code != 200 or not response.content:
+            logger.warning(f"[Wechat] {kind} 下载失败 HTTP {response.status_code}")
+            return None
+        data = response.content
+        if len(data) > MAX_INBOUND_IMAGE_BYTES:
+            logger.warning(f"[Wechat] {kind} 超过 {MAX_INBOUND_IMAGE_BYTES // (1024 * 1024)}MB，跳过")
+            return None
+
+        key = self._parse_aes_key(payload)
+        if key:
+            plain = self._decrypt_image(data, key)
+            if plain is None:
+                logger.warning(f"[Wechat] {kind} 解密失败，跳过")
+                return None
+            data = plain
+
+        digest = hashlib.sha1(data).hexdigest()[:16]
+        name = payload.get("file_name") or payload.get("filename") or ""
+        safe_name = self._safe_name(name)
+        if safe_name:
+            path = self._cache_dir() / f"{digest[:8]}_{safe_name}"
+        else:
+            path = self._cache_dir() / f"{digest}{self._image_ext(data)}"
+        if not path.exists():
+            path.write_bytes(data)
+        return str(path)
+
+    def _cache_dir(self) -> Path:
+        """入站图片缓存目录（复用宿主 get_cache_dir）。"""
+        from app.gateway.base import get_cache_dir
+
+        return get_cache_dir("wechat")
+
+    @staticmethod
+    def _safe_name(name: str) -> str:
+        """保留扩展名的安全文件名（去掉路径分隔符与控制字符）。"""
+        import re as _re
+
+        base = str(name or "").replace("\\", "/").split("/")[-1].strip()
+        base = _re.sub(r"[\x00-\x1f\x7f]", "", base)
+        return base[:80]
+
+    @staticmethod
+    def _image_ext(data: bytes) -> str:
+        if data.startswith(b"\x89PNG\r\n\x1a\n"):
+            return ".png"
+        if data.startswith(b"GIF8"):
+            return ".gif"
+        if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+            return ".webp"
+        return ".jpg"
 
     # ── 发送 ────────────────────────────────────────────
 
@@ -483,10 +709,7 @@ class WechatAdapter(BasePlatformAdapter):
 
             rendered = render_markdown_plain(content)
             ok, err = True, None
-            chunks = [
-                rendered[i : i + MSG_CHUNK_LIMIT]
-                for i in range(0, max(len(rendered), 1), MSG_CHUNK_LIMIT)
-            ]
+            chunks = _split_text(rendered, MSG_CHUNK_LIMIT, prefer_paragraph=True) or [rendered]
             for ci, chunk in enumerate(chunks):
                 body = {
                     "msg": {
@@ -538,6 +761,171 @@ class WechatAdapter(BasePlatformAdapter):
             logger.error(f"[Wechat] Send failed: {e}", exc_info=True)
             return SendResult(success=False, error=str(e), retryable=True)
 
+    # ── 媒体发送（图片/文件）──────────────────────────
+    # 协议参考 dsh-im weixin-api.mjs：getuploadurl 申请上传参数 → CDN 以
+    # AES-128-ECB(PKCS7) 加密上传 → 响应头 x-encrypted-param 作下载凭据 →
+    # sendmessage 带 image_item/file_item。media_type: 1=图片 3=文件。
+    MEDIA_TYPE_IMAGE = 1
+    MEDIA_TYPE_FILE = 3
+    MAX_OUTBOUND_MEDIA_BYTES = 30 * 1024 * 1024
+
+    @staticmethod
+    def _padded_size(size: int) -> int:
+        """AES-ECB + PKCS7 加密后的密文字节数（等价 Node 的 ceil((n+1)/16)*16）。"""
+        return (size // 16 + 1) * 16
+
+    async def _upload_media(
+        self, raw: bytes, user_id: str, media_type: int
+    ) -> Tuple[Dict[str, Any], int]:
+        """上传媒体到 iLink CDN，返回 (media 描述, 密文字节数)。失败抛异常。"""
+        import os
+
+        from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
+        file_key = os.urandom(16).hex()
+        aes_key = os.urandom(16)
+        cipher_size = self._padded_size(len(raw))
+        up = await self._api_post(
+            "ilink/bot/getuploadurl",
+            {
+                "filekey": file_key,
+                "media_type": media_type,
+                "to_user_id": user_id,
+                "rawsize": len(raw),
+                "rawfilemd5": hashlib.md5(raw).hexdigest(),
+                "filesize": cipher_size,
+                "no_need_thumb": True,
+                "aeskey": aes_key.hex(),
+                "base_info": {"channel_version": "1.0.0"},
+            },
+            timeout=30.0,
+        )
+        upload_url = up.get("upload_full_url")
+        if not upload_url:
+            param = up.get("upload_param")
+            if not param:
+                raise RuntimeError("getuploadurl 未返回上传地址")
+            upload_url = f"{IMAGE_CDN_BASE}/upload?encrypted_query_param={quote(param)}&filekey={file_key}"
+        encryptor = Cipher(algorithms.AES(aes_key), modes.ECB()).encryptor()
+        # cryptography 的 ECB 不做填充，需手工补 PKCS7（Node createCipheriv 自动填充）
+        pad = 16 - (len(raw) % 16)
+        padded = raw + bytes([pad]) * pad
+        ciphertext = encryptor.update(padded) + encryptor.finalize()
+        resp = await self._http_client.post(
+            upload_url,
+            content=ciphertext,
+            headers={
+                "Content-Type": "application/octet-stream",
+                "Content-Length": str(len(ciphertext)),
+            },
+            timeout=60.0,
+        )
+        if resp.status_code != 200:
+            raise RuntimeError(f"CDN 上传失败 HTTP {resp.status_code}: {resp.text[:200]}")
+        download_param = resp.headers.get("x-encrypted-param")
+        if not download_param:
+            raise RuntimeError("CDN 上传响应缺少 x-encrypted-param")
+        # 参考实现对 aeskey hex 串做 base64（入站 _parse_aes_key 兼容此编码）
+        media = {
+            "encrypt_query_param": download_param,
+            "aes_key": base64.b64encode(aes_key.hex().encode()).decode(),
+            "encrypt_type": 1,
+        }
+        return media, cipher_size
+
+    async def _post_item(self, chat_id: str, item: Dict[str, Any]) -> SendResult:
+        """发单条 item 消息（图片/文件共用），带限流退避与会话失效判定。"""
+        _, user_id = chat_id.split(":", 1) if ":" in chat_id else ("dm", chat_id)
+        ctx = self._get_context_token(chat_id)
+        if not ctx:
+            return SendResult(
+                success=False,
+                error="需要对方先发消息（24h 被动回复窗口）",
+                retryable=False,
+            )
+        body = {
+            "msg": {
+                "from_user_id": "",
+                "to_user_id": user_id,
+                "client_id": str(uuid.uuid4()),
+                "message_type": MSG_TYPE_BOT,
+                "message_state": MSG_STATE_FINISH,
+                "item_list": [item],
+                "context_token": ctx,
+            },
+            "base_info": {"channel_version": "1.0.0"},
+        }
+        for delay in [0.0] + SEND_RETRY_DELAYS:
+            if delay:
+                await asyncio.sleep(delay)
+            try:
+                await self._api_post("ilink/bot/sendmessage", body)
+                return SendResult(success=True)
+            except Exception as e:
+                msg = str(e)
+                if self._is_session_expired(e):
+                    self._last_error = "bot_token 已失效，请重新扫码登录"
+                    self._connected = False
+                    return SendResult(success=False, error=msg[:200], retryable=False)
+                if "prepare failed" in msg:
+                    logger.warning("[Wechat] context_token 失效（对方久未发消息）")
+                    return SendResult(
+                        success=False,
+                        error="回复窗口已失效：请让对方重新发一条消息再试",
+                        retryable=False,
+                    )
+                if "ret=-2" in msg:
+                    continue
+                return SendResult(success=False, error=msg[:200], retryable=True)
+        return SendResult(success=False, error="发送失败（限流重试耗尽）", retryable=True)
+
+    async def _send_media(self, chat_id: str, file_path: str, media_type: int) -> SendResult:
+        if not self._http_client:
+            return SendResult(success=False, error="Not connected", retryable=True)
+        # 先查回复窗口：没有 context_token 时上传也没用，别白传一遍文件
+        if not self._get_context_token(chat_id):
+            return SendResult(
+                success=False,
+                error="需要对方先发消息（24h 被动回复窗口）",
+                retryable=False,
+            )
+        try:
+            p = Path(file_path)
+            if not p.is_file():
+                return SendResult(success=False, error=f"文件不存在: {file_path}", retryable=False)
+            raw = p.read_bytes()
+            if len(raw) > self.MAX_OUTBOUND_MEDIA_BYTES:
+                limit = self.MAX_OUTBOUND_MEDIA_BYTES // (1024 * 1024)
+                return SendResult(success=False, error=f"文件超过 {limit}MB 上限", retryable=False)
+            _, user_id = chat_id.split(":", 1) if ":" in chat_id else ("dm", chat_id)
+            media, cipher_size = await self._upload_media(raw, user_id, media_type)
+            if media_type == self.MEDIA_TYPE_IMAGE:
+                item = {
+                    "type": ITEM_IMAGE,
+                    "image_item": {"media": media, "mid_size": cipher_size},
+                }
+            else:
+                item = {
+                    "type": ITEM_FILE,
+                    "file_item": {
+                        "media": media,
+                        "file_name": p.name,
+                        "len": str(len(raw)),
+                    },
+                }
+            return await self._post_item(chat_id, item)
+        except Exception as e:
+            logger.error("[Wechat] Send media failed: {}", e, exc_info=True)
+            return SendResult(success=False, error=str(e)[:200], retryable=True)
+
+    async def send_image(self, chat_id: str, image_path: str, **kwargs) -> SendResult:
+        """发送图片（原生 image_item）"""
+        return await self._send_media(chat_id, image_path, self.MEDIA_TYPE_IMAGE)
+
+    async def send_file(self, chat_id: str, file_path: str, **kwargs) -> SendResult:
+        """发送文件（原生 file_item）"""
+        return await self._send_media(chat_id, file_path, self.MEDIA_TYPE_FILE)
+
     async def get_chat_info(self, chat_id: str) -> ChatInfo:
         """获取聊天信息（iLink 不提供资料反查，返回占位）"""
         _, user_id = chat_id.split(":", 1) if ":" in chat_id else ("dm", chat_id)
@@ -554,54 +942,44 @@ class WechatAdapter(BasePlatformAdapter):
 # 避免模块顶层触发宿主副作用。
 
 
-def _build_config() -> "PlatformConfig":
-    """读 PluginConfigStore 构造微信配置"""
-    from app.gateway.base import PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+PLUGIN_NAME = "gateway-wechat"
 
-    store = PluginConfigStore()
-    return PlatformConfig(
-        enabled=bool(store.get("gateway-wechat", "enabled")),
-        platform="wechat",
-        bot_id=store.get("gateway-wechat", "bot_token") or "",
-        secret=store.get("gateway-wechat", "bot_token") or "",
-    )
+_CAPS: dict = {}
 
 
-def _write_config(config: "PlatformConfig") -> None:
-    """设置卡保存回调：PlatformConfig → PluginConfigStore"""
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+def _cap(cap_id: str):
+    """取宿主能力（按 manifest capabilities 裁剪；后台线程无 ctx 也可用）。"""
+    cap = _CAPS.get(cap_id)
+    if cap is None:
+        from app.plugins.sdk import caps_for
 
-    PluginConfigStore().set_values(
-        "gateway-wechat",
-        {
-            "enabled": config.enabled,
-            "bot_token": config.secret or "",
-        },
-    )
+        cap = caps_for(cap_id, plugin=PLUGIN_NAME, surface="ui")
+        if cap is None:
+            logger.warning(f"[{PLUGIN_NAME}] 能力不可用: {cap_id}（检查 manifest capabilities）")
+            return None
+        _CAPS[cap_id] = cap
+    return cap
 
 
-def _build_config_values(values: dict, old_config) -> "PlatformConfig":
-    """设置卡保存回调：表单值 → PluginConfigStore → PlatformConfig"""
-    from app.gateway.base import PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+def _config() -> dict:
+    """读本插件配置（plugin.config.read 能力，一次取全量）。"""
+    reader = _cap("plugin.config.read")
+    values = (reader() if reader else {}) or {}
+    return {
+        "enabled": bool(values.get("enabled")),
+        "bot_token": values.get("bot_token") or "",
+    }
 
-    store = PluginConfigStore()
-    enabled = values.get("enabled", store.get("gateway-wechat", "enabled"))
-    bot_token = values.get("bot_token", "") or store.get("gateway-wechat", "bot_token") or ""
-    store.set_values(
-        "gateway-wechat",
-        {
-            "enabled": bool(enabled),
-            "bot_token": bot_token,
-        },
-    )
-    return PlatformConfig(
-        enabled=bool(enabled),
-        platform="wechat",
-        bot_id=bot_token,
-        secret=bot_token,
-    )
+
+def _set_enabled(enabled: bool) -> None:
+    writer = _cap("plugin.config.write")
+    if writer is not None:
+        writer("enabled", bool(enabled))
+
+
+def _validate() -> tuple:
+    cfg = _config()
+    return bool(cfg["bot_token"]), "缺少 bot_token：请在设置卡点「扫码登录」（或手动粘贴）"
 
 
 def register(registry) -> None:
@@ -611,15 +989,11 @@ def register(registry) -> None:
         GatewayPlatformDef(
             platform_id="wechat",
             display_name="微信",
-            adapter_factory=lambda cfg: WechatAdapter(cfg),
+            adapter_factory=WechatAdapter,
             check_requirements=check_wechat_requirements,
-            config_builder=_build_config,
-            config_writer=_write_config,
-            build_config_values=_build_config_values,
-            validate_config=lambda cfg: (
-                bool(cfg.secret),
-                "缺少 bot_token：请在设置卡点「扫码登录」（或手动粘贴）",
-            ),
+            is_enabled=lambda: _config()["enabled"],
+            set_enabled=_set_enabled,
+            validate=_validate,
             ui_order=10,
         )
     )

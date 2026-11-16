@@ -79,3 +79,9 @@ $RECYCLE.BIN/
 plugins/*/config.json
 .worktrees/ 
 .tmp_we_extract/ 
+# 主题制作工具链：脚本与文档入库，中间产物与素材不进库
+.theme-template/_wip/
+.theme-template/_media/
+.theme-template/_selftest/
+.theme-template/**/__pycache__/
+.theme-template/*.bak

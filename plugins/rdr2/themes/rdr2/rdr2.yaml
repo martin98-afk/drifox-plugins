@@ -102,3 +102,42 @@ colors:
   branch_label_bg: "rgba(161, 40, 50, 0.15)"
   branch_label_border: "rgba(161, 40, 50, 0.30)"
   window_bg: "rgba(161, 40, 50, 0.04)"
+  titlebar_scrim: rgba(0, 0, 0, 0.58)
+  tool_title: '#FFA500'
+  tool_title_mcp: '#00BCD4'
+  tool_title_subagent: '#9C27B0'
+  status_danger_bg_dark: '#8B4A4A'
+  success_dark: '#3D7A5A'
+  tag_green: '#34d399'
+  tag_green_text: '#6ee7b7'
+  # ── 5. 结构键（从 guts-berserk 同色系模板补齐，非视觉主色） ──
+  input_glow_preset: "breath"
+  archived_card_bg: "rgba(158, 130, 131, 31)"
+  archived_card_border: "rgba(158, 130, 131, 56)"
+  button_text_on_accent: "#ffffff"
+  card_bg_dim: "rgba(115, 30, 34, 13)"
+  card_placeholder_text: "#9e8283"
+  divider_color: "rgba(255, 255, 255, 15)"
+  glow_ambient_alpha: "90"
+  glow_ambient_blur: "34"
+  glow_primary_alpha: "165"
+  glow_primary_blur: "26"
+  hover_bg_strong: "rgba(115, 30, 34, 41)"
+  scrollbar_handle_bg: "rgba(255, 255, 255, 36)"
+  scrollbar_handle_hover_bg: "rgba(115, 30, 34, 115)"
+  send_btn_radius: "17"
+  status_archive_bg: "rgba(224, 145, 63, 204)"
+  status_danger_bg: "rgba(224, 68, 63, 217)"
+  status_info: "#3fcde0"
+  syntax_error: "#e0443f"
+  syntax_result: "#993fe0"
+  syntax_step: "#3fcde0"
+  syntax_success: "#3fe04f"
+  syntax_tool: "#e0913f"
+  tag_accent: "#731e22"
+  tag_accent_text: "#a46d6f"
+  tag_orange: "#e0913f"
+  tag_orange_text: "#e9b279"
+  tag_purple: "#993fe0"
+  tag_purple_text: "#b879e9"
+  toolbar_bg: "rgba(115, 30, 34, 15)"

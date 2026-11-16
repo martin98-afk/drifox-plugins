@@ -281,14 +281,14 @@ if _UI_AVAILABLE:
 
         def _echo(self) -> None:
             """回显当前生效值（默认兜底可见）；blockSignals 阻断写盘循环。"""
-            from app.plugins.managers.plugin_config_store import PluginConfigStore
+            from app.plugins.sdk import caps_for
 
-            store = PluginConfigStore()
-            engine = str(store.get("voice-reply", "engine") or "local")
-            url = str(store.get("voice-reply", "api_url") or "")
-            model = str(store.get("voice-reply", "api_model") or "") or DEFAULT_MODEL
-            voice = str(store.get("voice-reply", "api_voice") or "") or default_voice_value(model)
-            api_key = str(store.get("voice-reply", "api_key") or "")
+            read = caps_for("plugin.config.read")
+            engine = str(read("engine", "") or "local")
+            url = str(read("api_url", "") or "")
+            model = str(read("api_model", "") or "") or DEFAULT_MODEL
+            voice = str(read("api_voice", "") or "") or default_voice_value(model)
+            api_key = str(read("api_key", "") or "")
 
             for combo, value in (
                 (self._engine_combo, engine),
@@ -540,20 +540,11 @@ if _UI_AVAILABLE:
             self._test_result.setStyleSheet("color: #3ea76a;" if ok else "color: #e5484d;")
 
         def _on_reset(self) -> None:
-            from app.plugins.managers.plugin_config_store import PluginConfigStore
+            from app.plugins.sdk import caps_for
 
-            store = PluginConfigStore()
-            store.set_values(
-                "voice-reply",
-                {
-                    "engine": "",
-                    "api_url": "",
-                    "api_model": "",
-                    "api_voice": "",
-                    "api_key": "",
-                    HOST_PROVIDER_KEY: "",
-                },
-            )
+            write = caps_for("plugin.config.write")
+            for key in ("engine", "api_url", "api_model", "api_voice", "api_key", HOST_PROVIDER_KEY):
+                write(key, "")  # api_key 是 password 字段，存储层自动清密钥库
             self._source_combo.blockSignals(True)
             self._source_combo.setCurrentIndex(0)
             self._source_combo.blockSignals(False)
@@ -564,9 +555,9 @@ if _UI_AVAILABLE:
         @staticmethod
         def _save(key: str, value: str) -> None:
             try:
-                from app.plugins.managers.plugin_config_store import PluginConfigStore
+                from app.plugins.sdk import caps_for
 
-                PluginConfigStore().set_values("voice-reply", {key: value})
+                caps_for("plugin.config.write")(key, value)
             except Exception as e:  # noqa: BLE001 — 写盘失败不影响界面操作
                 logger.warning(f"[voice-reply] 配置保存失败({key}): {e}")
 

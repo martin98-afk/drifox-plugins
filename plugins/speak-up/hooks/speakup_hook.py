@@ -23,7 +23,7 @@ from loguru import logger  # noqa: E402
 def on_user_message(ctx):
     """用户发送消息后触发（PostUserMessage）。"""
     try:
-        from ui.speakup_ui import get_runner  # type: ignore
+        from speakup_core.runtime import get_runner  # type: ignore
 
         get_runner().note_user_activity()
     except Exception as e:  # noqa: BLE001 - hook 绝不能影响对话

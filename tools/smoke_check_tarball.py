@@ -274,8 +274,11 @@ def _module_exists(
     name: str,
     roots: set[str],
     init_sources: dict[str, bytes],
+    read_member=None,
 ) -> bool:
     """from <module> import <name> 在包内是否存在对应落点。
+
+    read_member: 可选回调（成员路径 -> 文本），供星号重导出跟进目标模块用。
 
     `roots` 是该顶层包在包内的实际前缀集合（如 {"deps/bilibili_api"}），
     所有候选路径都要带上它 —— 包内成员名是 `deps/bilibili_api/login_v2.py`
@@ -287,6 +290,7 @@ def _module_exists(
       3. <root>/<module 剩余段>.py（name 是模块级符号）
       4. <root>/<module 剩余段>/__init__.py 里出现 name（重导出）
       5. <root>/<module 剩余段>/ 下有 name 的编译扩展（.so/.pyd/.dylib）
+      6. __init__ 用 `from .x import *` 星号重导出 name（跟进 x 的定义）
 
     第 4 条必须做内容级校验，不能只看 __init__.py 存不存在：
     bilibili_api/__init__.py 是存在的，但里面没有 login_v2，那正是本次事故形态。
@@ -306,6 +310,12 @@ def _module_exists(
         if init_key in paths:
             body = init_sources.get(init_key, b"")
             if _mentions_symbol(body, name):
+                return True
+            # 星号重导出不会在 __init__ 留下 name 字面（discord.py 2.7.1
+            # 全文件 `from .flags import *` 即此形态），跟进目标模块定义
+            if read_member is not None and _star_reexport_provides(
+                paths, read_member, base, body, name, seen={init_key}
+            ):
                 return True
         if name in _ext_module_names(paths, base):
             return True
@@ -336,6 +346,50 @@ def _mentions_symbol(source: bytes, name: str) -> bool:
         # __all__ = ["Server", ...]
         if isinstance(node, ast.Constant) and node.value == name:
             return True
+    return False
+
+
+def _star_modules(source: bytes) -> list[str]:
+    """源码里 `from .x.y import *` 的相对星号目标（转路径段）。"""
+    try:
+        tree = ast.parse(source.decode("utf-8", errors="replace"))
+    except SyntaxError:
+        return []
+    mods = []
+    for node in ast.walk(tree):
+        # 只跟同级相对星号导入；绝对导入与父级（level>1）不跟，宁可漏判不放残包
+        if isinstance(node, ast.ImportFrom) and node.level == 1 and node.module:
+            for alias in node.names:
+                if alias.name == "*":
+                    mods.append(node.module.replace(".", "/"))
+    return mods
+
+
+def _star_reexport_provides(
+    paths: set[str],
+    read_member,
+    base: str,
+    body: bytes,
+    name: str,
+    seen: set[str],
+    depth: int = 2,
+) -> bool:
+    """__init__ 是否经 `from .mod import *` 提供 name：读 mod 的模块级定义。
+
+    只做静态解析不执行代码；星号链最多跟 depth 层，seen 防循环导入形态死循环。
+    """
+    if depth <= 0:
+        return False
+    for mod in _star_modules(body):
+        for key in (f"{base}/{mod}.py", f"{base}/{mod}/__init__.py"):
+            if key not in paths or key in seen:
+                continue
+            seen.add(key)
+            src = read_member(key).encode("utf-8", errors="replace")
+            if _mentions_symbol(src, name):
+                return True
+            if _star_reexport_provides(paths, read_member, base, src, name, seen, depth - 1):
+                return True
     return False
 
 
@@ -522,7 +576,10 @@ def smoke_check(tarball: Path) -> tuple[bool, list[str], list[str]]:
                         continue  # 不是包内依赖（stdlib / 宿主模块），不管
                     if top in _DYNAMIC_MODULE_HINTS:
                         continue
-                    if not _module_exists(paths, module, name, vendored[top], init_sources):
+                    if not _module_exists(
+                        paths, module, name, vendored[top], init_sources,
+                        read_member=lambda key: _read_member_text(tf, raw_members, key),
+                    ):
                         errors.append(
                             f"{src_path}:{lineno} from {module} import {name}"
                             f" —— {top} 已 vendored 但缺 {name}"

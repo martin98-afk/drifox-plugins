@@ -303,3 +303,51 @@ class TestSmokeGateFailClosed:
         assert kept == {}, "门禁不可用时不能放行任何包"
         assert failures, "门禁不可用必须记录失败原因"
         assert any("门禁" in f for f in failures)
+
+
+class TestSmokeStarReexport:
+    """2026-11-13 gateway-discord 事故：discord.py 2.7.1 的 __init__.py
+    全用 `from .flags import *` 星号重导出，门禁不认星号导致误杀正常包。
+    修后：星号目标模块的定义/导入/__all__ 必须被跟进，真缺失仍要拒绝。"""
+
+    def _build(self, tmp_path: Path, flags_body: str) -> Path:
+        tar_path = tmp_path / "starplug-1.0.0-all.tar.gz"
+        files = {
+            ".drifox-plugin/plugin.json": '{"name": "starplug", "version": "1.0.0"}',
+            "main.py": "from discord import Intents\n\nprint(Intents)\n",
+            "deps/discord/__init__.py": "from .client import *\nfrom .flags import *\n",
+            "deps/discord/flags.py": flags_body,
+        }
+        with tarfile.open(tar_path, "w:gz") as tf:
+            for name, content in files.items():
+                data = content.encode("utf-8")
+                info = tarfile.TarInfo(name)
+                info.size = len(data)
+                info.mtime = 0
+                tf.addfile(info, io.BytesIO(data))
+        return tar_path
+
+    def test_accepts_class_defined_in_star_target(self, tmp_path):
+        """星号目标模块里定义的 class 必须被认出（discord.py 事故形态）"""
+        smoke = _load_tool("smoke_check_tarball")
+        ok, errors, _ = smoke.smoke_check(
+            self._build(tmp_path, "class Intents:\n    pass\n")
+        )
+        assert ok, f"星号重导出的正常包被误杀: {errors}"
+
+    def test_accepts_symbol_via_init_all_in_star_target(self, tmp_path):
+        """星号目标用 __all__ 列出符号也算存在"""
+        smoke = _load_tool("smoke_check_tarball")
+        ok, errors, _ = smoke.smoke_check(
+            self._build(tmp_path, '__all__ = ["Intents"]\n')
+        )
+        assert ok, f"__all__ 声明的星号导出被误杀: {errors}"
+
+    def test_still_rejects_when_star_target_lacks_symbol(self, tmp_path):
+        """星号目标里真没有该符号时仍必须拒绝（防止修成一律放行）"""
+        smoke = _load_tool("smoke_check_tarball")
+        ok, errors, _ = smoke.smoke_check(
+            self._build(tmp_path, "class SomethingElse:\n    pass\n")
+        )
+        assert not ok, "星号目标缺符号的坏包必须被拒绝"
+        assert any("Intents" in e for e in errors)

@@ -15,6 +15,7 @@
     "capabilities": [
         "ui.notify",
         "model.config",
+        "model.config_for",
         "engine.session",
         "provider.list",
         "model.enumerate"

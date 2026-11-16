@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "BuildSystemPrompt": [
+      {
+        "hooks": [
+          {
+            "type": "python",
+            "function": ".inject_prompt_affix:hook",
+            "add_output_to_context": true,
+            "statusMessage": "上下文洞察附加提示:",
+            "id": "context_insight_affix"
+          }
+        ]
+      }
+    ]
+  }
+}

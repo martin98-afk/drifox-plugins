@@ -25,8 +25,6 @@ from app.gateway.base import (
     ChatInfo,
     MessageEvent,
     MessageType,
-    Platform,
-    PlatformConfig,
     SendResult,
     get_cache_dir,
 )
@@ -108,6 +106,7 @@ DINGTALK_TYPE_MAPPING = {
 # 重连退避
 RECONNECT_BACKOFF = [2, 5, 10, 30, 60]
 MAX_MESSAGE_LENGTH = 20000
+MAX_INBOUND_IMAGES = 10
 
 
 class DingTalkAdapter(BasePlatformAdapter):
@@ -121,26 +120,34 @@ class DingTalkAdapter(BasePlatformAdapter):
         - client_secret: 应用 AppSecret
     """
 
-    platform = Platform.DINGTALK
+    platform_id = "dingtalk"
     name = "DingTalk"
     MAX_MESSAGE_LENGTH = MAX_MESSAGE_LENGTH
 
-    def __init__(self, config: PlatformConfig, **kwargs):
-        super().__init__(config, **kwargs)
+    def __init__(self) -> None:
+        super().__init__()
 
-        self._client_id = config.client_id or ""
-        self._client_secret = config.client_secret or ""
+        cfg = _config()
+        self._client_id = cfg["client_id"]
+        self._client_secret = cfg["client_secret"]
 
         # Stream 客户端
         self._stream_client: Optional[Any] = None
         self._stream_task: Optional[asyncio.Task] = None
         self._http_client: Optional[Any] = None
+        self._access_token: Optional[str] = None
+        self._access_token_expiry: float = 0.0
 
         # Session webhook 缓存
         self._session_webhooks: Dict[str, tuple] = {}  # chat_id -> (webhook, expire_time)
 
         # 重连退避
         self._backoff_idx = 0
+
+        # 流式回复：chat_id -> dm/group（决定卡片投放空间）
+        self._chat_types: Dict[str, str] = {}
+        # 流式状态：chat_id -> {out_track_id, chat_type, last_edit, last_text}
+        self._stream_states: Dict[str, Dict[str, Any]] = {}
 
     async def connect(self) -> bool:
         """连接到钉钉 Stream"""
@@ -278,6 +285,8 @@ class DingTalkAdapter(BasePlatformAdapter):
 
         chat_id = conversation_id or sender_id
         chat_type = "group" if is_group else "dm"
+        if chat_id:
+            self._chat_types[chat_id] = chat_type
 
         # 存储 session webhook
         session_webhook = getattr(message, "session_webhook", None) or ""
@@ -305,13 +314,13 @@ class DingTalkAdapter(BasePlatformAdapter):
             chat_id=chat_id,
             user_id=sender_id,
             user_name=sender_nick,
-            platform=Platform.DINGTALK,
+            platform="dingtalk",
             chat_type=chat_type,
             media_urls=media_urls,
             media_types=media_types,
         )
 
-        await self.handle_message(event)
+        await self._dispatch_event(event, media_urls, media_types)
 
     def _on_message_sync(self, message: Any) -> None:
         """同步处理收到的消息（供 ChatbotHandler 调用）"""
@@ -329,6 +338,8 @@ class DingTalkAdapter(BasePlatformAdapter):
 
         chat_id = conversation_id or sender_id
         chat_type = "group" if is_group else "dm"
+        if chat_id:
+            self._chat_types[chat_id] = chat_type
 
         # 存储 session webhook
         session_webhook = getattr(message, "session_webhook", None) or ""
@@ -355,7 +366,7 @@ class DingTalkAdapter(BasePlatformAdapter):
             chat_id=chat_id,
             user_id=sender_id,
             user_name=sender_nick,
-            platform=Platform.DINGTALK,
+            platform="dingtalk",
             chat_type=chat_type,
             media_urls=media_urls,
             media_types=media_types,
@@ -367,10 +378,86 @@ class DingTalkAdapter(BasePlatformAdapter):
         try:
             loop = asyncio.get_running_loop()
             # 当前线程已有运行中的事件循环 → 创建任务
-            asyncio.create_task(self.handle_message(event))
+            asyncio.create_task(self._dispatch_event(event, media_urls, media_types))
         except RuntimeError:
             # 当前线程无运行中的事件循环 → 用 asyncio.run 驱动
-            asyncio.run(self.handle_message(event))
+            asyncio.run(self._dispatch_event(event, media_urls, media_types))
+
+    async def _dispatch_event(self, event: MessageEvent, download_codes, media_types=None) -> None:
+        """下载入站图片后再交给宿主（钉钉给的是 downloadCode，不是 URL）。"""
+        types = list(media_types or [])
+        codes = [
+            (code, "image" if index >= len(types) or types[index] == "image" else "file")
+            for index, code in enumerate(download_codes or [])
+        ]
+        if codes:
+            try:
+                paths, kinds = await self._download_by_codes(codes)
+                if paths:
+                    event.media_urls = paths
+                    event.media_types = kinds
+            except Exception as e:
+                logger.warning("[DingTalk] 入站图片下载失败: {}", e)
+        await self.handle_message(event)
+
+    async def _get_access_token(self) -> Optional[str]:
+        """获取钉钉企业内应用 accessToken（缓存至过期前 5 分钟）。"""
+        import time
+
+        now = time.time()
+        if self._access_token and now < self._access_token_expiry - 300:
+            return self._access_token
+        if not self._http_client or not self._client_id or not self._client_secret:
+            return None
+        response = await self._http_client.post(
+            "https://api.dingtalk.com/v1.0/oauth2/accessToken",
+            json={"appKey": self._client_id, "appSecret": self._client_secret},
+        )
+        data = response.json() if response.content else {}
+        token = data.get("accessToken")
+        if response.status_code == 200 and token:
+            self._access_token = token
+            self._access_token_expiry = now + int(data.get("expireIn") or 7200)
+            return token
+        logger.warning("[DingTalk] 获取 accessToken 失败: HTTP {} {}", response.status_code, data)
+        return None
+
+    async def _download_by_codes(self, codes) -> tuple:
+        """downloadCode → downloadUrl → 本地文件。返回 (路径列表, 类型列表)。"""
+        if not self._http_client:
+            return [], []
+        token = await self._get_access_token()
+        if not token:
+            return []
+        import hashlib
+
+        cache = get_cache_dir("dingtalk")
+        paths, kinds = [], []
+        for code, kind in codes[:MAX_INBOUND_IMAGES]:
+            if not isinstance(code, str) or not code:
+                continue
+            response = await self._http_client.post(
+                "https://api.dingtalk.com/v1.0/robot/messageFiles/download",
+                headers={"x-acs-dingtalk-access-token": token},
+                json={"downloadCode": code, "robotCode": self._client_id},
+            )
+            data = response.json() if response.content else {}
+            url = data.get("downloadUrl")
+            if not url:
+                logger.warning("[DingTalk] 换取下载地址失败: {}", data)
+                continue
+            file_response = await self._http_client.get(url, timeout=30)
+            if file_response.status_code != 200 or not file_response.content:
+                logger.warning("[DingTalk] 图片下载失败 HTTP {}", file_response.status_code)
+                continue
+            digest = hashlib.sha1(code.encode("utf-8")).hexdigest()[:16]
+            suffix = ".jpg" if kind == "image" else ".bin"
+            target = cache / f"{digest}{suffix}"
+            if not target.exists():
+                target.write_bytes(file_response.content)
+            paths.append(str(target))
+            kinds.append(kind)
+        return paths, kinds
 
     def _extract_text(self, message: Any) -> str:
         """提取文本内容"""
@@ -435,6 +522,168 @@ class DingTalkAdapter(BasePlatformAdapter):
                                 msg_type = MessageType.AUDIO
 
         return msg_type, media_urls, media_types
+
+    # ── 流式回复（AI Card：v1.0/card/instances/createAndDeliver + v1.0/card/streaming） ──
+
+    # 钉钉官方 AI 卡片模板（dsh-im 同款公共模板），无需用户在后台自建
+    _AI_CARD_TEMPLATE_ID = "02fcf2f4-5e02-4a85-b672-46d1f715543e.schema"
+    _STREAM_EDIT_INTERVAL = 0.8
+    _CARD_CONTENT_LIMIT = 20000
+
+    def supports_streaming(self, chat_id: str) -> bool:
+        """收到过该会话的消息才有投放目标（私聊 senderId / 群 openConversationId）。"""
+        return chat_id in self._chat_types
+
+    async def start_stream(self, chat_id: str) -> Optional[str]:
+        """创建并投放 AI 卡片（带思考文案），返回 stream_key=``dd:<chat_id>:<outTrackId>``。
+
+        卡片接口需要额外权限，任何失败都返回 None，由宿主回退普通消息。
+        """
+        chat_type = self._chat_types.get(chat_id)
+        if not chat_type:
+            return None
+        token = await self._get_access_token()
+        if not token or not self._http_client:
+            return None
+
+        out_track_id = f"drifox_{uuid.uuid4().hex}"
+        initial_text = "💭 正在思考…"
+        body = {
+            "outTrackId": out_track_id,
+            "userIdType": 1,
+            "cardTemplateId": self._AI_CARD_TEMPLATE_ID,
+            "cardData": self._card_data(initial_text, "2"),
+            "callbackType": "STREAM",
+            "imGroupOpenSpaceModel": {"supportForward": True},
+            "imRobotOpenSpaceModel": {"supportForward": True},
+        }
+        if chat_type == "group":
+            body["openSpaceId"] = f"dtv1.card//IM_GROUP.{chat_id}"
+            body["imGroupOpenDeliverModel"] = {"robotCode": self._client_id}
+        else:
+            body["openSpaceId"] = f"dtv1.card//IM_ROBOT.{chat_id}"
+            body["imRobotOpenDeliverModel"] = {
+                "spaceType": "IM_ROBOT",
+                "robotCode": self._client_id,
+                "extension": {"dynamicSummary": "true"},
+            }
+        try:
+            response = await self._http_client.post(
+                "https://api.dingtalk.com/v1.0/card/instances/createAndDeliver",
+                headers={"x-acs-dingtalk-access-token": token},
+                json=body,
+            )
+            if response.status_code != 200:
+                logger.debug(
+                    "[DingTalk] AI 卡片不可用，回退普通消息: HTTP {} {}",
+                    response.status_code,
+                    response.text[:200],
+                )
+                return None
+        except Exception as e:
+            logger.debug("[DingTalk] AI 卡片创建失败，回退普通消息: {}", e)
+            return None
+
+        self._stream_states[chat_id] = {
+            "out_track_id": out_track_id,
+            "chat_type": chat_type,
+            "last_edit": 0.0,
+            "last_text": initial_text,
+        }
+        return f"dd:{chat_id}:{out_track_id}"
+
+    async def update_stream(self, stream_key: str, snapshot: str) -> bool:
+        """把可见快照推给 AI 卡片；单次失败不致命（finish 会发最终全文）。"""
+        state = self._stream_state(stream_key)
+        if state is None:
+            return False
+        import time as _time
+
+        now = _time.monotonic()
+        if now - float(state.get("last_edit") or 0.0) < self._STREAM_EDIT_INTERVAL:
+            return True
+        text = (snapshot or "").strip()
+        if not text or text == state.get("last_text"):
+            return True
+        try:
+            await self._push_card_stream(state, text, finalize=False)
+        except Exception as e:
+            logger.debug("[DingTalk] 卡片流式更新跳过: {}", e)
+            return True
+        state["last_edit"] = now
+        state["last_text"] = text
+        return True
+
+    async def finish_stream(self, stream_key: str, final: str) -> SendResult:
+        """关闭流式组件并落最终态（flowStatus=3），然后清理状态。"""
+        state = self._stream_state(stream_key)
+        if state is None:
+            return SendResult(success=False, error="unknown stream")
+        chat_id = str(stream_key.split(":", 2)[1])
+        text = (final or "（无输出）").strip() or "（无输出）"
+        try:
+            await self._push_card_stream(state, text, finalize=True)
+            # 落最终态：模板的 finished 样式与完整内容
+            token = await self._get_access_token()
+            if token and self._http_client:
+                await self._http_client.put(
+                    "https://api.dingtalk.com/v1.0/card/instances",
+                    headers={"x-acs-dingtalk-access-token": token},
+                    json={
+                        "outTrackId": state["out_track_id"],
+                        "cardData": self._card_data(text, "3"),
+                        "cardUpdateOptions": {"updateCardDataByKey": True},
+                    },
+                )
+            return SendResult(success=True, message_id=state["out_track_id"])
+        except Exception as e:
+            logger.warning("[DingTalk] finish_stream failed: {}", e)
+            return SendResult(success=False, error=str(e))
+        finally:
+            self._stream_states.pop(chat_id, None)
+
+    async def _push_card_stream(self, state: Dict[str, Any], text: str, finalize: bool) -> None:
+        """推一帧 v1.0/card/streaming（全量内容）。"""
+        token = await self._get_access_token()
+        if not token or not self._http_client:
+            raise RuntimeError("no access token")
+        response = await self._http_client.put(
+            "https://api.dingtalk.com/v1.0/card/streaming",
+            headers={"x-acs-dingtalk-access-token": token},
+            json={
+                "outTrackId": state["out_track_id"],
+                "guid": uuid.uuid4().hex,
+                "key": "msgContent",
+                "content": text[: self._CARD_CONTENT_LIMIT],
+                "isFull": True,
+                "isFinalize": finalize,
+                "isError": False,
+            },
+        )
+        if response.status_code != 200:
+            raise RuntimeError(f"HTTP {response.status_code}: {response.text[:200]}")
+
+    @staticmethod
+    def _card_data(text: str, flow_status: str) -> Dict[str, Any]:
+        """AI 卡片模板数据（msgContent 只放正文，order 固定单元素）。"""
+        return {
+            "cardParamMap": {
+                "flowStatus": flow_status,
+                "msgContent": text,
+                "staticMsgContent": "",
+                "sys_full_json_obj": json.dumps({"order": ["msgContent"]}),
+                "config": json.dumps({"autoLayout": True}),
+            }
+        }
+
+    def _stream_state(self, stream_key: str) -> Optional[Dict[str, Any]]:
+        """解析 ``dd:<chat_id>:<outTrackId>`` 定位流状态。"""
+        if not stream_key or not stream_key.startswith("dd:"):
+            return None
+        parts = stream_key.split(":", 2)
+        if len(parts) != 3:
+            return None
+        return self._stream_states.get(parts[1])
 
     async def send(self, chat_id: str, content: str, **kwargs) -> SendResult:
         """发送消息"""
@@ -666,60 +915,48 @@ def check_dingtalk_requirements() -> bool:
 # ── Phase E 插件注册 ────────────────────────────────────
 # 配置读写回调走主程序 Settings（存量用户配置零迁移；Task 5 统一切 E1
 # PluginConfigStore 时仅改本块闭包，调用方不动）。闭包内延迟 import
-# Settings/PlatformConfig，避免模块顶层触发 PyQt5 / Settings 副作用。
+# 宿主契约不承载平台配置，避免模块顶层触发 Settings 副作用。
 
 
-def _build_config() -> "PlatformConfig":
-    """读 PluginConfigStore 构造钉钉配置（E1 契约：插件自包含存储）"""
-    from app.gateway.base import Platform, PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+PLUGIN_NAME = "gateway-dingtalk"
 
-    store = PluginConfigStore()
-    return PlatformConfig(
-        enabled=bool(store.get("gateway-dingtalk", "enabled")),
-        platform=Platform.DINGTALK,
-        client_id=store.get("gateway-dingtalk", "client_id") or "",
-        client_secret=store.get("gateway-dingtalk", "client_secret") or "",
-    )
+_CAPS: dict = {}
 
 
-def _write_config(config: "PlatformConfig") -> None:
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+def _cap(cap_id: str):
+    """取宿主能力（按 manifest capabilities 裁剪；后台线程无 ctx 也可用）。"""
+    cap = _CAPS.get(cap_id)
+    if cap is None:
+        from app.plugins.sdk import caps_for
 
-    PluginConfigStore().set_values(
-        "gateway-dingtalk",
-        {
-            "enabled": config.enabled,
-            "client_id": config.client_id or "",
-            "client_secret": config.client_secret or "",
-        },
-    )
+        cap = caps_for(cap_id, plugin=PLUGIN_NAME, surface="ui")
+        if cap is None:
+            logger.warning(f"[{PLUGIN_NAME}] 能力不可用: {cap_id}（检查 manifest capabilities）")
+            return None
+        _CAPS[cap_id] = cap
+    return cap
 
 
-def _build_config_values(values: dict, old_config) -> "PlatformConfig":
-    """设置卡保存回调：表单值 → PluginConfigStore → PlatformConfig。"""
-    from app.gateway.base import Platform, PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+def _config() -> dict:
+    """读本插件配置（plugin.config.read 能力，一次取全量）。"""
+    reader = _cap("plugin.config.read")
+    values = (reader() if reader else {}) or {}
+    return {
+        "enabled": bool(values.get("enabled")),
+        "client_id": values.get("client_id") or "",
+        "client_secret": values.get("client_secret") or "",
+    }
 
-    store = PluginConfigStore()
-    plugin = "gateway-dingtalk"
-    enabled = values.get("enabled", store.get(plugin, "enabled"))
-    client_id = values.get("client_id", "")
-    client_secret = values.get("client_secret", "")
-    store.set_values(
-        plugin,
-        {
-            "enabled": bool(enabled),
-            "client_id": client_id,
-            "client_secret": client_secret,
-        },
-    )
-    return PlatformConfig(
-        enabled=bool(enabled),
-        platform=Platform.DINGTALK,
-        client_id=client_id,
-        client_secret=client_secret,
-    )
+
+def _set_enabled(enabled: bool) -> None:
+    writer = _cap("plugin.config.write")
+    if writer is not None:
+        writer("enabled", bool(enabled))
+
+
+def _validate() -> tuple:
+    cfg = _config()
+    return bool(cfg["client_id"] and cfg["client_secret"]), "ClientID/Secret 未配置"
 
 
 def register(registry) -> None:
@@ -729,15 +966,11 @@ def register(registry) -> None:
         GatewayPlatformDef(
             platform_id="dingtalk",
             display_name="钉钉",
-            adapter_factory=lambda cfg: DingTalkAdapter(cfg),
+            adapter_factory=DingTalkAdapter,
             check_requirements=check_dingtalk_requirements,
-            config_builder=_build_config,
-            config_writer=_write_config,
-            build_config_values=_build_config_values,
-            validate_config=lambda cfg: (
-                bool(cfg.client_id and cfg.client_secret),
-                "ClientID/Secret 未配置",
-            ),
+            is_enabled=lambda: _config()["enabled"],
+            set_enabled=_set_enabled,
+            validate=_validate,
             ui_order=20,
         )
     )

@@ -165,3 +165,7 @@ colors:
   branch_label_bg: rgba(201, 167, 232, 0.13)
   branch_label_border: rgba(201, 167, 232, 0.28)
   window_bg: rgba(201, 167, 232, 0.04)
+  titlebar_scrim: rgba(0, 0, 0, 0.58)
+  tool_title: '#FFA500'
+  tool_title_mcp: '#00BCD4'
+  tool_title_subagent: '#9C27B0'

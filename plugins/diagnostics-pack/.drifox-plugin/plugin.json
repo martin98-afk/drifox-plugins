@@ -1,0 +1,58 @@
+{
+    "name": "diagnostics-pack",
+    "display_name": {
+        "zh": "诊断包"
+    },
+    "description": "一键打包 DriFox 诊断信息：最近日志、崩溃现场（dump/堆栈）、系统与插件清单、脱敏后的配置，输出 zip 便于排查与回传。含 /diag 命令、AI 工具与设置卡。",
+    "version": "0.1.0",
+    "author": {
+        "name": "DriFoxx Team"
+    },
+    "homepage": "https://github.com/martin98-afk/drifox-plugins",
+    "license": "MIT",
+    "type": "user",
+    "api_version": 2,
+    "min_host_version": "0.6.11",
+    "capabilities": [
+        "storage.data_dir",
+        "ui.notify",
+        "plugin.read"
+    ],
+    "keywords": [
+        "diagnostics",
+        "crash",
+        "logs",
+        "support",
+        "诊断",
+        "崩溃",
+        "日志"
+    ],
+    "platforms": [
+        "windows",
+        "linux",
+        "darwin"
+    ],
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "components": {
+        "commands": true,
+        "tools": true,
+        "ui": true,
+        "agents": false,
+        "skills": false,
+        "hooks": false,
+        "mcp": false,
+        "lsp": false,
+        "themes": false,
+        "providers": false,
+        "team_templates": false,
+        "model_adapters": false,
+        "loop_policies": false,
+        "storages": false,
+        "serializers": false,
+        "gateways": false,
+        "engines": false
+    }
+}

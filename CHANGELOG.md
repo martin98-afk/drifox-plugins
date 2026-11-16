@@ -1,6 +1,32 @@
 # Changelog
 
 ## Unreleased
+### 🔧 gateway-feishu 1.9.0：修流式卡片两处 API 误用（流式不生效）
+- **症状**：飞书回复不走流式卡片，先收到「🤔 正在思考，请稍候...」再一次性整段发出；gateway.log 报 `start_stream failed: HTTP 400 code=9499 ... {"streaming_mode":true}`
+- **根因**：`cardkit/v1/cards/{id}/settings` 要求 `settings` 是 JSON 字符串、且内容包在 `config` 段，代码传的是裸对象；元素内容接口 `elements/{id}/content` 只接受 PUT，代码用 POST（404 page not found），开流后第一帧即熔断
+- **修复**：settings 改为 `json.dumps({"config": {"streaming_mode": ..., "update_multi": True}})`（`update_multi` 是流式必须项）；`update_stream` / `finish_stream` 的内容更新由 POST 改 PUT
+- **验证**：真实 app 实测建卡 200 → PATCH settings 200 → PUT content 200（连续两次，sequence 递增）→ 关闭流式 200
+### 🔧 gateway-feishu 1.9.0 / gateway-wechat 0.8.0 / gateway-qq 1.5.0 / gateway-dingtalk 1.5.0：适配 system-im 插件化，min_host_version 抬到 0.7.2
+- **症状**：宿主 v0.7.2 把 IM 网关抽成 `system-im` 系统插件后，已装的 gateway-* 插件连平台即报 `No module named 'app.gateway.config'`（飞书连接阶段）、点设置卡启停/扫码登录报 `No module named 'app.gateway.manager'`，平台恒不连接
+- **根因**：宿主重构把 `app/gateway/{config,manager,text_split}.py` 整体移入 `plugins/system-im/core/`，旧路径不留兼容层；四个插件仍按老路径 import
+- **修复**：平台管理器改走宿主稳定入口 `app.core.services.gateway_access.get_platform_manager`（经 `WindowServiceRegistry` 全局槽取服务，不触达插件内部模块）；飞书连接时重读配置改用本插件 `_build_config()`（旧路径最终调的就是它）；长文本分片（飞书/微信）改为插件自带实现，规则与 `system_im_core.text_split.split_message` 等价（微信保留 `prefer_paragraph`）；四个插件补 `min_host_version: 0.7.2`
+- **兼容**：`<0.7.2` 宿主会整插件拒载；slack / discord / telegram / wecom 只依赖未变的 `app.gateway.base`、`group_history`，不改
+- **验证**：`validate_plugins.py` 四个插件 OK；分片新实现与原实现 400 组样本对拍 0 差异；模块加载 + `_build_config()` + 分片调用冒烟通过
+### 🔧 context-insight v1.1.1：索引增量扫描，打开插件不再全量解析会话
+- **症状**：每次打开洞察页或会话页都要遍历全库会话、把每个会话的完整消息读出来重算，本机 129 个会话约 2.1s，会话越多越慢
+- **根因**：`cached_summaries()` 首次调用恒空，UI 必然同步等一次全库扫描；`IndexWorker` 为判指纹对每条会话调 `session()` 读全量 messages；`pricing._norm_model` 没有缓存，单次扫描被调 97.8 万次、占 analyze 耗时 74%
+- **修复**：轻量列表的 `last_time + message_count` 直接作内容指纹，命中即复用旧摘要、零全量读取；标题/项目/团队归属等元数据单独覆盖到旧摘要，不触发重算；首帧先渲染磁盘 `index.json` 快照，后台再增量校验（15 秒节流，手动刷新强制绕过）；洞察页与会话页扫描互斥，不再并发全库扫；`_norm_model` 加 lru_cache 并预建归一化价格索引，价格表探测 2 秒节流
+- **实测**：129 会话库再次打开 2126ms → 6~19ms，首轮冷扫 2126ms → 948ms，单会话 analyze 均值 9.8ms → 5.5ms
+- **兼容**：索引 version 升 3，升级后首次打开会全量重算一次
+- **验证**：新增 `tests/test_context_insight_incremental.py` 5 例（首轮全读 / 次轮零读 / 内容变化只重算该条 / 仅改标题不重算且标题已更新 / 无指纹保守回退 / 索引落盘可复用）；缓存摘要与实时重算数值 0 处差异；`validate_plugins.py` context-insight OK
+### ✨ context-insight v1.1.0：编队 tab 新增团队消息轨迹泳道图（复刻 dsh-context pulse 语义）
+- **形态**：每个团队成员一条横泳道，任务/回复邮件按时间沿 x 轴展开，贝塞尔弧线从发件人泳道连到收件人泳道；泳道头像点击筛选、事件点点击在条带下方展开详情、hover 出摘要 tooltip；横滚默认锚到最新，主题/字号随宿主缩放
+- **数据源**：宿主 TeamManager 邮箱——`team.read` 白名单新增 `get_mailbox_mails`（DriFox 0.7.3+，源码主程序已同步改 `facets.py`），逐成员聚合 task/reply 邮件归一成事件流
+- **快照回放**：DriFox 邮箱是「在线信箱」语义（成员离队整目录删除），聚合结果按 `mail_id` 增量落 `plugin_data/context-insight/teamcomms/<run_id>.jsonl`（单 run 上限 2000 条）；团队解散后打开历史会话仍能回放全程轨迹，泳道名单从快照事件反推，leader 按 task 发送数推定
+- **新文件**：`ui/lanechart.py`（QPainter 泳道组件：固定标签列 + 横滚画布）、`ui/teamcomms.py`（聚合/快照/回放）；`fleet.py` 编队顶部接线、`panel.py` `_render_fleet` 聚合接线
+- **依赖**：manifest `min_host_version` 升 0.7.3（`team.read` 能力早已声明，本次扩的白名单对插件透明）
+- **验证**：聚合/快照/回放/名单/布局 offscreen 冒烟 20 项全过（`D:\work\DriFox\.venv`）；宿主 facets 契约测试 13 passed
+
 ### 🔧 voice-reply v1.8.1 / voice-input v0.7.1 / meeting-notes v0.2.1：配置来源可选到具体模型
 - **症状**：上一版的「配置来源」下拉只能选到服务商实例，多模型实例（如硅基流动语音合成的 CosyVoice2 / Fish-Speech / MOSS-TTSD）无法指定用哪个，实际只能跑实例默认模型
 - **修复**：每个实例先出一项「实例默认模型」（query 为纯配置 ID，旧配置照常回显），再按 `model.enumerate` 逐模型展开，query 用宿主原生支持的 `<配置ID>:<模型名>` 格式；缺 `model.enumerate` 能力的旧宿主只出默认项。voice-reply / voice-input manifest 补 `model.enumerate` 声明

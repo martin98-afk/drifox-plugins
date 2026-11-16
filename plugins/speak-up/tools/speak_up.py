@@ -46,8 +46,8 @@ _SCHEMA = {
 
 
 def _runner():
-    """从插件 UI 模块取单例 runner（同一进程内只有一份）。"""
-    from ui.speakup_ui import get_runner  # type: ignore
+    """取全局单例 runner（实体在 speakup_core.runtime，同一进程只有一份）。"""
+    from speakup_core.runtime import get_runner  # type: ignore
 
     return get_runner()
 

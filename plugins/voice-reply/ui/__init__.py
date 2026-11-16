@@ -203,24 +203,27 @@ def _read_config() -> Dict[str, str]:
     宿主服务商优先：配置项 `host_provider` 选中了主程序里的语音合成实例且
     解析成功时，用它的端点/Key/模型覆盖插件自存值；没选或解析失败则原样
     使用插件配置（行为与改造前一致）。
+
+    普通项走 plugin.config.read；api_key 是 password 类型字段，存储层自动
+    走系统密钥库（插件侧无感知）。
     """
     try:
-        from app.plugins.managers.plugin_config_store import PluginConfigStore
+        from app.plugins.sdk import caps_for
 
-        store = PluginConfigStore()
+        read = caps_for("plugin.config.read")
         cfg = {
-            "engine": str(store.get(PLUGIN_NAME, "engine") or "local").strip(),
-            "api_url": str(store.get(PLUGIN_NAME, "api_url") or "").strip()
+            "engine": str(read("engine", "") or "local").strip(),
+            "api_url": str(read("api_url", "") or "").strip()
             or _DEFAULT_API_URL,
-            "api_model": str(store.get(PLUGIN_NAME, "api_model") or "").strip()
+            "api_model": str(read("api_model", "") or "").strip()
             or _DEFAULT_API_MODEL,
-            "api_voice": str(store.get(PLUGIN_NAME, "api_voice") or "").strip()
+            "api_voice": str(read("api_voice", "") or "").strip()
             or _DEFAULT_API_VOICE,
-            "api_key": str(store.get(PLUGIN_NAME, "api_key") or "").strip(),
+            "api_key": str(read("api_key", "") or "").strip(),
         }
         override = resolve_override(
             PLUGIN_NAME,
-            str(store.get(PLUGIN_NAME, HOST_PROVIDER_KEY) or ""),
+            str(read(HOST_PROVIDER_KEY, "") or ""),
             cfg["api_voice"],
         )
         if override:

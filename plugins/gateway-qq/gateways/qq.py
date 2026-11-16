@@ -17,6 +17,7 @@ SDK 延迟导入纪律：模块顶层不 eager import 平台 SDK，复用宿主 
 from __future__ import annotations
 
 import asyncio
+import os as _os
 import json
 import time
 from typing import Any, Dict, Optional
@@ -31,7 +32,6 @@ from app.gateway.base import (
     ChatInfo,
     MessageEvent,
     MessageType,
-    PlatformConfig,
     SendResult,
 )
 
@@ -57,7 +57,22 @@ CONNECT_TIMEOUT = 20.0
 REQUEST_TIMEOUT = 15.0
 TOKEN_REFRESH_MARGIN = 120.0  # access_token 提前刷新余量（秒）
 RECONNECT_BACKOFF = [2, 5, 10, 30, 60]
-MAX_MESSAGE_LENGTH = 1800  # QQ 文本消息长度上限（保守值）
+MAX_MESSAGE_LENGTH = 1800
+MAX_INBOUND_IMAGES = 10
+
+
+def _cache_dir():
+    """入站附件缓存目录：优先宿主 get_cache_dir，缺失时退回默认数据目录。"""
+    try:
+        from app.gateway.base import get_cache_dir
+
+        return get_cache_dir("qq")
+    except Exception:
+        from pathlib import Path
+
+        fallback = Path.home() / ".drifox" / "gateway" / "cache" / "qq"
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback  # QQ 文本消息长度上限（保守值）
 
 # 流式合并（单聊 stream_messages append 模式）
 STREAM_MIN_INTERVAL = 1.2  # 分片最小间隔（官方建议 ≥500ms，留限流余量）
@@ -121,16 +136,16 @@ class QqAdapter(BasePlatformAdapter):
         - websocket_url: WebSocket 地址 (可选)
     """
 
-    platform = "qq"  # 第三方平台 id 不经枚举、str 直通（Phase E 契约）
+    platform_id = "qq"
     name = "QQ"
     MAX_MESSAGE_LENGTH = MAX_MESSAGE_LENGTH
 
-    def __init__(self, config: PlatformConfig, **kwargs):
-        super().__init__(config, **kwargs)
-
-        self._appid = config.bot_id or ""
-        self._app_secret = config.secret or ""
-        self._ws_url = config.websocket_url or DEFAULT_WS_URL
+    def __init__(self) -> None:
+        super().__init__()
+        cfg = _config()
+        self._appid = cfg["appid"]
+        self._app_secret = cfg["app_secret"]
+        self._ws_url = cfg["websocket_url"] or DEFAULT_WS_URL
 
         # 连接资源
         self._session: Optional[Any] = None
@@ -451,6 +466,39 @@ class QqAdapter(BasePlatformAdapter):
         finally:
             self._reconnecting = False
 
+    async def _attach_inbound_media(self, event: MessageEvent, attachments) -> None:
+        """下载 QQ 消息附件到本地缓存（URL 带时效签名，收到即取）。"""
+        if not attachments or not self._http_client:
+            return
+        import hashlib
+
+        paths = []
+        kinds = []
+        for attachment in attachments[:MAX_INBOUND_IMAGES]:
+            content_type = str((attachment or {}).get("content_type") or "")
+            is_image = content_type.startswith("image/")
+            url = str((attachment or {}).get("url") or "")
+            if not url.startswith("http"):
+                continue
+            try:
+                digest = hashlib.sha1(url.encode("utf-8")).hexdigest()[:16]
+                filename = str((attachment or {}).get("filename") or "")
+                suffix = _os.path.splitext(filename)[1] or (".jpg" if is_image else ".bin")
+                target = _cache_dir() / f"{digest}{suffix}"
+                if not target.exists():
+                    response = await self._http_client.get(url, timeout=30)
+                    if response.status_code != 200 or not response.content:
+                        logger.warning("[QQ] 附件下载失败 HTTP {}", response.status_code)
+                        continue
+                    target.write_bytes(response.content)
+                paths.append(str(target))
+                kinds.append("image" if is_image else "file")
+            except Exception as e:
+                logger.warning("[QQ] 入站附件下载失败: {}", e)
+        if paths:
+            event.media_urls = paths
+            event.media_types = kinds
+
     async def _heartbeat_loop(self) -> None:
         """心跳循环：每 heartbeat_interval 发 op=1"""
         try:
@@ -486,7 +534,8 @@ class QqAdapter(BasePlatformAdapter):
             user_name = sender
 
         text = str(data.get("content") or "").strip()
-        if not text:
+        attachments = data.get("attachments") or []
+        if not text and not attachments:
             logger.debug("[QQ] Empty message skipped ({})", event_type)
             return
 
@@ -497,9 +546,14 @@ class QqAdapter(BasePlatformAdapter):
             cleaned = re.sub(r"^(?:<@!\w+>|@\S+)\s*", "", text).strip()
             text = cleaned or text
 
+        has_image = any(
+            str((att or {}).get("content_type") or "").startswith("image/")
+            or str((att or {}).get("filename") or "").lower().endswith((".png", ".jpg", ".jpeg", ".webp", ".gif"))
+            for att in attachments
+        )
         event = MessageEvent(
             text=text,
-            message_type=MessageType.TEXT,
+            message_type=MessageType.IMAGE if has_image else MessageType.TEXT,
             message_id=msg_id,
             chat_id=chat_id,
             user_id=sender,
@@ -516,6 +570,7 @@ class QqAdapter(BasePlatformAdapter):
                 self._finalize_stream_force(chat_id)
             self._current_msg_ids[chat_id] = msg_id
 
+        await self._attach_inbound_media(event, attachments)
         await self.handle_message(event)
 
     # ── 发送 ─────────────────────────────────────────────
@@ -949,65 +1004,46 @@ class QqAdapter(BasePlatformAdapter):
 # 避免模块顶层触发宿主副作用。
 
 
-def _build_config() -> "PlatformConfig":
-    """读 PluginConfigStore 构造 QQ 配置"""
-    from app.gateway.base import PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+PLUGIN_NAME = "gateway-qq"
 
-    store = PluginConfigStore()
-    return PlatformConfig(
-        enabled=bool(store.get("gateway-qq", "enabled")),
-        platform="qq",
-        bot_id=store.get("gateway-qq", "appid") or "",
-        secret=store.get("gateway-qq", "app_secret") or "",
-        websocket_url=(
-            store.get("gateway-qq", "websocket_url")
-            or "wss://api.sgroup.qq.com/websocket"
-        ),
-    )
+_CAPS: dict = {}
 
 
-def _write_config(config: "PlatformConfig") -> None:
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+def _cap(cap_id: str):
+    """取宿主能力（按 manifest capabilities 裁剪；后台线程无 ctx 也可用）。"""
+    cap = _CAPS.get(cap_id)
+    if cap is None:
+        from app.plugins.sdk import caps_for
 
-    PluginConfigStore().set_values(
-        "gateway-qq",
-        {
-            "enabled": config.enabled,
-            "appid": config.bot_id or "",
-            "app_secret": config.secret or "",
-            "websocket_url": (config.websocket_url or ""),
-        },
-    )
+        cap = caps_for(cap_id, plugin=PLUGIN_NAME, surface="ui")
+        if cap is None:
+            logger.warning(f"[{PLUGIN_NAME}] 能力不可用: {cap_id}（检查 manifest capabilities）")
+            return None
+        _CAPS[cap_id] = cap
+    return cap
 
 
-def _build_config_values(values: dict, old_config) -> "PlatformConfig":
-    """设置卡保存回调：表单值 → PluginConfigStore → PlatformConfig。"""
-    from app.gateway.base import PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+def _config() -> dict:
+    """读本插件配置（plugin.config.read 能力，一次取全量）。"""
+    reader = _cap("plugin.config.read")
+    values = (reader() if reader else {}) or {}
+    return {
+        "enabled": bool(values.get("enabled")),
+        "appid": values.get("appid") or "",
+        "app_secret": values.get("app_secret") or "",
+        "websocket_url": values.get("websocket_url") or "",
+    }
 
-    store = PluginConfigStore()
-    plugin = "gateway-qq"
-    enabled = values.get("enabled", store.get(plugin, "enabled"))
-    appid = values.get("appid", "")
-    app_secret = values.get("app_secret", "")
-    websocket_url = values.get("websocket_url", "")
-    store.set_values(
-        plugin,
-        {
-            "enabled": bool(enabled),
-            "appid": appid,
-            "app_secret": app_secret,
-            "websocket_url": websocket_url or "wss://api.sgroup.qq.com/websocket",
-        },
-    )
-    return PlatformConfig(
-        enabled=bool(enabled),
-        platform="qq",
-        bot_id=appid,
-        secret=app_secret,
-        websocket_url=websocket_url or "wss://api.sgroup.qq.com/websocket",
-    )
+
+def _set_enabled(enabled: bool) -> None:
+    writer = _cap("plugin.config.write")
+    if writer is not None:
+        writer("enabled", bool(enabled))
+
+
+def _validate() -> tuple:
+    cfg = _config()
+    return bool(cfg["appid"] and cfg["app_secret"]), "AppID/AppSecret 未配置"
 
 
 def register(registry) -> None:
@@ -1017,15 +1053,11 @@ def register(registry) -> None:
         GatewayPlatformDef(
             platform_id="qq",
             display_name="QQ",
-            adapter_factory=lambda cfg: QqAdapter(cfg),
+            adapter_factory=QqAdapter,
             check_requirements=check_qq_requirements,
-            config_builder=_build_config,
-            config_writer=_write_config,
-            build_config_values=_build_config_values,
-            validate_config=lambda cfg: (
-                bool(cfg.bot_id and cfg.secret),
-                "AppID/AppSecret 未配置",
-            ),
+            is_enabled=lambda: _config()["enabled"],
+            set_enabled=_set_enabled,
+            validate=_validate,
             ui_order=9,
         )
     )

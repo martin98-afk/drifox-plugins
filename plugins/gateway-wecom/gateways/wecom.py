@@ -24,8 +24,6 @@ from app.gateway.base import (
     ChatInfo,
     MessageEvent,
     MessageType,
-    Platform,
-    PlatformConfig,
     SendResult,
     get_cache_dir,
 )
@@ -47,6 +45,7 @@ REQUEST_TIMEOUT = 15.0
 HEARTBEAT_INTERVAL = 30.0
 RECONNECT_BACKOFF = [2, 5, 10, 30, 60]
 MAX_MESSAGE_LENGTH = 4000
+MAX_INBOUND_IMAGES = 10
 
 
 class WeComAdapter(BasePlatformAdapter):
@@ -61,16 +60,16 @@ class WeComAdapter(BasePlatformAdapter):
         - websocket_url: WebSocket 地址 (可选)
     """
 
-    platform = Platform.WECOM
+    platform_id = "wecom"
     name = "WeCom"
     MAX_MESSAGE_LENGTH = MAX_MESSAGE_LENGTH
 
-    def __init__(self, config: PlatformConfig, **kwargs):
-        super().__init__(config, **kwargs)
-
-        self._bot_id = config.bot_id or ""
-        self._secret = config.secret or ""
-        self._ws_url = config.websocket_url or DEFAULT_WS_URL
+    def __init__(self) -> None:
+        super().__init__()
+        cfg = _config()
+        self._bot_id = cfg["bot_id"]
+        self._secret = cfg["secret"]
+        self._ws_url = cfg["websocket_url"] or DEFAULT_WS_URL
 
         # WebSocket 连接
         self._session: Optional[Any] = None
@@ -83,6 +82,11 @@ class WeComAdapter(BasePlatformAdapter):
 
         # 响应管理
         self._pending_responses: Dict[str, asyncio.Future] = {}
+
+        # 流式回复：chat_id -> 回调帧 req_id（被动回复必须在 24h 内用同一 req_id）
+        self._reply_req_ids: Dict[str, str] = {}
+        # 流式状态：chat_id -> {stream_id, req_id, last_edit, last_text}
+        self._stream_states: Dict[str, Dict[str, Any]] = {}
 
         # 设备 ID
         self._device_id = uuid.uuid4().hex
@@ -318,6 +322,11 @@ class WeComAdapter(BasePlatformAdapter):
         if not chat_id:
             return
 
+        # 记录回调帧 req_id：流式回复（aibot_respond_msg）必须透传它
+        callback_req_id = str((payload.get("headers") or {}).get("req_id") or "")
+        if callback_req_id:
+            self._reply_req_ids[chat_id] = callback_req_id
+
         is_group = str(body.get("chattype", "")).lower() == "group"
         msgtype = str(body.get("msgtype", "")).lower()
 
@@ -383,7 +392,7 @@ class WeComAdapter(BasePlatformAdapter):
                 url = file_info.get("url", "")
                 if url:
                     media_urls.append(url)
-                    media_types.append(filename)
+                    media_types.append("file")
 
         if not text and not media_urls:
             logger.debug("[WeCom] Empty message skipped")
@@ -397,14 +406,45 @@ class WeComAdapter(BasePlatformAdapter):
             chat_id=chat_id,
             user_id=sender_id,
             user_name=sender_id,
-            platform=Platform.WECOM,
+            platform="wecom",
             chat_type="group" if is_group else "dm",
             media_urls=media_urls,
             media_types=media_types,
             metadata={"reply_to": reply_text} if reply_text else {},
         )
 
+        await self._attach_inbound_media(event, media_urls, media_types)
         await self.handle_message(event)
+
+    async def _attach_inbound_media(self, event: MessageEvent, urls, kinds=None) -> None:
+        """把媒体 URL 下载到本地缓存（宿主只认本地文件）。"""
+        if not urls or not self._http_client:
+            return
+        import hashlib
+
+        kinds = list(kinds or [])
+        paths, out_kinds = [], []
+        for index, url in enumerate(urls[:MAX_INBOUND_IMAGES]):
+            if not isinstance(url, str) or not url.startswith("http"):
+                continue
+            kind = "image" if index >= len(kinds) or kinds[index] == "image" else "file"
+            try:
+                digest = hashlib.sha1(url.encode("utf-8")).hexdigest()[:16]
+                suffix = ".jpg" if kind == "image" else ".bin"
+                target = get_cache_dir("wecom") / f"{digest}{suffix}"
+                if not target.exists():
+                    response = await self._http_client.get(url, timeout=30)
+                    if response.status_code != 200 or not response.content:
+                        logger.warning("[WeCom] {} 下载失败 HTTP {}", kind, response.status_code)
+                        continue
+                    target.write_bytes(response.content)
+                paths.append(str(target))
+                out_kinds.append(kind)
+            except Exception as e:
+                logger.warning("[WeCom] 入站 {} 下载失败: {}", kind, e)
+        if paths:
+            event.media_urls = paths
+            event.media_types = out_kinds
 
     async def _heartbeat_loop(self) -> None:
         """心跳循环"""
@@ -457,6 +497,114 @@ class WeComAdapter(BasePlatformAdapter):
         if current:
             chunks.append(current)
         return chunks or [content]
+
+    # ── 流式回复（aibot_respond_msg + stream，对齐 dsh-im stream-supervisor 精简版） ──
+
+    _STREAM_EDIT_INTERVAL = 2.5  # 会话限流 30 条/分钟，流式更新必须稀疏
+    _STREAM_CONTENT_BYTES = 20000  # 单帧上限 20480 字节，留余量
+
+    def supports_streaming(self, chat_id: str) -> bool:
+        """有回调帧 req_id 才能被动流式回复（主动推送没有流式通道）。"""
+        return chat_id in self._reply_req_ids
+
+    async def start_stream(self, chat_id: str) -> Optional[str]:
+        """发首帧流式消息（企微要求 5 秒内响应），返回 stream_key。"""
+        req_id = self._reply_req_ids.get(chat_id)
+        if not req_id:
+            return None
+        stream_id = self._new_req_id("stream")
+        try:
+            await self._send_stream_frame(req_id, stream_id, "💭 正在思考…", finish=False)
+        except Exception as e:
+            logger.warning("[WeCom] start_stream failed: {}", e)
+            return None
+        self._stream_states[chat_id] = {
+            "stream_id": stream_id,
+            "req_id": req_id,
+            "last_edit": 0.0,
+            "last_text": "💭 正在思考…",
+        }
+        return f"wc:{chat_id}:{stream_id}"
+
+    async def update_stream(self, stream_key: str, snapshot: str) -> bool:
+        """刷新流式内容（全量替换）；单次失败不致命，finish 会发最终全文。"""
+        state = self._stream_state(stream_key)
+        if state is None:
+            return False
+        import time as _time
+
+        now = _time.monotonic()
+        if now - float(state.get("last_edit") or 0.0) < self._STREAM_EDIT_INTERVAL:
+            return True
+        text = (snapshot or "").strip()
+        if not text or text == state.get("last_text"):
+            return True
+        try:
+            await self._send_stream_frame(
+                state["req_id"], state["stream_id"], text, finish=False
+            )
+        except Exception as e:
+            logger.debug("[WeCom] stream update skipped: {}", e)
+            return True
+        state["last_edit"] = now
+        state["last_text"] = text
+        return True
+
+    async def finish_stream(self, stream_key: str, final: str) -> SendResult:
+        """发 finish=true 的最终全文，超长部分用主动消息补发。"""
+        state = self._stream_state(stream_key)
+        if state is None:
+            return SendResult(success=False, error="unknown stream")
+        chat_id = str(stream_key.split(":", 2)[1])
+        chunks = self._split_message(final or "（无输出）")
+        try:
+            await self._send_stream_frame(
+                state["req_id"], state["stream_id"], chunks[0], finish=True
+            )
+            for chunk in chunks[1:]:
+                await self.send(chat_id, chunk)
+            return SendResult(success=True, message_id=state["stream_id"])
+        except Exception as e:
+            logger.warning("[WeCom] finish_stream failed: {}", e)
+            return SendResult(success=False, error=str(e))
+        finally:
+            self._stream_states.pop(chat_id, None)
+
+    async def _send_stream_frame(
+        self, req_id: str, stream_id: str, content: str, finish: bool
+    ) -> None:
+        """发送一帧 aibot_respond_msg（stream 类型）。"""
+        await self._send_json(
+            {
+                "cmd": CMD_RESPONSE,
+                "headers": {"req_id": req_id},
+                "body": {
+                    "msgtype": "stream",
+                    "stream": {
+                        "id": stream_id,
+                        "finish": finish,
+                        "content": self._truncate_utf8(content, self._STREAM_CONTENT_BYTES),
+                    },
+                },
+            }
+        )
+
+    def _stream_state(self, stream_key: str) -> Optional[Dict[str, Any]]:
+        """解析 ``wc:<chat_id>:<stream_id>`` 定位流状态。"""
+        if not stream_key or not stream_key.startswith("wc:"):
+            return None
+        parts = stream_key.split(":", 2)
+        if len(parts) != 3:
+            return None
+        return self._stream_states.get(parts[1])
+
+    @staticmethod
+    def _truncate_utf8(text: str, limit_bytes: int) -> str:
+        """按 UTF-8 字节数截断，不切坏多字节字符。"""
+        raw = (text or "").encode("utf-8")
+        if len(raw) <= limit_bytes:
+            return text or ""
+        return raw[:limit_bytes].decode("utf-8", "ignore")
 
     async def send(self, chat_id: str, content: str, **kwargs) -> SendResult:
         """发送消息"""
@@ -673,72 +821,49 @@ def check_wecom_requirements() -> bool:
 
 
 # ── Phase E 插件注册 ────────────────────────────────────
-# 配置读写回调走主程序 Settings（存量用户配置零迁移；Task 5 统一切 E1
-# PluginConfigStore 时仅改本块闭包，调用方不动）。闭包内延迟 import
-# Settings/PlatformConfig，避免模块顶层触发 PyQt5 / Settings 副作用。
+# 配置由本插件自管（plugin.config.read/write 能力），宿主契约只留行为回调。
 
 
-def _build_config() -> "PlatformConfig":
-    """读 PluginConfigStore 构造企业微信配置（E1 契约：插件自包含存储）"""
-    from app.gateway.base import Platform, PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+PLUGIN_NAME = "gateway-wecom"
 
-    store = PluginConfigStore()
-    return PlatformConfig(
-        enabled=bool(store.get("gateway-wecom", "enabled")),
-        platform=Platform.WECOM,
-        bot_id=store.get("gateway-wecom", "bot_id") or "",
-        secret=store.get("gateway-wecom", "secret") or "",
-        websocket_url=(
-            store.get("gateway-wecom", "websocket_url")
-            or "wss://openws.work.weixin.qq.com"
-        ),
-    )
+_CAPS: dict = {}
 
 
-def _write_config(config: "PlatformConfig") -> None:
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+def _cap(cap_id: str):
+    """取宿主能力（按 manifest capabilities 裁剪；后台线程无 ctx 也可用）。"""
+    cap = _CAPS.get(cap_id)
+    if cap is None:
+        from app.plugins.sdk import caps_for
 
-    PluginConfigStore().set_values(
-        "gateway-wecom",
-        {
-            "enabled": config.enabled,
-            "bot_id": config.bot_id or "",
-            "secret": config.secret or "",
-            "websocket_url": (
-                config.websocket_url or "wss://openws.work.weixin.qq.com"
-            ),
-        },
-    )
+        cap = caps_for(cap_id, plugin=PLUGIN_NAME, surface="ui")
+        if cap is None:
+            logger.warning(f"[{PLUGIN_NAME}] 能力不可用: {cap_id}（检查 manifest capabilities）")
+            return None
+        _CAPS[cap_id] = cap
+    return cap
 
 
-def _build_config_values(values: dict, old_config) -> "PlatformConfig":
-    """设置卡保存回调：表单值 → PluginConfigStore → PlatformConfig。"""
-    from app.gateway.base import Platform, PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+def _config() -> dict:
+    """读本插件配置（plugin.config.read 能力，一次取全量）。"""
+    reader = _cap("plugin.config.read")
+    values = (reader() if reader else {}) or {}
+    return {
+        "enabled": bool(values.get("enabled")),
+        "bot_id": values.get("bot_id") or "",
+        "secret": values.get("secret") or "",
+        "websocket_url": values.get("websocket_url") or "",
+    }
 
-    store = PluginConfigStore()
-    plugin = "gateway-wecom"
-    enabled = values.get("enabled", store.get(plugin, "enabled"))
-    bot_id = values.get("bot_id", "")
-    secret = values.get("secret", "")
-    websocket_url = values.get("websocket_url", "")
-    store.set_values(
-        plugin,
-        {
-            "enabled": bool(enabled),
-            "bot_id": bot_id,
-            "secret": secret,
-            "websocket_url": websocket_url,
-        },
-    )
-    return PlatformConfig(
-        enabled=bool(enabled),
-        platform=Platform.WECOM,
-        bot_id=bot_id,
-        secret=secret,
-        websocket_url=websocket_url or "wss://openws.work.weixin.qq.com",
-    )
+
+def _set_enabled(enabled: bool) -> None:
+    writer = _cap("plugin.config.write")
+    if writer is not None:
+        writer("enabled", bool(enabled))
+
+
+def _validate() -> tuple:
+    cfg = _config()
+    return bool(cfg["bot_id"] and cfg["secret"]), "BotID/Secret 未配置"
 
 
 def register(registry) -> None:
@@ -748,15 +873,11 @@ def register(registry) -> None:
         GatewayPlatformDef(
             platform_id="wecom",
             display_name="企业微信",
-            adapter_factory=lambda cfg: WeComAdapter(cfg),
+            adapter_factory=WeComAdapter,
             check_requirements=check_wecom_requirements,
-            config_builder=_build_config,
-            config_writer=_write_config,
-            build_config_values=_build_config_values,
-            validate_config=lambda cfg: (
-                bool(cfg.bot_id and cfg.secret),
-                "BotID/Secret 未配置",
-            ),
+            is_enabled=lambda: _config()["enabled"],
+            set_enabled=_set_enabled,
+            validate=_validate,
             ui_order=10,
         )
     )

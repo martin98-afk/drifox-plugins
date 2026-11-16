@@ -6,6 +6,7 @@
 
 - 上游 npm 包：`dsh-ppt`（v0.19.0，技能脚本 v0.16.0）
 - 上游 license：MIT
+- 版式参考库（v1.1.0）：`dataelement/dsh-desktop` tag `v0.9.2` 的 `packages/ppt-runtime`，含 Zara Zhang（MIT）与 html-anything（Apache-2.0）改编模板，声明见 `skills/ppt-deck/references/templates/_LICENSES/`
 
 ## 内容
 
@@ -14,6 +15,7 @@
 | skills | `skills/ppt-deck/SKILL.md` | 路由与纪律：叙事骨架、数据溯源、交付验收 |
 | skills | `skills/ppt-deck/references/` | 6 份按需加载的细则：文案、主题、语法、进阶、数据、排障 |
 | skills | `skills/ppt-deck/scripts/` | 10 个 `.mjs` 生成器（约 250KB），原样保留 |
+| skills | `skills/ppt-deck/references/templates/` | 16 套版式参考：每套 `design.md` + 12 张预览 + 通用排版规则（约 12MB） |
 | tools | `tools/ppt_deck.py` | 单入口工具，`action` 分流到 `node build-deck.mjs` |
 
 生成逻辑没有重写：工具层只做参数翻译、Node 版本检查与子进程调用。

@@ -28,10 +28,24 @@ from app.gateway.base import (
     BasePlatformAdapter,
     MessageEvent,
     MessageType,
-    Platform,
-    PlatformConfig,
     SendResult,
 )
+
+def _cache_dir():
+    """入站图片缓存目录：优先宿主 get_cache_dir，缺失时退回默认数据目录。"""
+    try:
+        from app.gateway.base import get_cache_dir
+
+        return get_cache_dir("telegram")
+    except Exception:
+        from pathlib import Path
+
+        fallback = Path.home() / ".drifox" / "gateway" / "cache" / "telegram"
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback
+
+
+MAX_INBOUND_IMAGES = 10
 
 # 延迟导入避免在没有安装时崩溃
 TELEGRAM_AVAILABLE = False
@@ -71,15 +85,20 @@ class TelegramAdapter(BasePlatformAdapter):
 
     MAX_MESSAGE_LENGTH = 4096  # Telegram 消息长度限制
 
-    def __init__(self, config: PlatformConfig):
-        super().__init__(config, Platform.TELEGRAM)
+    def __init__(self) -> None:
+        super().__init__()
+        cfg = _config()
+        self._token = cfg["token"]
         self._app = None
         self._bot = None
         self._polling_task = None
         self._update_id = None
 
         # 群组触发配置
-        self._require_mention = config.extra.get("require_mention", True)
+        self._require_mention = cfg["require_mention"]
+
+        # 流式回复状态：chat_id -> {chat_id, message_id, last_edit, last_text}
+        self._stream_states: Dict[str, Dict[str, Any]] = {}
 
     async def connect(self) -> bool:
         """连接到 Telegram Bot API"""
@@ -88,7 +107,7 @@ class TelegramAdapter(BasePlatformAdapter):
             self._last_error = "依赖不可用"
             return False
 
-        if not self.config.token:
+        if not self._token:
             logger.error("[Telegram] No bot token configured")
             self._last_error = "未配置 Bot Token"
             return False
@@ -97,7 +116,7 @@ class TelegramAdapter(BasePlatformAdapter):
             from telegram.ext import Application, MessageHandler
 
             # 创建应用
-            self._app = Application.builder().token(self.config.token).build()
+            self._app = Application.builder().token(self._token).build()
             self._bot = self._app.bot
 
             # 注册处理器
@@ -136,6 +155,10 @@ class TelegramAdapter(BasePlatformAdapter):
 
         msg = update.message
 
+        # 群消息先留档（含没 @机器人 的），被叫住时才有前文可参考
+        if self._is_group_chat(msg):
+            self._capture_group_message(msg)
+
         # 检查群组触发规则
         if self._is_group_chat(msg) and self._require_mention:
             if not self._message_mentions_bot(msg):
@@ -159,7 +182,27 @@ class TelegramAdapter(BasePlatformAdapter):
 
         # 构建事件
         event = self._build_message_event(msg, msg_type)
+        await self._attach_inbound_media(event, msg)
         await self.handle_message(event)
+
+    def _capture_group_message(self, message) -> None:
+        """群消息留档到宿主存档（失败不影响消息处理）。"""
+        try:
+            from app.gateway.group_history import get_group_history_store
+
+            chat = getattr(message, "chat", None)
+            sender = getattr(message, "from_user", None)
+            get_group_history_store().capture(
+                "telegram",
+                str(getattr(chat, "id", "") or ""),
+                text=getattr(message, "text", "") or getattr(message, "caption", "") or "",
+                user_id=str(getattr(sender, "id", "") or ""),
+                user_name=(getattr(sender, "full_name", "") or "") if sender else "",
+                message_id=str(getattr(message, "message_id", "") or ""),
+                chat_type="group",
+            )
+        except Exception as e:
+            logger.debug(f"[Telegram] 群消息留档失败: {e}")
 
     def _is_group_chat(self, message) -> bool:
         """检查是否为群组聊天"""
@@ -212,32 +255,48 @@ class TelegramAdapter(BasePlatformAdapter):
             chat_id=str(getattr(chat, "id", "")),
             user_id=str(getattr(user, "id", "")) if user else "",
             user_name=getattr(user, "full_name", "") if user else "",
-            platform=Platform.TELEGRAM,
+            platform="telegram",
             chat_type=chat_type,
             media_urls=self._extract_media_urls(message),
             media_types=self._extract_media_types(message),
             metadata={"thread_id": thread_id_str} if thread_id_str else {},
         )
 
+    async def _attach_inbound_media(self, event: MessageEvent, message) -> None:
+        """把图片/文件落到本地缓存（file_id 只在平台侧有效，宿主只认本地文件）。"""
+        if not self._bot:
+            return
+        items = []
+        photos = getattr(message, "photo", None)
+        if photos:
+            items.append((photos[-1], "image", ""))
+        document = getattr(message, "document", None)
+        if document:
+            items.append((document, "file", getattr(document, "file_name", "") or ""))
+        paths, kinds = [], []
+        for media, kind, name in items[:MAX_INBOUND_IMAGES]:
+            file_id = getattr(media, "file_id", "")
+            if not file_id:
+                continue
+            try:
+                remote = await self._bot.get_file(file_id)
+                suffix = _os.path.splitext(
+                    name or getattr(remote, "file_path", "") or ""
+                )[1] or (".jpg" if kind == "image" else ".bin")
+                target = _cache_dir() / f"{file_id[-16:]}{suffix}"
+                if not target.exists():
+                    await remote.download_to_drive(custom_path=str(target))
+                paths.append(str(target))
+                kinds.append(kind)
+            except Exception as e:
+                logger.warning("[Telegram] 入站 {} 下载失败: {}", kind, e)
+        if paths:
+            event.media_urls = paths
+            event.media_types = kinds
+
     def _extract_media_urls(self, message) -> List[str]:
-        """提取媒体 URL"""
-        urls = []
-
-        if hasattr(message, "photo") and message.photo:
-            # 使用最大尺寸的照片
-            photo = message.photo[-1]
-            if hasattr(photo, "file_id"):
-                urls.append(f"file://telegram_photo:{photo.file_id}")
-
-        if hasattr(message, "video") and message.video:
-            if hasattr(message.video, "file_id"):
-                urls.append(f"file://telegram_video:{message.video.file_id}")
-
-        if hasattr(message, "voice") and message.voice:
-            if hasattr(message.voice, "file_id"):
-                urls.append(f"file://telegram_voice:{message.voice.file_id}")
-
-        return urls
+        """图片由 _attach_inbound_media 下载后填本地路径，这里不再给伪协议。"""
+        return []
 
     def _extract_media_types(self, message) -> List[str]:
         """提取媒体类型"""
@@ -449,6 +508,10 @@ class TelegramAdapter(BasePlatformAdapter):
             logger.error(f"[Telegram] Send document failed: {e}")
             return SendResult(success=False, error=str(e))
 
+    async def send_file(self, chat_id: str, file_path: str, **kwargs) -> SendResult:
+        """发送文件（宿主统一口径 send_file，委托 send_document）"""
+        return await self.send_document(chat_id, file_path, **kwargs)
+
     async def send_typing(self, chat_id: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         """发送 typing 状态"""
         if self._bot:
@@ -459,6 +522,124 @@ class TelegramAdapter(BasePlatformAdapter):
                 await self._bot.send_chat_action(**kwargs)
             except Exception:
                 pass  # Typing failures are non-fatal
+
+    # ── 流式回复（编辑占位消息，对齐 dsh-im editable-message-stream） ──
+
+    _STREAM_EDIT_INTERVAL = 0.9  # Telegram 编辑限流：约每 chat 1 次/秒
+
+    def supports_streaming(self, chat_id: str) -> bool:
+        """Telegram 可编辑自己发的消息，所有会话都能打字机式输出。"""
+        return self._bot is not None
+
+    async def start_stream(self, chat_id: str) -> Optional[str]:
+        """发占位消息，返回 stream_key=``tg:<chat_id>:<message_id>``；失败返回 None。"""
+        if not self._bot:
+            return None
+        try:
+            msg = await self._bot.send_message(chat_id=int(chat_id), text="💭 正在思考…")
+        except Exception as e:
+            logger.warning(f"[Telegram] start_stream failed: {e}")
+            return None
+        self._stream_states[str(chat_id)] = {
+            "chat_id": int(chat_id),
+            "message_id": msg.message_id,
+            "last_edit": 0.0,
+            "last_text": "💭 正在思考…",
+        }
+        return f"tg:{chat_id}:{msg.message_id}"
+
+    async def update_stream(self, stream_key: str, snapshot: str) -> bool:
+        """把可见快照写进占位消息；单次失败不致命（finish 会补最终全文）。"""
+        state = self._stream_state(stream_key)
+        if state is None:
+            return False
+        import time as _time
+
+        now = _time.monotonic()
+        if now - float(state.get("last_edit") or 0.0) < self._STREAM_EDIT_INTERVAL:
+            return True  # 让宿主继续推，最终由 finish_stream 收口
+        text = (snapshot or "").strip()
+        if not text or text == state.get("last_text"):
+            return True
+        # 流式中途走纯文本：半截 Markdown 转 HTML 易产生未闭合标签 → 400
+        text = text[: self.MAX_MESSAGE_LENGTH]
+        try:
+            await self._bot.edit_message_text(
+                chat_id=state["chat_id"], message_id=state["message_id"], text=text
+            )
+        except Exception as e:
+            if self._is_not_modified(e):
+                return True
+            logger.debug(f"[Telegram] stream edit skipped: {e}")
+            return True  # 单次编辑失败不放弃整条流，最终 finish 兜底
+        state["last_edit"] = now
+        state["last_text"] = text
+        return True
+
+    async def finish_stream(self, stream_key: str, final: str) -> SendResult:
+        """写入最终全文（HTML），超长分段补发，然后清理流状态。"""
+        state = self._stream_state(stream_key)
+        if state is None:
+            return SendResult(success=False, error="unknown stream")
+        chat_id = state["chat_id"]
+        message_id = state["message_id"]
+        try:
+            # SDK 缺失或 HTML 解析失败时退纯文本，保证最终内容仍能送达
+            try:
+                from telegram.constants import ParseMode
+
+                parse_mode = ParseMode.HTML
+            except Exception:
+                parse_mode = None
+
+            parts = self._split_telegram(final or "（无输出）", 3800)
+            last_id = message_id
+            html_kwargs = {
+                "chat_id": chat_id,
+                "message_id": message_id,
+                "text": self._format_telegram_text(parts[0]),
+            }
+            if parse_mode:
+                html_kwargs["parse_mode"] = parse_mode
+            try:
+                await self._bot.edit_message_text(**html_kwargs)
+            except Exception as e:
+                if not self._is_not_modified(e):
+                    # HTML 解析失败或格式越界 → 纯文本重试，保证最终内容送达
+                    await self._bot.edit_message_text(
+                        chat_id=chat_id,
+                        message_id=message_id,
+                        text=parts[0][: self.MAX_MESSAGE_LENGTH],
+                    )
+            for part in parts[1:]:
+                send_kwargs = {
+                    "chat_id": chat_id,
+                    "text": self._format_telegram_text(part),
+                }
+                if parse_mode:
+                    send_kwargs["parse_mode"] = parse_mode
+                msg = await self._bot.send_message(**send_kwargs)
+                last_id = msg.message_id
+            return SendResult(success=True, message_id=str(last_id))
+        except Exception as e:
+            logger.warning(f"[Telegram] finish_stream failed: {e}")
+            return SendResult(success=False, error=str(e))
+        finally:
+            self._stream_states.pop(str(chat_id), None)
+
+    def _stream_state(self, stream_key: str) -> Optional[Dict[str, Any]]:
+        """解析 ``tg:<chat_id>:<message_id>`` 定位流状态。"""
+        if not stream_key or not stream_key.startswith("tg:"):
+            return None
+        parts = stream_key.split(":", 2)
+        if len(parts) != 3:
+            return None
+        return self._stream_states.get(parts[1])
+
+    @staticmethod
+    def _is_not_modified(exc: Exception) -> bool:
+        """Telegram 内容未变化时会报 400，视为成功。"""
+        return "message is not modified" in str(exc).lower()
 
     async def get_chat_info(self, chat_id: str) -> Dict[str, Any]:
         """获取聊天信息"""
@@ -479,85 +660,48 @@ class TelegramAdapter(BasePlatformAdapter):
 # ── Phase E 插件注册 ────────────────────────────────────
 # 配置读写回调走主程序 Settings（存量用户配置零迁移；Task 5 统一切 E1
 # PluginConfigStore 时仅改本块闭包，调用方不动）。闭包内延迟 import
-# Settings/PlatformConfig，避免模块顶层触发 PyQt5 / Settings 副作用。
+# 宿主契约不承载平台配置，避免模块顶层触发 Settings 副作用。
 
 
-def _build_config() -> "PlatformConfig":
-    """读 PluginConfigStore 构造 Telegram 配置（E1 契约：插件自包含存储）。
+PLUGIN_NAME = "gateway-telegram"
 
-    字段键：enabled / token / require_mention（plugin.json config_schema 声明）。
-    require_mention 在 extra dict 中保持原样（适配器 ``config.extra.get(...)``
-    已做 bool 兜底）。"""
-    from app.gateway.base import Platform, PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
-
-    store = PluginConfigStore()
-    return PlatformConfig(
-        enabled=bool(store.get("gateway-telegram", "enabled")),
-        platform=Platform.TELEGRAM,
-        token=store.get("gateway-telegram", "token") or "",
-        extra={"require_mention": bool(store.get("gateway-telegram", "require_mention"))},
-    )
+_CAPS: dict = {}
 
 
-def _write_config(config: "PlatformConfig") -> None:
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
+def _cap(cap_id: str):
+    """取宿主能力（按 manifest capabilities 裁剪；后台线程无 ctx 也可用）。"""
+    cap = _CAPS.get(cap_id)
+    if cap is None:
+        from app.plugins.sdk import caps_for
 
-    PluginConfigStore().set_values(
-        "gateway-telegram",
-        {
-            "enabled": config.enabled,
-            "token": config.token or "",
-            "require_mention": (
-                bool(config.extra.get("require_mention", True))
-                if config.extra
-                else True
-            ),
-        },
-    )
+        cap = caps_for(cap_id, plugin=PLUGIN_NAME, surface="ui")
+        if cap is None:
+            logger.warning(f"[{PLUGIN_NAME}] 能力不可用: {cap_id}（检查 manifest capabilities）")
+            return None
+        _CAPS[cap_id] = cap
+    return cap
 
 
-def _build_config_values(values: dict, old_config) -> "PlatformConfig":
-    """设置卡保存回调：表单值 → PluginConfigStore → PlatformConfig。
-
-    enabled / require_mention 在主仓表单无对应输入控件（启用开关在状态行，
-    require_mention 仅插件自管 UI 才用），由 PluginConfigStore 兜底当前值：
-    values 缺则读 store 现有值（无则 schema 默认）。
-    """
-    from app.gateway.base import Platform, PlatformConfig
-    from app.plugins.managers.plugin_config_store import PluginConfigStore
-
-    store = PluginConfigStore()
-    plugin = "gateway-telegram"
-    enabled = values.get("enabled", store.get(plugin, "enabled"))
-    require_mention = values.get(
-        "require_mention", store.get(plugin, "require_mention")
-    )
-    token = values.get("token", "")
-    # 先落盘（让后续 store.get 即时可见新值；空串被 store 视为清除）
-    store.set_values(
-        plugin,
-        {
-            "enabled": bool(enabled),
-            "token": token,
-            "require_mention": _truthy(require_mention),
-        },
-    )
-    extra = dict(old_config.extra) if old_config and old_config.extra else {}
-    extra["require_mention"] = _truthy(require_mention)
-    return PlatformConfig(
-        enabled=bool(enabled),
-        platform=Platform.TELEGRAM,
-        token=token,
-        extra=extra,
-    )
+def _config() -> dict:
+    """读本插件配置（plugin.config.read 能力，一次取全量）。"""
+    reader = _cap("plugin.config.read")
+    values = (reader() if reader else {}) or {}
+    return {
+        "enabled": bool(values.get("enabled")),
+        "token": values.get("token") or "",
+        "require_mention": bool(values.get("require_mention", True)),
+    }
 
 
-def _truthy(v) -> bool:
-    """表单 truthy 判定（QLineEdit 文本 'true'/'false' → bool）。"""
-    if isinstance(v, bool):
-        return v
-    return str(v).strip().lower() in ("1", "true", "yes", "on")
+def _set_enabled(enabled: bool) -> None:
+    writer = _cap("plugin.config.write")
+    if writer is not None:
+        writer("enabled", bool(enabled))
+
+
+def _validate() -> tuple:
+    cfg = _config()
+    return bool(cfg["token"]), "Token 未配置"
 
 
 def register(registry) -> None:
@@ -567,12 +711,11 @@ def register(registry) -> None:
         GatewayPlatformDef(
             platform_id="telegram",
             display_name="Telegram",
-            adapter_factory=lambda cfg: TelegramAdapter(cfg),
+            adapter_factory=TelegramAdapter,
             check_requirements=check_telegram_requirements,
-            config_builder=_build_config,
-            config_writer=_write_config,
-            build_config_values=_build_config_values,
-            validate_config=lambda cfg: (bool(cfg.token), "Token 未配置"),
+            is_enabled=lambda: _config()["enabled"],
+            set_enabled=_set_enabled,
+            validate=_validate,
             ui_order=30,
         )
     )
