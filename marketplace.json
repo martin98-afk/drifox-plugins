@@ -7470,6 +7470,52 @@
             }
         },
         {
+            "name": "oaipro-provider",
+            "description": "OAIPro（api.oaipro.com）中转站服务商：单条配置承载 GPT/Claude 全模型，按模型自动路由 chat/completions、responses 与 anthropic-messages 三通道；支持填网页 Cookie 查余额",
+            "version": "0.2.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "provider"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/oaipro-provider",
+                "ref": "main"
+            },
+            "components": {
+                "providers": true,
+                "model_adapters": true
+            },
+            "display_name": {
+                "zh": "OAIPro 中转站服务商"
+            },
+            "keywords": [
+                "OAIPro",
+                "oaipro",
+                "中转站",
+                "OpenAI",
+                "Claude",
+                "服务商",
+                "余额"
+            ],
+            "min_host_version": "0.7.4",
+            "api_version": 2,
+            "homepage": "https://docs.oaipro.com",
+            "icon": {
+                "light": "providers/icons_light/oaipro.svg",
+                "dark": "providers/icons/oaipro.svg"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-oaipro-provider-v0.2.0/oaipro-provider-0.2.0-all.tar.gz",
+                    "sha256": "90fca0e57ba3efd59a2386459c9aa80449966d3dfb1fe47047c0dc7ef1c8c3cd",
+                    "size": 7406
+                }
+            }
+        },
+        {
             "name": "ocean-full-moon",
             "description": "海上明月 — 深动画主题，Wallpaper Engine 创意工坊 2956215523 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
             "version": "1.0.1",
