@@ -9414,19 +9414,19 @@
             },
             "tarball": {
                 "darwin": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-ssh-toolkit-v0.4.4/ssh-toolkit-0.4.4-darwin.tar.gz",
-                    "sha256": "cd517d432a4ead803c9e9cd85760923911e2782643fa726a0bb09329cea38045",
-                    "size": 5305149
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-ssh-toolkit-v0.4.5/ssh-toolkit-0.4.5-darwin.tar.gz",
+                    "sha256": "ddba559f352637bda52d8d250ce4c953005aacd8230a44eff3d8d34c33e99150",
+                    "size": 5305912
                 },
                 "linux": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-ssh-toolkit-v0.4.4/ssh-toolkit-0.4.4-linux.tar.gz",
-                    "sha256": "9595baaa000bbcfe210ccb3238d403f734713253d173a3dcdda57d236c27cf77",
-                    "size": 6931404
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-ssh-toolkit-v0.4.5/ssh-toolkit-0.4.5-linux.tar.gz",
+                    "sha256": "f153551be40c238ef04191771265186fffca0976500bf3226747ca471f875517",
+                    "size": 6932124
                 },
                 "win32": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-ssh-toolkit-v0.4.4/ssh-toolkit-0.4.4-win32.tar.gz",
-                    "sha256": "e325cd9871614120cf53fbf7189f1705e066b94a9588ccbd44e425827a36f7b2",
-                    "size": 4634122
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-ssh-toolkit-v0.4.5/ssh-toolkit-0.4.5-win32.tar.gz",
+                    "sha256": "a7c0fd03495efb4f18beea93f759082f5a0fa80614e4e55b3d7c2c6b436460ab",
+                    "size": 4634969
                 }
             }
         },
