@@ -341,9 +341,10 @@ class WechatAdapter(BasePlatformAdapter):
             raise RuntimeError(f"{endpoint} HTTP {resp.status_code}: {resp.text[:200]}")
         data = resp.json()
         ret = data.get("ret")
-        if ret is not None and ret != 0:
+        errcode = data.get("errcode")
+        if (ret is not None and ret != 0) or (errcode is not None and errcode != 0):
             raise RuntimeError(
-                f"{endpoint} ret={ret} errcode={data.get('errcode', '')} errmsg={data.get('errmsg', '')}"
+                f"{endpoint} ret={ret} errcode={errcode} errmsg={data.get('errmsg', '')}"
             )
         return data
 
