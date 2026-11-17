@@ -60,13 +60,8 @@ def _collect_tool_schemas(settings: Dict[str, Any]) -> List[Dict[str, Any]]:
 
     by_name: Dict[str, Dict[str, Any]] = {}
     try:
-        from app.plugins.capabilities.resolve import pool_for
-
         # MCP 工具不进 ToolRegistry；mcp.call 能力直接给 MCPClientManager（_TOOL surface）
-        pool = pool_for(plugin=PLUGIN_NAME, surface="tool") or {}
-        mgr = pool.get("mcp.call")
-        if callable(mgr):
-            mgr = mgr()
+        mgr = _mcp_manager()
         by_server = _schemas_with_timeout(mgr) if mgr else {}
         for schema in by_server.get("bili", []):
             fn = (schema or {}).get("function") or {}
@@ -135,6 +130,43 @@ def _opening_user_message(store: DutyStore, settings: Dict[str, Any]) -> str:
                  "并在报告末尾写「因无字幕跳过 N 条」。")
     lines.append("保底：报告至少一行（「不写日报」档除外）、判重表至少一行，先把这两样落下再干别的。")
     return "\n".join(lines)
+
+
+def _mcp_manager():
+    """MCPClientManager 单例（mcp.call 能力投影返回完整实例，含 enable/disable_ephemeral）。"""
+    try:
+        from app.plugins.capabilities.resolve import pool_for
+
+        pool = pool_for(plugin=PLUGIN_NAME, surface="tool") or {}
+        mgr = pool.get("mcp.call")
+        if callable(mgr):
+            mgr = mgr()
+        return mgr
+    except Exception:
+        return None
+
+
+def _ensure_bili_mcp() -> bool:
+    """值班前确保 bili MCP 可用；缺失时经 enable_ephemeral 临时拉起（不写 config）。
+
+    Returns:
+        True = 本次值班临时拉起的，调用方结束须 disable_ephemeral("bili") 清理；
+        False = 已常驻连接，或拉起失败（后续 _collect_tool_schemas 如实报空）。
+    """
+    mgr = _mcp_manager()
+    if mgr is None:
+        return False
+    try:
+        if mgr.get_tool_schemas_by_server().get("bili"):
+            return False  # 已连接，无需临时态
+        ok, payload = mgr.enable_ephemeral("bili")
+        if ok:
+            logger.info(f"[bili-scroll] bili MCP 临时开启成功（{len(payload)} 个工具，值班结束自动关闭）")
+            return True
+        logger.warning(f"[bili-scroll] bili MCP 临时开启失败：{payload}")
+    except Exception as e:
+        logger.warning(f"[bili-scroll] bili MCP 临时开启异常：{type(e).__name__}: {e}")
+    return False
 
 
 def run_duty_round() -> Dict[str, Any]:
@@ -207,6 +239,22 @@ def _run_duty_round_locked() -> Dict[str, Any]:
     except ValueError as e:
         return {"status": "error", "error": str(e), "text": ""}
 
+    ephemeral = _ensure_bili_mcp()
+    try:
+        return _duty_round_with_tools(settings, store, model_override)
+    finally:
+        if ephemeral:
+            try:
+                mgr = _mcp_manager()
+                if mgr is not None:
+                    mgr.disable_ephemeral("bili")
+                    logger.info("[bili-scroll] bili MCP 临时连接已关闭")
+            except Exception as e:
+                logger.warning(f"[bili-scroll] bili MCP 临时连接关闭失败：{type(e).__name__}: {e}")
+
+
+def _duty_round_with_tools(settings: Dict[str, Any], store: DutyStore,
+                           model_override: Dict[str, Any]) -> Dict[str, Any]:
     tools = _collect_tool_schemas(settings)
     if not tools:
         return {

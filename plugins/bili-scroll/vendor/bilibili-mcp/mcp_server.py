@@ -1837,7 +1837,41 @@ def _crop_tile(sheet: bytes, tile_index: int, tw: int, th: int) -> bytes:
 
 
 @tool()
-async def bili_frames(bvid: str, num: int = 3, at: list | None = None) -> list:
+def _fmt_ts(sec: float) -> str:
+    """秒 → mm:ss（拼图时间戳条用，纯 ASCII 免字体依赖）"""
+    s = max(0, int(sec or 0))
+    return f"{s // 60:02d}:{s % 60:02d}"
+
+
+def _compose_frames_grid(tiles: list, labels: list, tw: int, th: int) -> bytes:
+    """把若干帧 JPEG 拼成一张网格图（≤3 列，底部时间戳条，帧间深色分隔线）"""
+    import io as _io
+
+    from PIL import Image, ImageDraw
+
+    n = len(tiles)
+    cols = min(n, 3)
+    rows = (n + cols - 1) // cols
+    label_h, gap = 20, 2
+    canvas = Image.new(
+        "RGB",
+        (cols * tw + (cols - 1) * gap, rows * (th + label_h) + (rows - 1) * gap),
+        (18, 18, 18),
+    )
+    draw = ImageDraw.Draw(canvas)
+    for i, (raw, label) in enumerate(zip(tiles, labels)):
+        r, c = divmod(i, cols)
+        x = c * (tw + gap)
+        y = r * (th + label_h + gap)
+        canvas.paste(Image.open(_io.BytesIO(raw)).convert("RGB"), (x, y))
+        draw.text((x + 4, y + th + 3), label, fill=(235, 235, 235))
+    out = _io.BytesIO()
+    canvas.save(out, format="JPEG", quality=85)
+    return out.getvalue()
+
+
+async def bili_frames(bvid: str, num: int = 3, at: list | None = None,
+                      layout: str = "grid") -> list:
     """
     看这个视频里的画面（从 B 站自带的故事板里裁几帧）
 
@@ -1848,11 +1882,13 @@ async def bili_frames(bvid: str, num: int = 3, at: list | None = None) -> list:
         bvid: 视频BV号，如"BV1uNk1YxEJQ"
         num: 取几帧，1-6，默认 3
         at: 指定时间点（秒）的列表；传了就以它为准，忽略 num
+        layout: grid = 全部帧拼成一张连续网格图（默认，单图带时间戳，看动作序列更直观）；
+                separate = 逐帧独立返回（旧行为）
 
     Returns:
-        若干张 480×270 的画面 + 一句说明（时长、实际取到的那一刻、哪几帧失败）。
+        grid 一张拼图（帧下带 mm:ss 时间戳）+ 元数据说明；separate 为若干张 480×270 画面。
         失败会写进 failed。**多P 视频的故事板通常只覆盖第 1P**，返回里会用
-        covered_sec / pages 标明实际覆盖范围。图能否被看见取决于模型是否支持图片输入。
+        covered_sec / pages 标明实际覆盖范围。
     """
     cred = load_credential()          # 故事板不登录也能取
     try:
@@ -1927,7 +1963,7 @@ async def bili_frames(bvid: str, num: int = 3, at: list | None = None) -> list:
         return cache[no]
 
     # 每张拼图装几块要等第一张下来才知道（列数 = 宽 // 块宽）
-    blocks, frames, failed = [], [], []
+    tiles, labels, frames, failed = [], [], [], []
     cap = None
     for i, (want, got, tile) in enumerate(picked):
         try:
@@ -1943,37 +1979,55 @@ async def bili_frames(bvid: str, num: int = 3, at: list | None = None) -> list:
             raw = _crop_tile(await get_sheet(sheet_no), pos, tw, th)
             if len(raw) > _MAX_IMAGE_BYTES:
                 raise RuntimeError(f"这一帧太大（{len(raw) // 1024}KB）")
-            blocks.append(ImageContent(
-                type="image",
-                data=base64.b64encode(raw).decode("ascii"),
-                mimeType="image/jpeg",
-            ))
+            tiles.append(raw)
+            labels.append(_fmt_ts(got))
             frames.append({"index": i, "want_sec": want, "got_sec": got,
                            "kb": round(len(raw) / 1024, 1)})
         except Exception as e:
             failed.append({"index": i, "want_sec": want, "got_sec": got, "reason": str(e)})
 
-    if not blocks:
+    if not tiles:
         return _text_only({
             "bvid": bvid, "ok": False,
             "error": "一帧都没取到", "failed": failed,
         })
 
+    meta = {
+        "bvid": bvid,
+        "ok": True,
+        "title": info.get("title"),
+        "duration": duration,
+        "covered_sec": round(covered, 1),
+        "pages": max(1, len(pages)),
+        "tile": f"{tw}x{th}",
+        "layout": "grid" if layout != "separate" else "separate",
+        "frames": frames,
+        "failed": failed,        # 空列表 = 全成
+        "note": "want_sec 是想要的时刻，got_sec 是实际取到的那一块（故事板按固定间隔切）；"
+                "多P 视频只覆盖第 1P，看 covered_sec",
+    }
+
+    if layout != "separate":
+        grid = _compose_frames_grid(tiles, labels, tw, th)
+        return [
+            TextContent(type="text", text=json.dumps(meta, ensure_ascii=False)),
+            ImageContent(
+                type="image",
+                data=base64.b64encode(grid).decode("ascii"),
+                mimeType="image/jpeg",
+            ),
+        ]
+
     return [
-        TextContent(type="text", text=json.dumps({
-            "bvid": bvid,
-            "ok": True,
-            "title": info.get("title"),
-            "duration": duration,
-            "covered_sec": round(covered, 1),
-            "pages": max(1, len(pages)),
-            "tile": f"{tw}x{th}",
-            "frames": frames,
-            "failed": failed,        # 空列表 = 全成
-            "note": "want_sec 是想要的时刻，got_sec 是实际取到的那一块（故事板按固定间隔切）；"
-                    "多P 视频只覆盖第 1P，看 covered_sec",
-        }, ensure_ascii=False)),
-        *blocks,
+        TextContent(type="text", text=json.dumps(meta, ensure_ascii=False)),
+        *(
+            ImageContent(
+                type="image",
+                data=base64.b64encode(raw).decode("ascii"),
+                mimeType="image/jpeg",
+            )
+            for raw in tiles
+        ),
     ]
 
 
