@@ -791,7 +791,7 @@
             "display_name": {
                 "zh": "B站日报"
             },
-            "downloads": 32,
+            "downloads": 41,
             "keywords": [
                 "bilibili",
                 "b站",
@@ -958,7 +958,7 @@
             "display_name": {
                 "zh": "内置浏览器"
             },
-            "downloads": 96,
+            "downloads": 97,
             "keywords": [
                 "browser",
                 "web",
@@ -4766,7 +4766,7 @@
             "display_name": {
                 "zh": "微信网关"
             },
-            "downloads": 34,
+            "downloads": 35,
             "dependencies": {
                 "pip": {
                     "default": [
@@ -4906,7 +4906,7 @@
             "display_name": {
                 "zh": "Git 控制面板"
             },
-            "downloads": 102,
+            "downloads": 104,
             "keywords": [
                 "git",
                 "source-control",
