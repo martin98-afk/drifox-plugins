@@ -4923,9 +4923,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-git-panel-v2.3.2/git-panel-2.3.2-all.tar.gz",
-                    "sha256": "fe93f532c270509dce2ca795e37b59d17d7788eee7b8807abe494d6fac644c57",
-                    "size": 72013
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-git-panel-v2.4.0/git-panel-2.4.0-all.tar.gz",
+                    "sha256": "72c82082e5a4257dcd4f8d2e8d4ca0a4f8453fd507aba0fe94988e9497dfeb30",
+                    "size": 79185
                 }
             }
         },
