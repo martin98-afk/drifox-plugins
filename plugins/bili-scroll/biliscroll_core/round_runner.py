@@ -98,6 +98,8 @@ def _opening_user_message(store: DutyStore, settings: Dict[str, Any]) -> str:
         f"- 日报：由系统把你最终回复整体写入 {store.report_path()}（每段以 ### BV号 开头）",
         f"- 判重：看过的每条视频都要 bili_seen_append 记一行（status 必填，「跳过」在 note 写一句理由）",
         f"- 归档：系统按判重记录自动生成（{store.digest_path()}），无需手动写",
+        "- MCP：B站工具调不通（如 Unknown tool / 连接未就绪）时，先调 "
+        'mcp_manage(action="enable", name="bili") 临时拉起，成功后 B站工具立即可用',
     ]
     seen_rows = store.seen_recent(limit=200)
     if seen_rows:
@@ -144,40 +146,6 @@ def _mcp_manager():
         return mgr
     except Exception:
         return None
-
-
-def _ensure_bili_mcp(max_tries: int = 3) -> bool:
-    """值班前确保 bili MCP 可用；缺失时经 enable_ephemeral 临时拉起（不写 config）。
-
-    插件 market 更新/重载后 MCP 注册表有一段空窗（"未注册 MCP server"），
-    一次失败就放弃会让每次更新后的首跑必撞——按 2s/4s 退避重试穿透窗口。
-
-    Returns:
-        True = 本次值班临时拉起的，调用方结束须 disable_ephemeral("bili") 清理；
-        False = 已常驻连接，或重试后仍失败（后续 _collect_tool_schemas 如实报空）。
-    """
-    import time as _time
-
-    mgr = _mcp_manager()
-    if mgr is None:
-        return False
-    transient = ("未找到", "未注册", "正在连接", "稍后", "稍等")
-    for attempt in range(1, max_tries + 1):
-        try:
-            if mgr.get_tool_schemas_by_server().get("bili"):
-                return False  # 已连接，无需临时态
-            ok, payload = mgr.enable_ephemeral("bili")
-            if ok:
-                logger.info(f"[bili-scroll] bili MCP 临时开启成功（{len(payload)} 个工具，值班结束自动关闭）")
-                return True
-            logger.warning(f"[bili-scroll] bili MCP 临时开启失败（第 {attempt}/{max_tries} 次）：{payload}")
-            if attempt < max_tries and any(k in str(payload) for k in transient):
-                _time.sleep(2.0 * attempt)
-                continue
-        except Exception as e:
-            logger.warning(f"[bili-scroll] bili MCP 临时开启异常：{type(e).__name__}: {e}")
-        return False
-    return False
 
 
 def run_duty_round() -> Dict[str, Any]:
@@ -248,18 +216,18 @@ def _run_duty_round_locked() -> Dict[str, Any]:
     except ValueError as e:
         return {"status": "error", "error": str(e), "text": ""}
 
-    ephemeral = _ensure_bili_mcp()
+    return _duty_round_with_tools(settings, store, model_override)
+
+
+def _manage_tool_schema():
+    """mcp_manage 的注册 schema（值班轮模型经它临时拉起 bili MCP）。"""
     try:
-        return _duty_round_with_tools(settings, store, model_override)
-    finally:
-        if ephemeral:
-            try:
-                mgr = _mcp_manager()
-                if mgr is not None:
-                    mgr.disable_ephemeral("bili")
-                    logger.info("[bili-scroll] bili MCP 临时连接已关闭")
-            except Exception as e:
-                logger.warning(f"[bili-scroll] bili MCP 临时连接关闭失败：{type(e).__name__}: {e}")
+        from app.tools.registry import ToolRegistry
+
+        reg = ToolRegistry.get_instance().get("mcp_manage")
+        return reg.schema if reg is not None else None
+    except Exception:
+        return None
 
 
 def _duty_round_with_tools(settings: Dict[str, Any], store: DutyStore,
@@ -267,12 +235,11 @@ def _duty_round_with_tools(settings: Dict[str, Any], store: DutyStore,
     from app.plugins.capabilities.resolve import pool_for
 
     tools = _collect_tool_schemas(settings)
-    if not tools:
-        return {
-            "status": "error",
-            "error": "B站工具还没就绪（MCP 未连接）：等几秒再点一次，或重载插件后重试",
-            "text": "",
-        }
+    manage = _manage_tool_schema()
+    if manage is not None:
+        # 值班轮模型自己经 mcp_manage 临时拉起 bili MCP（0.5.7）：
+        # 代码级 ensure 在重载空窗/重启竞态下反复翻车，交给模型按需拉起更直接。
+        tools.append(manage)
 
     pool_ui = pool_for(plugin=PLUGIN_NAME, surface="ui") or {}
     create_session = pool_ui.get("engine.session")

@@ -24,6 +24,7 @@ description: B站值班轮章程：手动「跑一轮」或峰谷定时值班时
 | 想干什么 | 用哪个 |
 |---|---|
 | 往判重表记一行 | `bili_seen_append(bvid, title, up, status, rpid?, root?, note?)`（status = 挑了 / 跳过 / 评论；「跳过」在 note 写一句理由） |
+| B站工具调不通时 | `mcp_manage(action="enable", name="bili")` 临时拉起，成功后 B站工具立即可用 |
 | 没字幕的视频转写 | `bili_transcribe_start(bvid)` → 拿 job_id；之后 `bili_transcribe_result(job_id)` 取 |
 
 你**没有**写日报 / 归档 / 查判重的工具 —— 你的**最终回复就是日报**（系统会整体落盘到 `out/<日期>.md`）、
