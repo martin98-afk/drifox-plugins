@@ -311,7 +311,7 @@
             "display_name": {
                 "zh": "Apify 爬虫"
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "mcp",
                 "connector",
@@ -791,7 +791,7 @@
             "display_name": {
                 "zh": "B站日报"
             },
-            "downloads": 31,
+            "downloads": 32,
             "keywords": [
                 "bilibili",
                 "b站",
@@ -958,7 +958,7 @@
             "display_name": {
                 "zh": "内置浏览器"
             },
-            "downloads": 95,
+            "downloads": 96,
             "keywords": [
                 "browser",
                 "web",
@@ -3282,7 +3282,7 @@
             "display_name": {
                 "zh": "专家团模板包"
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "team",
                 "团队",
@@ -3407,7 +3407,7 @@
             "display_name": {
                 "zh": "数据智能专家包"
             },
-            "downloads": 3,
+            "downloads": 4,
             "keywords": [
                 "agents",
                 "experts",
@@ -3690,7 +3690,7 @@
             "display_name": {
                 "zh": "产品设计专家包"
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "agents",
                 "experts",
@@ -4906,7 +4906,7 @@
             "display_name": {
                 "zh": "Git 控制面板"
             },
-            "downloads": 101,
+            "downloads": 102,
             "keywords": [
                 "git",
                 "source-control",
@@ -7449,7 +7449,7 @@
             "display_name": {
                 "zh": "女娲 Skill 造人术"
             },
-            "downloads": 13,
+            "downloads": 14,
             "keywords": [
                 "skill",
                 "agents",
@@ -7661,7 +7661,7 @@
             "display_name": {
                 "zh": "OMML 公式生成"
             },
-            "downloads": 12,
+            "downloads": 13,
             "keywords": [
                 "omml",
                 "docx",
@@ -8021,7 +8021,7 @@
             "display_name": {
                 "zh": "Ponytail 最简开发"
             },
-            "downloads": 9,
+            "downloads": 10,
             "keywords": [
                 "yagni",
                 "refactor",
