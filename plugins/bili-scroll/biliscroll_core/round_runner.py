@@ -233,8 +233,6 @@ def _credential_ready() -> bool:
 
 
 def _run_duty_round_locked() -> Dict[str, Any]:
-    from app.plugins.capabilities.resolve import pool_for
-
     settings = load_settings()
     store = DutyStore()
 
@@ -266,6 +264,8 @@ def _run_duty_round_locked() -> Dict[str, Any]:
 
 def _duty_round_with_tools(settings: Dict[str, Any], store: DutyStore,
                            model_override: Dict[str, Any]) -> Dict[str, Any]:
+    from app.plugins.capabilities.resolve import pool_for
+
     tools = _collect_tool_schemas(settings)
     if not tools:
         return {
