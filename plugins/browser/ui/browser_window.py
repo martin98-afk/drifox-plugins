@@ -40,8 +40,14 @@ from PyQt5.QtWidgets import (
 from qfluentwidgets import FluentIcon
 
 from ._page_factory import create_page
-from .bookmarks import BookmarkBar
-from .data import AsyncDataLoader, add_bookmark, record_history, remove_bookmark
+from .bookmarks import BookmarkBar, icon_to_base64
+from .data import (
+    AsyncDataLoader,
+    add_bookmark,
+    record_history,
+    remove_bookmark,
+    update_bookmark_icon,
+)
 from .profile_manager import get_browser_profile, reset_profiles
 from .tab_widget import ChromeTabBar, MAX_ALIVE_TABS
 from .theme import font_css, theme_colors
@@ -478,6 +484,26 @@ class BrowserWindowCard(QWidget):
                 self._tab_bar.setTabIcon(idx, icon)
         except Exception:
             pass
+        self._backfill_bookmark_icon(view, icon)
+
+    def _backfill_bookmark_icon(self, view, icon):
+        """页面 favicon 到达后回填旧收藏（仅缺图标时写盘并刷新收藏栏）"""
+        if icon is None or icon.isNull():
+            return
+        try:
+            url = view.url().toString()
+        except Exception:
+            return
+        if not url:
+            return
+        bm = next((b for b in self._bookmarks_cache if b.get("url") == url), None)
+        if bm is None or bm.get("icon"):
+            return
+        b64 = icon_to_base64(icon)
+        if not b64:
+            return
+        update_bookmark_icon(url, b64)
+        self._refresh_bookmarks()
 
     def _sync_url_bar(self, idx: int):
         if 0 <= idx < len(self._views):
@@ -970,7 +996,9 @@ class BrowserWindowCard(QWidget):
             )
             if not title or title == "新标签页":
                 title = urlparse(url).hostname or url
-            if not add_bookmark(url, title):
+            view = self._current_view()
+            icon = icon_to_base64(view.icon()) if view is not None else ""
+            if not add_bookmark(url, title, icon=icon):
                 self._set_status("收藏失败")
                 return
         self._refresh_bookmarks()

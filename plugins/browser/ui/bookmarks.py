@@ -9,7 +9,8 @@ H2 修复：_reload 走 AsyncDataLoader 后台线程，主线程不阻塞。
 
 from typing import List
 
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import QBuffer, QByteArray, QIODevice, QSize, Qt, pyqtSignal
+from PyQt5.QtGui import QIcon, QPixmap
 from PyQt5.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -26,6 +27,38 @@ from qfluentwidgets import FluentIcon
 from .data import AsyncDataLoader, add_bookmark, remove_bookmark
 from .panel_base import _PanelMixin, build_footer, build_header, show_singleton_panel
 from .theme import font_css, scrollbar_style, theme_colors
+
+
+_ICON_PX = 32
+
+
+def icon_to_base64(icon) -> str:
+    """QIcon → base64 PNG（收藏时持久化 favicon）"""
+    if icon is None or icon.isNull():
+        return ""
+    pixmap = icon.pixmap(_ICON_PX, _ICON_PX)
+    if pixmap.isNull():
+        return ""
+    data = QByteArray()
+    buf = QBuffer(data)
+    buf.open(QIODevice.WriteOnly)
+    pixmap.save(buf, "PNG")
+    buf.close()
+    return bytes(data.toBase64()).decode("ascii")
+
+
+def icon_from_base64(text: str) -> QIcon:
+    """base64 PNG → QIcon（空/坏数据返回空图标）"""
+    if not text:
+        return QIcon()
+    try:
+        raw = QByteArray.fromBase64(text.encode("ascii"))
+    except Exception:
+        return QIcon()
+    pixmap = QPixmap()
+    if not pixmap.loadFromData(raw, "PNG"):
+        return QIcon()
+    return QIcon(pixmap)
 
 
 class BookmarkBar(QWidget):
@@ -102,6 +135,10 @@ class BookmarkBar(QWidget):
         title = item.get("title") or item.get("url") or "收藏"
         btn = QToolButton(parent)
         btn.setText(title)
+        icon = icon_from_base64(item.get("icon", ""))
+        if not icon.isNull():
+            btn.setIcon(icon)
+            btn.setIconSize(QSize(16, 16))
         btn.setToolTip(f"{title}\n{item.get('url', '')}")
         btn.setMaximumWidth(160)
         btn.clicked.connect(
@@ -210,6 +247,7 @@ class BookmarksPanel(QFrame, _PanelMixin):
         )
 
         self._list = QListWidget(self)
+        self._list.setIconSize(QSize(16, 16))
         self._list.itemDoubleClicked.connect(self._open_item)
         root.addWidget(self._list, 1)
 
@@ -246,6 +284,9 @@ class BookmarksPanel(QFrame, _PanelMixin):
         for bm in self._items_cache:
             title = bm.get("title") or bm.get("url")
             item = QListWidgetItem(f"{title}\n   {bm.get('url')}")
+            icon = icon_from_base64(bm.get("icon", ""))
+            if not icon.isNull():
+                item.setIcon(icon)
             item.setData(Qt.UserRole, bm.get("url"))
             item.setToolTip(bm.get("url"))
             self._list.addItem(item)
@@ -259,8 +300,15 @@ class BookmarksPanel(QFrame, _PanelMixin):
             return
         idx = self._owner._tab_bar.currentIndex()
         title = self._owner._views[idx].get("title", "")
-        add_bookmark(url, title)
+        add_bookmark(url, title, icon=icon_to_base64(view.icon()))
         self._reload()
+        self._notify_owner_refresh()
+
+    def _notify_owner_refresh(self):
+        """同步刷新卡片顶部收藏栏（收藏栏与面板各持一套数据）"""
+        refresh = getattr(self._owner, "_refresh_bookmarks", None)
+        if callable(refresh):
+            refresh()
 
     def _open_item(self, item):
         self._open_url(item)
@@ -283,6 +331,7 @@ class BookmarksPanel(QFrame, _PanelMixin):
             if url:
                 remove_bookmark(url)
             self._reload()
+            self._notify_owner_refresh()
 
     def showEvent(self, event):
         super().showEvent(event)

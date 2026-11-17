@@ -37,7 +37,7 @@ class HistoryPanel(QFrame, _PanelMixin):
         super().__init__(parent or owner)
         self._owner = owner
         self.setObjectName("historyPanel")
-        self.setFixedSize(420, 270)
+        self.setFixedSize(500, 380)
         self._loader = AsyncDataLoader(self)
         self._items_cache: List[dict] = []
         self._setup_ui()

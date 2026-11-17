@@ -2,7 +2,7 @@
 """数据层 — SQLite 存储（收藏/历史/下载）+ QThread 异步 Worker
 
 表结构：
-- bookmarks(url PK, title, created_at, folder)
+- bookmarks(url PK, title, created_at, folder, icon)
 - history(url, title, visited_at, visit_count)
 - downloads(id, url, path, state, bytes_received, bytes_total, created_at)
 
@@ -41,7 +41,8 @@ CREATE TABLE IF NOT EXISTS bookmarks (
     url         TEXT PRIMARY KEY,
     title       TEXT NOT NULL DEFAULT '',
     created_at  TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
-    folder      TEXT NOT NULL DEFAULT ''
+    folder      TEXT NOT NULL DEFAULT '',
+    icon        TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS history (
     url         TEXT PRIMARY KEY,
@@ -70,6 +71,12 @@ def _ensure_db() -> None:
             data_dir().mkdir(parents=True, exist_ok=True)
             conn = sqlite3.connect(str(_db_path()), timeout=5)
             conn.executescript(_SCHEMA)
+            # 轻量迁移：旧库补 icon 列（收藏栏 favicon）
+            cols = {row[1] for row in conn.execute("PRAGMA table_info(bookmarks)")}
+            if "icon" not in cols:
+                conn.execute(
+                    "ALTER TABLE bookmarks ADD COLUMN icon TEXT NOT NULL DEFAULT ''"
+                )
             conn.commit()
             conn.close()
         except Exception as e:
@@ -88,15 +95,19 @@ def _get_conn() -> sqlite3.Connection:
 # ══════════════════════════════════════════════════════════
 
 
-def add_bookmark(url: str, title: str = "", folder: str = "") -> bool:
-    """添加/更新收藏（url 为主键，upsert），返回是否成功。"""
+def add_bookmark(url: str, title: str = "", folder: str = "", icon: str = "") -> bool:
+    """添加/更新收藏（url 为主键，upsert），返回是否成功。
+
+    icon 为 favicon 的 base64 PNG；空值时保留已有图标（避免旧收藏被清空）。
+    """
     _ensure_db()
     try:
         conn = _get_conn()
         conn.execute(
-            "INSERT INTO bookmarks(url, title, folder) VALUES(?, ?, ?) "
-            "ON CONFLICT(url) DO UPDATE SET title=excluded.title, folder=excluded.folder",
-            (url, title, folder),
+            "INSERT INTO bookmarks(url, title, folder, icon) VALUES(?, ?, ?, ?) "
+            "ON CONFLICT(url) DO UPDATE SET title=excluded.title, folder=excluded.folder, "
+            "  icon=CASE WHEN excluded.icon!='' THEN excluded.icon ELSE bookmarks.icon END",
+            (url, title, folder, icon),
         )
         conn.commit()
         conn.close()
@@ -104,6 +115,22 @@ def add_bookmark(url: str, title: str = "", folder: str = "") -> bool:
     except Exception as e:
         logger.error(f"[browser] 添加收藏失败: {e}")
         return False
+
+
+def update_bookmark_icon(url: str, icon: str) -> None:
+    """回填收藏 favicon（仅当该收藏存在且此前无图标，幂等）"""
+    if not icon:
+        return
+    _ensure_db()
+    try:
+        conn = _get_conn()
+        conn.execute(
+            "UPDATE bookmarks SET icon=? WHERE url=? AND icon=''", (icon, url)
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        logger.error(f"[browser] 更新收藏图标失败: {e}")
 
 
 def remove_bookmark(url: str) -> bool:
@@ -205,7 +232,7 @@ def query_bookmarks(limit: int = 500) -> List[dict]:
     try:
         conn = _get_conn()
         rows = conn.execute(
-            "SELECT url, title, folder, created_at FROM bookmarks "
+            "SELECT url, title, folder, created_at, icon FROM bookmarks "
             "ORDER BY created_at DESC LIMIT ?",
             (limit,),
         ).fetchall()

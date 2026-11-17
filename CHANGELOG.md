@@ -1,6 +1,12 @@
 # Changelog
 
 ## Unreleased
+### ✨ browser v1.8.0：收藏栏显示网页图标，修复删除收藏不刷新，历史弹窗放大
+- **收藏图标**：`bookmarks` 表新增 `icon` 列（base64 PNG），旧库首次打开自动 `ALTER TABLE` 迁移、原有收藏不丢；星标收藏、收藏面板「收藏当前页」、Ctrl+D 三个入口写入当前页 favicon，页面 `iconChanged` 时回填旧收藏缺失的图标；收藏栏、溢出面板、收藏面板列表统一 16px 显示，旧收藏在该网页打开过一次后自动补图
+- **修复**：收藏面板删除/新增后只重载面板自身，顶部收藏栏仍显示旧数据 —— 改为操作后调 `owner._refresh_bookmarks()` 同步
+- **历史弹窗**：420x270 → 500x380，搜索框宽度不变
+- **地址栏**：URL 输入框最小宽度不再受限（默认 `QLineEdit.minimumSizeHint` 约 22px 卡住压缩，覆盖后返回 0），可随卡片任意压窄
+- **验证**：旧库迁移 / 图标编解码往返 / 删除后刷新三组 offscreen 脚本通过；`ruff` 无告警；`plugins/browser/tests` 5 passed；`validate_plugins.py plugins/browser` OK
 ### 🔧 gateway-feishu 1.9.0：修流式卡片两处 API 误用（流式不生效）
 - **症状**：飞书回复不走流式卡片，先收到「🤔 正在思考，请稍候...」再一次性整段发出；gateway.log 报 `start_stream failed: HTTP 400 code=9499 ... {"streaming_mode":true}`
 - **根因**：`cardkit/v1/cards/{id}/settings` 要求 `settings` 是 JSON 字符串、且内容包在 `config` 段，代码传的是裸对象；元素内容接口 `elements/{id}/content` 只接受 PUT，代码用 POST（404 page not found），开流后第一帧即熔断

@@ -119,10 +119,11 @@ def _bookmark_current(card):
     url = view.url().toString()
     if not url or url == "about:blank":
         return
+    from .bookmarks import icon_to_base64
     from .data import add_bookmark
 
     title = card._views[card._tab_bar.currentIndex()].get("title", "")
-    add_bookmark(url, title)
+    add_bookmark(url, title, icon=icon_to_base64(view.icon()))
     card._set_status(f"★ 已收藏: {title or url}")
 
 

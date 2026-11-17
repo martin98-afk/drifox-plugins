@@ -11,7 +11,7 @@ import os
 import re
 from typing import Callable, List, Tuple
 
-from PyQt5.QtCore import QTimer, Qt, pyqtSignal
+from PyQt5.QtCore import QSize, QTimer, Qt, pyqtSignal
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import (
     QCompleter,
@@ -77,6 +77,13 @@ def is_blank_page(url: str) -> bool:
 # ── 地址栏控件 ──────────────────────────────────────────
 
 
+class _UrlLineEdit(QLineEdit):
+    """地址栏输入框：最小宽度不设限（QLineEdit 默认 minimumSizeHint 会卡住压缩）"""
+
+    def minimumSizeHint(self):
+        return QSize(0, super().minimumSizeHint().height())
+
+
 class UrlBar(QWidget):
     """Chrome 风格地址栏：圆角输入框 + 内嵌加载进度条
 
@@ -103,7 +110,7 @@ class UrlBar(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        self._edit = QLineEdit(self)
+        self._edit = _UrlLineEdit(self)
         self._edit.setPlaceholderText("搜索或输入网址")
         self._edit.textChanged.connect(self._sync_placeholder)
         self._edit.setClearButtonEnabled(True)
