@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import QAbstractItemView, QStyle, QStyledItemDelegate, QTre
 
 FILE_ROLE = Qt.UserRole + 1
 KEY_ROLE = Qt.UserRole + 2
+DIR_ROLE = Qt.UserRole + 3  # 目录节点：子文件清单 + 派生状态（文件树模式专用）
 CONFLICTS = {"UU", "AA", "DD", "DU", "UD", "AU", "UA"}
 GROUPS = (("conflict", "合并更改"), ("staged", "已暂存的更改"), ("changes", "更改"))
 
@@ -25,7 +26,9 @@ class _FileDelegate(QStyledItemDelegate):
 
     def paint(self, painter: QPainter, option, index):
         info = index.data(FILE_ROLE)
-        if not info:
+        dir_info = index.data(DIR_ROLE)
+        payload = info or dir_info
+        if not payload:
             super().paint(painter, option, index)
             return
         opt = self.viewOptions(option)
@@ -45,11 +48,11 @@ class _FileDelegate(QStyledItemDelegate):
         hovered = bool(option.state & QStyle.State_MouseOver)
         action_width = 24
         text_rect = rect.adjusted(0, 0, -(26 + action_width), 0)
-        name = os.path.basename(info["path"])
+        name = os.path.basename(info["path"]) if info else payload["path"].rstrip("/").rsplit("/", 1)[-1]
         painter.setPen(primary)
         painter.drawText(text_rect, Qt.AlignVCenter | Qt.AlignLeft,
                          option.fontMetrics.elidedText(name, Qt.ElideMiddle, text_rect.width()))
-        if option.widget.property("changesMode") == "list":
+        if info and option.widget.property("changesMode") == "list":
             name_width = option.fontMetrics.horizontalAdvance(name) + 14
             directory = os.path.dirname(info["path"])
             if directory and name_width < text_rect.width() - 24:
@@ -58,20 +61,22 @@ class _FileDelegate(QStyledItemDelegate):
                 available = directory_rect.width()
                 painter.drawText(directory_rect, Qt.AlignVCenter | Qt.AlignLeft,
                                  option.fontMetrics.elidedText(directory, Qt.ElideLeft, available))
-        status = info["status"]
+        status = payload["status"]
         letter = "U" if status in CONFLICTS or status == "??" else status[:1]
         color = primary if selected else palette.color(QPalette.Link)
         if status in {"A", "??"} and not selected:
             color = QColor("#16a34a")
         elif (status in CONFLICTS or status == "D") and not selected:
             color = QColor("#e05252")
-        painter.setPen(color)
-        status_rect = QRect(rect.right() - action_width - 20, rect.top(), 20, rect.height())
-        painter.drawText(status_rect, Qt.AlignCenter, letter)
+        # 目录不画状态字母（避免与文件名挤在一起），只靠 hover 的批量按钮表意
+        if info:
+            painter.setPen(color)
+            status_rect = QRect(rect.right() - action_width - 20, rect.top(), 20, rect.height())
+            painter.drawText(status_rect, Qt.AlignCenter, letter)
         if hovered:
             painter.setPen(primary)
             painter.drawText(rect.adjusted(rect.width() - 22, 0, 0, 0), Qt.AlignCenter,
-                             "!" if status in CONFLICTS else "−" if info["staged"] else "+")
+                             "!" if status in CONFLICTS else "−" if payload["staged"] else "+")
         painter.restore()
 
     @staticmethod
@@ -201,6 +206,16 @@ class ChangesView(QTreeView):
                             item.setData(f"{group}/{path}/", KEY_ROLE)
                             parent.appendRow(item)
                             directories[path] = item
+                        # 目录节点聚合子文件：支持整目录暂存/取消暂存
+                        dir_info = directories[path].data(DIR_ROLE) or {
+                            "path": path, "files": [], "staged": True,
+                            "status": "M", "isDir": True,
+                        }
+                        dir_info["files"].append(info["path"])
+                        dir_info["staged"] = dir_info["staged"] and info["staged"]
+                        if info["status"] in CONFLICTS:
+                            dir_info["status"] = "UU"  # 含冲突子文件：动作降级为冲突菜单
+                        directories[path].setData(dir_info, DIR_ROLE)
                         parent = directories[path]
                 item = QStandardItem(parts[-1])
                 item.setToolTip(f"{info['path']}\n{'已暂存' if info['staged'] else '工作区'} · {info['status']}")
@@ -222,13 +237,15 @@ class ChangesView(QTreeView):
     def mouseReleaseEvent(self, event):
         index = self.indexAt(event.pos())
         info = index.data(FILE_ROLE)
+        dir_info = index.data(DIR_ROLE)
         super().mouseReleaseEvent(event)
         # 单击只选中，右侧动作区（+/−）保持单击即触发；打开 diff 走双击
-        if event.button() == Qt.LeftButton and info:
+        payload = info or dir_info
+        if event.button() == Qt.LeftButton and payload:
             rect = self.visualRect(index)
             if event.pos().x() >= rect.right() - 26:
-                action = "conflict" if info["status"] in CONFLICTS else "unstage" if info["staged"] else "stage"
-                self.action_requested.emit(action, info)
+                action = self._action_for(payload)
+                self.action_requested.emit(action, payload)
 
     def mouseDoubleClickEvent(self, event):
         index = self.indexAt(event.pos())
@@ -248,6 +265,12 @@ class ChangesView(QTreeView):
             event.accept()
             return
         super().keyPressEvent(event)
+
+    @staticmethod
+    def _action_for(payload) -> str:
+        if payload["status"] in CONFLICTS:
+            return "conflict"
+        return "unstage" if payload["staged"] else "stage"
 
     def _context_menu(self, pos):
         info = self.indexAt(pos).data(FILE_ROLE)

@@ -244,3 +244,29 @@ def test_stale_thread_is_abandoned_so_button_works_again(card, monkeypatch):
     card._on_run_round()
     assert len(calls) == 1
     assert card._run_btn.text() == "值班中…"
+
+
+def test_history_reports_are_switchable(card):
+    data = snapshot()
+    data["reports"] = [
+        {"day": "2026-11-17", "text": "# 今天\n\n### BV111", "today": True},
+        {"day": "2026-11-10", "text": "# 十天前\n\n### BV222", "today": False},
+    ]
+    card._render_snapshot(data)
+    assert card._report_picker.isVisible() or card._report_picker.count() == 2
+    card._report_picker.setCurrentIndex(1)
+    assert "十天前" in card._report_view.toPlainText()
+    card._report_picker.setCurrentIndex(0)
+    assert "今天" in card._report_view.toPlainText()
+
+
+def test_stale_round_thread_resets_running_state(card, app, monkeypatch):
+    """值班轮线程假死被抛弃后，运行状态必须复位，否则按钮永久失效。"""
+    card._thread = object()
+    card._thread_started_at = __import__("time").monotonic() - 60
+    card._round_running = True
+    card._run_btn.setEnabled(False)
+    alive = card._worker_alive()
+    assert alive is False
+    assert card._round_running is False
+    assert card._run_btn.isEnabled()

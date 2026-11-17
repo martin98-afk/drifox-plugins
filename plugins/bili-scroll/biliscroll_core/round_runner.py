@@ -13,6 +13,7 @@ from typing import Any, Dict, List
 
 from loguru import logger
 
+from .diagnostics import _schemas_with_timeout
 from .paths import PLUGIN_ROOT
 from .store import DutyStore
 
@@ -103,7 +104,7 @@ def _collect_tool_schemas(settings: Dict[str, Any]) -> List[Dict[str, Any]]:
         mgr = pool.get("mcp.call")
         if callable(mgr):
             mgr = mgr()
-        by_server = mgr.get_tool_schemas_by_server() if mgr else {}
+        by_server = _schemas_with_timeout(mgr) if mgr else {}
         for schema in by_server.get("bili", []):
             fn = (schema or {}).get("function") or {}
             if fn.get("name"):

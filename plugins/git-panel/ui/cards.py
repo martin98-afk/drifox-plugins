@@ -85,6 +85,12 @@ PLUGIN_NAME = "git-panel"
 # 增强模型不支持思考时会在 extra_body 里塞无效参数 → 特殊服务商 400。
 # 交给主程序注入：o1/o3 等拒收 temperature 的模型由 transport 的 skip_params 自动剔除。
 _COMMIT_AI_PARAMS = {"温度": 0.3, "最大Token": 500, "思考模式": False}
+# 单文件 diff 字符上限：按文件边界截断（超限加显式标记），而非整体切字符。
+# 参考 VSCode Copilot 单文件 100KB 限额，此处取更保守值控总 token 成本。
+_AI_PER_FILE_LIMIT = 12000
+# 整个 user 消息的 diff 总预算：防文件数很多时总量失控。
+# 超出后按改动量降序装到装不下为止，未被装下的文件在清单里标「未包含」。
+_AI_TOTAL_DIFF_BUDGET = 40000
 # turn() 内部超时（秒）与硬看门狗缓冲：daemon 线程下内部超时收尾可能整链未发生
 # （cron-tasks 实测），超时后放弃等待直接报错，避免按钮永久卡在「生成中…」
 _AI_TURN_TIMEOUT = 120.0
@@ -2449,7 +2455,8 @@ class GitPanelCard(QWidget):
         self._setup_ui()
         self._poll_timer = QTimer(self)
         self._poll_timer.setInterval(5000)
-        self._poll_timer.timeout.connect(lambda: self._async_refresh(0))
+        # 轮询静默：后台轮询不得每次弹「加载中…」，否则右上角状态每 5 秒闪一次
+        self._poll_timer.timeout.connect(lambda: self._async_refresh(0, silent=True))
 
     # ── 上下文注入 ──
 
@@ -3191,9 +3198,17 @@ class GitPanelCard(QWidget):
             self._popup(helper._build_conflict_menu())
             return
         repo = GitRepo(self._repo_path)
-        path = info["path"]
-        fn = (lambda: repo.restore_staged([path])) if action == "unstage" else (lambda: repo.add([path]))
-        self._run_git_async(fn, lambda result: self._on_op_done("已取消暂存" if action == "unstage" else "已暂存", result))
+        # 目录节点携带 files 列表：一次 git 调用批量处理，避免逐文件刷新
+        paths = list(info["files"]) if info.get("isDir") else [info["path"]]
+        if action == "unstage":
+            fn = lambda: repo.restore_staged(paths)  # noqa: E731
+            label = "已取消暂存"
+        else:
+            fn = lambda: repo.add(paths)  # noqa: E731
+            label = "已暂存"
+        if len(paths) > 1:
+            label = f"{label} {len(paths)} 个文件"
+        self._run_git_async(fn, lambda result: self._on_op_done(label, result))
 
     def _show_file_context(self, info, pos):
         helper = self._file_helper(info)
@@ -3265,32 +3280,40 @@ class GitPanelCard(QWidget):
 
     # ── 异步刷新 ──
 
-    def _async_refresh(self, delay: int = 300):
-        """后台获取所有 Git 数据（300ms 去抖：连续触发合并为一次）"""
+    def _async_refresh(self, delay: int = 300, silent: bool = False):
+        """后台获取所有 Git 数据（300ms 去抖：连续触发合并为一次）
+
+        silent=True 供后台轮询使用：不显示「加载中…」、失败也不弹 InfoBar。
+        去抖期间只要有一个非静默请求加入，合并后的刷新就恢复可见加载态。
+        """
         if getattr(self, "_refresh_debounce", None) is None:
             self._refresh_debounce = QTimer(self)
             self._refresh_debounce.setSingleShot(True)
             self._refresh_debounce.timeout.connect(self._do_async_refresh)
+        self._pending_silent = silent and getattr(self, "_pending_silent", True)
         self._refresh_debounce.start(delay)
 
     def _do_async_refresh(self):
         """请求捕获仓库和页面；同类等待请求合并，写操作不会被刷新拦截。"""
         if self._disposed:
             return
+        silent = getattr(self, "_pending_silent", True)
+        self._pending_silent = True
         self._apply_latest_theme()
         repo, generation = self._repo_path, self._generation
         history = self._tabs.currentIndex() == 1
         limit = getattr(self, "_log_limit", 30)
-        self._set_loading(True)
+        if not silent:
+            self._set_loading(True)
 
         def done(data):
             if generation != self._generation or repo != self._repo_path:
                 return
-            self._on_refresh_done(data)
+            self._on_refresh_done(data, silent)
 
         def error(message):
             if generation == self._generation:
-                self._on_refresh_error(message)
+                self._on_refresh_error(message, silent)
 
         self._runner.submit(
             lambda: GitPanelCard._fetch_all_data(repo, history, limit),
@@ -3315,8 +3338,11 @@ class GitPanelCard(QWidget):
         return data
 
 
-    def _on_refresh_done(self, data: dict):
-        self._set_loading(False)
+    def _on_refresh_done(self, data: dict, silent: bool = False):
+        if silent:
+            self._is_loading = False
+        else:
+            self._set_loading(False)
 
         if data.get("error"):
             self._empty.setText(data["error"])
@@ -3353,8 +3379,13 @@ class GitPanelCard(QWidget):
         sb = self._scroll.verticalScrollBar()
         QTimer.singleShot(0, lambda: sb.setValue(min(pos, sb.maximum())))
 
-    def _on_refresh_error(self, err: str):
-        self._set_loading(False)
+    def _on_refresh_error(self, err: str, silent: bool = False):
+        if not silent:
+            self._set_loading(False)
+        if silent and self._snapshot:
+            # 后台轮询失败：保留旧内容，只记日志，不反复弹错误条
+            logger.warning(f"[git-panel] 后台刷新失败: {err[:200]}")
+            return
         if self._snapshot:
             self._show_info_bar("error", "刷新失败", err[:200])
             return
@@ -3488,8 +3519,9 @@ class GitPanelCard(QWidget):
         if main_widget is None:
             self._show_info_bar("info", "AI 生成", "需要宿主环境（无法获取模型配置）")
             return
-        diff_text = (GitRepo(self._repo_path).diff_staged() or "").strip()
-        if not diff_text:
+        repo = GitRepo(self._repo_path)
+        files = repo.staged_file_diffs(_AI_PER_FILE_LIMIT)
+        if not files:
             self._show_info_bar("info", "AI 生成", "暂存区为空，请先暂存要提交的文件")
             return
         override = resolve_model(
@@ -3504,7 +3536,7 @@ class GitPanelCard(QWidget):
             self._show_info_bar("info", "AI 生成", "未找到模型配置，请先在系统设置配置模型")
             return
         system = load_plugin_text_config("commit_prompt", DEFAULT_COMMIT_PROMPT)
-        user = f"暂存变更 diff（超长时已截断）：\n{diff_text[:9000]}"
+        user = self._build_commit_user_prompt(repo, files)
         llm = {**llm, **_COMMIT_AI_PARAMS}
         self._ai_task_running = True
         self._set_ai_running(True)
@@ -3518,6 +3550,79 @@ class GitPanelCard(QWidget):
         self._ai_task = task
         pool = getattr(main_widget, "_gen_thread_pool", None) or QThreadPool.globalInstance()
         pool.start(task)
+
+    def _build_commit_user_prompt(self, repo, files) -> str:
+        """拼装 AI 生成提交描述的 user 消息
+
+        对齐 VSCode Copilot 的三层信息：
+        1. 仓库详情（仓库名/分支名）——给模型定位上下文
+        2. 变更文件清单（状态 + 增删行数）——即使大文件 diff 被截，也不漏文件
+        3. 逐文件 diff（单文件超限才截断，带显式标记；按改动量降序）
+        另附最近提交首行作风格参考（明确标注不可照抄）。
+        """
+        repo_name = os.path.basename(self._repo_path.rstrip("/\\")) or self._repo_path
+        branch = repo.branch() or "(detached)"
+        total_add = sum(f["add"] for f in files)
+        total_del = sum(f["del"] for f in files)
+
+        # 总预算裁剪：装得下的才附 diff，装不下的降级为清单条目。
+        # 不强制放入超大首文件（会把预算占满，挤掉信息密度更高的小文件 diff）；
+        # 但若一个都装不下（单文件改动超大），至少截断首文件进预算，避免完全没有 diff 可读。
+        included, used = [], 0
+        for f in files:
+            cost = len(f["diff"])
+            if used + cost <= _AI_TOTAL_DIFF_BUDGET:
+                included.append(f)
+                used += cost
+        if not included and files:
+            head = dict(files[0])
+            cut = max(_AI_TOTAL_DIFF_BUDGET - 200, 1000)
+            head["diff"] = (
+                head["diff"][:cut]
+                + f"\n... [此文件 diff 因总预算截断，原始 {len(head['diff'])} 字符]\n"
+            )
+            head["truncated"] = True
+            included = [head]
+        included_paths = {f["path"] for f in included}
+        omitted = len(files) - len(included_paths)
+
+        lines = [
+            "# 仓库详情",
+            f"仓库名：{repo_name}",
+            f"分支名：{branch}",
+            "",
+            f"# 变更文件（{len(files)} 个，+{total_add} −{total_del}）",
+        ]
+        for f in files:
+            tags = []
+            if f["truncated"]:
+                tags.append("diff 已截断")
+            if f["path"] not in included_paths:
+                tags.append("diff 未包含")
+            suffix = f"（{'；'.join(tags)}）" if tags else ""
+            lines.append(f"  {f['status']} {f['path']}  (+{f['add']} −{f['del']}){suffix}")
+        if omitted:
+            lines.append(
+                f"  ※ 其余 {omitted} 个文件因体积超限未附 diff，请根据文件清单概括其改动。"
+            )
+
+        # 风格样例：自己的提交优先，无则用仓库近期提交
+        samples: list = []
+        try:
+            author = repo.user_name()
+            samples = repo.recent_subjects(5, author) if author else []
+            if not samples:
+                samples = repo.recent_subjects(5)
+        except Exception as e:  # 样例仅辅助，取不到不影响生成
+            logger.debug(f"[git-panel] 获取近期提交失败: {e}")
+        if samples:
+            lines += ["", "# 最近提交（仅参考风格，不要照抄）"]
+            lines += [f"  - {s}" for s in samples]
+
+        lines += ["", "# 代码改动"]
+        for f in included:
+            lines += [f"## {f['path']} ({f['status']})", f["diff"].rstrip(), ""]
+        return "\n".join(lines)
 
     def _on_ai_cancel(self):
         """停止 AI 生成：打断后台 turn，按钮立即复位（迟到结果由任务侧静默丢弃）"""

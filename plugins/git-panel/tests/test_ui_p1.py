@@ -363,5 +363,175 @@ class TestWorkerErrorRecovery(P1UITestBase):
         _APP.processEvents()
 
 
+class TestCommitPromptAssembly(P1UITestBase):
+    """AI 生成提交描述的 prompt 拼装：按文件截断、清单、风格样例、总预算"""
+
+    def _stage_changes(self):
+        self._write("base.txt", "line1\nline2-mod\nline3\n")
+        self._write("small.txt", "x\n")
+        big = "\n".join(f"line {i}" for i in range(1500))
+        self._write("big.py", big + "\n")
+        self.g.add(["."])
+
+    def test_file_list_and_context_present(self):
+        self._stage_changes()
+        card = cards.GitPanelCard()
+        card._repo_path = self.repo
+        files = self.g.staged_file_diffs(2000)
+        prompt = card._build_commit_user_prompt(self.g, files)
+        self.assertIn("# 仓库详情", prompt)
+        self.assertIn(f"仓库名：{os.path.basename(self.repo)}", prompt)
+        self.assertIn("# 变更文件", prompt)
+        self.assertIn("big.py", prompt)
+        self.assertIn("# 最近提交", prompt)
+        card.deleteLater()
+        _APP.processEvents()
+
+    def test_per_file_truncation_marked(self):
+        self._stage_changes()
+        files = self.g.staged_file_diffs(800)
+        big = next(f for f in files if f["path"] == "big.py")
+        self.assertTrue(big["truncated"], "超过单文件上限应标记 truncated")
+        self.assertLessEqual(len(big["diff"]), 800 + 120, "截断后不应显著超出限额")
+        self.assertIn("此文件 diff 已截断", big["diff"])
+        small = next(f for f in files if f["path"] == "small.txt")
+        self.assertFalse(small["truncated"])
+
+    def test_files_sorted_by_change_volume(self):
+        self._stage_changes()
+        files = self.g.staged_file_diffs(20000)
+        volumes = [f["add"] + f["del"] for f in files]
+        self.assertEqual(volumes, sorted(volumes, reverse=True), "应按改动量降序")
+
+    def test_total_budget_drops_oversized_file_without_starving_small_ones(self):
+        """超大文件装不进总预算时应降级为清单条目，小文件 diff 保留"""
+        self._stage_changes()
+        card = cards.GitPanelCard()
+        card._repo_path = self.repo
+        orig = cards._AI_TOTAL_DIFF_BUDGET
+        try:
+            cards._AI_TOTAL_DIFF_BUDGET = 400
+            files = self.g.staged_file_diffs(20000)
+            prompt = card._build_commit_user_prompt(self.g, files)
+            self.assertIn("diff 未包含", prompt)
+            self.assertIn("small.txt", prompt)
+            # 小文件 diff 仍应出现，超大文件不被强制塞入
+            self.assertNotIn("## big.py", prompt)
+        finally:
+            cards._AI_TOTAL_DIFF_BUDGET = orig
+            card.deleteLater()
+            _APP.processEvents()
+
+    def test_returns_single_code_section_when_nothing_fits(self):
+        """预算极小时兜底：至少给一个文件的截断 diff"""
+        self._stage_changes()
+        card = cards.GitPanelCard()
+        card._repo_path = self.repo
+        orig = cards._AI_TOTAL_DIFF_BUDGET
+        try:
+            cards._AI_TOTAL_DIFF_BUDGET = 100
+            files = self.g.staged_file_diffs(20000)
+            prompt = card._build_commit_user_prompt(self.g, files)
+            self.assertIn("# 代码改动", prompt)
+            self.assertIn("因总预算截断", prompt)
+        finally:
+            cards._AI_TOTAL_DIFF_BUDGET = orig
+            card.deleteLater()
+            _APP.processEvents()
+
+
+class TestTreeDirStaging(P1UITestBase):
+    """文件树模式：目录节点聚合子文件，支持整目录暂存/取消暂存"""
+
+    def setUp(self):
+        # set_mode 会把模式持久化到 QSettings，污染其他用例（如切换按钮文案断言）
+        from PyQt5.QtCore import QSettings
+        self._settings = QSettings("DriFox", "git-panel")
+        self._saved_mode = self._settings.value("changes_view", "list")
+
+    def tearDown(self):
+        self._settings.setValue("changes_view", self._saved_mode)
+        super().tearDown()
+
+    def _make_tree(self):
+        import ui_plugin_git_panel.changes_view as cv
+        self.cv = cv
+        view = cv.ChangesView()
+        view.set_mode("tree")
+        view.set_items([
+            {"path": "alpha/a.txt", "status": "??", "staged": False},
+            {"path": "alpha/beta/b.txt", "status": "??", "staged": False},
+            {"path": "gamma/g.txt", "status": "??", "staged": False},
+        ])
+        return view
+
+    def test_dir_node_aggregates_nested_files(self):
+        view = self._make_tree()
+        dirs = {i.data(self.cv.DIR_ROLE)["path"]: i.data(self.cv.DIR_ROLE)
+                for i in view._all_indexes() if i.data(self.cv.DIR_ROLE)}
+        self.assertIn("alpha", dirs)
+        self.assertIn("alpha/beta", dirs)
+        # 父目录必须包含嵌套子目录下的文件
+        self.assertEqual(sorted(dirs["alpha"]["files"]),
+                         ["alpha/a.txt", "alpha/beta/b.txt"])
+        view.deleteLater()
+        _APP.processEvents()
+
+    def test_dir_action_is_stage_when_children_unstaged(self):
+        view = self._make_tree()
+        idx = next(i for i in view._all_indexes()
+                   if (i.data(self.cv.DIR_ROLE) or {}).get("path") == "alpha")
+        info = idx.data(self.cv.DIR_ROLE)
+        self.assertEqual(view._action_for(info), "stage")
+        view.deleteLater()
+        _APP.processEvents()
+
+    def test_dir_action_is_unstage_when_all_children_staged(self):
+        import ui_plugin_git_panel.changes_view as cv
+        view = cv.ChangesView()
+        view.set_mode("tree")
+        view.set_items([
+            {"path": "alpha/a.txt", "status": "M", "staged": True},
+            {"path": "alpha/b.txt", "status": "M", "staged": True},
+        ])
+        idx = next(i for i in view._all_indexes()
+                   if (i.data(cv.DIR_ROLE) or {}).get("path") == "alpha")
+        self.assertEqual(view._action_for(idx.data(cv.DIR_ROLE)), "unstage")
+        view.deleteLater()
+        _APP.processEvents()
+
+    def test_batch_stage_and_unstage_via_repo(self):
+        """目录批量路径真实落到 git add / restore --staged"""
+        os.makedirs(os.path.join(self.repo, "alpha", "beta"), exist_ok=True)
+        self._write("alpha/a.txt", "a\n")
+        self._write("alpha/beta/b.txt", "b\n")
+        paths = ["alpha/a.txt", "alpha/beta/b.txt"]
+        self.assertTrue(self.g.add(paths).ok)
+        staged = {i["path"] for i in self.g.status_items() if i["staged"]}
+        self.assertTrue(set(paths).issubset(staged), "批量暂存未生效")
+        self.assertTrue(self.g.restore_staged(paths).ok)
+        staged_after = {i["path"] for i in self.g.status_items() if i["staged"]}
+        self.assertFalse(set(paths) & staged_after, "批量取消暂存未生效")
+
+    def test_restore_staged_falls_back_on_empty_repo(self):
+        """空仓库（无 HEAD）取消暂存回退 rm --cached"""
+        import tempfile
+        tmp = tempfile.mkdtemp(prefix="gp_empty_repo_")
+        try:
+            _git(tmp, "init", "-b", "main")
+            _git(tmp, "config", "user.email", "t@t.t")
+            _git(tmp, "config", "user.name", "T")
+            with open(os.path.join(tmp, "x.txt"), "w", encoding="utf-8") as f:
+                f.write("x\n")
+            repo = GitRepo(tmp)
+            self.assertTrue(repo.add(["x.txt"]).ok)
+            res = repo.restore_staged(["x.txt"])
+            self.assertTrue(res.ok, f"空仓库取消失败: {res.stderr}")
+            statuses = {i["path"]: i["status"] for i in repo.status_items()}
+            self.assertEqual(statuses.get("x.txt"), "??")
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

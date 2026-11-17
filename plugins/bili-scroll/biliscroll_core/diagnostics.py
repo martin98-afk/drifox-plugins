@@ -2,6 +2,10 @@
 """环境自检：工具（bili_status）与 UI 卡共用同一份检查逻辑。"""
 from __future__ import annotations
 
+import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as _FutTimeout
+from loguru import logger
+
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -51,6 +55,30 @@ def _check_deps() -> str:
     return "就绪（随插件自带）"
 
 
+
+def _schemas_with_timeout(mgr, timeout: float = 5.0) -> Dict[str, Any]:
+    """MCP 客户端未就绪时 get_tool_schemas_by_server 会长时间阻塞，这里限时。
+
+    超时/失败统一返回空 dict，上层按「工具未就绪」给提示；
+    卡住的后台线程留给宿主收尾，不在这里等待（等待会拖死调用方线程）。
+    """
+    started = time.monotonic()
+    executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="bili-schema")
+    future = executor.submit(mgr.get_tool_schemas_by_server)
+    try:
+        result = future.result(timeout=timeout) or {}
+        logger.debug(f"[bili-scroll] MCP 工具表读取 {time.monotonic() - started:.2f}s")
+        return result
+    except _FutTimeout:
+        logger.warning(f"[bili-scroll] MCP 工具表读取超时（>{timeout:.0f}s），按未就绪处理")
+        return {}
+    except Exception as e:  # noqa: BLE001 — 查询失败等同未就绪
+        logger.warning(f"[bili-scroll] MCP 工具表读取失败：{type(e).__name__}: {e}")
+        return {}
+    finally:
+        executor.shutdown(wait=False)
+
+
 def _check_tools_registered() -> str:
     """B站工具注册状态：MCP 形态下查 MCPClientManager 里 bili server 的工具数。"""
     try:
@@ -61,7 +89,7 @@ def _check_tools_registered() -> str:
         mgr = pool.get("mcp.call")
         if callable(mgr):
             mgr = mgr()
-        schemas = (mgr.get_tool_schemas_by_server() if mgr else {}).get("bili", [])
+        schemas = _schemas_with_timeout(mgr).get("bili", [])
         if schemas:
             return f"MCP 已注入 {len(schemas)} 个 B站工具"
         return "未注入（MCP 未连接，检查 .mcp.json / 控制端点）"

@@ -17,6 +17,7 @@ from PyQt5.QtGui import (
 )
 from PyQt5.QtWidgets import (
     QBoxLayout,
+    QComboBox,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -223,9 +224,21 @@ class BiliScrollCard(QWidget):
         if self._thread is None:
             return False
         if time.monotonic() - self._thread_started_at > 25:
-            logger.warning("[bili-scroll] 读取线程疑似卡住，放弃旧句柄")
+            logger.warning("[bili-scroll] 后台线程疑似卡住，放弃旧句柄")
             self._thread = None
             self._worker = None
+            if self._round_running:
+                # 抛弃的是值班轮线程：必须把运行状态一并复位，
+                # 否则按钮永远停在「上一轮还在跑」，看起来像点了没反应。
+                self._round_running = False
+                self._run_btn.setText("跑一轮")
+            # 读取线程卡住期间按钮被禁用，放行时必须恢复，否则永远点不动
+            self._run_btn.setEnabled(True)
+            self._refresh_btn.setEnabled(True)
+            if self._round_running:
+                self._notify("上一轮后台任务超时，已复位；再点一次「跑一轮」重试")
+            else:
+                self._notify("状态读取超时已恢复，可继续操作")
             return False
         return True
 
@@ -340,9 +353,15 @@ class BiliScrollCard(QWidget):
         self._body_layout = QBoxLayout(QBoxLayout.LeftToRight)
         self._body_layout.setSpacing(14)
         self._report_panel, self._report_stack, self._report_view, self._report_meta = self._panel(
-            "今日日报", dt.date.today().strftime("%m 月 %d 日"),
-            "今天的精选，正在等你", "点击「跑一轮」，完成后在这里查看日报",
+            "日报", "", "今天的精选，正在等你", "点击「跑一轮」，完成后在这里查看日报",
         )
+        # 历史日报：标题右侧日期下拉，切换即换内容（数据随快照一次性带回，切换不再读盘）
+        self._report_picker = QComboBox(self._report_panel)
+        self._report_picker.setFixedWidth(150)
+        self._report_picker.setVisible(False)
+        self._report_picker.currentIndexChanged.connect(self._on_report_picked)
+        self._report_meta.setVisible(False)
+        self._report_panel.layout().itemAt(0).layout().addWidget(self._report_picker, 0)
         self._seen_panel, self._seen_stack, self._seen_view, self._seen_meta = self._panel(
             "最近看过", "0 条记录", "还没有浏览记录", "处理过的视频会在这里留下记录，避免重复筛选",
         )
@@ -418,14 +437,23 @@ class BiliScrollCard(QWidget):
         from biliscroll_core.store import DutyStore
 
         status = collect_status()
-        report = ""
         store = DutyStore()
         path = store.report_path()
-        if path.is_file():
-            lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
-            report = "\n".join(lines[-80:])
-        return {"status": status, "report": report, "report_path": str(path),
-                "seen_rows": store.seen_recent(limit=12)}
+        reports = []
+        try:
+            files = sorted(store.out_dir.glob("*.md"), reverse=True)[:30]
+        except Exception:
+            files = []
+        for item in files:
+            try:
+                text = item.read_text(encoding="utf-8", errors="replace")
+            except Exception:
+                continue
+            reports.append({"day": item.stem, "text": "\n".join(text.splitlines()[-120:]),
+                            "today": item.stem == dt.date.today().isoformat()})
+        today = next((r for r in reports if r["today"]), None)
+        return {"status": status, "report": (today or {}).get("text", ""), "report_path": str(path),
+                "reports": reports, "seen_rows": store.seen_recent(limit=12)}
 
     def _render_snapshot(self, snap: dict):
         status: dict = snap.get("status", {})
@@ -451,10 +479,17 @@ class BiliScrollCard(QWidget):
             self._metric_values[key].setToolTip(text)
         self._metric_values["credential"].setToolTip(f"{credential or '未读取到凭证信息'}；未校验登录有效性")
         self._metric_values["comment"].setToolTip(comment or "未读取到评论设置")
+        self._reports = snap.get("reports") or []
+        self._report_picker.blockSignals(True)
+        self._report_picker.clear()
+        for item in self._reports:
+            day = item.get("day", "")
+            label = f"{day}（今天）" if item.get("today") else day
+            self._report_picker.addItem(label, userData=day)
+        self._report_picker.blockSignals(False)
+        self._report_picker.setVisible(len(self._reports) > 1)
         report = snap.get("report") or ""
-        self._report_view.setMarkdown(report)
-        self._format_report()
-        self._report_stack.setCurrentIndex(1 if report.strip() else 0)
+        self._show_report(report)
         self._seen_rows = snap.get("seen_rows") or []
         self._render_seen()
         self._diagnostics.setPlainText("\n\n".join(
@@ -463,6 +498,18 @@ class BiliScrollCard(QWidget):
         self._hint_lb.setText(f"{dt.datetime.now():%H:%M} 已更新 · 设置：插件 → bili-scroll")
         self._refresh_btn.setEnabled(True)
         self._run_btn.setEnabled(not self._round_running)
+
+    def _show_report(self, report: str):
+        self._report_view.setMarkdown(report or "")
+        self._format_report()
+        self._report_stack.setCurrentIndex(1 if (report or "").strip() else 0)
+
+    def _on_report_picked(self, _index: int):
+        day = self._report_picker.currentData()
+        for item in getattr(self, "_reports", []):
+            if item.get("day") == day:
+                self._show_report(item.get("text") or "")
+                return
 
     def _render_seen(self):
         rows = []

@@ -309,8 +309,15 @@ class GitRepo:
         return self._run("add", *paths)
 
     def restore_staged(self, paths: List[str]) -> GitResult:
-        """取消暂存（paths 可为 ["."] 表示全部）"""
-        return self._run("restore", "--staged", *paths)
+        """取消暂存（paths 可为 ["."] 表示全部）
+
+        空仓库（无任何提交）下 `git restore --staged` 报
+        "fatal: could not resolve 'HEAD'"，回退 rm --cached 完成同样的语义。
+        """
+        res = self._run("restore", "--staged", *paths)
+        if not res.ok and "could not resolve 'HEAD'" in (res.stderr or ""):
+            return self._run("rm", "--cached", "-q", "--", *paths)
+        return res
 
     def checkout_discard(self, paths: List[str]) -> GitResult:
         """放弃已跟踪文件的工作区修改"""
@@ -529,6 +536,72 @@ class GitRepo:
         """获取暂存区全量 diff（AI 生成提交描述用）"""
         stdout, _, _ = _run_git(self.cwd, "diff", "--cached")
         return stdout
+
+    def staged_file_diffs(self, per_file_limit: int = 20000) -> List[dict]:
+        """暂存区逐文件 diff 与改动行数统计（AI 生成提交描述用）
+
+        相比 diff_staged 的整体字符截断，按文件边界切分：单文件超限才截断并
+        打显式标记，按改动量降序返回，保证影响大的文件优先进入 token 预算。
+
+        返回 [{"path", "status", "add", "del", "diff", "truncated"}]。
+        用 --numstat 一次拿统计（二进制文件 add/del 为 '-' → 记 0）。
+        """
+        numstat, _, _ = _run_git(self.cwd, "diff", "--cached", "--numstat")
+        stats: dict = {}
+        order: List[str] = []
+        for line in (numstat or "").splitlines():
+            parts = line.split("\t")
+            if len(parts) < 3:
+                continue
+            add_raw, del_raw, path = parts[0], parts[1], parts[2]
+            add = int(add_raw) if add_raw.isdigit() else 0
+            dele = int(del_raw) if del_raw.isdigit() else 0
+            stats[path] = (add, dele)
+            order.append(path)
+        name_status, _, _ = _run_git(self.cwd, "diff", "--cached", "--name-status")
+        status_map: dict = {}
+        for line in (name_status or "").splitlines():
+            parts = line.split("\t")
+            if len(parts) >= 2:
+                # 重命名：R100\told\tnew，取新路径
+                status_map[parts[-1]] = parts[0][:1]
+        result: List[dict] = []
+        for path in order:
+            diff_out, _, _ = _run_git(self.cwd, "diff", "--cached", "--", path)
+            truncated = len(diff_out) > per_file_limit
+            if truncated:
+                diff_out = (
+                    diff_out[:per_file_limit]
+                    + f"\n... [此文件 diff 已截断，原始 {len(diff_out)} 字符]\n"
+                )
+            add, dele = stats.get(path, (0, 0))
+            result.append({
+                "path": path,
+                "status": status_map.get(path, "M"),
+                "add": add,
+                "del": dele,
+                "diff": diff_out,
+                "truncated": truncated,
+            })
+        # 改动量降序：大改动优先占用预算，避免路径字母序偏差
+        result.sort(key=lambda f: (f["add"] + f["del"]), reverse=True)
+        return result
+
+    def recent_subjects(self, n: int = 5, author: str = "") -> List[str]:
+        """最近 n 条提交的首行标题（AI 生成提交描述时作风格样例）
+
+        author 非空时只取该作者的提交（学「我的」写法）。
+        """
+        args = ["log", f"-n{n}", "--pretty=%s"]
+        if author:
+            args.append(f"--author={author}")
+        stdout, _, _ = _run_git(self.cwd, *args)
+        return [ln.strip() for ln in (stdout or "").splitlines() if ln.strip()]
+
+    def user_name(self) -> str:
+        """本地配置的提交者名字（取不到返回空串）"""
+        stdout, _, _ = _run_git(self.cwd, "config", "user.name")
+        return (stdout or "").strip()
 
     def file_content(self, path: str) -> str:
         """读取工作区文件内容（未跟踪文件预览用）。
