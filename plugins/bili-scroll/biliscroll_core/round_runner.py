@@ -146,26 +146,37 @@ def _mcp_manager():
         return None
 
 
-def _ensure_bili_mcp() -> bool:
+def _ensure_bili_mcp(max_tries: int = 3) -> bool:
     """值班前确保 bili MCP 可用；缺失时经 enable_ephemeral 临时拉起（不写 config）。
+
+    插件 market 更新/重载后 MCP 注册表有一段空窗（"未注册 MCP server"），
+    一次失败就放弃会让每次更新后的首跑必撞——按 2s/4s 退避重试穿透窗口。
 
     Returns:
         True = 本次值班临时拉起的，调用方结束须 disable_ephemeral("bili") 清理；
-        False = 已常驻连接，或拉起失败（后续 _collect_tool_schemas 如实报空）。
+        False = 已常驻连接，或重试后仍失败（后续 _collect_tool_schemas 如实报空）。
     """
+    import time as _time
+
     mgr = _mcp_manager()
     if mgr is None:
         return False
-    try:
-        if mgr.get_tool_schemas_by_server().get("bili"):
-            return False  # 已连接，无需临时态
-        ok, payload = mgr.enable_ephemeral("bili")
-        if ok:
-            logger.info(f"[bili-scroll] bili MCP 临时开启成功（{len(payload)} 个工具，值班结束自动关闭）")
-            return True
-        logger.warning(f"[bili-scroll] bili MCP 临时开启失败：{payload}")
-    except Exception as e:
-        logger.warning(f"[bili-scroll] bili MCP 临时开启异常：{type(e).__name__}: {e}")
+    transient = ("未找到", "未注册", "正在连接", "稍后", "稍等")
+    for attempt in range(1, max_tries + 1):
+        try:
+            if mgr.get_tool_schemas_by_server().get("bili"):
+                return False  # 已连接，无需临时态
+            ok, payload = mgr.enable_ephemeral("bili")
+            if ok:
+                logger.info(f"[bili-scroll] bili MCP 临时开启成功（{len(payload)} 个工具，值班结束自动关闭）")
+                return True
+            logger.warning(f"[bili-scroll] bili MCP 临时开启失败（第 {attempt}/{max_tries} 次）：{payload}")
+            if attempt < max_tries and any(k in str(payload) for k in transient):
+                _time.sleep(2.0 * attempt)
+                continue
+        except Exception as e:
+            logger.warning(f"[bili-scroll] bili MCP 临时开启异常：{type(e).__name__}: {e}")
+        return False
     return False
 
 
