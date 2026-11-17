@@ -1836,7 +1836,6 @@ def _crop_tile(sheet: bytes, tile_index: int, tw: int, th: int) -> bytes:
     return buf.getvalue()
 
 
-@tool()
 def _fmt_ts(sec: float) -> str:
     """秒 → mm:ss（拼图时间戳条用，纯 ASCII 免字体依赖）"""
     s = max(0, int(sec or 0))
@@ -1870,6 +1869,7 @@ def _compose_frames_grid(tiles: list, labels: list, tw: int, th: int) -> bytes:
     return out.getvalue()
 
 
+@tool()
 async def bili_frames(bvid: str, num: int = 3, at: list | None = None,
                       layout: str = "grid") -> list:
     """
