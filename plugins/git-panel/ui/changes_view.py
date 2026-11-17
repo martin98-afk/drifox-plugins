@@ -12,6 +12,14 @@ GROUPS = (("conflict", "合并更改"), ("staged", "已暂存的更改"), ("chan
 
 
 class _FileDelegate(QStyledItemDelegate):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        # 主题正文色由卡片注入（delegate 不参与 QSS 继承，取不到 QSS 的 color）
+        self._text_color: QColor | None = None
+
+    def set_text_color(self, color):
+        self._text_color = QColor(color) if color else None
+
     def sizeHint(self, option, index):
         return QSize(80, max(28, option.fontMetrics.height() + 10))
 
@@ -29,7 +37,9 @@ class _FileDelegate(QStyledItemDelegate):
         rect = option.rect.adjusted(4, 0, -4, 0)
         selected = bool(option.state & QStyle.State_Selected)
         palette = option.palette
-        primary = palette.color(QPalette.HighlightedText if selected else QPalette.Text)
+        # 选中底色是极淡的面板色（非系统高亮蓝），文字必须沿用正文色：
+        # 取 HighlightedText 会拿到系统固定的白色，浅色主题下选中行变白字不可读。
+        primary = QColor(self._text_color) if self._text_color else palette.color(QPalette.Text)
         secondary = QColor(primary)
         secondary.setAlphaF(.5)
         hovered = bool(option.state & QStyle.State_MouseOver)
@@ -94,11 +104,33 @@ class ChangesView(QTreeView):
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setTextElideMode(Qt.ElideMiddle)
         self.setItemDelegate(_FileDelegate(self))
+        self._delegate = self.itemDelegate()
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self._context_menu)
         self.expanded.connect(lambda i: self._remember_dir(i, True))
         self.collapsed.connect(lambda i: self._remember_dir(i, False))
+        self._sync_selection_palette()
         self.set_mode(str(self._settings.value("changes_view", "list")))
+
+    def _sync_selection_palette(self):
+        """系统高亮色透明化：展开箭头所在的 branch 区会用它刷底色，
+        在极淡的选中行上表现为左侧一块系统蓝，与卡片配色冲突。"""
+        pal = self.palette()
+        pal.setColor(QPalette.Highlight, QColor(0, 0, 0, 0))
+        pal.setColor(QPalette.HighlightedText, pal.color(QPalette.Text))
+        self.setPalette(pal)
+
+    def set_theme_colors(self, text_color: str, link_color: str = ""):
+        """注入主题文字/链接色：delegate 自绘不继承 QSS，需显式下发"""
+        self._delegate.set_text_color(text_color)
+        pal = self.palette()
+        pal.setColor(QPalette.Highlight, QColor(0, 0, 0, 0))
+        pal.setColor(QPalette.HighlightedText, QColor(text_color))
+        pal.setColor(QPalette.Text, QColor(text_color))
+        if link_color:
+            pal.setColor(QPalette.Link, QColor(link_color))
+        self.setPalette(pal)
+        self.viewport().update()
 
     @property
     def mode(self):
@@ -191,13 +223,23 @@ class ChangesView(QTreeView):
         index = self.indexAt(event.pos())
         info = index.data(FILE_ROLE)
         super().mouseReleaseEvent(event)
+        # 单击只选中，右侧动作区（+/−）保持单击即触发；打开 diff 走双击
         if event.button() == Qt.LeftButton and info:
             rect = self.visualRect(index)
             if event.pos().x() >= rect.right() - 26:
                 action = "conflict" if info["status"] in CONFLICTS else "unstage" if info["staged"] else "stage"
                 self.action_requested.emit(action, info)
-            else:
+
+    def mouseDoubleClickEvent(self, event):
+        index = self.indexAt(event.pos())
+        info = index.data(FILE_ROLE)
+        if event.button() == Qt.LeftButton and info:
+            rect = self.visualRect(index)
+            if event.pos().x() < rect.right() - 26:
                 self._open(info)
+                event.accept()
+                return
+        super().mouseDoubleClickEvent(event)
 
     def keyPressEvent(self, event):
         info = self.currentIndex().data(FILE_ROLE)

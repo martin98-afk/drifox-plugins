@@ -112,8 +112,11 @@ def test_round_has_explicit_renderer_and_short_button(card, app, monkeypatch):
 
 
 def test_loading_blocks_round_and_error_restores_controls(card, monkeypatch):
+    import time as _time
+
     calls = []
     card._thread = object()
+    card._thread_started_at = _time.monotonic()  # 刚启动：应拦住第二次点击
     monkeypatch.setattr(card, "_start_worker", lambda *args: calls.append(args))
     card._on_run_round()
     assert calls == []
@@ -196,3 +199,48 @@ def test_theme_context_failure_keeps_card_usable(card):
     card.refresh_style()
     assert "biliDutyCard" in card.styleSheet()
     assert card._run_btn.isEnabled()
+
+
+def test_run_round_blocked_without_credential(card, monkeypatch):
+    calls = []
+    monkeypatch.setattr(card, "_start_worker", lambda *a, **k: calls.append(a))
+    monkeypatch.setattr(card, "_credential_present", staticmethod(lambda: False))
+    card._on_run_round()
+    assert calls == []
+    assert "扫码登录" in card._hint_lb.text()
+    assert not card._round_running
+
+
+@pytest.mark.parametrize("status, expect", [
+    ("need_login", "未登录"),
+    ("timeout", "超时"),
+    ("error", "未完成"),
+])
+def test_round_failure_states_are_visible(card, status, expect):
+    card._round_running = True
+    card._render_round({"round": {"status": status, "error": "B站未登录：先扫码" if status == "need_login" else "模拟错误"}})
+    assert expect in card._hint_lb.text()
+    assert card._run_btn.isEnabled()
+
+
+def test_success_reports_model_and_output_size(card, monkeypatch):
+    refreshed = []
+    monkeypatch.setattr(card, "_async_load", lambda: refreshed.append(True))
+    card._render_round({"round": {"status": "success", "model": "服务商:模型A", "text": "本轮结论"}})
+    assert "服务商:模型A" in card._hint_lb.text()
+    assert "输出 4 字" in card._hint_lb.text()
+    assert refreshed == [True]
+
+
+def test_stale_thread_is_abandoned_so_button_works_again(card, monkeypatch):
+    """线程僵死超过阈值后，点击必须能重新发起，而不是永远静默。"""
+    import time as _time
+
+    calls = []
+    monkeypatch.setattr(card, "_start_worker", lambda *a, **k: calls.append(a))
+    monkeypatch.setattr(card, "_credential_present", staticmethod(lambda: True))
+    card._thread = object()
+    card._thread_started_at = _time.monotonic() - 60
+    card._on_run_round()
+    assert len(calls) == 1
+    assert card._run_btn.text() == "值班中…"

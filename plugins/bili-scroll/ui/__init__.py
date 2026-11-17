@@ -42,6 +42,20 @@ def register_ui(registry):
         default_visible=False,
     )
 
+    # 自绘设置卡（priority>0 覆盖 E1 自动卡）：账号登录 + 模型下拉 + 分组配置
+    try:
+        from .settings_card import BiliSettingsCard
+
+        registry.register_settings_card(
+            plugin_name="bili-scroll",
+            card_id="bili-scroll-config",
+            title="B站日报",
+            widget_class=BiliSettingsCard,
+            priority=10,
+        )
+    except Exception:
+        logger.exception("[bili-scroll] 设置卡注册失败（回退自动卡）")
+
     # 峰谷调度器常驻（卡片开不开都生效；热重载经 unload_ui 停表）
     from .controller import ensure_scheduler
 

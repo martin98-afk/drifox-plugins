@@ -2528,6 +2528,19 @@ class GitPanelCard(QWidget):
         # 更新 header 样式
         self._header_widget.setStyleSheet("background: transparent;")
 
+    def _apply_branch_badge_style(self):
+        """分支徽章 QSS：蓝底胶囊明暗通用，字号跟随主题字号
+
+        字号必须写在 QSS 里：QLabel 装了 QSS 后 font-size 会覆盖 setFont，
+        setFont 单独调用无效。
+        """
+        fs = self._cached_fs or 14
+        self._branch_lb.setStyleSheet(
+            "background: rgba(98,160,234,0.12); border-radius: 5px; padding: 3px 10px; "
+            f"color: #62a0ea; font-weight: 600; font-size: {fs}px;"
+            "font-family: 'Consolas', 'Courier New', monospace;"
+        )
+
     def _theme_snapshot(self) -> dict:
         """细项构建用主题快照：色板 + 字体一次取齐
 
@@ -2568,9 +2581,9 @@ class GitPanelCard(QWidget):
             f"font-family: '{ff}'; font-size: {fs}px;"
         )
 
-        # 分支徽章：样式由 _build_header 静态定义（蓝底胶囊明暗通用），仅跟随主题字号
+        # 分支徽章：字号由 QSS 决定（setFont 会被 QSS font-size 压回去）
         try:
-            self._branch_lb.setFont(QFont("Consolas", max(11, fs - 2) if fs else 12))
+            self._apply_branch_badge_style()
         except (RuntimeError, TypeError):
             pass
 
@@ -2634,6 +2647,11 @@ class GitPanelCard(QWidget):
             f"QTreeView::item:hover {{ background: {self._cached_hover}; }}"
             f"QTreeView::item:selected {{ background: {self._cached_panel}; color: {tc}; }}"
         )
+        # delegate 自绘路径不继承 QSS 的 color，显式下发主题正文色
+        try:
+            self._changes_view.set_theme_colors(tc)
+        except (RuntimeError, AttributeError, TypeError):
+            pass
         self._summary_lb.setStyleSheet(f"color: {tcs}; background: transparent; font-size: {max(fs - 2, 10)}px;")
         self._view_btn.setStyleSheet(btn_base)
 
@@ -2818,11 +2836,7 @@ class GitPanelCard(QWidget):
         # 分支徽章（蓝色胶囊）：超长名中间省略 + tooltip 完整名，不换行撑高
         self._branch_lb = _ElidedLabel("", row1)
         self._branch_lb.setProperty("keepColor", True)
-        self._branch_lb.setStyleSheet(
-            "background: rgba(98,160,234,0.12); border-radius: 5px; padding: 2px 10px; "
-            "color: #62a0ea; font-weight: 600; font-size: 12px;"
-            "font-family: 'Consolas', 'Courier New', monospace;"
-        )
+        self._apply_branch_badge_style()
         self._branch_lb.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
         self._branch_lb.setCursor(Qt.PointingHandCursor)
         self._branch_lb.mousePressEvent = lambda event: self._show_branch_menu()

@@ -8,9 +8,7 @@ MCP 工具（mcp__bili__*）调用，ToolExecutor 路由到宿主 MCP 桥（stdi
 from __future__ import annotations
 
 import datetime as _dt
-import json
 import threading
-from pathlib import Path
 from typing import Any, Dict, List
 
 from loguru import logger
@@ -184,15 +182,65 @@ def run_duty_round() -> Dict[str, Any]:
 _ROUND_LOCK = threading.Lock()
 
 
+def _resolve_model_override(spec: str) -> Dict[str, Any]:
+    """设置里的「值班模型」→ 宿主模型配置（含明文 key）。空串返回 {}（跟随当前对话模型）。
+
+    spec 格式与 meeting-notes 对齐：``服务商:模型名``，也接受配置 ID / 服务商名
+    （五级解析由宿主 model.config_for 负责）。解析失败抛 ValueError，由调用方
+    转成人话错误显示，不静默回退到别的模型。
+    """
+    spec = (spec or "").strip()
+    if not spec:
+        return {}
+    from app.plugins.capabilities.resolve import pool_for
+
+    pool = pool_for(plugin=PLUGIN_NAME, surface="ui") or {}
+    resolve = pool.get("model.config_for")
+    if not callable(resolve):
+        raise ValueError("宿主未提供 model.config_for，无法使用指定模型（可留空跟随当前对话模型）")
+    cfg = resolve(spec) or {}
+    if not isinstance(cfg, dict) or not cfg:
+        raise ValueError(f"找不到模型配置：{spec}（检查服务商与模型名）")
+    return {str(k): v for k, v in cfg.items()}
+
+
+def _credential_ready() -> bool:
+    """本地扫码凭证是否可用：没有就别开轮，否则整轮 B站工具全报未登录。"""
+    try:
+        from .diagnostics import _check_credential
+        from .paths import plugin_data_root
+
+        return str(_check_credential(plugin_data_root())).startswith("已存在（登录过）")
+    except Exception as e:  # noqa: BLE001 — 预检失败不阻断，让轮内错误如实上报
+        logger.warning(f"[bili-scroll] 凭证预检失败：{e}")
+        return True
+
+
 def _run_duty_round_locked() -> Dict[str, Any]:
     from app.plugins.capabilities.resolve import pool_for
 
     settings = load_settings()
     store = DutyStore()
 
+    if not _credential_ready():
+        return {
+            "status": "need_login",
+            "error": "B站未登录：先在对话里喊「扫码登录B站」完成扫码，再跑一轮",
+            "text": "",
+        }
+
+    try:
+        model_override = _resolve_model_override(str(settings.get("duty_model") or ""))
+    except ValueError as e:
+        return {"status": "error", "error": str(e), "text": ""}
+
     tools = _collect_tool_schemas(settings)
     if not tools:
-        return {"status": "error", "error": "没取到任何 B站工具 schema（插件工具未注册成功）", "text": ""}
+        return {
+            "status": "error",
+            "error": "B站工具还没就绪（MCP 未连接）：等几秒再点一次，或重载插件后重试",
+            "text": "",
+        }
 
     pool_ui = pool_for(plugin=PLUGIN_NAME, surface="ui") or {}
     create_session = pool_ui.get("engine.session")
@@ -203,7 +251,14 @@ def _run_duty_round_locked() -> Dict[str, Any]:
     if not charter:
         return {"status": "error", "error": f"值班章程缺失：{SKILL_PATH}", "text": ""}
 
-    session = create_session(PLUGIN_NAME)
+    model_desc = str(settings.get("duty_model") or "").strip() or "跟随当前对话模型"
+    logger.info(f"[bili-scroll] 值班轮开始（模型：{model_desc}，工具 {len(tools)} 个）")
+    try:
+        session = create_session(PLUGIN_NAME, model_config_override=model_override)
+    except Exception as e:  # noqa: BLE001 — 常见于无活跃窗口或模型配置不可用
+        logger.error(f"[bili-scroll] 创建值班会话失败：{type(e).__name__}: {e}")
+        return {"status": "error", "error": f"创建值班会话失败：{type(e).__name__}: {e}", "text": ""}
+
     result = session.turn(
         system=charter,
         user=_opening_user_message(store, settings),
@@ -213,9 +268,15 @@ def _run_duty_round_locked() -> Dict[str, Any]:
     err = getattr(result, "error", None)
     status = "error" if err else ("cancelled" if getattr(result, "cancelled", False)
                                   else ("timeout" if getattr(result, "timed_out", False) else "success"))
+    text = str(getattr(result, "text", "") or "")
+    if status == "success":
+        logger.info(f"[bili-scroll] 值班轮完成（输出 {len(text)} 字，日报 {store.report_path()}）")
+    else:
+        logger.warning(f"[bili-scroll] 值班轮未完成（{status}）：{err or '无错误信息'}")
     return {
         "status": status,
         "error": str(err or ""),
-        "text": str(getattr(result, "text", "") or ""),
+        "text": text,
         "report_path": str(store.report_path()),
+        "model": model_desc,
     }

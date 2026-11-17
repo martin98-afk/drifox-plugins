@@ -6,6 +6,7 @@ import datetime as dt
 import re
 import subprocess
 import sys
+import time
 import traceback
 from html import escape
 from typing import Any, Callable, Optional
@@ -31,6 +32,8 @@ from PyQt5.QtWidgets import (
 from loguru import logger
 from qfluentwidgets import (
     FluentIcon,
+    InfoBar,
+    InfoBarPosition,
     PrimaryPushButton,
     TransparentToolButton,
     isDarkTheme,
@@ -85,6 +88,7 @@ class BiliScrollCard(QWidget):
         self._thread: Optional[QThread] = None
         self._worker: Optional[_Worker] = None
         self._round_running = False
+        self._thread_started_at = 0.0
         self._seen_rows: list[dict] = []
         self._summary_columns = 0
         self._setup_ui()
@@ -199,6 +203,31 @@ class BiliScrollCard(QWidget):
                     cursor.mergeCharFormat(link)
                 iterator += 1
             block = block.next()
+
+    def _notify(self, text: str, ok: bool = False):
+        """顶部悬浮提示：失败原因不能只写在底部小字里（用户会以为没反应）。"""
+        try:
+            show = InfoBar.success if ok else InfoBar.error
+            show(
+                "B站值班",
+                text,
+                parent=self.window(),
+                position=InfoBarPosition.BOTTOM,
+                duration=4000 if ok else 8000,
+            )
+        except Exception:  # noqa: BLE001 — 提示失败不影响主流程
+            pass
+
+    def _worker_alive(self) -> bool:
+        """后台线程是否真的还在跑；超过 25 秒视为僵死，允许重新发起。"""
+        if self._thread is None:
+            return False
+        if time.monotonic() - self._thread_started_at > 25:
+            logger.warning("[bili-scroll] 读取线程疑似卡住，放弃旧句柄")
+            self._thread = None
+            self._worker = None
+            return False
+        return True
 
     def _label(self, text: str, role: str = "", parent=None) -> QLabel:
         lb = QLabel(text, parent or self._page)
@@ -377,7 +406,7 @@ class BiliScrollCard(QWidget):
     # ── 数据加载 ────────────────────────────────────────
 
     def _async_load(self):
-        if self._thread is not None or self._round_running:
+        if self._worker_alive() or self._round_running:
             return
         self._refresh_btn.setEnabled(False)
         self._run_btn.setEnabled(False)
@@ -456,7 +485,16 @@ class BiliScrollCard(QWidget):
     # ── 业务动作保持原入口 ──────────────────────────────
 
     def _on_run_round(self):
-        if self._round_running or self._thread is not None:
+        if self._round_running:
+            self._notify("上一轮还在跑，完成会通知你")
+            return
+        if self._worker_alive():
+            self._notify("正在读取状态，稍等一两秒再点")
+            return
+        if not self._credential_present():
+            message = "B站还没登录：到 设置 → 插件 → B站日报 点「扫码登录」，或在对话里喊「扫码登录B站」"
+            self._hint_lb.setText(message)
+            self._notify(message)
             return
         self._round_running = True
         self._run_btn.setText("值班中…")
@@ -473,6 +511,17 @@ class BiliScrollCard(QWidget):
         except Exception as e:
             return {"round": {"status": "error", "error": f"{type(e).__name__}: {e}", "text": ""}}
 
+    @staticmethod
+    def _credential_present() -> bool:
+        """本地凭证文件是否存在（在线有效性由值班轮/设置卡鉴）。"""
+        try:
+            from biliscroll_core.diagnostics import _check_credential
+            from biliscroll_core.paths import plugin_data_root
+
+            return str(_check_credential(plugin_data_root())).startswith("已存在")
+        except Exception:  # noqa: BLE001 — 预检失败不阻断，让值班轮自己报错
+            return True
+
     def _render_round(self, snap: dict):
         self._round_running = False
         self._run_btn.setText("跑一轮")
@@ -480,12 +529,28 @@ class BiliScrollCard(QWidget):
         self._refresh_btn.setEnabled(True)
         result = snap.get("round", {})
         status = result.get("status")
+        error = str(result.get("error") or "").strip()
+        text = str(result.get("text") or "").strip()
         if status == "success":
+            self._hint_lb.setText(
+                f"上一轮已完成 ✓（模型：{result.get('model') or '跟随当前对话模型'}，" + (f"输出 {len(text)} 字" if text else "无文字输出") + "）"
+            )
+            self._hint_lb.setToolTip(text[:2000])
             self._async_load()
+        elif status == "need_login":
+            message = error or "B站未登录：先扫码登录再跑一轮"
+            self._hint_lb.setText(message)
+            self._notify(message)
         elif status == "busy":
             self._hint_lb.setText("已有一轮值班在运行，完成后会通知你；可稍后刷新查看日报")
+        elif status == "timeout":
+            message = f"本轮超时已取消：{error or '模型长时间无响应'}"
+            self._hint_lb.setText(message)
+            self._notify(message)
         else:
-            self._hint_lb.setText(f"值班轮未完成：{result.get('error') or status}")
+            message = f"值班轮未完成（{status}）：{error or '无错误信息'}"
+            self._hint_lb.setText(message)
+            self._notify(message)
 
     def _open_data_dir(self):
         try:
@@ -522,6 +587,7 @@ class BiliScrollCard(QWidget):
         self._worker.error.connect(self._worker.deleteLater)
         self._thread.finished.connect(self._thread.deleteLater)
         self._pending_render = render
+        self._thread_started_at = time.monotonic()
         self._thread.start()
 
     def _on_worker_done(self, result: Any):

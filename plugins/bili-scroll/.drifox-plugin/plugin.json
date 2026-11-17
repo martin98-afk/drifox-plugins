@@ -8,7 +8,7 @@
         "light": "icon.svg",
         "dark": "icon_dark.svg"
     },
-    "version": "0.4.0",
+    "version": "0.5.0",
     "author": {
         "name": "DriFox Contributors"
     },
@@ -29,7 +29,10 @@
         "window.host",
         "tool.read",
         "mcp.call",
-        "mcp.register"
+        "mcp.register",
+        "model.config_for",
+        "model.enumerate",
+        "provider.list"
     ],
     "keywords": [
         "bilibili",
@@ -98,6 +101,14 @@
                 "label": "夜间窗口自动跑（18:00-次日09:00）",
                 "type": "bool",
                 "default": false
+            },
+            {
+                "key": "duty_model",
+                "label": "值班模型",
+                "type": "text",
+                "default": "",
+                "placeholder": "留空跟随当前对话模型，如 服务商:模型名",
+                "description": "值班轮使用的模型；下拉选择在「设置→插件→B站账号与值班模型」卡里，也可手填「服务商:模型名」"
             },
             {
                 "key": "report_mode",
