@@ -1368,26 +1368,40 @@ def duty_report_append(text: str) -> str:
 
 
 @tool()
-def duty_seen_append(bvid: str, title: str, up: str, status: str, date: str = "") -> str:
+def bili_seen_append(bvid: str, title: str, up: str, status: str,
+                     rpid: str = "", root: str = "", note: str = "") -> str:
     """
-    往判重表追加一行（「挑了」= 进过报告 / 「跳过」= 看过但没进 / 「评论」= 本轮 @ 过）。
+    值班轮专用：往判重表记一行（DriFox 值班数据目录，TSV 纯文本追加）。
+    「挑了」= 进过日报；「跳过」= 看过但没进（note 写一句理由）；「评论」= 本轮发过评论。
+    发过评论必须带 rpid（从 bili_reply 返回取）；没取到就留空并在 note 注明，绝不编造。
 
     Args:
         bvid: BV 号
-        title: 标题
-        up: UP 主
+        title: 视频标题
+        up: UP 主名字
         status: 挑了 / 跳过 / 评论
-        date: 日期（YYYY-MM-DD，一般留空=今天）
+        rpid: 评论 rpid（没发评论留空）
+        root: 回复楼中楼时的根评论 rpid（普通评论留空）
+        note: 一句话结论或跳过理由（可选，会进月度归档）
 
     Returns:
-        写到了哪个文件
+        确认文本（含判重表路径）
     """
+    st = str(status or "").strip()
+    if st not in ("挑了", "跳过", "评论"):
+        return "没写：status 必须是 挑了 / 跳过 / 评论"
     bv = str(bvid or "").strip()
     if not bv:
         return "没写：bvid 是空的"
-    d = _duty_norm_date(date)
-    row = f"| {_cell(d, 10)} | {_cell(bv, 16)} | {_cell(title)} | {_cell(up, 30)} | {_cell(status, 8)} |\n"
-    return "已追加到 " + _append(DUTY_HOME / "seen.md", row)
+    from biliscroll_core.store import DutyStore
+
+    store = DutyStore()
+    store.seen_append(
+        bv, str(title or "").strip(), str(up or "").strip(), st,
+        rpid=str(rpid or "").strip(), root=str(root or "").strip(),
+        note=str(note or "").strip(),
+    )
+    return "已记入判重表：" + str(store.seen_path)
 
 
 @tool()

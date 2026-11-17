@@ -55,9 +55,9 @@ class DutyStore:
     # ---------------- 判重表 ----------------
 
     def seen_append(self, bvid: str, title: str, up: str, status: str,
-                    rpid: str = "", root: str = "") -> None:
+                    rpid: str = "", root: str = "", note: str = "") -> None:
         row = [_TODAY(), bvid, title.replace("\t", " "), up.replace("\t", " "),
-               status, str(rpid), str(root)]
+               status, str(rpid), str(root), note.replace("\t", " ")]
         with open(self.seen_path, "a", encoding="utf-8") as f:
             f.write("\t".join(row) + "\n")
 
@@ -79,6 +79,7 @@ class DutyStore:
                     "up": parts[3], "status": parts[4],
                     "rpid": parts[5] if len(parts) > 5 else "",
                     "root": parts[6] if len(parts) > 6 else "",
+                    "note": parts[7] if len(parts) > 7 else "",
                 }
                 if bvid and row["bvid"] != bvid:
                     continue
@@ -93,6 +94,30 @@ class DutyStore:
                 if r["status"] == "评论" and r["rpid"] and r["date"] >= cutoff]
 
     # ---------------- 归档 ----------------
+
+    def digest_sync_today(self, day: str | None = None) -> str:
+        """把某天的判重记录生成归档分节，追加进本月 digest；已有该天分节则跳过（幂等）。
+
+        归档职责自 0.5.3 起从模型侧工具（bili_digest_append）收口到代码：
+        模型只管 seen_append 记录，翻旧账用的归档由这里从判重表自动产出。
+        """
+        day = day or _TODAY()
+        rows = [r for r in self.seen_recent(limit=100000) if r["date"] == day]
+        heading = f"## {day}"
+        existing = ""
+        if self.digest_path().is_file():
+            existing = self.digest_path().read_text(encoding="utf-8", errors="replace")
+        if heading in existing:
+            return str(self.digest_path())
+        if not rows:
+            return ""
+        lines = [heading, ""]
+        for r in rows:
+            tail = f" · {r['note']}" if r.get("note") else ""
+            lines.append(f"- {r['status']} | {r['bvid']} | {r['title']} | {r['up']}{tail}")
+        with open(self.digest_path(), "a", encoding="utf-8") as f:
+            f.write("\n".join(lines) + "\n")
+        return str(self.digest_path())
 
     def digest_path(self) -> Path:
         return self.digest_dir / f"{_dt.date.today().strftime('%Y-%m')}.md"

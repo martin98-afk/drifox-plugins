@@ -28,48 +28,11 @@ BASE_TOOLS = [
     for n in (
         "bili_recommend", "bili_search", "bili_subtitle", "bili_video_info",
         "bili_comments", "bili_danmaku", "bili_cover", "bili_frames",
-        "bili_user_info",
+        "bili_user_info", "bili_seen_append",
     )
 ]
 COMMENT_TOOLS = [MCP_PREFIX + "bili_reply"]            # auto_comment 开才给
 REPLY_TOOLS = [MCP_PREFIX + "bili_received_replies"]   # reply_comments 开才给
-
-# 本地窄口工具 schema（与 tools/bili_duty_data.py 的注册保持一致）
-LOCAL_TOOL_SCHEMAS: List[Dict[str, Any]] = [
-    {"type": "function", "function": {
-        "name": "bili_report_append",
-        "description": "向今天的日报追加一段文本（值班轮专用，路径固定不可传）",
-        "parameters": {"type": "object", "properties": {
-            "text": {"type": "string", "description": "要追加的 Markdown 文本"}},
-            "required": ["text"]}}},
-    {"type": "function", "function": {
-        "name": "bili_seen_append",
-        "description": "向判重表记一行（status: 挑了/跳过/评论；发过评论必须带 rpid）",
-        "parameters": {"type": "object", "properties": {
-            "bvid": {"type": "string"}, "title": {"type": "string"},
-            "up": {"type": "string"}, "status": {"type": "string",
-            "enum": ["挑了", "跳过", "评论"]},
-            "rpid": {"type": "string", "description": "评论 rpid，从 bili_reply 返回取，没取到就留空"},
-            "root": {"type": "string", "description": "回复楼中楼时填根评论 rpid"}},
-            "required": ["bvid", "title", "up", "status"]}}},
-    {"type": "function", "function": {
-        "name": "bili_seen_recent",
-        "description": "查判重表最近记录（新→旧），用于去重与找回自己发过的评论",
-        "parameters": {"type": "object", "properties": {
-            "limit": {"type": "number", "description": "默认 40"},
-            "bvid": {"type": "string", "description": "只查某条"}},
-            "required": []}}},
-    {"type": "function", "function": {
-        "name": "bili_digest_append",
-        "description": "向本月归档追加一行（看过的每条都要记，跳过的注明理由）",
-        "parameters": {"type": "object", "properties": {
-            "text": {"type": "string"}}, "required": ["text"]}}},
-    {"type": "function", "function": {
-        "name": "bili_paths",
-        "description": "查看日报/判重表/归档的实际路径",
-        "parameters": {"type": "object", "properties": {}, "required": []}}},
-]
-
 
 def load_settings() -> Dict[str, Any]:
     from app.plugins.managers.plugin_config_store import PluginConfigStore
@@ -137,10 +100,14 @@ def _opening_user_message(store: DutyStore, settings: Dict[str, Any]) -> str:
         f"- 关键词：{'已设置，逐行用 bili_search 搜（近 7 天优先）' if keywords else '未设置，用 bili_recommend 刷首页推荐流，随机挑，别固定取前 N'}",
         f"- 今天已挑 {picked} 条，配额 {quota} 条" + ("（已满，本轮只补归档与判重）" if quota and picked >= quota else ""),
         f"- 日报档位：{settings.get('report_mode')}（完整 full / 薄版 thin / 不写 none，判重表任何档位都要写）",
-        f"- 日报路径：{store.report_path()}（一天一份，追加别覆盖；每段以 ### BV号 开头）",
-        f"- 判重表：{store.seen_path}（动手前先 bili_seen_recent 查重）",
-        f"- 归档：{store.digest_path()}（看过的每条都记，含跳过理由）",
+        f"- 日报：由系统把你最终回复整体写入 {store.report_path()}（每段以 ### BV号 开头）",
+        f"- 判重：看过的每条视频都要 bili_seen_append 记一行（status 必填，「跳过」在 note 写一句理由）",
+        f"- 归档：系统按判重记录自动生成（{store.digest_path()}），无需手动写",
     ]
+    seen_rows = store.seen_recent(limit=200)
+    if seen_rows:
+        lines.append("- 最近判重记录（日期 BV号 状态，旧→新），出现过的一律跳过或只快速复核：")
+        lines.extend(f"  {r['date']} {r['bvid']} {r['status']}" for r in reversed(seen_rows))
     if settings.get("auto_comment"):
         uid = (settings.get("my_uid") or "").strip()
         per_round = min(int(settings.get("comment_quota") or 1), 20)
@@ -155,7 +122,12 @@ def _opening_user_message(store: DutyStore, settings: Dict[str, Any]) -> str:
     else:
         lines.append("- 自动评论：关着。本轮只看不发，bili_reply 不可用也不许尝试")
     if settings.get("reply_comments"):
-        lines.append("- 回复评论：开着。先 bili_seen_recent 查最近 7 天自己发过的评论（带 rpid），只回直接回复到那条下面的，每条 ≤100 字")
+        mine = store.my_recent_comments(days=7)
+        if mine:
+            lines.append("- 回复评论：开着。最近 7 天自己发过的评论（rpid | BV号 | 标题），只回直接回复到那条下面的，每条 ≤100 字：")
+            lines.extend(f"  {r['rpid']} | {r['bvid']} | {r['title']}" for r in mine)
+        else:
+            lines.append("- 回复评论：开着，但最近 7 天没有自己发过的评论，本轮忽略")
     persona = (settings.get("persona") or "").strip()
     if persona:
         lines.append(f"- 使用者人设补充：{persona}")
@@ -263,7 +235,7 @@ def _run_duty_round_locked() -> Dict[str, Any]:
     result = session.turn(
         system=charter,
         user=_opening_user_message(store, settings),
-        tools=tools + LOCAL_TOOL_SCHEMAS,
+        tools=tools,
         timeout=ROUND_TIMEOUT_SECONDS,
     )
     err = getattr(result, "error", None)
@@ -271,7 +243,15 @@ def _run_duty_round_locked() -> Dict[str, Any]:
                                   else ("timeout" if getattr(result, "timed_out", False) else "success"))
     text = str(getattr(result, "text", "") or "")
     if status == "success":
-        logger.info(f"[bili-scroll] 值班轮完成（输出 {len(text)} 字，日报 {store.report_path()}）")
+        # 落盘收口到代码（0.5.3）：不再依赖 LLM 调本地写盘工具（tools 组件开关
+        # 曾导致全部 Unknown tool 而虚报成功）。success 才写，残缺轮不污染日报。
+        if str(settings.get("report_mode") or "full") != "none":
+            if text.strip():
+                store.report_append(text)
+            else:
+                store.report_append(f"### 本轮无输出\n\n- 模型未产出文本（{model_desc}）")
+        archive = store.digest_sync_today()
+        logger.info(f"[bili-scroll] 值班轮完成（输出 {len(text)} 字，日报 {store.report_path()}，归档 {archive or '空'}）")
     else:
         logger.warning(f"[bili-scroll] 值班轮未完成（{status}）：{err or '无错误信息'}")
     return {

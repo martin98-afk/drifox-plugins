@@ -220,25 +220,24 @@ class BiliScrollCard(QWidget):
             pass
 
     def _worker_alive(self) -> bool:
-        """后台线程是否真的还在跑；超过 25 秒视为僵死，允许重新发起。"""
+        """后台线程是否真的还在跑。
+
+        值班轮预期 5-20 分钟（session.turn 自带 20 分钟超时兜底），以线程存活为准，
+        不设秒级超时，否则值班期间点开卡片就会被误报「超时已恢复」而线程还在跑；
+        读状态正常 1-2 秒，超过 25 秒视为僵死，允许重新发起。
+        """
         if self._thread is None:
             return False
+        if self._round_running:
+            return self._thread.isRunning()
         if time.monotonic() - self._thread_started_at > 25:
             logger.warning("[bili-scroll] 后台线程疑似卡住，放弃旧句柄")
             self._thread = None
             self._worker = None
-            if self._round_running:
-                # 抛弃的是值班轮线程：必须把运行状态一并复位，
-                # 否则按钮永远停在「上一轮还在跑」，看起来像点了没反应。
-                self._round_running = False
-                self._run_btn.setText("跑一轮")
             # 读取线程卡住期间按钮被禁用，放行时必须恢复，否则永远点不动
             self._run_btn.setEnabled(True)
             self._refresh_btn.setEnabled(True)
-            if self._round_running:
-                self._notify("上一轮后台任务超时，已复位；再点一次「跑一轮」重试")
-            else:
-                self._notify("状态读取超时已恢复，可继续操作")
+            self._notify("状态读取超时已恢复，可继续操作")
             return False
         return True
 
