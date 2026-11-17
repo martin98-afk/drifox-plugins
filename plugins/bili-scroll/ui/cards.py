@@ -11,7 +11,9 @@ from html import escape
 from typing import Any, Callable, Optional
 
 from PyQt5.QtCore import QObject, QThread, Qt, QUrl, pyqtSignal
-from PyQt5.QtGui import QDesktopServices, QFont
+from PyQt5.QtGui import (
+    QColor, QDesktopServices, QFont, QPalette, QTextBlockFormat, QTextCharFormat, QTextCursor,
+)
 from PyQt5.QtWidgets import (
     QBoxLayout,
     QFrame,
@@ -101,7 +103,11 @@ class BiliScrollCard(QWidget):
         self._apply_theme()
 
     def _apply_theme(self):
-        ctx = (self._context_provider() or {}) if self._context_provider else {}
+        try:
+            ctx = (self._context_provider() or {}) if self._context_provider else {}
+        except Exception as error:
+            logger.debug(f"[bili-scroll] 主题上下文暂不可用，使用默认主题：{error}")
+            ctx = {}
         dark = ctx.get("is_dark", isDarkTheme())
         colors = ctx.get("colors") or {}
         text = colors.get("text_primary") or ("#ececf0" if dark else "#23252c")
@@ -110,10 +116,12 @@ class BiliScrollCard(QWidget):
         border = colors.get("border") or ("rgba(255,255,255,0.10)" if dark else "rgba(0,0,0,0.09)")
         surface = "rgba(255,255,255,0.035)" if dark else "rgba(255,255,255,0.65)"
         soft = "rgba(255,255,255,0.045)" if dark else "rgba(0,0,0,0.025)"
-        base = max(12, int(ctx.get("font_size", 14)))
+        button_text = colors.get("button_text_on_accent") or ("#202027" if dark else "#ffffff")
+        base = max(12, int(ctx.get("font_size") or 14))
         font = QFont(ctx.get("font_family") or self.font().family())
         font.setPixelSize(base)
         self.setFont(font)
+        self._base_font_size = base
         self._secondary_color = secondary
         self._accent_color = accent
         self._border_color = border
@@ -138,7 +146,18 @@ class BiliScrollCard(QWidget):
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
             QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{ background: transparent; }}
         """)
+        self._run_btn.setFont(font)
+        self._run_btn.setFixedWidth(max(96, self._run_btn.fontMetrics().horizontalAdvance("值班中…") + 36))
+        self._run_btn.setStyleSheet(
+            f"PrimaryPushButton {{ background: {accent}; color: {button_text}; border: none;"
+            " border-radius: 8px; padding: 7px 18px; font-weight: 600; }"
+            "PrimaryPushButton:hover { border: 1px solid rgba(127,127,127,0.4); }"
+            f"PrimaryPushButton:disabled {{ background: {soft}; color: {secondary}; }}"
+        )
         for reader in (self._report_view, self._seen_view, self._diagnostics):
+            palette = reader.palette()
+            palette.setColor(QPalette.Link, QColor(accent))
+            reader.setPalette(palette)
             reader.setFont(font)
             reader.document().setDefaultFont(font)
             reader.document().setDefaultStyleSheet(
@@ -149,7 +168,37 @@ class BiliScrollCard(QWidget):
                 f"h3 {{ font-size: {base + 2}px; margin-top: 18px; }} "
                 f"blockquote {{ color: {secondary}; }}"
             )
+        self._format_report()
         self._render_seen()
+
+    def _format_report(self):
+        """Qt Markdown 自带字符格式会覆盖 CSS，显式统一段距和链接颜色。"""
+        block = self._report_view.document().begin()
+        while block.isValid():
+            cursor = QTextCursor(block)
+            fmt = block.blockFormat()
+            level = fmt.headingLevel()
+            fmt.setTopMargin(8 if level else 0)
+            fmt.setBottomMargin(4 if level else 5)
+            fmt.setLineHeight(125, QTextBlockFormat.ProportionalHeight)
+            cursor.setBlockFormat(fmt)
+            if level:
+                cursor.select(QTextCursor.BlockUnderCursor)
+                heading = QTextCharFormat()
+                heading.setFontPointSize((self._base_font_size + max(2, 9 - level * 2)) * 0.75)
+                cursor.mergeCharFormat(heading)
+            iterator = block.begin()
+            while not iterator.atEnd():
+                fragment = iterator.fragment()
+                if fragment.isValid() and fragment.charFormat().isAnchor():
+                    cursor.setPosition(fragment.position())
+                    cursor.setPosition(fragment.position() + fragment.length(), QTextCursor.KeepAnchor)
+                    link = QTextCharFormat()
+                    link.setForeground(QColor(self._accent_color))
+                    link.setFontUnderline(False)
+                    cursor.mergeCharFormat(link)
+                iterator += 1
+            block = block.next()
 
     def _label(self, text: str, role: str = "", parent=None) -> QLabel:
         lb = QLabel(text, parent or self._page)
@@ -375,6 +424,7 @@ class BiliScrollCard(QWidget):
         self._metric_values["comment"].setToolTip(comment or "未读取到评论设置")
         report = snap.get("report") or ""
         self._report_view.setMarkdown(report)
+        self._format_report()
         self._report_stack.setCurrentIndex(1 if report.strip() else 0)
         self._seen_rows = snap.get("seen_rows") or []
         self._render_seen()

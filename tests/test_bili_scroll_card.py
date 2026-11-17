@@ -9,6 +9,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 pytest.importorskip("PyQt5")
 pytest.importorskip("qfluentwidgets")
 from PyQt5.QtCore import QEventLoop, QTimer, Qt, QUrl
+from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtWidgets import QApplication, QBoxLayout
 
 
@@ -93,10 +94,16 @@ def test_responsive_layout_does_not_overflow(card, app, width, direction, column
     card.hide()
 
 
-def test_round_has_explicit_renderer_and_short_button(card, monkeypatch):
+def test_round_has_explicit_renderer_and_short_button(card, app, monkeypatch):
     calls = []
     monkeypatch.setattr(card, "_start_worker", lambda fn, render=None: calls.append((fn, render)))
+    card.resize(620, 780)
+    card.show()
+    app.processEvents()
+    width = card._run_btn.width()
     card._on_run_round()
+    app.processEvents()
+    assert card._run_btn.width() == width
     assert calls == [(card._run_round, card._render_round)]
     assert card._run_btn.text() == "值班中…"
     assert not card._run_btn.isEnabled()
@@ -129,3 +136,63 @@ def test_context_theme_and_close_signal(card):
         assert card._report_view.textInteractionFlags() & Qt.TextSelectableByMouse
     card._close_btn.click()
     assert closed == [True]
+
+
+def test_real_worker_routes_round_then_refreshes(card, app, monkeypatch):
+    monkeypatch.setattr(card, "_run_round", lambda: {"round": {"status": "success"}})
+    monkeypatch.setattr(card, "_load_snapshot", lambda: snapshot())
+    card._on_run_round()
+    loop = QEventLoop()
+    probe = QTimer()
+    probe.setInterval(10)
+    probe.timeout.connect(lambda: loop.quit() if card._thread is None else None)
+    probe.start()
+    QTimer.singleShot(3000, loop.quit)
+    loop.exec_()
+    probe.stop()
+    assert card._thread is None
+    assert not card._round_running
+    assert card._run_btn.isEnabled()
+    assert card._run_btn.text() == "跑一轮"
+    assert card._metric_values["quota"].text() == "2 / 6"
+
+
+def test_report_links_only_open_http_and_https(card, monkeypatch):
+    opened = []
+    monkeypatch.setattr(QDesktopServices, "openUrl", lambda url: opened.append(url.toString()))
+    for url in ["file:///etc/passwd", "javascript:alert(1)", "https://www.bilibili.com/video/BV123"]:
+        card._report_view._open_link(QUrl(url))
+    assert opened == ["https://www.bilibili.com/video/BV123"]
+
+
+@pytest.mark.parametrize("credential, expected", [
+    ("不存在（未登录）", "未登录"),
+    ("存在但读不出（损坏）", "需重新登录"),
+    ("", "未知"),
+])
+def test_credential_does_not_claim_online_login(card, credential, expected):
+    data = snapshot()
+    data["status"]["扫码凭证"] = credential
+    card._render_snapshot(data)
+    assert card._metric_values["credential"].text() == expected
+
+
+@pytest.mark.parametrize("status", ["busy", "error"])
+def test_round_failure_remains_visible_and_restores_controls(card, status):
+    card._round_running = True
+    card._run_btn.setEnabled(False)
+    card._refresh_btn.setEnabled(False)
+    card._render_round({"round": {"status": status, "error": "测试错误"}})
+    assert not card._round_running
+    assert card._run_btn.isEnabled()
+    assert card._refresh_btn.isEnabled()
+    assert "运行" in card._hint_lb.text() if status == "busy" else "测试错误" in card._hint_lb.text()
+
+
+def test_theme_context_failure_keeps_card_usable(card):
+    def unavailable():
+        raise RuntimeError("窗口正在切换")
+    card.set_context_provider(unavailable)
+    card.refresh_style()
+    assert "biliDutyCard" in card.styleSheet()
+    assert card._run_btn.isEnabled()
