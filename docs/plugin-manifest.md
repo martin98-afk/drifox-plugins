@@ -33,6 +33,23 @@
 | `keywords` | string[] | 检索关键词 |
 | `drifox` | object | 兼容性声明，见下 |
 | `dependencies` | object | 插件间依赖，见下 |
+| `module_prefixes` | string[] | 自有共享顶层模块命名空间，见下 |
+
+### `module_prefixes` 模块命名空间
+
+插件把自己的目录注入 `sys.path`、以顶层名 import 自有包时（如 `biliscroll_core.*`），
+这些模块会以共享名字滞留在 `sys.modules`，宿主热重载不知道它们属于谁，旧代码会
+一直活到进程重启——这就是热重载盲区。声明后宿主在热重载/卸载时统一摘除：
+
+```json
+"module_prefixes": ["biliscroll_core"]
+```
+
+- 每项须为合法 Python 标识符（可含点分层级，如 `"foo.bar"`）
+- 首段对应的包/模块必须真实存在于插件根或 `deps/` 下
+- 同时是 AST 安全网的放行清单：未声明时，插件代码手动写 `sys.modules` 会被拒载
+- 注意：插件目录名含连字符等非标识符字符时（如 `bili-scroll`），宿主不会按目录名
+  隐式声明，共享顶层包必须显式声明在这单
 
 ### `components` 子字段（10 个 flag）
 
@@ -123,3 +140,4 @@
 - `version` 必须符合 SemVer `^\d+\.\d+\.\d+(-[a-z0-9.-]+)?$`
 - `components.*` 启用时，对应目录/文件必须存在
 - `dependencies.*` 中被引用的插件也必须存在
+- `module_prefixes.*` 每段须为合法标识符，且首段在插件根/deps/ 下真实存在

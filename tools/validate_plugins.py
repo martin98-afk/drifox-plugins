@@ -1001,6 +1001,51 @@ def check_dependencies(
             errors.append(f"dependencies 引用的插件不存在: {dep_name}")
 
 
+def check_module_prefixes(
+    plugin_dir: Path, manifest: dict, errors: list[str], warnings: list[str]
+) -> None:
+    """校验 module_prefixes：每段须为合法 Python 标识符，且首段在插件内真实存在。
+
+    该字段是宿主热重载契约：声明后插件以顶层名 import 的自有包会在热重载/卸载时
+    被统一摘除 sys.modules（PluginHostService._purge_module_prefixes），AST 安全网
+    据此放行。声明了不存在于插件根或 deps/ 的模块名，说明写错了名字，热重载
+    不会清到任何东西，盲区原样存在——直接报错。
+    """
+    prefixes = manifest.get("module_prefixes")
+    if not prefixes:
+        return
+    if not isinstance(prefixes, list):
+        errors.append("module_prefixes 必须是字符串数组")
+        return
+    # 搜索范围：插件根 + deps/（含平台目录）——vendored 顶层包也可能被声明清理
+    search_dirs = [plugin_dir]
+    deps_dir = plugin_dir / "deps"
+    if deps_dir.is_dir():
+        search_dirs.append(deps_dir)
+        search_dirs.extend(p for p in deps_dir.iterdir() if p.is_dir())
+    for pref in prefixes:
+        if not isinstance(pref, str) or not pref.strip():
+            errors.append(f"module_prefixes 含非字符串或空项: {pref!r}")
+            continue
+        segs = pref.split(".")
+        bad = [s for s in segs if not s.isidentifier()]
+        if bad:
+            errors.append(
+                f"module_prefixes 项 {pref!r} 含非法 Python 标识符段: {bad}"
+            )
+            continue
+        first = segs[0]
+        found = any(
+            (d / first).is_dir() or (d / f"{first}.py").is_file()
+            for d in search_dirs
+        )
+        if not found:
+            errors.append(
+                f"module_prefixes 声明的 {first!r} 在插件根/deps/ 下不存在"
+                f"（热重载将清不到任何模块）"
+            )
+
+
 def check_marketplace_consistency(
     all_plugins: list[Path], errors: list[str], warnings: list[str]
 ) -> None:
@@ -1106,6 +1151,7 @@ def validate_one(plugin_dir: Path) -> CheckResult:
 
     check_consistency(plugin_dir, manifest, result.errors, result.warnings)
     check_dependencies(plugin_dir, manifest, result.errors, result.warnings)
+    check_module_prefixes(plugin_dir, manifest, result.errors, result.warnings)
     check_commands_dir(plugin_dir, manifest, result.errors, result.warnings)
     check_hooks_dir(plugin_dir, manifest, result.errors, result.warnings)
     check_skills_dir(plugin_dir, manifest, result.errors, result.warnings)

@@ -108,6 +108,12 @@
       "uniqueItems": true,
       "description": "声明的能力清单（仅 api_version>=2 时参与裁剪），如 [\"session.read\", \"ui.notify\"]。支持通配 \"tool.*\" 与 \"*\"。可用能力见 DriFox docs/plugins/capabilities.md。"
     },
+    "module_prefixes": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1, "pattern": "^[A-Za-z_][A-Za-z0-9_]*(\\.[A-Za-z_][A-Za-z0-9_]*)*$" },
+      "uniqueItems": true,
+      "description": "插件自有的共享顶层模块命名空间（如 [\"biliscroll_core\"]）。插件经 sys.path 注入后以顶层名 import 的自有包必须在此声明：AST 安全网据此放行 sys.modules 写入，热重载/卸载据此统一摘除 sys.modules 旧缓存，消除热重载盲区。未声明时宿主按最严口径拒绝该类写入。"
+    },
     "components": {
       "type": "object",
       "additionalProperties": false,
