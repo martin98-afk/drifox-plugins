@@ -23,7 +23,6 @@ import sys
 import threading
 import time
 import traceback
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from typing import Any, Callable, List, Optional, Tuple
 
@@ -36,13 +35,16 @@ from .llm_config import (
 )
 
 from PyQt5.QtCore import QObject, QPoint, QRunnable, QRectF, QSize, QThread, Qt, QTimer, QThreadPool, pyqtSignal
-from PyQt5.QtGui import QBrush, QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
+from PyQt5.QtGui import QBrush, QColor, QFont, QFontMetrics, QKeySequence, QPainter, QPainterPath, QPen
 from PyQt5.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QPlainTextEdit,
+    QShortcut,
+    QStackedWidget,
+    QTabBar,
     QGridLayout,
     QListWidget,
     QListWidgetItem,
@@ -72,6 +74,8 @@ from loguru import logger
 from .diff_renderer import render_diff_html
 from .elided_label import _ElidedLabel
 from .git_core import GitRepo, GitResult
+from .changes_view import ChangesView
+from .task_runner import TaskRunner
 
 PLUGIN_NAME = "git-panel"
 
@@ -2435,7 +2439,17 @@ class GitPanelCard(QWidget):
         self._cached_hover = _fallback_semantic("hover")
         self._cached_panel = _fallback_semantic("panel")
 
+        self._runner = TaskRunner()
+        runner = self._runner
+        self.destroyed.connect(lambda *_: runner.dispose())
+        self._generation = 0
+        self._snapshot = {}
+        self._history_fingerprint = None
+        self._disposed = False
         self._setup_ui()
+        self._poll_timer = QTimer(self)
+        self._poll_timer.setInterval(5000)
+        self._poll_timer.timeout.connect(lambda: self._async_refresh(0))
 
     # ── 上下文注入 ──
 
@@ -2444,8 +2458,8 @@ class GitPanelCard(QWidget):
 
     def show_card(self):
         self._apply_latest_theme()
-        self._async_refresh()
         self.setVisible(True)
+        self._async_refresh(0)
 
     def _apply_latest_theme(self):
         if self._context_provider is None:
@@ -2479,10 +2493,25 @@ class GitPanelCard(QWidget):
         if font_family:
             self.setFont(QFont(font_family, font_size if font_size else 14))
 
-        self._retheme()
+        theme_key = (font_family, font_size, tc, tcs, border_c, repr(theme_colors))
+        if theme_key != getattr(self, "_applied_theme_key", None):
+            self._applied_theme_key = theme_key
+            self._retheme()
 
-        # 从上下文获取 repo_path
-        self._repo_path = ctx.get("project_root", "")
+        # 仓库变更使旧请求失效，避免将上一仓库内容绘制到新项目。
+        repo_path = ctx.get("project_root", "")
+        if repo_path != self._repo_path:
+            self._repo_path = repo_path
+            self._generation += 1
+            self._snapshot = {}
+            self._history_fingerprint = None
+            self._history_dirty = True
+            self._changes_view.set_items([])
+            self._clear_history()
+            self._commit_input.clear()
+            self._commit_btn.setEnabled(True)
+            self._set_sync_busy(False)
+        self._branch_lb.setToolTip(f"{self._repo_path}\n点击切换或管理分支")
 
         # 应用插件图标（DriFox 注入 ctx["plugin_icon"] = {light, dark} 路径）
         # 与 plugin-marketplace 卡片同机制：IconWidget.setIcon(QIcon(path))
@@ -2596,6 +2625,18 @@ class GitPanelCard(QWidget):
             "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
         )
 
+        self._tabs.setStyleSheet(
+            f"QTabBar::tab {{ color: {tcs}; background: transparent; padding: 7px 12px; border-bottom: 2px solid transparent; }}"
+            f"QTabBar::tab:selected {{ color: {self._cached_accent}; border-bottom-color: {self._cached_accent}; }}"
+        )
+        self._changes_view.setStyleSheet(
+            f"QTreeView {{ background: transparent; color: {tc}; border: none; outline: none; font-family: '{ff}'; font-size: {max(fs - 1, 11)}px; }}"
+            f"QTreeView::item:hover {{ background: {self._cached_hover}; }}"
+            f"QTreeView::item:selected {{ background: {self._cached_panel}; color: {tc}; }}"
+        )
+        self._summary_lb.setStyleSheet(f"color: {tcs}; background: transparent; font-size: {max(fs - 2, 10)}px;")
+        self._view_btn.setStyleSheet(btn_base)
+
         # Labels 样式更新
         for child in self.findChildren(QLabel):
             if child.property("keepColor"):
@@ -2701,7 +2742,7 @@ class GitPanelCard(QWidget):
         self._repo_icon.setStyleSheet("background: transparent;")
         hly.addWidget(self._repo_icon)
 
-        self._title_lb = StrongBodyLabel("Git 面板", self._header_widget)
+        self._title_lb = StrongBodyLabel("源代码管理", self._header_widget)
         self._title_lb.setStyleSheet(
             f"color: {self._cached_tc}; background: transparent; font-weight: 600;"
         )
@@ -2734,6 +2775,12 @@ class GitPanelCard(QWidget):
         self._refresh_btn.clicked.connect(self._async_refresh)
         hly.addWidget(self._refresh_btn)
 
+        self._more_btn = TransparentToolButton(FluentIcon.MORE, self._header_widget)
+        self._more_btn.setFixedSize(28, 28)
+        self._more_btn.setToolTip("更多 Git 操作")
+        self._more_btn.clicked.connect(self._show_more_menu)
+        hly.addWidget(self._more_btn)
+
         # 关闭
         close_btn = TransparentToolButton(FluentIcon.CLOSE, self._header_widget)
         close_btn.setFixedSize(28, 28)
@@ -2750,6 +2797,8 @@ class GitPanelCard(QWidget):
         行 2：提交输入框（内嵌 AI 按钮） + 提交模式按钮（占满一行）
         """
         panel = QFrame(self)
+        self._action_panel = panel
+        panel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
         panel.setObjectName("panelAction")
         panel.setStyleSheet(
             "#panelAction { background: rgba(128,128,128,0.05); "
@@ -2775,8 +2824,11 @@ class GitPanelCard(QWidget):
             "font-family: 'Consolas', 'Courier New', monospace;"
         )
         self._branch_lb.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+        self._branch_lb.setCursor(Qt.PointingHandCursor)
+        self._branch_lb.mousePressEvent = lambda event: self._show_branch_menu()
         # 自适应内容宽（不拉伸填满半行、不限最大宽度），窄面板压缩时由 _ElidedLabel 自动中间省略
         self._branch_lb.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        self._branch_lb.setMinimumWidth(84)
         r1.addWidget(self._branch_lb)
         r1.addStretch(1)
 
@@ -2788,21 +2840,24 @@ class GitPanelCard(QWidget):
         sl.setSpacing(6)
 
         self._push_btn = QPushButton("推送", sync_widget)
-        self._push_btn.setFixedSize(60, 24)
+        self._push_btn.setFixedSize(30, 26)
+        self._push_btn.setText("↑")
         self._push_btn.setToolTip("推送本地提交到远程")
         self._push_btn.setCursor(Qt.PointingHandCursor)
         self._push_btn.clicked.connect(self._do_push)
         sl.addWidget(self._push_btn)
 
         self._pull_btn = QPushButton("拉取", sync_widget)
-        self._pull_btn.setFixedSize(60, 24)
+        self._pull_btn.setFixedSize(30, 26)
+        self._pull_btn.setText("↓")
         self._pull_btn.setToolTip("拉取远程更新")
         self._pull_btn.setCursor(Qt.PointingHandCursor)
         self._pull_btn.clicked.connect(self._do_pull)
         sl.addWidget(self._pull_btn)
 
         self._fetch_btn = QPushButton("获取", sync_widget)
-        self._fetch_btn.setFixedSize(60, 24)
+        self._fetch_btn.setFixedSize(30, 26)
+        self._fetch_btn.setText("↻")
         self._fetch_btn.setToolTip("获取远程所有分支更新")
         self._fetch_btn.setCursor(Qt.PointingHandCursor)
         self._fetch_btn.clicked.connect(self._do_fetch)
@@ -2813,6 +2868,8 @@ class GitPanelCard(QWidget):
 
         # ── 行 2：提交描述（随内容增高） + 底部按钮行 ──
         row2 = QWidget(panel)
+        self._commit_editor = row2
+        row2.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
         row2.setStyleSheet("background: transparent;")
         r2 = QVBoxLayout(row2)
         r2.setContentsMargins(0, 0, 0, 0)
@@ -2825,8 +2882,14 @@ class GitPanelCard(QWidget):
         igl = QGridLayout(input_wrap)
         igl.setContentsMargins(0, 0, 0, 0)
         self._commit_input = QPlainTextEdit(input_wrap)
-        self._commit_input.setPlaceholderText("提交描述...")
+        self._commit_input.setPlaceholderText("提交说明（Ctrl / ⌘ + Enter 提交）")
+        for key in ("Ctrl+Return", "Meta+Return"):
+            shortcut = QShortcut(QKeySequence(key), self._commit_input)
+            shortcut.setContext(Qt.WidgetWithChildrenShortcut)
+            shortcut.activated.connect(self._on_commit)
         self._commit_input.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self._commit_input.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self._commit_input.setFixedHeight(36)
         self._commit_input.textChanged.connect(self._adjust_input_height)
         self._commit_input.updateRequest.connect(self._on_input_update_request)
         self._commit_input.setStyleSheet(
@@ -2905,6 +2968,7 @@ class GitPanelCard(QWidget):
         self._new_branch_btn.setCursor(Qt.PointingHandCursor)
         self._new_branch_btn.setToolTip("创建并切换到新分支")
         self._new_branch_btn.clicked.connect(self._on_create_branch)
+        self._new_branch_btn.hide()
 
         root.addWidget(panel)
 
@@ -2922,7 +2986,7 @@ class GitPanelCard(QWidget):
         edit = self._commit_input
         fm = edit.fontMetrics()
         # 估算总行数：逐 block 显式行 + 长段按宽度软折行
-        avail = max(40, edit.viewport().width() - 16)
+        avail = max(160, edit.viewport().width() - 16)
         lines = 0
         blk = edit.document().firstBlock()
         while blk.isValid():
@@ -2944,8 +3008,41 @@ class GitPanelCard(QWidget):
 
 
     def _build_body(self, root: QVBoxLayout):
-        """主体内容：滚动区域内的所有区块"""
-        self._scroll = ScrollArea(self)
+        """变更与历史分开；文件列表不为每个文件创建 QWidget。"""
+        self._tabs = QTabBar(self)
+        self._tabs.setExpanding(True)
+        self._tabs.setDrawBase(False)
+        self._tabs.addTab("变更")
+        self._tabs.addTab("历史")
+        root.addWidget(self._tabs)
+        tools = QWidget(self)
+        self._changes_tools = tools
+        row = QHBoxLayout(tools)
+        row.setContentsMargins(2, 5, 2, 5)
+        row.setSpacing(2)
+        self._view_btn = QPushButton("列表 ▾", tools)
+        self._view_btn.setToolTip("切换列表 / 文件树")
+        self._view_btn.clicked.connect(self._toggle_changes_view)
+        row.addWidget(self._view_btn)
+        row.addStretch(1)
+        for icon, title, handler in (
+            (FluentIcon.ADD, "暂存全部", self._on_stage_all),
+            (FluentIcon.REMOVE, "取消暂存全部", self._on_unstage_all),
+        ):
+            button = TransparentToolButton(icon, tools)
+            button.setFixedSize(26, 26)
+            button.setToolTip(title)
+            button.clicked.connect(handler)
+            row.addWidget(button)
+        root.addWidget(tools)
+        self._pages = QStackedWidget(self)
+        self._changes_view = ChangesView(self._pages)
+        self._changes_view.diff_requested.connect(self._on_diff_request)
+        self._changes_view.action_requested.connect(self._on_file_action)
+        self._changes_view.context_requested.connect(self._show_file_context)
+        self._pages.addWidget(self._changes_view)
+        self._view_btn.setText("文件树 ▾" if self._changes_view.mode == "tree" else "列表 ▾")
+        self._scroll = ScrollArea(self._pages)
         self._scroll.setWidgetResizable(True)
         self._scroll.setFrameShape(QFrame.NoFrame)
         self._scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
@@ -2954,10 +3051,161 @@ class GitPanelCard(QWidget):
         self._content.setStyleSheet("background: transparent;")
         self._content_layout = QVBoxLayout(self._content)
         self._content_layout.setContentsMargins(0, 4, 0, 4)
-        self._content_layout.setSpacing(6)
+        self._content_layout.setSpacing(0)
         self._content_layout.setAlignment(Qt.AlignTop)
         self._scroll.setWidget(self._content)
-        root.addWidget(self._scroll, 1)
+        self._pages.addWidget(self._scroll)
+        root.addWidget(self._pages, 1)
+        self._summary_lb = QLabel("正在检查仓库…", self)
+        self._summary_lb.setContentsMargins(4, 6, 4, 2)
+        root.addWidget(self._summary_lb)
+        self._tabs.currentChanged.connect(self._on_page_changed)
+
+    def _popup(self, menu, anchor=None, pos=None):
+        old = getattr(self, "_popup_menu", None)
+        if old is not None and old is not menu:
+            try:
+                old.close()
+                old.deleteLater()
+            except RuntimeError:
+                pass
+        self._popup_menu = menu
+        if pos is None:
+            anchor = anchor or self._more_btn
+            pos = anchor.mapToGlobal(QPoint(0, anchor.height()))
+        menu.exec(pos)
+
+    def _show_more_menu(self):
+        menu = RoundMenu(parent=self)
+        for text, handler in (
+            ("暂存全部", self._on_stage_all),
+            ("取消暂存全部", self._on_unstage_all),
+            ("放弃全部未暂存修改…", self._on_discard_unstaged_all),
+            ("搁置当前更改…", self._on_stash_create),
+            ("管理搁置…", self._show_stash_menu),
+            ("管理分支…", self._show_branch_menu),
+            ("修改上次提交…", self._on_amend),
+            ("推送", self._do_push), ("拉取", self._do_pull), ("获取", self._do_fetch),
+        ):
+            menu.addAction(Action(text, menu, triggered=handler))
+        self._popup(menu)
+
+    def _load_menu_data(self, fn, callback):
+        generation = self._generation
+        def done(data):
+            if generation == self._generation and self.isVisible():
+                callback(data)
+        self._runner.submit(fn, done, self._on_worker_error)
+
+    def _show_branch_menu(self):
+        repo = GitRepo(self._repo_path)
+        self._load_menu_data(repo.branch_list,
+                             lambda items: self._popup(self._build_branch_menu(items), self._branch_lb))
+
+    def _build_branch_menu(self, branches):
+        menu = RoundMenu(parent=self)
+        menu.addAction(Action("新建分支…", menu, triggered=self._on_create_branch))
+        menu.addSeparator()
+        for branch in branches:
+            name = branch["name"]
+            current = branch.get("current", False)
+            elsewhere = branch.get("checked_out_elsewhere", False)
+            label = f"{'✓ ' if current else ''}{name}"
+            sub = RoundMenu(label, menu)
+            switch = Action("切换到此分支", sub, triggered=lambda _=False, n=name: self._on_switch_branch(n))
+            switch.setEnabled(not current and not elsewhere)
+            sub.addAction(switch)
+            delete = Action("删除分支…", sub, triggered=lambda _=False, n=name: self._on_delete_branch(n))
+            delete.setEnabled(not current and not elsewhere)
+            sub.addAction(delete)
+            menu.addMenu(sub)
+        return menu
+
+    def _show_stash_menu(self):
+        repo = GitRepo(self._repo_path)
+        self._load_menu_data(repo.stash_list,
+                             lambda items: self._popup(self._build_stash_menu(items)))
+
+    def _build_stash_menu(self, stashes):
+        menu = RoundMenu(parent=self)
+        menu.addAction(Action("搁置当前更改…", menu, triggered=self._on_stash_create))
+        menu.addSeparator()
+        if not stashes:
+            action = Action("无搁置记录", menu)
+            action.setEnabled(False)
+            menu.addAction(action)
+        for stash in stashes:
+            ref = stash["ref"]
+            sub = RoundMenu(f"{ref}  {stash['message'][:55]}", menu)
+            for kind, title in (("view", "查看内容"), ("apply", "应用并保留"), ("pop", "应用并删除…"), ("drop", "删除…")):
+                sub.addAction(Action(title, sub, triggered=lambda _=False, k=kind, r=ref: self._on_stash_action(k, r)))
+            menu.addMenu(sub)
+        return menu
+
+    def _on_stash_create(self):
+        message = _input_ask("搁置当前更改", "搁置说明（不包含未跟踪文件）:", parent=self,
+                             confirm_text="搁置", cancel_text="取消")
+        if not message:
+            return
+        repo = GitRepo(self._repo_path)
+        self._run_git_async(lambda: repo.stash_push(message or "WIP"),
+                            lambda result: self._on_op_done("更改已搁置", result))
+
+    def _on_amend(self):
+        if not _confirm_ask("修改上次提交", "将暂存区更改合入上次提交；提交哈希会改变。确定继续吗？", self):
+            return
+        repo = GitRepo(self._repo_path)
+        message = self._commit_input.toPlainText().strip()
+        self._run_git_async(lambda: repo.commit(message, amend=True), self._on_commit_done)
+
+    def _file_helper(self, info):
+        old = getattr(self, "_file_action_helper", None)
+        if old is not None:
+            old.deleteLater()
+        helper = _FileRowWidget(dict(info), self)
+        helper.hide()
+        helper._repo_path = self._repo_path
+        # 保留行控件原有的完成回调（含成功刷新与失败日志），仅把执行器换成面板队列。
+        helper._run_row_async = self._run_git_async
+        helper.staged_changed.connect(lambda: self._async_refresh(0))
+        self._file_action_helper = helper
+        return helper
+
+    def _on_file_action(self, action, info):
+        if action == "conflict":
+            helper = self._file_helper(info)
+            self._popup(helper._build_conflict_menu())
+            return
+        repo = GitRepo(self._repo_path)
+        path = info["path"]
+        fn = (lambda: repo.restore_staged([path])) if action == "unstage" else (lambda: repo.add([path]))
+        self._run_git_async(fn, lambda result: self._on_op_done("已取消暂存" if action == "unstage" else "已暂存", result))
+
+    def _show_file_context(self, info, pos):
+        helper = self._file_helper(info)
+        menu = helper._build_context_menu()
+        self._popup(menu, pos=pos)
+
+    def _toggle_changes_view(self):
+        mode = "tree" if self._changes_view.mode == "list" else "list"
+        self._changes_view.set_mode(mode)
+        self._view_btn.setText("文件树 ▾" if mode == "tree" else "列表 ▾")
+
+    def _on_page_changed(self, index):
+        self._pages.setCurrentIndex(index)
+        self._commit_editor.setVisible(index == 0)
+        self._changes_tools.setVisible(index == 0)
+        if index == 1:
+            self._async_refresh(0)
+
+    def _clear_history(self):
+        self._expanded_row = None
+        while self._content_layout.count():
+            item = self._content_layout.takeAt(0)
+            if item.widget():
+                item.widget().hide()
+                item.widget().deleteLater()
+
 
     def _build_empty_state(self, root: QVBoxLayout):
         """空状态提示"""
@@ -2982,10 +3230,18 @@ class GitPanelCard(QWidget):
 
     def showEvent(self, event):
         super().showEvent(event)
+        self._poll_timer.start()
         win = self.window()
         if win:
             win.installEventFilter(self)
             self.updateGeometry()
+
+    def hideEvent(self, event):
+        self._poll_timer.stop()
+        debounce = getattr(self, "_refresh_debounce", None)
+        if debounce is not None:
+            debounce.stop()
+        super().hideEvent(event)
 
     def eventFilter(self, obj, event):
         from PyQt5.QtCore import QEvent
@@ -3004,57 +3260,46 @@ class GitPanelCard(QWidget):
         self._refresh_debounce.start(delay)
 
     def _do_async_refresh(self):
-        """去抖到期后真正执行的全量刷新"""
+        """请求捕获仓库和页面；同类等待请求合并，写操作不会被刷新拦截。"""
+        if self._disposed:
+            return
+        self._apply_latest_theme()
+        repo, generation = self._repo_path, self._generation
+        history = self._tabs.currentIndex() == 1
+        limit = getattr(self, "_log_limit", 30)
         self._set_loading(True)
-        self._cleanup_worker()
 
-        w = _Worker(self._fetch_all_data)
-        t = QThread(self)
-        w.moveToThread(t)
-        t.started.connect(w.run)
-        w.finished.connect(self._on_refresh_done)
-        w.error.connect(self._on_refresh_error)
-        w.finished.connect(t.quit)
-        w.error.connect(t.quit)
-        w.finished.connect(w.deleteLater)
-        w.error.connect(w.deleteLater)
-        t.finished.connect(t.deleteLater)
-        self._worker, self._worker_thread = w, t
-        t.start()
+        def done(data):
+            if generation != self._generation or repo != self._repo_path:
+                return
+            self._on_refresh_done(data)
 
-    def _fetch_all_data(self) -> dict:
-        """同步函数：后台线程执行，收集所有 Git 信息
+        def error(message):
+            if generation == self._generation:
+                self._on_refresh_error(message)
 
-        4 个查询（status_v2[分支/ahead/状态三合一]/stash/分支列表/日志）并行执行，
-        总耗时从「串行求和」降到「最慢单个查询」。
-        """
-        repo = self._repo_path
+        self._runner.submit(
+            lambda: GitPanelCard._fetch_all_data(repo, history, limit),
+            done, error, key="refresh",
+        )
+
+    @staticmethod
+    def _fetch_all_data(repo: str, history: bool = False, log_limit: int = 30) -> dict:
+        """纯后台读取，变更页不查询日志、搁置和分支列表。"""
         if not repo:
             return {"error": "未获取到项目路径"}
         g = GitRepo(repo)
         if not g.is_git_repo():
             return {"error": "当前项目不是 Git 仓库"}
-
-        log_limit = getattr(self, "_log_limit", 30)
-        with ThreadPoolExecutor(max_workers=4) as ex:
-            f_sv2 = ex.submit(g.status_v2)
-            f_stashes = ex.submit(g.stash_list)
-            f_branches = ex.submit(g.branch_list)
-            f_log = ex.submit(g.log, log_limit)
-            sv2 = f_sv2.result()
-            stashes = f_stashes.result()
-            branches = f_branches.result()
-            log = f_log.result()
-
-        return {
-            "branch": sv2["branch"],
-            "ahead": sv2["ahead"],
-            "behind": sv2["behind"],
-            "status": sv2["items"],
-            "stashes": stashes,
-            "branches": branches,
-            "log": log,
+        sv2 = g.status_v2()
+        data = {
+            "branch": sv2["branch"], "ahead": sv2["ahead"],
+            "behind": sv2["behind"], "status": sv2["items"],
         }
+        if history:
+            data["log"] = g.log(log_limit)
+        return data
+
 
     def _on_refresh_done(self, data: dict):
         self._set_loading(False)
@@ -3065,11 +3310,16 @@ class GitPanelCard(QWidget):
             self._set_status_text("")
             self._branch_lb.setText("")
             self._content.setVisible(False)
+            self._pages.setVisible(False)
+            self._action_panel.setVisible(False)
+            self._changes_tools.setVisible(False)
             return
 
         self._empty.setVisible(False)
+        self._pages.setVisible(True)
+        self._action_panel.setVisible(True)
+        self._changes_tools.setVisible(self._tabs.currentIndex() == 0)
         self._content.setVisible(True)
-        self._preserve_scroll_pos()
         self._render_content(data)
 
     def _preserve_scroll_pos(self):
@@ -3091,14 +3341,17 @@ class GitPanelCard(QWidget):
 
     def _on_refresh_error(self, err: str):
         self._set_loading(False)
+        if self._snapshot:
+            self._show_info_bar("error", "刷新失败", err[:200])
+            return
         self._empty.setText(f"加载失败: {err[:80]}")
         self._empty.setVisible(True)
-        self._content.setVisible(False)
+        self._pages.setVisible(False)
         logger.error(f"[git-panel] 数据加载失败: {err}")
 
     def _set_loading(self, loading: bool):
         self._is_loading = loading
-        self._refresh_btn.setEnabled(not loading)
+        self._refresh_btn.setEnabled(True)
         if loading:
             self._set_status_text("加载中…")
         else:
@@ -3107,200 +3360,40 @@ class GitPanelCard(QWidget):
     # ── 渲染内容 ──
 
     def _render_content(self, data: dict):
-        """渲染所有区块到内容区"""
-        # 旧行即将销毁，展开态引用作废
-        self._expanded_row = None
-        # 断开旧行控件信号，避免回调进入即将销毁的对象（B2）
-        for row in self.findChildren(_FileRowWidget):
-            try:
-                row.staged_changed.disconnect()
-                row.diff_requested.disconnect()
-            except (TypeError, RuntimeError):
-                pass
-        # 清空旧内容
-        while self._content_layout.count():
-            item = self._content_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
-
-        # 更新头部
+        """按快照增量更新；相同状态不重建模型与历史控件。"""
+        self._snapshot.update(data)
         branch = data.get("branch", "")
-        ahead = data.get("ahead", 0)
-        behind = data.get("behind", 0)
-        bt = branch
-        if ahead or behind:
-            bt += f"  ↑{ahead}  ↓{behind}"
-        self._branch_lb.setText(bt)
+        ahead, behind = data.get("ahead", 0), data.get("behind", 0)
+        self._branch_lb.setText(f"⑂ {branch}  ↑{ahead} ↓{behind}")
+        self._push_btn.setToolTip(f"推送（领先 {ahead} 个提交）")
+        self._pull_btn.setToolTip(f"拉取（落后 {behind} 个提交）")
+        items = data.get("status", [])
+        self._changes_view.set_items(items)
+        self._tabs.setTabText(0, f"变更 {len(items)}" if items else "变更")
+        self._summary_lb.setText(f"{len({i['path'] for i in items})} 个文件有更改" if items else "✓ 工作区干净，无变更")
+        if "log" not in data:
+            return
+        fingerprint = repr((data["log"], branch, ahead))
+        if self._history_fingerprint == fingerprint:
+            return
+        self._history_fingerprint = fingerprint
+        expanded = getattr(self, "_expanded_row", None)
+        expanded_hash = expanded.info().get("hash") if expanded is not None else None
+        self._preserve_scroll_pos()
+        self._clear_history()
+        self._render_history(data)
+        if expanded_hash:
+            for row in self._content.findChildren(_CommitRowWidget):
+                if row.info().get("hash") == expanded_hash:
+                    self._on_commit_row_expand(row)
+                    break
+        self._restore_scroll_pos()
 
-        # 同步按钮 tooltip 显示 ahead/behind
-        self._push_btn.setToolTip(f"推送本地提交到远程（本地领先 {ahead} 个提交）")
-        self._pull_btn.setToolTip(f"拉取远程更新（远程领先 {behind} 个提交）")
-        self._fetch_btn.setToolTip("获取远程所有分支更新（fetch --all --prune）")
-
-        # 描述框内容保留：刷新/重开面板不清空用户已输入的描述
-        # （提交成功后由 _on_commit_done 清空，AI 生成直接覆盖）
-
-        # ── 1. 文件变更 ──
-        status_items = data.get("status", [])
-        staged = [s for s in status_items if s["staged"]]
-        unstaged = [s for s in status_items if not s["staged"]]
-        total_changes = len(staged) + len(unstaged)
-
-        changes_section = self._create_section(
-            "变更", count=total_changes, default_collapsed=False
-        )
-        # 暂存/放弃/取消暂存按钮挂折叠区标题右侧（同「新建分支」模式）
-        if unstaged:
-            stage_all_btn = QPushButton("暂存", self)
-            stage_all_btn.setFixedHeight(24)
-            stage_all_btn.setCursor(Qt.PointingHandCursor)
-            stage_all_btn.setToolTip("暂存所有修改")
-            stage_all_btn.setStyleSheet(
-                "QPushButton { background: rgba(80,227,194,0.12); border: none; border-radius: 4px; "
-                f"color: {self._cached_tc}; font-size: 11px; padding: 0 10px; }}"
-                "QPushButton:hover { background: rgba(80,227,194,0.25); }"
-            )
-            stage_all_btn.clicked.connect(self._on_stage_all)
-            changes_section.add_action_button(stage_all_btn)
-
-            discard_btn = QPushButton("放弃", self)
-            discard_btn.setFixedHeight(24)
-            discard_btn.setCursor(Qt.PointingHandCursor)
-            discard_btn.setToolTip(
-                "放弃所有未暂存修改：已跟踪文件恢复原状，未跟踪文件将被删除（已暂存内容不受影响）"
-            )
-            discard_btn.setStyleSheet(
-                "QPushButton { background: rgba(241,76,76,0.08); border: none; border-radius: 4px; "
-                f"color: {self._cached_tcs}; font-size: 11px; padding: 0 10px; }}"
-                "QPushButton:hover { background: rgba(241,76,76,0.2); }"
-            )
-            discard_btn.clicked.connect(self._on_discard_unstaged_all)
-            changes_section.add_action_button(discard_btn)
-
-        if staged:
-            unstage_all_btn = QPushButton("取消暂存", self)
-            unstage_all_btn.setFixedHeight(24)
-            unstage_all_btn.setCursor(Qt.PointingHandCursor)
-            unstage_all_btn.setToolTip("取消暂存所有文件")
-            unstage_all_btn.setStyleSheet(
-                "QPushButton { background: rgba(241,76,76,0.12); border: none; border-radius: 4px; "
-                f"color: {self._cached_tc}; font-size: 11px; padding: 0 10px; }}"
-                "QPushButton:hover { background: rgba(241,76,76,0.25); }"
-            )
-            unstage_all_btn.clicked.connect(self._on_unstage_all)
-            changes_section.add_action_button(unstage_all_btn)
-
-        changes_content = QWidget()
-        changes_content.setStyleSheet("background: transparent;")
-        cl = QVBoxLayout(changes_content)
-        cl.setContentsMargins(0, 0, 0, 0)
-        cl.setSpacing(0)
-
-        # 已暂存标题
-        if staged:
-            staged_title = QLabel(f"  ● 已暂存 ({len(staged)})", changes_content)
-            staged_title.setProperty("keepColor", True)
-            staged_title.setStyleSheet(
-                "background: transparent; color: #50e3c2; font-size: 11px; "
-                "font-weight: 600; padding: 4px 14px;"
-            )
-            cl.addWidget(staged_title)
-            for item in staged:
-                row = _FileRowWidget(item)
-                row._repo_path = self._repo_path
-                row.staged_changed.connect(self._async_refresh)
-                row.diff_requested.connect(self._on_diff_request)
-                cl.addWidget(row)
-
-        # 未暂存标题
-        if unstaged:
-            unstaged_title = QLabel(f"  ● 未暂存 ({len(unstaged)})", changes_content)
-            unstaged_title.setProperty("keepColor", True)
-            unstaged_title.setStyleSheet(
-                f"background: transparent; color: {self._cached_tcs}; font-size: 11px; "
-                "font-weight: 600; padding: 4px 14px;"
-            )
-            cl.addWidget(unstaged_title)
-            for item in unstaged:
-                row = _FileRowWidget(item)
-                row._repo_path = self._repo_path
-                row.staged_changed.connect(self._async_refresh)
-                row.diff_requested.connect(self._on_diff_request)
-                cl.addWidget(row)
-
-        if total_changes == 0:
-            no_changes = QLabel("  ✓ 工作区干净，无变更", changes_content)
-            no_changes.setStyleSheet(
-                f"background: transparent; color: {self._cached_tcs}; font-size: 12px; "
-                "padding: 12px 16px;"
-            )
-            cl.addWidget(no_changes)
-
-        changes_section.set_content(changes_content)
-        self._content_layout.addWidget(changes_section)
-
-        # ── 2. Stash ──
-        stashes = data.get("stashes", [])
-        stash_section = self._create_section(
-            "搁置", count=len(stashes), default_collapsed=False
-        )
-        stash_content = QWidget()
-        stash_content.setStyleSheet("background: transparent;")
-        sl = QVBoxLayout(stash_content)
-        sl.setContentsMargins(0, 0, 0, 0)
-        sl.setSpacing(0)
-
-        if stashes:
-            for item in stashes:
-                row = _StashRowWidget(item)
-                row.action_requested.connect(self._on_stash_action)
-                sl.addWidget(row)
-        else:
-            no_stash = QLabel("  无搁置", stash_content)
-            no_stash.setStyleSheet(
-                f"background: transparent; color: {self._cached_tcs}; font-size: 12px; "
-                "padding: 12px 16px;"
-            )
-            sl.addWidget(no_stash)
-
-        stash_section.set_content(stash_content)
-        self._content_layout.addWidget(stash_section)
-
-        # ── 3. 分支 ──
-        branches = data.get("branches", [])
-        branch_section = self._create_section(
-            "分支", count=len(branches), default_collapsed=False
-        )
-        branch_content = QWidget()
-        branch_content.setStyleSheet("background: transparent;")
-        bl = QVBoxLayout(branch_content)
-        bl.setContentsMargins(0, 0, 0, 0)
-        bl.setSpacing(0)
-
-        if branches:
-            for item in branches:
-                row = _BranchRowWidget(item, ff=self._cached_ff, fs=self._cached_fs)
-                row.switch_requested.connect(self._on_switch_branch)
-                row.delete_requested.connect(self._on_delete_branch)
-                bl.addWidget(row)
-        else:
-            no_branch = QLabel("  无分支", branch_content)
-            no_branch.setStyleSheet(
-                f"background: transparent; color: {self._cached_tcs}; font-size: 12px; "
-                "padding: 12px 16px;"
-            )
-            bl.addWidget(no_branch)
-
-        branch_section.set_content(branch_content)
-        # 新建分支按钮挂在区块标题右侧（每次重建时重新 reparent 到新 section）
-        branch_section.add_action_button(self._new_branch_btn)
-        self._content_layout.addWidget(branch_section)
-
-        # ── 4. 提交历史 ──
+    def _render_history(self, data: dict):
         log = data.get("log", [])
         # 提交图：固定只显示最近 30 条，非真实总数 → 不显示计数
         log_section = self._create_section(
-            "提交图", count=None, default_collapsed=True
+            "提交图", count=None, default_collapsed=False
         )
         log_content = QWidget()
         log_content.setStyleSheet("background: transparent;")
@@ -3349,11 +3442,8 @@ class GitPanelCard(QWidget):
         log_section.set_content(log_content)
         self._content_layout.addWidget(log_section)
 
-        # 刷新主题
-        self._apply_latest_theme()
-
-        # 重建完成后恢复滚动位置
-        self._restore_scroll_pos()
+        # 只对新建历史控件应用已捕获主题，不重复读取宿主上下文。
+        self._retheme()
 
     def _create_section(self, title: str, count: Optional[int],
                         default_collapsed: bool) -> "_CollapsibleSection":
@@ -3503,21 +3593,22 @@ class GitPanelCard(QWidget):
             self._show_info_bar("info", "提交信息不能为空", "")
             return
         mode = self._commit_mode
-        if mode == "stage_commit":
-            # 先 add -A：小操作同步执行，失败直接终止不进提交
-            self._set_status_text("暂存全部中…")
-            r = GitRepo(self._repo_path).add(["-A"])
-            if not r.ok:
-                self._set_status_text(f"暂存失败: {r.stderr[:50]}")
-                QTimer.singleShot(3000, lambda: self._reset_status() if not self._is_loading else None)
-                return
+        if not self._repo_path:
+            self._show_info_bar("info", "未获取到项目路径", "")
+            return
+        repo = GitRepo(self._repo_path)
+        def commit():
+            if mode == "stage_commit":
+                result = repo.add(["-A"])
+                if not result.ok:
+                    return result
+            return repo.commit(msg)
         self._set_status_text("提交中…")
-        self._run_git_async(
-            lambda: GitRepo(self._repo_path).commit(msg),
-            lambda r: self._on_commit_done(r, mode),
-        )
+        self._commit_btn.setEnabled(False)
+        self._run_git_async(commit, lambda r: self._on_commit_done(r, mode))
 
     def _on_commit_done(self, result: Optional[GitResult] = None, mode: str = "commit"):
+        self._commit_btn.setEnabled(True)
         if result is not None:
             if result.ok:
                 self._set_status_text("提交成功")
@@ -3569,8 +3660,9 @@ class GitPanelCard(QWidget):
     def _on_switch_branch(self, name: str):
         """切换分支"""
         self._set_status_text(f"切换到 {name}…")
+        repo = GitRepo(self._repo_path)
         self._run_git_async(
-            lambda: GitRepo(self._repo_path).branch_checkout(name),
+            lambda: repo.branch_checkout(name),
             lambda r: self._on_op_done(f"已切换到 {name}", r),
         )
 
@@ -3579,8 +3671,9 @@ class GitPanelCard(QWidget):
         if not _confirm_ask("确认删除分支", f"确定要删除分支「{name}」吗？", self):
             return
         self._set_status_text(f"删除 {name}…")
+        repo = GitRepo(self._repo_path)
         self._run_git_async(
-            lambda: GitRepo(self._repo_path).branch_delete(name),
+            lambda: repo.branch_delete(name),
             lambda r: self._on_op_done(f"已删除 {name}", r),
         )
 
@@ -3591,24 +3684,27 @@ class GitPanelCard(QWidget):
         if not branch_name:
             return
         self._set_status_text(f"创建分支 {branch_name}…")
+        repo = GitRepo(self._repo_path)
         self._run_git_async(
-            lambda: GitRepo(self._repo_path).branch_create(branch_name),
+            lambda: repo.branch_create(branch_name),
             lambda r: self._on_op_done(f"已创建并切换到 {branch_name}", r),
         )
 
     def _on_stage_all(self):
         """全部暂存"""
         self._set_status_text("暂存中…")
+        repo = GitRepo(self._repo_path)
         self._run_git_async(
-            lambda: GitRepo(self._repo_path).add(["-A"]),
+            lambda: repo.add(["-A"]),
             lambda r: self._on_op_done("已暂存所有修改", r),
         )
 
     def _on_unstage_all(self):
         """全部取消暂存"""
         self._set_status_text("取消暂存中…")
+        repo = GitRepo(self._repo_path)
         self._run_git_async(
-            lambda: GitRepo(self._repo_path).restore_staged(["."]),
+            lambda: repo.restore_staged(["."]),
             lambda r: self._on_op_done("已取消暂存所有修改", r),
         )
 
@@ -3623,8 +3719,9 @@ class GitPanelCard(QWidget):
         ):
             return
         self._set_status_text("放弃中…")
+        repo = GitRepo(self._repo_path)
         self._run_git_async(
-            lambda: GitRepo(self._repo_path).discard_unstaged_all(),
+            lambda: repo.discard_unstaged_all(),
             lambda r: self._on_op_done("已放弃所有未暂存修改", r),
         )
 
@@ -3724,14 +3821,11 @@ class GitPanelCard(QWidget):
         """推送本地提交到远程（无 upstream 时自动 --set-upstream）"""
         if not self._repo_path:
             return
-        if self._is_loading:
-            self._set_status_text("正在刷新，请稍候…")
-            QTimer.singleShot(2000, lambda: self._reset_status() if not self._is_loading else None)
-            return
         self._set_sync_busy(True)
         self._set_status_text("推送中…")
+        repo = GitRepo(self._repo_path)
         self._run_git_async(
-            lambda: GitRepo(self._repo_path).push(),
+            repo.push,
             lambda r: self._on_sync_done("Push 完成", r),
         )
 
@@ -3739,14 +3833,11 @@ class GitPanelCard(QWidget):
         """拉取远程更新（rebase --autostash，失败回退普通 pull）"""
         if not self._repo_path:
             return
-        if self._is_loading:
-            self._set_status_text("正在刷新，请稍候…")
-            QTimer.singleShot(2000, lambda: self._reset_status() if not self._is_loading else None)
-            return
         self._set_sync_busy(True)
         self._set_status_text("拉取中…")
+        repo = GitRepo(self._repo_path)
         self._run_git_async(
-            lambda: GitRepo(self._repo_path).pull_rebase(),
+            repo.pull_rebase,
             lambda r: self._on_sync_done("Pull 完成", r),
         )
 
@@ -3754,14 +3845,11 @@ class GitPanelCard(QWidget):
         """获取远程所有分支更新"""
         if not self._repo_path:
             return
-        if self._is_loading:
-            self._set_status_text("正在刷新，请稍候…")
-            QTimer.singleShot(2000, lambda: self._reset_status() if not self._is_loading else None)
-            return
         self._set_sync_busy(True)
         self._set_status_text("获取中…")
+        repo = GitRepo(self._repo_path)
         self._run_git_async(
-            lambda: GitRepo(self._repo_path).fetch(),
+            repo.fetch,
             lambda r: self._on_sync_done("Fetch 完成", r),
         )
 
@@ -3828,31 +3916,24 @@ class GitPanelCard(QWidget):
             self._set_status_text("")
 
     def _run_git_async(self, fn, on_done):
-        """在后台线程执行一个 git 操作"""
-        if self._is_loading:
-            # 刷新进行中不静默丢弃：提示用户稍候
-            self._set_status_text("正在刷新，请稍候…")
-            QTimer.singleShot(2000, lambda: self._reset_status() if not self._is_loading else None)
-            return
-        self._cleanup_worker()
-
-        w = _Worker(fn)
-        t = QThread(self)
-        w.moveToThread(t)
-        t.started.connect(w.run)
-        w.finished.connect(on_done)
-        w.error.connect(self._on_worker_error)
-        w.finished.connect(t.quit)
-        w.error.connect(t.quit)
-        w.finished.connect(w.deleteLater)
-        w.error.connect(w.deleteLater)
-        t.finished.connect(t.deleteLater)
-        self._worker, self._worker_thread = w, t
-        t.start()
+        """写操作按顺序排队，刷新期间也接受请求。"""
+        generation = self._generation
+        def run():
+            # fn 捕获创建时的 GitRepo；切项目不会把旧操作写到新项目。
+            return fn()
+        def done(result):
+            if generation != self._generation:
+                return
+            on_done(result)
+        def error(message):
+            if generation == self._generation:
+                self._on_worker_error(message)
+        self._runner.submit(run, done, error)
 
     def _on_worker_error(self, err: str):
         """后台任务异常（非 GitResult 路径）：恢复同步按钮并反馈"""
         self._set_sync_busy(False)
+        self._commit_btn.setEnabled(True)
         logger.error(f"[git-panel] 后台操作异常: {err}")
         self._show_info_bar("error", "操作异常", err[:200])
         self._set_status_text("操作异常")
@@ -3865,15 +3946,15 @@ class GitPanelCard(QWidget):
         self.closed.emit()
 
     def _cleanup_worker(self):
-        """清理卡片级后台线程引用（非阻塞，线程结束后由 finished 链自行销毁）"""
-        if self._worker_thread is not None:
-            try:
-                self._worker_thread.quit()
-                self._worker_thread.wait(0)
-            except RuntimeError:
-                pass
-            self._worker_thread = None
-        self._worker = None
+        """不等待网络任务，队列对象自行存活至运行任务返回。"""
+        self._disposed = True
+        timer = getattr(self, "_poll_timer", None)
+        if timer is not None:
+            timer.stop()
+        debounce = getattr(self, "_refresh_debounce", None)
+        if debounce is not None:
+            debounce.stop()
+        self._runner.dispose()
 
     def deleteLater(self):
         self._cleanup_worker()

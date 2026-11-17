@@ -9,7 +9,7 @@
 插件自包含：不依赖主应用内部模块，可独立加载测试。
 """
 
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtWidgets import QLabel, QSizePolicy
 
 
@@ -29,12 +29,21 @@ class _ElidedLabel(QLabel):
         self.setToolTip(text)
         self._update_elided()
 
+    def sizeHint(self):
+        # 按完整文本给建议宽度：否则省略后的文本会反过来把建议宽度越压越小，
+        # 形成「越省略越窄」的自锁（分支徽标曾只剩一个省略号）。
+        base = super().sizeHint()
+        width = self.fontMetrics().horizontalAdvance(self._full_text) + 24
+        return QSize(width, base.height())
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self._update_elided()
 
     def _update_elided(self):
-        w = self.width()
+        # 用 contentsRect 而非 width：QSS padding 会占掉左右空间，
+        # 直接按 width 计算会高估可用宽度，导致末尾被裁。
+        w = self.contentsRect().width()
         if w <= 0:
             # 未布局：显示原文。强制 PlainText，避免路径含 < > 时误判富文本
             self.setTextFormat(Qt.PlainText)
