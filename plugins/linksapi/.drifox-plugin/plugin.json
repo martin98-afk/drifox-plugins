@@ -1,0 +1,29 @@
+{
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "name": "linksapi",
+    "display_name": {
+        "zh": "LinksAPI 中转"
+    },
+    "description": "LinksAPI 服务商 — 国内直连的 OpenAI 兼容中转网关，聚合 GPT 全系模型，微信/支付宝充值，按量计费",
+    "version": "0.1.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "homepage": "https://linksapi.cn",
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "api_version": 2,
+    "keywords": [
+        "linksapi",
+        "中转",
+        "openai",
+        "gpt",
+        "服务商"
+    ],
+    "components": {
+        "providers": true
+    }
+}
