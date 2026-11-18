@@ -1,15 +1,20 @@
 # -*- coding: utf-8 -*-
 """express — 助手用自己的情绪发表情包。
 
-流程：情绪词 → 标签三档打分 → 偏好加减分 → top3 随机取一 → 返回 markdown 图片。
+流程：情绪词 → 口语兜底扩展 → 标签三档打分 → 偏好加减分 → top3 随机取一
+→ 生成 180px 缩略图 → 返回 markdown 图片（模型在正文复述）。
 移植自 moononnn/DeepSeek-Harness-biaoqingbao（MIT）的 express 工具。
+
+展示通道选择：正文 markdown 图片（宿主 _resolve_image_src 转 file:///）。
+不走工具卡 body —— 简洁模式下宿主 lazy_body 只给 body 留空壳，靠「展开工具区」
+时 JS 注入，而本工具卡片 keep_in_content 留在正文，永远等不到注入（表现为只有
+标题行，图不出现）。缩略图负责控宽：正文图片只有 max-width:100%，原图 618px
+会撑满整行，缩略图的天然像素宽就是 180。
 """
 from __future__ import annotations
 
 import random
-import re
 import sys
-from html import escape
 from pathlib import Path
 
 # 宿主 tools 加载器不注插件根，先自注入再 import 本插件包
@@ -26,10 +31,21 @@ MAX_RECENT = 5
 # 进程内最近使用记录（session 维度；DriFox 工具无 session 句柄时退化为全局）
 _recent: list[str] = []
 
-# markdown 图片：![alt](path)
-_IMG_RE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
-# 自定义标记：[sticker:/abs/path] —— 模型不会把它当图片复述到正文
-_STICKER_RE = re.compile(r"\[sticker:([^\]]+)\]")
+# 情绪口语兜底：内置图库导入后不会随 starter 更新，词表缺口在这里补
+_ALIASES = {
+    "得意": "开心 成功 干得漂亮",
+    "心疼": "撒娇 抱抱",
+    "想抱抱你": "撒娇 抱抱",
+    "抱抱": "撒娇",
+    "贴贴": "撒娇 可爱",
+    "感动": "喜欢 爱了",
+    "治愈": "喜欢 可爱",
+    "吃瓜": "惊讶 好家伙",
+    "emo": "难过 失落",
+    "破防": "难过 崩溃",
+    "无语": "无奈 服了",
+    "爱你": "喜欢 爱心",
+}
 
 _SCHEMA = {
     "type": "function",
@@ -39,8 +55,8 @@ _SCHEMA = {
             "用表情包表达你（助手）自己的情绪。当你回复用户时，如果自己感受到了开心、委屈、"
             "心疼、无奈、感动、得意、无语等情绪，想用一张图片表达感受，就调用这个工具。"
             "只需传一个情绪词，如 emotion='开心' 或 emotion='心疼想抱抱你'。"
+            "调用成功会返回一张 markdown 图片，请在你的回复正文中原样包含它（前面配一句短话即可）。"
             "这是助手自己的情绪表达方式，不是必须执行的任务；工作/严肃场景不要用。"
-            "注意：工具返回的 [sticker:...] 标记是内部渲染指令，不要在回复正文里复述它或图片路径。"
         ),
         "parameters": {
             "type": "object",
@@ -64,40 +80,6 @@ _SCHEMA = {
 def _preview(args: dict) -> str:
     emo = (args or {}).get("emotion") or ""
     return f"表情：{emo}"
-
-
-def _render_express_body(result, tool_name, tool_args, success):
-    """express 完成框渲染闭包：把 markdown 图片显示成真实图片。
-
-    签名与 desktop-automation 的 screenshot 一致：
-    render(result, tool_name, tool_args, success) -> str | None
-    返回 None 回退通用文本渲染（no_match / 错误场景）。
-    """
-    content = getattr(result, "content", "") or ""
-    if not isinstance(content, str):
-        content = str(content)
-    # 优先自定义标记；兼容旧格式 markdown 图片
-    m = _STICKER_RE.search(content)
-    if m:
-        path, alt = m.group(1).strip(), "表情"
-        head = content[: m.start()].strip()
-    else:
-        m = _IMG_RE.search(content)
-        if not m:
-            return None
-        alt, path = m.group(1), m.group(2)
-        head = content[: m.start()].strip()
-    note = (
-        f'<span style="color:var(--text-secondary);font-size:12px;">{escape(head)}</span>'
-        if head else ""
-    )
-    return (
-        '<div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start;padding:2px 0;">'
-        f'<img src="{escape(path)}" alt="{escape(alt)}" '
-        'style="max-width:180px;max-height:180px;border-radius:10px;display:block;" />'
-        f'{note}'
-        '</div>'
-    )
 
 
 def _impl(tool_ctx, **kwargs):
@@ -127,11 +109,17 @@ def _impl(tool_ctx, **kwargs):
     user_prefs = (prefs.get("users") or {}).get("default") or {"mappings": []}
     prefs_for = collect_prefs_for_emotion(user_prefs.get("mappings"), emotion)
 
+    # 口语词扩展：别名拼进查询串，靠标签包含匹配兜底（图库词表不全时也不落空）
+    query = emotion
+    alias = _ALIASES.get(emotion)
+    if alias:
+        query = f"{emotion} {alias}"
+
     exclude = list(kwargs.get("exclude_ids") or []) + list(_recent)
-    scored = score_stickers(stickers, emotion, exclude, prefs_for)
+    scored = score_stickers(stickers, query, exclude, prefs_for)
     if not scored:
         # 排除名单导致全空时，放开最近记录再试一次
-        scored = score_stickers(stickers, emotion, list(kwargs.get("exclude_ids") or []), prefs_for)
+        scored = score_stickers(stickers, query, list(kwargs.get("exclude_ids") or []), prefs_for)
     if not scored:
         return ToolResult(
             True,
@@ -144,15 +132,16 @@ def _impl(tool_ctx, **kwargs):
     if len(_recent) > MAX_RECENT:
         _recent.pop(0)
 
-    path = store.sticker_abs_path(data_dir, best)
-    if not path:
+    path = store.thumb_path(data_dir, best)
+    if path is None:
         return ToolResult(False, error=f"表情包文件丢失：{best.get('file')}")
 
     desc = best.get("description") or best.get("id")
-    # markdown 图片：宿主 _resolve_image_src 会把绝对路径转 file:/// 渲染
-    # 用自定义标记而非 markdown 图片：模型看到 ![](...) 容易原样复述到正文，
-    # 而正文图片宿主不限制尺寸（只有 max-width:100%），会撑满整行。
-    content = f"已发送表情包「{desc}」（匹配度 {best['_score']}）\n\n[sticker:{path}]"
+    alt = sanitize_tag(desc, 30) or "表情包"
+    content = (
+        f"已发送表情包「{desc}」（匹配度 {best['_score']}）\n\n"
+        f"![{alt}]({path})"
+    )
     return ToolResult(True, content=content, data={"sticker": {
         "id": best["id"], "description": desc, "score": best["_score"], "emotion": emotion,
     }})
@@ -167,8 +156,7 @@ def register(registry):
         cn_name="发表情包",
         group=GROUP,
         description="按自己的情绪挑一张表情包发出来",
-        render_mode="expand",  # 图片直接展示，禁用折叠框
-        render=_render_express_body,
+        render_mode="inline",  # 单行卡：图片由回复正文承载，卡里不再渲染 body
         keep_in_content=True,  # 表情卡常驻正文，不迁入「工具与思考」折叠区
         preview=_preview,
         summarize=make_summarize_from_preview(_preview),

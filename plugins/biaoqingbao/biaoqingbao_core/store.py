@@ -21,6 +21,8 @@ STICKERS_FILE = "stickers.json"
 PREFS_FILE = "preferences.json"
 CONFIG_FILE = "config.json"
 STICKERS_DIR = "stickers"
+THUMBS_DIR = "thumbs"
+THUMB_SIZE = 180  # 正文 markdown 图片没有尺寸约束，靠缩略图自身像素控制显示宽度
 
 
 # ═══════════════ 路径 ═══════════════
@@ -125,6 +127,37 @@ def sticker_abs_path(data_dir: Path, sticker: dict) -> Path | None:
         p = data_dir / rel
     p = p.expanduser().resolve()
     return p if p.is_file() else None
+
+
+def thumb_path(data_dir: Path, sticker: dict, size: int = THUMB_SIZE) -> Path | None:
+    """返回缩略图路径（首次调用生成并缓存），失败回退原图。
+
+    宿主正文图片只有 max-width:100%，没有尺寸上限：原图 618px 会撑满整行。
+    缩略图让 img 的天然像素宽就是目标宽度，不依赖渲染层配合。
+    """
+    src = sticker_abs_path(data_dir, sticker)
+    if src is None:
+        return None
+    out = data_dir / THUMBS_DIR / f"{src.stem}_{size}.png"
+    try:
+        if out.is_file() and out.stat().st_mtime >= src.stat().st_mtime:
+            return out
+    except OSError:
+        pass
+    try:
+        from PIL import Image  # 宿主自带 Pillow；独立测试环境可能没有
+    except Exception:
+        return src
+    try:
+        out.parent.mkdir(parents=True, exist_ok=True)
+        with Image.open(src) as im:
+            if im.mode not in ("RGB", "RGBA"):
+                im = im.convert("RGBA")
+            im.thumbnail((size, size), Image.LANCZOS)
+            im.save(out, "PNG")
+        return out if out.is_file() else src
+    except Exception:
+        return src
 
 
 def new_id() -> str:

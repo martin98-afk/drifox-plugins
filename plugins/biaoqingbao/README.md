@@ -57,14 +57,18 @@
 
 ## 展示位置
 
-表情图直接显示在**消息流正文**里，不是折叠的工具卡：
+表情图由**回复正文的 markdown 图片**承载，工具卡只留一行标题：
 
-- `render_mode="expand"` — 工具块无折叠框，内容始终可见
+- `render_mode="inline"` — 单行卡，无 body（卡片 body 在简洁模式下是 lazy 空壳，见下）
 - `keep_in_content=True` — 完成卡常驻正文，不迁入「工具与思考」折叠区
-- `render` 闭包输出 `<img>`，宿主 `_resolve_image_src` 把绝对路径转 `file:///` 渲染
-- 图片限 180×180，下方一行「已发送表情包「xxx」（匹配度 N）」
+- 工具返回 `![desc](/abs/path)`，宿主 `_resolve_image_src` 把绝对路径转 `file:///` 渲染
+- 返回路径指向 **180px 缩略图**（`thumbs/<id>_180.png`，PIL 首次生成并缓存）
 
-宿主默认会把工具结果当纯文本转义（`<pre>`），markdown 图片不会渲染成图 —— 所以必须走 render 闭包，与 `edit` / `desktop-automation.screenshot` 同一套机制。
+为什么不用 render 闭包往工具卡里塞 `<img>`：简洁模式下宿主 `_tool_lazy_body` 为真，
+工具块 body 只出空占位，靠「展开工具区」时 JS 经 `tool_body` 通道注入内容；
+而 `keep_in_content` 把卡片搬到了正文，永远等不到那次展开 → body 始终为空，
+表现为只有标题行、图不出现。正文 markdown 图片是宿主已验证的稳定通道。
+缩略图负责控宽：正文图片只有 `max-width:100%`，原图 618px 会撑满整行。
 
 ## 数据结构
 
@@ -73,6 +77,7 @@ plugin_data/biaoqingbao/
 ├── stickers.json      # 图库：[{id, file, description, tags{emotion,scene,keywords}, ...}]
 ├── preferences.json   # 偏好：{users: {default: {mappings: [{context:{emotion}, preferred_ids, vetoed_ids, dislike_counts}]}}}
 ├── config.json        # 设置：{enabled, freq:{daily,task}, dialect:{...}}
+├── thumbs/            # 180px 缩略图缓存（自动生成，可删）
 └── stickers/          # 图片文件
 ```
 
