@@ -224,7 +224,7 @@ class GitRepo:
         out = {"branch": "", "ahead": 0, "behind": 0, "items": []}
         # strip=False：变更行 path 前后空白有语义，不能 strip
         res = self._run("--no-optional-locks", "status", "--porcelain=v2", "--branch",
-                        strip=False)
+                        "--untracked-files=all", strip=False)
         if not res.ok:
             return out
         oid = ""

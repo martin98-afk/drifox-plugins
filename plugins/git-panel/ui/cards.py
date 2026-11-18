@@ -34,8 +34,11 @@ from .llm_config import (
     strip_thinking,
 )
 
-from PyQt5.QtCore import QObject, QPoint, QRunnable, QRectF, QSize, QThread, Qt, QTimer, QThreadPool, pyqtSignal
-from PyQt5.QtGui import QBrush, QColor, QFont, QFontMetrics, QKeySequence, QPainter, QPainterPath, QPen
+from PyQt5.QtCore import QObject, QPoint, QPointF, QRunnable, QRect, QSize, QThread, Qt, QTimer, QThreadPool, pyqtSignal
+from PyQt5.QtGui import (
+    QBrush, QColor, QFont, QFontMetrics, QIcon, QIconEngine, QKeySequence,
+    QPainter, QPainterPath, QPen,
+)
 from PyQt5.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -65,7 +68,6 @@ from qfluentwidgets import (
     RoundMenu,
     ScrollArea,
     StrongBodyLabel,
-    ToolButton,
     TransparentToolButton,
     isDarkTheme,
 )
@@ -158,6 +160,61 @@ def _fallback_semantic(key: str) -> str:
     }
     d, l = table[key]
     return d if dark else l
+
+
+class _StrokeIconEngine(QIconEngine):
+    """VS Code 风格细线描边图标（QIconEngine 使其随主题色重绘）。
+
+    kind: more / close，图形绘制在 24×24 参考坐标内。
+    """
+
+    def __init__(self, kind: str, color: str):
+        super().__init__()
+        self.kind = kind
+        self.color = QColor(color)
+
+    def clone(self):
+        return _StrokeIconEngine(self.kind, self.color.name())
+
+    def paint(self, painter: QPainter, rect: QRect, mode, state):
+        painter.save()
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        # 以 24×24 为参考缩放到目标矩形，居中留白
+        side = min(rect.width(), rect.height())
+        ox = rect.x() + (rect.width() - side) / 2
+        oy = rect.y() + (rect.height() - side) / 2
+        painter.translate(ox, oy)
+        painter.scale(side / 24.0, side / 24.0)
+
+        pen = QPen(self.color)
+        pen.setWidthF(1.7)
+        pen.setCapStyle(Qt.RoundCap)
+        pen.setJoinStyle(Qt.RoundJoin)
+        painter.setPen(pen)
+        painter.setBrush(Qt.NoBrush)
+
+        if self.kind == "more":
+            # 三个水平圆点
+            painter.setBrush(self.color)
+            pen.setWidthF(0)
+            painter.setPen(Qt.NoPen)
+            for x in (5.5, 12, 18.5):
+                painter.drawEllipse(QPointF(x, 12), 1.6, 1.6)
+        elif self.kind == "close":
+            painter.drawLine(QPointF(6.5, 6.5), QPointF(17.5, 17.5))
+            painter.drawLine(QPointF(17.5, 6.5), QPointF(6.5, 17.5))
+
+        painter.restore()
+
+
+def _git_icon(kind: str, color: str = "") -> QIcon:
+    """从本地 SVG 加载图标，与 AI 按钮 FluentIcon 同机制（QIcon(path)）。
+
+    深浅两套：dark 主题用 *_dark.svg（浅描边），否则用 * .svg（深描边）。
+    """
+    name = f"{kind}_dark" if isDarkTheme() else kind
+    path = os.path.join(os.path.dirname(__file__), "icons", f"{name}.svg")
+    return QIcon(path)
 
 
 def _css_color_to_qcolor(val: str) -> QColor:
@@ -2572,6 +2629,24 @@ class GitPanelCard(QWidget):
         tcs = self._cached_tcs
         border_c = self._cached_border
 
+        # 自绘图标（右上角 + 同步按钮组）随主题前景色重建
+        # （QIconEngine 改色后须重新 setIcon 才可靠重绘）
+        for btn in (
+            getattr(self, "_more_btn", None),
+            getattr(self, "_close_btn", None),
+            getattr(self, "_push_btn", None),
+            getattr(self, "_pull_btn", None),
+            getattr(self, "_fetch_btn", None),
+            getattr(self, "_local_refresh_btn", None),
+        ):
+            if btn is not None:
+                kind = btn.property("strokeKind")
+                if kind:
+                    if btn.property("svgIcon"):
+                        btn.setIcon(_git_icon(kind))
+                    else:
+                        btn.setIcon(QIcon(_StrokeIconEngine(kind, tcs)))
+
         # 卡片背景：交给宿主 CardContainer 绘制（dock 停靠区自带 CARD_BG + BORDER
         # + 8px 圆角面板，且随主题 refresh_style 自动刷新）。此处再画一层就是
         # 双层边框嵌套，且 fallback 硬编码色不跟主题走。
@@ -2620,7 +2695,7 @@ class GitPanelCard(QWidget):
         except RuntimeError:
             pass
 
-        # 次要按钮（推送/拉取/获取/新建分支）
+        # 次要按钮（新建分支仍用 QPushButton；推送/拉取/获取已改为透明自绘图标）
         btn_base = (
             f"QPushButton {{ background: rgba(128,128,128,0.1); border: none; border-radius: 5px; "
             f"color: {tc}; font-family: '{ff}'; font-size: {fs - 2}px; padding: 4px 10px; }}"
@@ -2629,9 +2704,6 @@ class GitPanelCard(QWidget):
         )
         if hasattr(self, '_new_branch_btn'):
             self._new_branch_btn.setStyleSheet(btn_base)
-        for name in ("_push_btn", "_pull_btn", "_fetch_btn"):
-            if hasattr(self, name):
-                getattr(self, name).setStyleSheet(btn_base)
 
         # 滚动条
         sh_hex = "rgba(255,255,255,0.12)" if isDarkTheme() else "rgba(0,0,0,0.12)"
@@ -2793,25 +2865,22 @@ class GitPanelCard(QWidget):
         self._status_lb.setVisible(False)
         hly.addWidget(self._status_lb)
 
-        # 刷新
-        self._refresh_btn = ToolButton(FluentIcon.SYNC, self._header_widget)
-        self._refresh_btn.setFixedSize(28, 28)
-        self._refresh_btn.setToolTip("刷新")
-        self._refresh_btn.clicked.connect(self._async_refresh)
-        hly.addWidget(self._refresh_btn)
+        # 右上角三个按钮统一用 VS Code 风格细线自绘图标。
+        # TransparentToolButton 无底色，贴合 VS Code 标题栏的扁平观感。
+        # strokeKind 供主题切换时按图形重建图标。
 
-        self._more_btn = TransparentToolButton(FluentIcon.MORE, self._header_widget)
-        self._more_btn.setFixedSize(28, 28)
-        self._more_btn.setToolTip("更多 Git 操作")
-        self._more_btn.clicked.connect(self._show_more_menu)
-        hly.addWidget(self._more_btn)
+        def _header_icon_btn(kind: str, tip: str, handler) -> TransparentToolButton:
+            btn = TransparentToolButton(QIcon(_StrokeIconEngine(kind, self._cached_tcs)), self._header_widget)
+            btn.setProperty("strokeKind", kind)
+            btn.setIconSize(QSize(16, 16))
+            btn.setFixedSize(28, 28)
+            btn.setToolTip(tip)
+            btn.clicked.connect(handler)
+            hly.addWidget(btn)
+            return btn
 
-        # 关闭
-        close_btn = TransparentToolButton(FluentIcon.CLOSE, self._header_widget)
-        close_btn.setFixedSize(28, 28)
-        close_btn.setToolTip("关闭")
-        close_btn.clicked.connect(self._on_close)
-        hly.addWidget(close_btn)
+        self._more_btn = _header_icon_btn("more", "更多 Git 操作", self._show_more_menu)
+        self._close_btn = _header_icon_btn("close", "关闭", self._on_close)
 
         root.addWidget(self._header_widget)
 
@@ -2838,7 +2907,7 @@ class GitPanelCard(QWidget):
         row1.setStyleSheet("background: transparent;")
         r1 = QHBoxLayout(row1)
         r1.setContentsMargins(0, 0, 0, 0)
-        r1.setSpacing(6)
+        r1.setSpacing(4)
 
         # 分支徽章（蓝色胶囊）：超长名中间省略 + tooltip 完整名，不换行撑高
         self._branch_lb = _ElidedLabel("", row1)
@@ -2854,35 +2923,31 @@ class GitPanelCard(QWidget):
         r1.addStretch(1)
 
         # 同步按钮组（固定宽度，避免 sizeHint 挤占分支徽章）
+        # VS Code 风格：透明底 + 细线自绘图标，strokeKind 供主题切换重建
         sync_widget = QWidget(row1)
         sync_widget.setStyleSheet("background: transparent;")
         sl = QHBoxLayout(sync_widget)
         sl.setContentsMargins(0, 0, 0, 0)
-        sl.setSpacing(6)
+        sl.setSpacing(2)
 
-        self._push_btn = QPushButton("推送", sync_widget)
-        self._push_btn.setFixedSize(30, 26)
-        self._push_btn.setText("↑")
-        self._push_btn.setToolTip("推送本地提交到远程")
-        self._push_btn.setCursor(Qt.PointingHandCursor)
-        self._push_btn.clicked.connect(self._do_push)
-        sl.addWidget(self._push_btn)
+        def _sync_btn(kind: str, tip: str, handler) -> TransparentToolButton:
+            btn = TransparentToolButton(_git_icon(kind), sync_widget)
+            btn.setProperty("strokeKind", kind)
+            btn.setProperty("svgIcon", True)
+            btn.setIconSize(QSize(16, 16))
+            btn.setFixedSize(30, 26)
+            btn.setToolTip(tip)
+            btn.setCursor(Qt.PointingHandCursor)
+            btn.clicked.connect(handler)
+            sl.addWidget(btn)
+            return btn
 
-        self._pull_btn = QPushButton("拉取", sync_widget)
-        self._pull_btn.setFixedSize(30, 26)
-        self._pull_btn.setText("↓")
-        self._pull_btn.setToolTip("拉取远程更新")
-        self._pull_btn.setCursor(Qt.PointingHandCursor)
-        self._pull_btn.clicked.connect(self._do_pull)
-        sl.addWidget(self._pull_btn)
-
-        self._fetch_btn = QPushButton("获取", sync_widget)
-        self._fetch_btn.setFixedSize(30, 26)
-        self._fetch_btn.setText("↻")
-        self._fetch_btn.setToolTip("获取远程所有分支更新")
-        self._fetch_btn.setCursor(Qt.PointingHandCursor)
-        self._fetch_btn.clicked.connect(self._do_fetch)
-        sl.addWidget(self._fetch_btn)
+        self._push_btn = _sync_btn("push", "推送本地提交到远程", self._do_push)
+        self._pull_btn = _sync_btn("pull", "拉取远程更新", self._do_pull)
+        self._fetch_btn = _sync_btn("fetch", "获取远程所有分支更新", self._do_fetch)
+        self._local_refresh_btn = _sync_btn(
+            "refresh", "刷新本地更改", lambda: self._async_refresh(0)
+        )
 
         r1.addWidget(sync_widget)
         pl.addWidget(row1)
@@ -2926,13 +2991,15 @@ class GitPanelCard(QWidget):
         self._ai_btn.setToolTip("根据暂存区变更由 AI 生成提交描述（失败自动重试）")
         self._ai_btn.setCursor(Qt.PointingHandCursor)
         self._ai_btn.clicked.connect(self._on_ai_generate)
-        # 透明容器包一层：给按钮顶部/右侧留呼吸边距（直接用 alignment 会贴死框顶）
+        # 透明容器只占自身大小并靠右垂直居中：
+        # 不能用无对齐的 addWidget，否则容器 stretch 铺满整格盖住输入框、吃掉点击。
+        # 输入框右侧 40px padding 正好留给这个按钮。
         ai_holder = QWidget(input_wrap)
         ai_holder.setStyleSheet("background: transparent;")
         ahl = QHBoxLayout(ai_holder)
-        ahl.setContentsMargins(0, 5, 3, 0)
+        ahl.setContentsMargins(0, 0, 3, 0)
         ahl.addWidget(self._ai_btn)
-        igl.addWidget(ai_holder, 0, 0, Qt.AlignTop | Qt.AlignRight)
+        igl.addWidget(ai_holder, 0, 0, Qt.AlignVCenter | Qt.AlignRight)
         r2.addWidget(input_wrap)
 
         # 提交行：占满一行 + 右侧下拉切换提交模式（VSCode Commit 按钮同构）。
@@ -3078,6 +3145,7 @@ class GitPanelCard(QWidget):
         self._pages.addWidget(self._scroll)
         root.addWidget(self._pages, 1)
         self._summary_lb = QLabel("正在检查仓库…", self)
+        self._summary_lb.setAlignment(Qt.AlignHCenter)
         self._summary_lb.setContentsMargins(4, 6, 4, 2)
         root.addWidget(self._summary_lb)
         self._tabs.currentChanged.connect(self._on_page_changed)
@@ -3396,7 +3464,6 @@ class GitPanelCard(QWidget):
 
     def _set_loading(self, loading: bool):
         self._is_loading = loading
-        self._refresh_btn.setEnabled(True)
         if loading:
             self._set_status_text("加载中…")
         else:
