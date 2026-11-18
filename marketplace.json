@@ -802,7 +802,7 @@
                 "zh": "表情包",
                 "en": "Biaoqingbao"
             },
-            "downloads": 2,
+            "downloads": 8,
             "keywords": [
                 "meme",
                 "sticker",
@@ -851,7 +851,7 @@
             "display_name": {
                 "zh": "B站日报"
             },
-            "downloads": 42,
+            "downloads": 43,
             "keywords": [
                 "bilibili",
                 "b站",
@@ -1018,7 +1018,7 @@
             "display_name": {
                 "zh": "内置浏览器"
             },
-            "downloads": 99,
+            "downloads": 100,
             "keywords": [
                 "browser",
                 "web",
@@ -4609,7 +4609,7 @@
             "display_name": {
                 "zh": "飞书网关"
             },
-            "downloads": 65,
+            "downloads": 66,
             "platforms": [
                 "windows",
                 "linux",
@@ -4966,7 +4966,7 @@
             "display_name": {
                 "zh": "Git 控制面板"
             },
-            "downloads": 112,
+            "downloads": 114,
             "keywords": [
                 "git",
                 "source-control",
@@ -6349,7 +6349,7 @@
             "display_name": {
                 "zh": "LinksAPI 中转"
             },
-            "downloads": 2,
+            "downloads": 3,
             "keywords": [
                 "linksapi",
                 "中转",
@@ -7594,6 +7594,7 @@
             "display_name": {
                 "zh": "OAIPro 中转站服务商"
             },
+            "downloads": 2,
             "keywords": [
                 "OAIPro",
                 "oaipro",
