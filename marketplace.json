@@ -767,7 +767,7 @@
         {
             "name": "biaoqingbao",
             "description": "养成系表情包插件 — 助手按自己的情绪挑图发表情，带频率门控、偏好学习与图库养成。移植自 DSH 社区插件（MIT）。",
-            "version": "0.2.1",
+            "version": "0.2.2",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -818,9 +818,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-biaoqingbao-v0.2.1/biaoqingbao-0.2.1-all.tar.gz",
-                    "sha256": "5519d126624c7a26efc772b4790418d65c54daf9c4496ebb4c5a2ac785c36255",
-                    "size": 477251
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-biaoqingbao-v0.2.2/biaoqingbao-0.2.2-all.tar.gz",
+                    "sha256": "6b269074b36ab46fda9c96e6546c3ec3dbed6b167c5ba25e5fd7ccf153a025e6",
+                    "size": 477436
                 }
             }
         },
