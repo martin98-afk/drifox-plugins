@@ -3143,11 +3143,20 @@ class GitPanelCard(QWidget):
         self._content_layout.setAlignment(Qt.AlignTop)
         self._scroll.setWidget(self._content)
         self._pages.addWidget(self._scroll)
-        root.addWidget(self._pages, 1)
-        self._summary_lb = QLabel("正在检查仓库…", self)
-        self._summary_lb.setAlignment(Qt.AlignHCenter)
-        self._summary_lb.setContentsMargins(4, 6, 4, 2)
-        root.addWidget(self._summary_lb)
+
+        # 舞台：内容页与两种居中提示（干净 / 空态）叠在同一格，互斥显示。
+        # 提示用 AlignCenter 水平+垂直居中于内容区，不再贴卡片底部。
+        stage = QWidget(self)
+        stage.setStyleSheet("background: transparent;")
+        self._stage_layout = QGridLayout(stage)
+        self._stage_layout.setContentsMargins(0, 0, 0, 0)
+        self._stage_layout.addWidget(self._pages, 0, 0)
+        root.addWidget(stage, 1)
+
+        self._summary_lb = QLabel("✓ 工作区干净，无变更", self)
+        self._summary_lb.setAlignment(Qt.AlignCenter)
+        self._stage_layout.addWidget(self._summary_lb, 0, 0, Qt.AlignCenter)
+        self._summary_lb.hide()
         self._tabs.currentChanged.connect(self._on_page_changed)
 
     def _popup(self, menu, anchor=None, pos=None):
@@ -3292,6 +3301,8 @@ class GitPanelCard(QWidget):
         self._pages.setCurrentIndex(index)
         self._commit_editor.setVisible(index == 0)
         self._changes_tools.setVisible(index == 0)
+        # 干净标签只属于变更页：历史页隐藏，切回时按当前变更状态恢复
+        self._summary_lb.setVisible(index == 0 and not self._snapshot.get("status", []))
         if index == 1:
             self._async_refresh(0)
 
@@ -3313,7 +3324,7 @@ class GitPanelCard(QWidget):
             "font-size: 13px; padding: 40px;"
         )
         self._empty.setVisible(False)
-        root.addWidget(self._empty)
+        self._stage_layout.addWidget(self._empty, 0, 0, Qt.AlignCenter)
 
     # ── 比例高度 ──
 
@@ -3415,6 +3426,7 @@ class GitPanelCard(QWidget):
         if data.get("error"):
             self._empty.setText(data["error"])
             self._empty.setVisible(True)
+            self._summary_lb.hide()
             self._set_status_text("")
             self._branch_lb.setText("")
             self._content.setVisible(False)
@@ -3459,6 +3471,7 @@ class GitPanelCard(QWidget):
             return
         self._empty.setText(f"加载失败: {err[:80]}")
         self._empty.setVisible(True)
+        self._summary_lb.hide()
         self._pages.setVisible(False)
         logger.error(f"[git-panel] 数据加载失败: {err}")
 
@@ -3482,7 +3495,8 @@ class GitPanelCard(QWidget):
         items = data.get("status", [])
         self._changes_view.set_items(items)
         self._tabs.setTabText(0, f"变更 {len(items)}" if items else "变更")
-        self._summary_lb.setText(f"{len({i['path'] for i in items})} 个文件有更改" if items else "✓ 工作区干净，无变更")
+        # 有变更时或历史页不显示状态标签；变更页且工作区干净时居中显示。
+        self._summary_lb.setVisible(self._tabs.currentIndex() == 0 and not items)
         if "log" not in data:
             return
         fingerprint = repr((data["log"], branch, ahead))
