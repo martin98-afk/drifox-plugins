@@ -1,0 +1,51 @@
+{
+    "name": "biaoqingbao",
+    "display_name": {
+        "zh": "表情包",
+        "en": "Biaoqingbao"
+    },
+    "description": "养成系表情包插件 — 助手按自己的情绪挑图发表情，带频率门控、偏好学习与图库养成。移植自 DSH 社区插件（MIT）。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "0.1.0",
+    "author": {
+        "name": "DriFox Contributors",
+        "url": "https://github.com/moononnn/DeepSeek-Harness-biaoqingbao"
+    },
+    "license": "MIT",
+    "type": "user",
+    "min_host_version": "0.6.10",
+    "api_version": 2,
+    "capabilities": [],
+    "module_prefixes": [
+        "biaoqingbao_core"
+    ],
+    "keywords": [
+        "meme",
+        "sticker",
+        "expression",
+        "表情包",
+        "情绪"
+    ],
+    "components": {
+        "tools": true,
+        "commands": false,
+        "agents": false,
+        "skills": false,
+        "themes": false,
+        "hooks": false,
+        "mcp": false,
+        "lsp": false,
+        "ui": false,
+        "providers": false,
+        "team_templates": false,
+        "model_adapters": false,
+        "loop_policies": false,
+        "storages": false,
+        "serializers": false,
+        "gateways": false,
+        "engines": false
+    }
+}
