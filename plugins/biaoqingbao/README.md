@@ -35,12 +35,10 @@
 | 工具 | 作用 |
 |---|---|
 | `biaoqingbao_express` | 按情绪挑一张表情发出来（核心） |
-| `biaoqingbao_search` | 按情绪/标签搜索图库 |
-| `biaoqingbao_list` | 列出图库全部表情包 |
-| `biaoqingbao_add_sticker` | 把本地图片导入图库 |
-| `biaoqingbao_update_tags` | 修改描述与标签 |
-| `biaoqingbao_feedback` | 记录喜欢/不喜欢，影响后续选图 |
-| `biaoqingbao_import_starter` | 一键导入 39 张内置 OpenMoji 表情 |
+| `biaoqingbao_manage` | 图库管理，`action` 分发：`list` / `search` / `add` / `update_tags` / `feedback` / `import_starter` |
+
+管理能力合并成单一入口：6 个独立工具 schema 共 2368 字符，每轮随 prompt 走太贵；
+合并后 1205 字符，加 express 共 1766 字符（约 1100 token），比合并前省 1260 字符。
 
 ## 打分规则
 

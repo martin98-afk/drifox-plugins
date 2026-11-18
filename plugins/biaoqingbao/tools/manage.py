@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-"""图库管理工具组 — 搜索 / 列表 / 导入 / 改标签 / 反馈。
+"""图库管理 — 合并为一个 biaoqingbao_manage(action=...)。
 
-对应上游 search_stickers、list_stickers、add_sticker(HTTP 上传改为本地路径)、
-update_sticker_tags、report_bad_match 五个工具。
+原 6 个独立工具（search/list/add_sticker/update_tags/feedback/import_starter）
+每轮随 prompt 走约 2400 字符 schema；合并后约 800，省一半以上。
+各 action 的实现与合并前逐字一致，只是入口变参数分发。
 """
 from __future__ import annotations
 
@@ -24,66 +25,54 @@ from biaoqingbao_core.scoring import (
 )
 
 GROUP = "表情包"
+ACTIONS = ("list", "search", "add", "update_tags", "feedback", "import_starter")
 
-
-# ═══════════════ 搜索 ═══════════════
-
-_SEARCH_SCHEMA = {
+_SCHEMA = {
     "type": "function",
     "function": {
-        "name": "biaoqingbao_search",
-        "description": "搜索表情包图库（管理用途）。按情绪/描述/标签找图，返回候选列表与 ID。",
+        "name": "biaoqingbao_manage",
+        "description": (
+            "图库管理。action：list 列全部；search 按词搜(query)；add 导本地图(path)；"
+            "update_tags 改标签(id)；feedback 记喜欢/不喜欢(id+context)；import_starter 导内置 39 张。"
+        ),
         "parameters": {
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "搜索词，如「开心」「猫咪」"},
-                "limit": {"type": "integer", "description": "返回条数，默认 10", "default": 10},
+                "action": {
+                    "type": "string",
+                    "enum": list(ACTIONS),
+                    "description": "要做的事",
+                },
+                "query": {"type": "string", "description": "search：搜索词"},
+                "limit": {"type": "integer", "description": "search：返回条数，默认 10"},
+                "path": {"type": "string", "description": "add：本地图片绝对路径，8MB 内"},
+                "description": {"type": "string", "description": "add/update_tags：一句话描述"},
+                "id": {"type": "string", "description": "update_tags/feedback：表情包 ID"},
+                "emotion": {
+                    "type": "array", "items": {"type": "string"},
+                    "description": "add/update_tags：情绪标签，整体替换",
+                },
+                "scene": {
+                    "type": "array", "items": {"type": "string"},
+                    "description": "add/update_tags：场景标签，整体替换",
+                },
+                "keywords": {
+                    "type": "array", "items": {"type": "string"},
+                    "description": "add/update_tags：关键词，整体替换",
+                },
+                "context": {"type": "string", "description": "feedback：当时想表达的情绪"},
+                "positive": {"type": "boolean", "description": "feedback：true=喜欢，false=不喜欢"},
             },
-            "required": ["query"],
+            "required": ["action"],
         },
     },
 }
 
 
-def _search_impl(tool_ctx, **kwargs):
-    query = sanitize_tag(kwargs.get("query"), 60)
-    limit = max(1, min(int(kwargs.get("limit") or 10), 50))
-    data_dir = store.resolve_data_dir(tool_ctx)
+def _list(data_dir: Path) -> ToolResult:
     stickers = store.load_stickers(data_dir)
     if not stickers:
-        return ToolResult(True, content="图库是空的。")
-
-    hits = score_stickers(stickers, query, [], {"preferred": [], "vetoed": [], "dislikes": {}})
-    if not hits:
-        hits = [{**s, "_score": 1} for s in substring_match(stickers, query)]
-    if not hits:
-        return ToolResult(True, content=f"没有找到匹配「{query}」的表情包。")
-
-    lines = [f"找到 {min(len(hits), limit)} 张（共 {len(hits)}）："]
-    for s in hits[:limit]:
-        tags = s.get("tags") or {}
-        emo = "/".join(tags.get("emotion") or []) or "-"
-        lines.append(f"- {s.get('id')}｜{s.get('description') or '-'}｜情绪 {emo}｜分数 {s['_score']}")
-    return ToolResult(True, content="\n".join(lines))
-
-
-# ═══════════════ 列表 ═══════════════
-
-_LIST_SCHEMA = {
-    "type": "function",
-    "function": {
-        "name": "biaoqingbao_list",
-        "description": "列出表情包图库的全部图片与标签（管理用途）。",
-        "parameters": {"type": "object", "properties": {}},
-    },
-}
-
-
-def _list_impl(tool_ctx, **kwargs):
-    data_dir = store.resolve_data_dir(tool_ctx)
-    stickers = store.load_stickers(data_dir)
-    if not stickers:
-        return ToolResult(True, content="图库是空的。可以先用 biaoqingbao_add_sticker 导入图片。")
+        return ToolResult(True, content="图库是空的。可以用 action=add 导入图片，或 action=import_starter 导入内置图库。")
     lines = [f"图库共 {len(stickers)} 张："]
     for s in stickers:
         tags = s.get("tags") or {}
@@ -96,45 +85,33 @@ def _list_impl(tool_ctx, **kwargs):
     return ToolResult(True, content="\n".join(lines))
 
 
-# ═══════════════ 导入 ═══════════════
+def _search(data_dir: Path, query, limit) -> ToolResult:
+    q = sanitize_tag(query, 60)
+    if not q:
+        return ToolResult(False, error="search 需要 query")
+    n = max(1, min(int(limit or 10), 50))
+    stickers = store.load_stickers(data_dir)
+    if not stickers:
+        return ToolResult(True, content="图库是空的。")
 
-_ADD_SCHEMA = {
-    "type": "function",
-    "function": {
-        "name": "biaoqingbao_add_sticker",
-        "description": (
-            "把一张本地图片导入表情包图库。支持 png/jpg/jpeg/gif/webp/bmp，单图 8MB 以内。"
-            "导入时给情绪标签，后续 express 才能按情绪命中。"
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "path": {"type": "string", "description": "本地图片绝对路径"},
-                "description": {"type": "string", "description": "一句话描述这张图，如「开心猫咪挥手」"},
-                "emotion": {
-                    "type": "array", "items": {"type": "string"},
-                    "description": "情绪标签，如 [\"开心\"] 或 [\"委屈\",\"想哭\"]",
-                },
-                "scene": {
-                    "type": "array", "items": {"type": "string"},
-                    "description": "使用场景，如 [\"问候\",\"早安\"]",
-                },
-                "keywords": {
-                    "type": "array", "items": {"type": "string"},
-                    "description": "关键词，如 [\"猫咪\",\"挥手\"]",
-                },
-            },
-            "required": ["path"],
-        },
-    },
-}
+    hits = score_stickers(stickers, q, [], {"preferred": [], "vetoed": [], "dislikes": {}})
+    if not hits:
+        hits = [{**s, "_score": 1} for s in substring_match(stickers, q)]
+    if not hits:
+        return ToolResult(True, content=f"没有找到匹配「{q}」的表情包。")
+
+    lines = [f"找到 {min(len(hits), n)} 张（共 {len(hits)}）："]
+    for s in hits[:n]:
+        tags = s.get("tags") or {}
+        emo = "/".join(tags.get("emotion") or []) or "-"
+        lines.append(f"- {s.get('id')}｜{s.get('description') or '-'}｜情绪 {emo}｜分数 {s['_score']}")
+    return ToolResult(True, content="\n".join(lines))
 
 
-def _add_impl(tool_ctx, **kwargs):
+def _add(data_dir: Path, kwargs: dict) -> ToolResult:
     raw_path = (kwargs.get("path") or "").strip()
     if not raw_path:
-        return ToolResult(False, error="请提供图片路径")
-    data_dir = store.resolve_data_dir(tool_ctx)
+        return ToolResult(False, error="add 需要 path")
     try:
         sticker = store.import_image(
             data_dir,
@@ -155,33 +132,10 @@ def _add_impl(tool_ctx, **kwargs):
     )
 
 
-# ═══════════════ 改标签 ═══════════════
-
-_UPDATE_SCHEMA = {
-    "type": "function",
-    "function": {
-        "name": "biaoqingbao_update_tags",
-        "description": "修改某张表情包的描述或标签（管理用途）。只传要改的字段。",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "id": {"type": "string", "description": "表情包 ID（biaoqingbao_list 可查）"},
-                "description": {"type": "string", "description": "新描述"},
-                "emotion": {"type": "array", "items": {"type": "string"}, "description": "新情绪标签（整体替换）"},
-                "scene": {"type": "array", "items": {"type": "string"}, "description": "新场景标签（整体替换）"},
-                "keywords": {"type": "array", "items": {"type": "string"}, "description": "新关键词（整体替换）"},
-            },
-            "required": ["id"],
-        },
-    },
-}
-
-
-def _update_impl(tool_ctx, **kwargs):
+def _update_tags(data_dir: Path, kwargs: dict) -> ToolResult:
     sid = sanitize_tag(kwargs.get("id"), 60)
     if not sid:
-        return ToolResult(False, error="请提供表情包 ID")
-    data_dir = store.resolve_data_dir(tool_ctx)
+        return ToolResult(False, error="update_tags 需要 id")
     tags = {}
     for key in ("emotion", "scene", "keywords"):
         if key in kwargs and kwargs[key] is not None:
@@ -197,58 +151,20 @@ def _update_impl(tool_ctx, **kwargs):
     return ToolResult(True, content=f"已更新 {sid}｜{updated.get('description') or '-'}", data={"sticker": updated})
 
 
-# ═══════════════ 反馈 ═══════════════
-
-_FEEDBACK_SCHEMA = {
-    "type": "function",
-    "function": {
-        "name": "biaoqingbao_feedback",
-        "description": (
-            "记录用户对某张表情包的反馈，影响以后的选择：喜欢会加分，不喜欢会否决并逐次降权。"
-            "用户说「这个我喜欢」「这张不合适」时调用。"
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "id": {"type": "string", "description": "表情包 ID"},
-                "emotion": {"type": "string", "description": "当时想表达的情绪"},
-                "positive": {"type": "boolean", "description": "true=喜欢，false=不喜欢"},
-            },
-            "required": ["id", "emotion", "positive"],
-        },
-    },
-}
-
-
-def _feedback_impl(tool_ctx, **kwargs):
+def _feedback(data_dir: Path, kwargs: dict) -> ToolResult:
     sid = sanitize_tag(kwargs.get("id"), 60)
-    emotion = sanitize_tag(kwargs.get("emotion"), 60)
-    positive = bool(kwargs.get("positive"))
-    if not sid or not emotion:
-        return ToolResult(False, error="需要 id 和 emotion")
-    data_dir = store.resolve_data_dir(tool_ctx)
-    store.record_feedback(data_dir, emotion=emotion, sticker_id=sid, positive=positive)
-    verdict = "喜欢" if positive else "不喜欢"
-    return ToolResult(True, content=f"已记录：{sid} 在「{emotion}」情境下标记为{verdict}。")
+    ctx_emotion = sanitize_tag(kwargs.get("context"), 60)
+    if not ctx_emotion:
+        emos = str_arr(kwargs.get("emotion"))
+        ctx_emotion = emos[0] if emos else ""
+    if not sid or not ctx_emotion:
+        return ToolResult(False, error="feedback 需要 id 与 context（当时情绪）")
+    store.record_feedback(data_dir, emotion=ctx_emotion, sticker_id=sid, positive=bool(kwargs.get("positive")))
+    verdict = "喜欢" if kwargs.get("positive") else "不喜欢"
+    return ToolResult(True, content=f"已记录：{sid} 在「{ctx_emotion}」情境下标记为{verdict}。")
 
 
-# ═══════════════ 导入内置图库 ═══════════════
-
-_STARTER_SCHEMA = {
-    "type": "function",
-    "function": {
-        "name": "biaoqingbao_import_starter",
-        "description": (
-            "把插件自带的内置图库（13 类情绪、39 张 OpenMoji 表情）一键导入。"
-            "图库为空时用它开箱可用；已导入过的会跳过，可重复执行。"
-        ),
-        "parameters": {"type": "object", "properties": {}},
-    },
-}
-
-
-def _starter_impl(tool_ctx, **kwargs):
-    data_dir = store.resolve_data_dir(tool_ctx)
+def _starter(data_dir: Path) -> ToolResult:
     pack_dir = Path(__file__).resolve().parent.parent / "starter"
     if not pack_dir.is_dir():
         return ToolResult(False, error=f"内置图库不存在：{pack_dir}")
@@ -262,65 +178,51 @@ def _starter_impl(tool_ctx, **kwargs):
     )
 
 
-# ═══════════════ 注册 ═══════════════
+def _impl(tool_ctx, **kwargs):
+    action = sanitize_tag(kwargs.get("action"), 30)
+    if action not in ACTIONS:
+        return ToolResult(False, error=f"action 需为 {'/'.join(ACTIONS)} 之一")
+    data_dir = store.resolve_data_dir(tool_ctx)
+    if action == "list":
+        return _list(data_dir)
+    if action == "search":
+        return _search(data_dir, kwargs.get("query"), kwargs.get("limit"))
+    if action == "add":
+        return _add(data_dir, kwargs)
+    if action == "update_tags":
+        return _update_tags(data_dir, kwargs)
+    if action == "feedback":
+        return _feedback(data_dir, kwargs)
+    return _starter(data_dir)
 
-def _preview_search(args: dict) -> str:
-    return f"搜索：{(args or {}).get('query') or ''}"
 
-
-def _preview_add(args: dict) -> str:
-    return f"导入：{Path((args or {}).get('path') or '').name}"
-
-
-def _preview_update(args: dict) -> str:
-    return f"改标签：{(args or {}).get('id') or ''}"
-
-
-def _preview_feedback(args: dict) -> str:
-    verdict = "喜欢" if (args or {}).get("positive") else "不喜欢"
-    return f"反馈{verdict}：{(args or {}).get('id') or ''}"
+def _preview(args: dict) -> str:
+    a = (args or {}).get("action") or ""
+    if a == "search":
+        return f"搜索：{(args or {}).get('query') or ''}"
+    if a == "add":
+        return f"导入：{Path((args or {}).get('path') or '').name}"
+    if a == "update_tags":
+        return f"改标签：{(args or {}).get('id') or ''}"
+    if a == "feedback":
+        verdict = "喜欢" if (args or {}).get("positive") else "不喜欢"
+        return f"反馈{verdict}：{(args or {}).get('id') or ''}"
+    if a == "list":
+        return "列出图库"
+    if a == "import_starter":
+        return "导入内置图库"
+    return "图库管理"
 
 
 def register(registry):
     registry.register(
-        "biaoqingbao_search", _SEARCH_SCHEMA, impl=_search_impl,
-        danger="safe", cn_name="搜表情包", group=GROUP,
-        description="按情绪或标签搜索图库",
-        render_mode="expand", preview=_preview_search,
-        summarize=make_summarize_from_preview(_preview_search),
-    )
-    registry.register(
-        "biaoqingbao_list", _LIST_SCHEMA, impl=_list_impl,
-        danger="safe", cn_name="表情包列表", group=GROUP,
-        description="列出图库全部表情包",
-        render_mode="expand", preview=lambda a: "列出图库",
-        summarize=make_summarize_from_preview(lambda a: "列出图库"),
-    )
-    registry.register(
-        "biaoqingbao_add_sticker", _ADD_SCHEMA, impl=_add_impl,
-        danger="safe", cn_name="导入表情包", group=GROUP,
-        description="把本地图片导入图库",
-        render_mode="expand", preview=_preview_add,
-        summarize=make_summarize_from_preview(_preview_add),
-    )
-    registry.register(
-        "biaoqingbao_update_tags", _UPDATE_SCHEMA, impl=_update_impl,
-        danger="safe", cn_name="改表情包标签", group=GROUP,
-        description="修改表情包描述与标签",
-        render_mode="expand", preview=_preview_update,
-        summarize=make_summarize_from_preview(_preview_update),
-    )
-    registry.register(
-        "biaoqingbao_feedback", _FEEDBACK_SCHEMA, impl=_feedback_impl,
-        danger="safe", cn_name="表情包反馈", group=GROUP,
-        description="记录喜欢/不喜欢，影响后续选图",
-        render_mode="inline", preview=_preview_feedback,
-        summarize=make_summarize_from_preview(_preview_feedback),
-    )
-    registry.register(
-        "biaoqingbao_import_starter", _STARTER_SCHEMA, impl=_starter_impl,
-        danger="safe", cn_name="导入内置表情包", group=GROUP,
-        description="一键导入 39 张内置 OpenMoji 表情",
-        render_mode="inline", preview=lambda a: "导入内置图库",
-        summarize=make_summarize_from_preview(lambda a: "导入内置图库"),
+        "biaoqingbao_manage",
+        _SCHEMA,
+        impl=_impl,
+        danger="safe",
+        cn_name="表情包图库",
+        group=GROUP,
+        description="管理表情包图库：查看、搜索、导入、改标签、反馈",
+        preview=_preview,
+        summarize=make_summarize_from_preview(_preview),
     )
