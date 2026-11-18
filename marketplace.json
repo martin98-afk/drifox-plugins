@@ -6269,6 +6269,48 @@
             }
         },
         {
+            "name": "linksapi",
+            "description": "LinksAPI 服务商 — 国内直连的 OpenAI 兼容中转网关，聚合 GPT 全系模型，微信/支付宝充值，按量计费",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "provider"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/linksapi",
+                "ref": "main"
+            },
+            "components": {
+                "providers": true
+            },
+            "display_name": {
+                "zh": "LinksAPI 中转"
+            },
+            "keywords": [
+                "linksapi",
+                "中转",
+                "openai",
+                "gpt",
+                "服务商"
+            ],
+            "api_version": 2,
+            "homepage": "https://linksapi.cn",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-linksapi-v0.1.0/linksapi-0.1.0-all.tar.gz",
+                    "sha256": "7bcb58863844e6b170c6eb68d18ed685983937697558ff5529b92dc393ae67b4",
+                    "size": 2253
+                }
+            }
+        },
+        {
             "name": "live-data",
             "description": "实时数据查询 — 汇率、A股、大盘指数、金价、npm/PyPI/GitHub 包信息、天气、B站视频数据、IP 归属地，8 个免密钥公开接口聚合为 4 个工具。",
             "version": "0.1.1",
