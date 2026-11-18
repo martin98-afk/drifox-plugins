@@ -802,6 +802,7 @@
                 "zh": "表情包",
                 "en": "Biaoqingbao"
             },
+            "downloads": 2,
             "keywords": [
                 "meme",
                 "sticker",
@@ -850,7 +851,7 @@
             "display_name": {
                 "zh": "B站日报"
             },
-            "downloads": 41,
+            "downloads": 42,
             "keywords": [
                 "bilibili",
                 "b站",
@@ -1017,7 +1018,7 @@
             "display_name": {
                 "zh": "内置浏览器"
             },
-            "downloads": 97,
+            "downloads": 99,
             "keywords": [
                 "browser",
                 "web",
@@ -4965,7 +4966,7 @@
             "display_name": {
                 "zh": "Git 控制面板"
             },
-            "downloads": 104,
+            "downloads": 112,
             "keywords": [
                 "git",
                 "source-control",
@@ -6348,6 +6349,7 @@
             "display_name": {
                 "zh": "LinksAPI 中转"
             },
+            "downloads": 2,
             "keywords": [
                 "linksapi",
                 "中转",
