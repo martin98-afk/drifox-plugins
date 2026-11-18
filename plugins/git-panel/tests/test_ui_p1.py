@@ -320,6 +320,21 @@ class TestContextMenu(P1UITestBase):
         _APP.processEvents()
 
 
+class TestTabFont(P1UITestBase):
+    """tab 名的字体族必须取系统 UI 字体，不跟随宿主主题字体（行楷等）"""
+
+    def test_tab_font_not_theme_family(self):
+        card = cards.GitPanelCard()
+        card.set_context_provider(lambda: {"project_root": self.repo, "colors": {},
+                                           "font_family": "Xingkai SC", "font_size": 14})
+        card._apply_latest_theme()
+        # 根控件仍是宿主主题字体，tab 名单独回落系统字体
+        self.assertEqual(card.font().family(), "Xingkai SC")
+        self.assertEqual(card._tabs.font().family(), QApplication.font().family())
+        card.deleteLater()
+        _APP.processEvents()
+
+
 class TestInfoBar(P1UITestBase):
     def test_info_bar_success(self):
         card = cards.GitPanelCard()

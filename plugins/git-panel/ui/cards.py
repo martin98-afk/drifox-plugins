@@ -40,6 +40,7 @@ from PyQt5.QtGui import (
     QPainter, QPainterPath, QPen,
 )
 from PyQt5.QtWidgets import (
+    QApplication,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -2717,6 +2718,12 @@ class GitPanelCard(QWidget):
             "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
         )
 
+        # tab 名的字体族来自 widget font（上面的 QSS 只管颜色与内边距），
+        # 而根控件被设成宿主主题字体（如行楷）后会被子控件继承；
+        # 这里显式改回系统 UI 字体，tab 名不再跟随聊天字体。
+        tab_font = QFont(QApplication.font())
+        tab_font.setPointSize(int(fs) if fs else 14)
+        self._tabs.setFont(tab_font)
         self._tabs.setStyleSheet(
             f"QTabBar::tab {{ color: {tcs}; background: transparent; padding: 7px 12px; border-bottom: 2px solid transparent; }}"
             f"QTabBar::tab:selected {{ color: {self._cached_accent}; border-bottom-color: {self._cached_accent}; }}"
