@@ -814,6 +814,13 @@
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-biaoqingbao-v0.1.0/biaoqingbao-0.1.0-all.tar.gz",
+                    "sha256": "0f978efb24e164b1bff7fefac63ed76570653d1751ae6cc63a25aefb44977257",
+                    "size": 476084
+                }
             }
         },
         {
