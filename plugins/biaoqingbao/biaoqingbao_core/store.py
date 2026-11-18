@@ -231,6 +231,32 @@ def import_starter_pack(data_dir: Path, pack_dir: Path) -> dict:
     return {"added": added, "skipped": skipped}
 
 
+STARTER_MARKER = ".starter_imported"
+
+
+def ensure_starter_imported(data_dir: Path, pack_dir: Path) -> dict:
+    """首次使用时自动导入内置图库，只做一次。
+
+    用标记文件控制：
+    - 图库非空 → 打标记，不导入（尊重用户已有图库）
+    - 已导入过 → 直接跳过（用户清空图库后不会被重新填充）
+    - 首次且为空 → 导入 39 张并打标记
+    """
+    marker = data_dir / STARTER_MARKER
+    if marker.is_file():
+        return {"imported": False, "reason": "already"}
+    if load_stickers(data_dir):
+        marker.write_text("skip: library not empty", encoding="utf-8")
+        return {"imported": False, "reason": "not_empty"}
+    if not (pack_dir / "memes").is_dir():
+        return {"imported": False, "reason": "no_starter_pack"}
+    result = import_starter_pack(data_dir, pack_dir)
+    marker.write_text(
+        f"imported: added={result.get('added', 0)}", encoding="utf-8"
+    )
+    return {"imported": True, **result}
+
+
 def delete_sticker(data_dir: Path, sticker_id: str) -> bool:
     """删除图库条目并移除图片文件。"""
     stickers = load_stickers(data_dir)

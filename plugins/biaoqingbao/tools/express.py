@@ -112,6 +112,12 @@ def _impl(tool_ctx, **kwargs):
 
     stickers = store.load_stickers(data_dir)
     if not stickers:
+        # 首次使用：自动导入内置图库（只做一次，用户清空后不再自动填）
+        store.ensure_starter_imported(
+            data_dir, Path(__file__).resolve().parent.parent / "starter"
+        )
+        stickers = store.load_stickers(data_dir)
+    if not stickers:
         return ToolResult(
             False,
             error="表情包库是空的。让用户先往图库放几张图（或用 biaoqingbao_add_sticker 导入）",
