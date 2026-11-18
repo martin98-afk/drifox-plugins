@@ -7,9 +7,8 @@
 
 展示通道选择：正文 markdown 图片（宿主 _resolve_image_src 转 file:///）。
 不走工具卡 body —— 简洁模式下宿主 lazy_body 只给 body 留空壳，靠「展开工具区」
-时 JS 注入，而本工具卡片 keep_in_content 留在正文，永远等不到注入（表现为只有
-标题行，图不出现）。缩略图负责控宽：正文图片只有 max-width:100%，原图 618px
-会撑满整行，缩略图的天然像素宽就是 180。
+时 JS 注入；卡片本身收在「工具与思考」折叠区。缩略图负责控宽：正文图片只有
+max-width:100%，原图 618px 会撑满整行，缩略图的天然像素宽就是 180。
 """
 from __future__ import annotations
 
@@ -157,7 +156,7 @@ def register(registry):
         group=GROUP,
         description="按自己的情绪挑一张表情包发出来",
         render_mode="inline",  # 单行卡：图片由回复正文承载，卡里不再渲染 body
-        keep_in_content=True,  # 表情卡常驻正文，不迁入「工具与思考」折叠区
+        # 不进正文：卡收进「工具与思考」折叠区，正文只留模型复述的图片
         preview=_preview,
         summarize=make_summarize_from_preview(_preview),
     )
