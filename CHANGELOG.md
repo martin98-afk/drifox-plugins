@@ -1,6 +1,13 @@
 # Changelog
 
 ## Unreleased
+### 🔧 file-designer v0.6.1：预览图片拖出恒名 download.png，多图在输入框互相覆盖
+- **症状**：从预览窗把图片拖进输入框，所有图片都叫 `download.png`，多张叠在一起分不清
+- **根因**：预览页图片是内联 `data:` URI，Chromium 对 data: 图片拖拽一律按 `download.<ext>` 命名（crbug 40556755，`download` 属性对 data scheme 无效），插件侧无法指定文件名
+- **修复**：渲染前把 base64 图片落盘为 `plugin_data/file-designer/preview_assets/<文档名>_NN.<ext>`，页面改引用相对路径（docx / pptx / 通用格式统一在 `_load_html` 前改写）；同一张图（base64 相同）复用同一文件；含落盘资产的页面强制走 `file://` 加载（`setHtml` 的 http baseUrl 下 file 子资源按跨源被拦，实测 `naturalWidth=0`）
+- **清理时机**：`preview_assets/` 在下一次打开文档时整体重置；关闭预览卡片不清目录
+- **性能**：39.2MB / 200 图实测加载 1.77s → 0.30s（落盘 216ms + 页面 0.08s）；小文档（0.52MB / 2 图）因 `file://` 固定导航开销慢约 0.25s；无图文档仍走 `setHtml` 不变
+- **验证**：新增 `tests/test_preview_assets.py` 5 例（唯一命名 / 同图复用 / 非图片 data URI 不动 / pptx JSON 资产 / reset 清理）；`plugins/file-designer/tests` 109 passed
 ### ✨ browser v1.8.0：收藏栏显示网页图标，修复删除收藏不刷新，历史弹窗放大
 - **收藏图标**：`bookmarks` 表新增 `icon` 列（base64 PNG），旧库首次打开自动 `ALTER TABLE` 迁移、原有收藏不丢；星标收藏、收藏面板「收藏当前页」、Ctrl+D 三个入口写入当前页 favicon，页面 `iconChanged` 时回填旧收藏缺失的图标；收藏栏、溢出面板、收藏面板列表统一 16px 显示，旧收藏在该网页打开过一次后自动补图
 - **修复**：收藏面板删除/新增后只重载面板自身，顶部收藏栏仍显示旧数据 —— 改为操作后调 `owner._refresh_bookmarks()` 同步

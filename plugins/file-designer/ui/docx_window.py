@@ -36,6 +36,7 @@ from .pick_format import (
     format_pick,
     normalize_annotations,
 )
+from .preview_assets import PreviewAssets
 from .theme import theme_colors
 
 _CURRENT_CARD = None
@@ -64,6 +65,7 @@ class DocxWindowCard(QWidget):
         self._annotate_on = False
         self._count = 0
         self._annotations = []
+        self._preview_assets = None
         self._fs = 15
         self._accent_hex = "#66c6ff"
         self._outer_bg = "#1d2533"
@@ -237,6 +239,7 @@ class DocxWindowCard(QWidget):
             self._set_status(f"解析失败: {e}")
             return False
         self._reset_state("docx")
+        self._reset_assets(p)
         self._blocks = blocks
         self._current_path = str(p)
         restored = self._load_annotations()
@@ -266,6 +269,7 @@ class DocxWindowCard(QWidget):
             self._set_status(f"解析失败: {e}")
             return False
         self._reset_state(spec["mode"])
+        self._reset_assets(p)
         self._generic_model = model
         self._generic_mode = spec["mode"]
         self._current_path = str(p)
@@ -300,8 +304,8 @@ class DocxWindowCard(QWidget):
         self._btn_pick.setChecked(False)
         self._btn_annotate.setChecked(False)
 
-    def _preview_file(self):
-        """大 HTML 落盘文件（两个名字轮换，避免同 URL 缓存）。"""
+    def _preview_dir(self):
+        """预览 HTML 与图片资产的落盘目录（HTML 与 preview_assets/ 同级）。"""
         try:
             from app.plugins.sdk import caps_for
 
@@ -312,8 +316,20 @@ class DocxWindowCard(QWidget):
             root = Path.home() / ".drifox"
         d = root / "plugin_data" / "file-designer"
         d.mkdir(parents=True, exist_ok=True)
+        return d
+
+    def _preview_file(self):
+        """大 HTML 落盘文件（两个名字轮换，避免同 URL 缓存）。"""
+        d = self._preview_dir()
         self._pv_flip = not getattr(self, "_pv_flip", False)
         return d / ("preview_a.html" if self._pv_flip else "preview_b.html")
+
+    def _reset_assets(self, path):
+        """按文档重建图片资产目录：图片落盘后拖出预览即带真实文件名。"""
+        try:
+            self._preview_assets = PreviewAssets(self._preview_dir(), Path(path).stem)
+        except Exception:
+            self._preview_assets = None
 
     def _inline_qwebchannel(self, html):
         """qwebchannel.js 内联（QFile 读 qrc 资源）：file:// 加载路径下拾取/标注桥照常可用。"""
@@ -332,13 +348,17 @@ class DocxWindowCard(QWidget):
 
     def _load_html(self, html):
         """>1.5MB 走本地文件加载：setHtml 超 ~2MB 静默不渲染（售前 PPT 39MB HTML
-        表现为状态栏「已打开」但内容不刷新）。"""
+        表现为状态栏「已打开」但内容不刷新）。图片落盘后也必须走 file://：
+        setHtml 的 http baseUrl 下 file 子资源被 Chromium 拦掉。"""
         payload = self._inline_qwebchannel(html)
+        has_assets = False
+        if self._preview_assets is not None:
+            payload, has_assets = self._preview_assets.rewrite_html(payload)
         try:
             size = len(payload.encode("utf-8"))
         except Exception:
             size = len(payload)
-        if size <= 1_500_000:
+        if size <= 1_500_000 and not has_assets:
             self._view.setHtml(payload, QUrl("http://file-designer.local/"))
             return
         f = self._preview_file()
@@ -363,6 +383,7 @@ class DocxWindowCard(QWidget):
             self._set_status(f"解析失败: {e}")
             return False
         self._reset_state("pptx")
+        self._reset_assets(p)
         self._pptx_model = model
         self._current_path = str(p)
         restored = self._load_annotations()

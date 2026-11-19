@@ -20,12 +20,12 @@
 - **预览（docx）**：python-docx XML 流遍历解析 → 自生成 HTML（QWebEngineView 渲染）
   - 标题层级 / 段落 / 粗斜体下划线 / 列表
   - 表格（colspan / rowspan，vMerge + gridSpan）
-  - 内嵌图片（data URI）
+  - 内嵌图片（data URI）：渲染前落盘为 `plugin_data/file-designer/preview_assets/<文档名>_NN.<ext>`，页面改引用相对路径——Chromium 对 data: URI 图片拖出时一律命名 download.png（多图互相覆盖），file:// 资源拖出即带原文档名
   - OMML 公式 HTML/CSS 模拟（上下标/分数/根号/nary，复杂结构降级带边框文本块）
 - **预览（pptx）**：python-pptx 解析 → 固定画布绝对定位渲染（每页一张 slide）
   - 文本框/占位符（字号/颜色/加粗/对齐/行距，版式占位符回退）、图片、表格、形状填充
   - 版式/母版非占位符形状垫底渲染（背景图/装饰件，showMasterSp="0" 时跳过母版），背景填充链 slide→layout→master（支持图片填充）
-  - 图片按 blob 哈希去重；大 HTML（>1.5MB）自动改走本地文件加载（setHtml 超 ~2MB 静默不渲染）
+  - 图片按 blob 哈希去重；图片同样落盘为本地资产（拖出预览带真实文件名）；大 HTML（>1.5MB）或含落盘资产时改走本地文件加载（setHtml 超 ~2MB 静默不渲染）
   - 图表/媒体/动画降级为占位块（不渲染）
 - **预览（xmind）**：自绘 SVG，根居中、一级分支左右交替、贝塞尔连线、文本按宽度估算换行（孤字平衡）；视图自适应铺满窗口（fit），滚轮缩放（围绕鼠标点）、按住拖拽平移；不还原原文件配色与自由布局
 - **预览（xlsx / csv）**：统一 HTML 表格，多 sheet 页内 tab 切换、冻结首行、合并单元格；列宽按原生列宽（csv 按字符估算）换算百分比铺满窗口，列少拉伸、列多滚动；零点 datetime 只显示日期；视图满高，按住拖拽平移；数据优先，不还原颜色字体
@@ -48,6 +48,7 @@ ui/formats.py        格式注册表（后缀 → mode / parse / render）+ 旧�
 ui/docx_parser.py    XML 流遍历 → 中间结构 Block（纯函数，可单测）
 ui/html_renderer.py  Block → HTML（data-anchor + QWebChannel 桥，纯函数，可单测）
 ui/docx_window.py    窗口（打开分派 / 拖拽 / 缩放 / 状态栏 / 拾取标注接线）
+ui/preview_assets.py 预览图片落盘（data URI → preview_assets/<文档名>_NN.ext）
 ui/picker.py         Bridge + 拾取态 + 截图裁剪 + input.write 回填
 ui/pick_format.py    按 mode 组装回填文本与标注发送文本（纯函数，可单测）
 ui/pptx_parser.py    python-pptx → 固定画布中间结构（纯函数）
