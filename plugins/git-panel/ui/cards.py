@@ -158,6 +158,7 @@ def _fallback_semantic(key: str) -> str:
         "del": ("#f14c4c", "#dc2626"),
         "hover": ("rgba(255,255,255,0.07)", "rgba(0,0,0,0.05)"),
         "panel": ("rgba(255,255,255,0.045)", "rgba(0,0,0,0.04)"),
+        "solid": ("rgba(48,48,50,0.98)", "rgba(255,255,255,0.98)"),
     }
     d, l = table[key]
     return d if dark else l
@@ -2502,6 +2503,7 @@ class GitPanelCard(QWidget):
         self._cached_del = _fallback_semantic("del")
         self._cached_hover = _fallback_semantic("hover")
         self._cached_panel = _fallback_semantic("panel")
+        self._cached_solid = _fallback_semantic("solid")
 
         self._runner = TaskRunner()
         runner = self._runner
@@ -2552,6 +2554,7 @@ class GitPanelCard(QWidget):
         self._cached_del = _sem("del", "syntax_error")
         self._cached_hover = _sem("hover", "hover_bg")
         self._cached_panel = _sem("panel", "card_bg_dim")
+        self._cached_solid = _sem("solid", "card_bg_solid")
         self._cached_ff = font_family
         self._cached_fs = font_size
 
@@ -2718,11 +2721,11 @@ class GitPanelCard(QWidget):
             "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
         )
 
-        # tab 名的字体族来自 widget font（上面的 QSS 只管颜色与内边距），
-        # 而根控件被设成宿主主题字体（如行楷）后会被子控件继承；
-        # 这里显式改回系统 UI 字体，tab 名不再跟随聊天字体。
+        # tab 名的字体族取系统 UI 字体（上面的 QSS 只管颜色与内边距），
+        # 而根控件被设成宿主主题字体（如行楷）+ 正文字号后会被子控件继承；
+        # 字号在主题字号上收 3 号，避免 tab 名比正文更抢眼。
         tab_font = QFont(QApplication.font())
-        tab_font.setPointSize(int(fs) if fs else 14)
+        tab_font.setPointSize(max(int(fs) - 3, 9) if fs else 9)
         self._tabs.setFont(tab_font)
         self._tabs.setStyleSheet(
             f"QTabBar::tab {{ color: {tcs}; background: transparent; padding: 7px 12px; border-bottom: 2px solid transparent; }}"
@@ -2736,6 +2739,13 @@ class GitPanelCard(QWidget):
         # delegate 自绘路径不继承 QSS 的 color，显式下发主题正文色
         try:
             self._changes_view.set_theme_colors(tc)
+        except (RuntimeError, AttributeError, TypeError):
+            pass
+        # 悬停气泡：原生 QToolTip 的字号/底色被宿主全局接管，改由插件自绘
+        try:
+            self._changes_view.set_tooltip_theme(
+                tc, self._cached_solid, border_c, ff, max(fs - 3, 11)
+            )
         except (RuntimeError, AttributeError, TypeError):
             pass
         self._summary_lb.setStyleSheet(f"color: {tcs}; background: transparent; font-size: {max(fs - 2, 10)}px;")

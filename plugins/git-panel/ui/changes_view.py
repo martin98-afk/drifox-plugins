@@ -1,9 +1,11 @@
 """变更文件的轻量模型/视图：列表与文件树共用交互和状态。"""
 import os
 
-from PyQt5.QtCore import QSettings, QRect, QSize, Qt, pyqtSignal
-from PyQt5.QtGui import QColor, QPainter, QPalette, QStandardItem, QStandardItemModel
-from PyQt5.QtWidgets import QAbstractItemView, QStyle, QStyledItemDelegate, QTreeView
+from PyQt5.QtCore import QEvent, QPoint, QSettings, QRect, QSize, Qt, pyqtSignal
+from PyQt5.QtGui import QColor, QFont, QPainter, QPalette, QStandardItem, QStandardItemModel
+from PyQt5.QtWidgets import (
+    QAbstractItemView, QApplication, QLabel, QStyle, QStyledItemDelegate, QTreeView,
+)
 
 FILE_ROLE = Qt.UserRole + 1
 KEY_ROLE = Qt.UserRole + 2
@@ -85,6 +87,50 @@ class _FileDelegate(QStyledItemDelegate):
         return QStyleOptionViewItem(option)
 
 
+class _HoverTip(QLabel):
+    """文件行悬停气泡。
+
+    不用原生 QToolTip：它的字体与底色被宿主全局接管（QFont(ff, fs) 把像素
+    字号当磅值用，字号膨胀一倍），插件侧无法改；这里自绘一个跟随卡片主题的
+    顶层提示窗，字号与配色由卡片下发。
+    """
+
+    def __init__(self):
+        super().__init__(None, Qt.ToolTip | Qt.FramelessWindowHint)
+        self.setAttribute(Qt.WA_ShowWithoutActivating, True)
+
+    def set_theme(self, fg: str, bg: str, border: str, font_family: str = "", font_size: int = 0):
+        self.setFont(self._make_font(font_family, font_size))
+        # 内边距用 contentsMargins 而不是 QSS padding：padding 要等 polish 后才进 sizeHint，
+        # 首次 adjustSize 会算小一号导致文字贴边
+        self.setContentsMargins(10, 6, 10, 6)
+        self.setStyleSheet(
+            f"background-color: {bg}; color: {fg}; border: 1px solid {border}; border-radius: 6px;"
+        )
+
+    @staticmethod
+    def _make_font(font_family: str, font_size: int) -> QFont:
+        # QLabel 装了 QSS 后只管颜色/边框，字体走 setFont；字号按像素给，避免磅值膨胀
+        font = QFont(font_family) if font_family else QFont()
+        if font_size:
+            font.setPixelSize(max(10, int(font_size)))
+        return font
+
+    def show_text(self, text: str, global_pos: QPoint):
+        self.setText(text)
+        # 不用 adjustSize：它对顶层窗口会钳到屏幕的 2/3，长路径会被裁短
+        self.setWordWrap(False)
+        self.resize(self.sizeHint())
+        screen = QApplication.screenAt(global_pos) or QApplication.primaryScreen()
+        x, y = global_pos.x() + 14, global_pos.y() + 18
+        if screen is not None:
+            area = screen.availableGeometry()
+            x = min(max(x, area.left() + 4), area.right() - self.width() - 4)
+            y = min(max(y, area.top() + 4), area.bottom() - self.height() - 4)
+        self.move(x, y)
+        self.show()
+
+
 class ChangesView(QTreeView):
     diff_requested = pyqtSignal(str, bool, str)
     action_requested = pyqtSignal(str, object)
@@ -115,6 +161,8 @@ class ChangesView(QTreeView):
         self.expanded.connect(lambda i: self._remember_dir(i, True))
         self.collapsed.connect(lambda i: self._remember_dir(i, False))
         self._sync_selection_palette()
+        self._tip = _HoverTip()
+        self.destroyed.connect(self._tip.deleteLater)
         self.set_mode(str(self._settings.value("changes_view", "list")))
 
     def _sync_selection_palette(self):
@@ -136,6 +184,14 @@ class ChangesView(QTreeView):
             pal.setColor(QPalette.Link, QColor(link_color))
         self.setPalette(pal)
         self.viewport().update()
+
+    def set_tooltip_theme(self, fg: str, bg: str, border: str,
+                          font_family: str = "", font_size: int = 0):
+        """悬停气泡配色与字号：跟随卡片主题，替代被宿主接管的原生 QToolTip"""
+        self._tip.set_theme(fg, bg, border, font_family, font_size)
+
+    def hide_tooltip(self):
+        self._tip.hide()
 
     @property
     def mode(self):
@@ -233,6 +289,30 @@ class ChangesView(QTreeView):
 
     def _open(self, info):
         self.diff_requested.emit(info["path"], info["staged"], info["status"])
+
+    def viewportEvent(self, event):
+        """接管文件行 tooltip：原生 QToolTip 字号/底色不受插件控制，改用自绘气泡"""
+        kind = event.type()
+        if kind == QEvent.ToolTip:
+            index = self.indexAt(event.pos())
+            tip = index.data(Qt.ToolTipRole) if index.isValid() else ""
+            if tip:
+                self._tip.show_text(str(tip), event.globalPos())
+            else:
+                self._tip.hide()
+            return True
+        if kind in (QEvent.Leave, QEvent.MouseButtonPress, QEvent.Wheel, QEvent.Hide):
+            self._tip.hide()
+        return super().viewportEvent(event)
+
+    def mouseMoveEvent(self, event):
+        # 悬停到另一行时旧气泡内容已过期：先收起，等 Qt 重新派发 ToolTip
+        if self._tip.isVisible():
+            index = self.indexAt(event.pos())
+            tip = index.data(Qt.ToolTipRole) if index.isValid() else ""
+            if str(tip or "") != self._tip.text():
+                self._tip.hide()
+        super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         index = self.indexAt(event.pos())

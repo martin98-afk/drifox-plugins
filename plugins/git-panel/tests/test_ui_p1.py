@@ -321,17 +321,45 @@ class TestContextMenu(P1UITestBase):
 
 
 class TestTabFont(P1UITestBase):
-    """tab 名的字体族必须取系统 UI 字体，不跟随宿主主题字体（行楷等）"""
+    """tab 名的字体族必须取系统 UI 字体，不跟随宿主主题字体（行楷等）；字号比正文字号小 3 号"""
 
     def test_tab_font_not_theme_family(self):
         card = cards.GitPanelCard()
         card.set_context_provider(lambda: {"project_root": self.repo, "colors": {},
-                                           "font_family": "Xingkai SC", "font_size": 14})
+                                           "font_family": "Xingkai SC", "font_size": 16})
         card._apply_latest_theme()
         # 根控件仍是宿主主题字体，tab 名单独回落系统字体
         self.assertEqual(card.font().family(), "Xingkai SC")
         self.assertEqual(card._tabs.font().family(), QApplication.font().family())
+        self.assertEqual(card._tabs.font().pointSize(), 13)
         card.deleteLater()
+        _APP.processEvents()
+
+
+class TestChangesTooltip(P1UITestBase):
+    """文件行 tooltip 走插件自绘气泡：原生 QToolTip 字号被宿主放大且底色不受控"""
+
+    def test_viewport_tooltip_uses_bubble(self):
+        from PyQt5.QtCore import QEvent, QPoint
+        from PyQt5.QtGui import QHelpEvent
+
+        view = cards.ChangesView()
+        view.resize(420, 240)
+        view.set_tooltip_theme("#ffffff", "#303032", "#3d3d3d", "Microsoft YaHei", 15)
+        view.set_items([
+            {"path": "plugins/git-panel/ui/cards.py", "status": "M", "staged": False},
+        ])
+        view.show()
+        index = view.file_indexes()[0]
+        pos = view.visualRect(index).center()
+        ev = QHelpEvent(QEvent.ToolTip, pos, view.viewport().mapToGlobal(pos))
+        # 拦下原生 tooltip，改由自绘气泡显示
+        self.assertTrue(view.viewportEvent(ev))
+        self.assertEqual(view._tip.text(),
+                         "plugins/git-panel/ui/cards.py\n工作区 · M")
+        self.assertEqual(view._tip.font().pixelSize(), 15)
+        view._tip.hide()
+        view.deleteLater()
         _APP.processEvents()
 
 
