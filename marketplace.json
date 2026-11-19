@@ -2917,7 +2917,7 @@
             "display_name": {
                 "zh": "DSH 插件迁移"
             },
-            "downloads": 5,
+            "downloads": 6,
             "keywords": [
                 "dsh",
                 "deepseek-harness",
@@ -6983,7 +6983,7 @@
             "display_name": {
                 "zh": "扫雷游戏"
             },
-            "downloads": 8,
+            "downloads": 9,
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
@@ -8478,7 +8478,7 @@
             "display_name": {
                 "zh": "快速截图"
             },
-            "downloads": 45,
+            "downloads": 47,
             "keywords": [
                 "screenshot",
                 "clipboard",
@@ -11411,7 +11411,7 @@
             "display_name": {
                 "zh": "子智能体编排"
             },
-            "downloads": 3,
+            "downloads": 4,
             "icon": {
                 "light": "icon.png",
                 "dark": "icon_dark.png"
