@@ -4066,7 +4066,7 @@
         {
             "name": "file-designer",
             "description": "多格式文件设计模式 — 独立窗口预览 Word/PPT/Excel/CSV/XMind/Mermaid 流程图，页内拾取元素并标注，锚点+文本+截图回填输入框，让模型精确修改。",
-            "version": "0.6.0",
+            "version": "0.6.1",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -4123,19 +4123,19 @@
             },
             "tarball": {
                 "darwin": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-file-designer-v0.6.0/file-designer-0.6.0-darwin.tar.gz",
-                    "sha256": "7a50500019dc67c8580eb8143f795d4a84c329660de3e28c885cc63cd50e3d65",
-                    "size": 15485479
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-file-designer-v0.6.1/file-designer-0.6.1-darwin.tar.gz",
+                    "sha256": "0c41e985783d62af8fb6af8598c5b9dedf34ed0616bc9fc3953c810303c49122",
+                    "size": 15486757
                 },
                 "linux": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-file-designer-v0.6.0/file-designer-0.6.0-linux.tar.gz",
-                    "sha256": "7c8ea758f55b51883e5c619c23e3e8b82518522bbe78d630d7d351a847929bc7",
-                    "size": 14402180
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-file-designer-v0.6.1/file-designer-0.6.1-linux.tar.gz",
+                    "sha256": "2ad1e3b5deeb04e9a8c5fc39b5518eb153fee0dc34f9ac2ae153c43fef5bb9c0",
+                    "size": 14402137
                 },
                 "win32": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-file-designer-v0.6.0/file-designer-0.6.0-win32.tar.gz",
-                    "sha256": "501bf8ea05f85ad4d9e2832232dbe3710a4ddca7c62d67abac6e05dacb39d81f",
-                    "size": 13154095
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-file-designer-v0.6.1/file-designer-0.6.1-win32.tar.gz",
+                    "sha256": "2f959d434bda24594c931d6a979a9ca21d8bfd78364ef690fe50009b3b6f44c1",
+                    "size": 13154757
                 }
             }
         },
