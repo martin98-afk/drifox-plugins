@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1795229786.8956258,
+  "fetched_at": 1795256851.856502,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -95,7 +95,7 @@
     "fe-fw": 9,
     "feature-dev": 5,
     "figma": 2,
-    "file-designer": 12,
+    "file-designer": 13,
     "floating-chat": 1,
     "fosunwealth": 1,
     "frog-picnic": 3,
@@ -112,7 +112,7 @@
     "gateway-wechat": 35,
     "gateway-wecom": 6,
     "git-dashboard": 20,
-    "git-panel": 114,
+    "git-panel": 115,
     "git-status": 3,
     "git-workflow": 4,
     "gitee": 0,
