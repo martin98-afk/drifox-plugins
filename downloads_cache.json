@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1795389857.7011352,
+  "fetched_at": 1795405981.517121,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -112,7 +112,7 @@
     "gateway-wechat": 35,
     "gateway-wecom": 6,
     "git-dashboard": 20,
-    "git-panel": 115,
+    "git-panel": 116,
     "git-status": 3,
     "git-workflow": 4,
     "gitee": 0,
@@ -145,7 +145,7 @@
     "knowledge-base-skills": 2,
     "laputa-fog": 11,
     "linear": 0,
-    "linksapi": 3,
+    "linksapi": 4,
     "live-data": 6,
     "lucy-edgerunner": 4,
     "lunheng-article-pipeline": 0,
