@@ -1018,7 +1018,7 @@
             "display_name": {
                 "zh": "内置浏览器"
             },
-            "downloads": 100,
+            "downloads": 101,
             "keywords": [
                 "browser",
                 "web",
@@ -3467,7 +3467,7 @@
             "display_name": {
                 "zh": "数据智能专家包"
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "agents",
                 "experts",
@@ -3508,7 +3508,7 @@
             "display_name": {
                 "zh": "技术工程专家包"
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "agents",
                 "experts",
@@ -6770,7 +6770,7 @@
             "display_name": {
                 "zh": "会议纪要"
             },
-            "downloads": 17,
+            "downloads": 18,
             "keywords": [
                 "meeting",
                 "transcript",
