@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>不落地的人 · 一则寓言</title>
+<style>
+  :root{
+    --ink-green: #2B3A2C;
+    --ink-green-deep: #1B2620;
+    --parchment: #EFE6CC;
+    --parchment-edge: #DCCBA0;
+    --bark: #6B4F3B;
+    --bark-soft: #8a6c52;
+    --moss: #7E9A63;
+    --slate: #51707a;
+    --ochre: #C97A3D;
+    --ink-text: #2B2018;
+    --font-display: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
+    --font-body: "Noto Serif SC", "Songti SC", serif;
+    --font-utility: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+    --font-roman: "EB Garamond", "Times New Roman", Georgia, serif;
+  }
+
+  *{ box-sizing: border-box; margin:0; padding:0; }
+
+  html,body{
+    min-height:100vh;
+    background: var(--ink-green-deep);
+    color: var(--ink-text);
+    font-family: var(--font-body);
+    overflow-x:hidden;
+  }
+
+  /* 场景背景 */
+  .scene-layer{
+    position:fixed; inset:0; z-index:0;
+    background-size: cover;
+    background-position: center;
+    opacity:0;
+    transition: opacity 1.5s ease;
+  }
+  .scene-layer.active{ opacity:1; }
+
+  .scene-overlay{
+    position:fixed; inset:0; z-index:1;
+    background: linear-gradient(180deg, 
+      rgba(27,38,32,0.3) 0%, 
+      rgba(27,38,32,0.1) 30%,
+      rgba(27,38,32,0.4) 70%,
+      rgba(27,38,32,0.85) 100%);
+    pointer-events:none;
+  }
+
+  /* 粒子 */
+  .particle-layer{
+    position:fixed; inset:0; z-index:2;
+    pointer-events:none; overflow:hidden;
+  }
+  .particle{
+    position:absolute;
+    animation: fall linear infinite;
+  }
+  @keyframes fall{
+    0%{ transform: translateY(-10vh) rotate(0deg); opacity:0; }
+    10%{ opacity:0.6; }
+    90%{ opacity:0.4; }
+    100%{ transform: translateY(110vh) rotate(360deg); opacity:0; }
+  }
+
+  /* 火光 */
+  .fire-glow{
+    position:fixed; inset:0; z-index:2;
+    pointer-events:none; opacity:0;
+    background: radial-gradient(ellipse at 50% 60%, rgba(201,122,61,0.15) 0%, transparent 60%);
+    animation: firePulse 2s ease-in-out infinite alternate;
+    transition: opacity 1.5s ease;
+  }
+  .fire-glow.active{ opacity:1; }
+  @keyframes firePulse{
+    0%{ opacity:0.3; } 100%{ opacity:0.7; }
+  }
+
+  /* 雾气 */
+  .mist-layer{
+    position:fixed; bottom:0; left:0; right:0; height:40vh; z-index:2;
+    pointer-events:none;
+    background: linear-gradient(0deg, rgba(239,230,204,0.08) 0%, transparent 100%);
+    animation: mistDrift 12s ease-in-out infinite alternate;
+  }
+  @keyframes mistDrift{
+    0%{ transform: translateX(-20px); opacity:0.5; }
+    100%{ transform: translateX(20px); opacity:0.8; }
+  }
+
+  /* 光束（树冠透光）*/
+  .light-rays{
+    position:fixed; inset:0; z-index:2;
+    pointer-events:none; opacity:0;
+    background:
+      linear-gradient(105deg, transparent 40%, rgba(239,230,204,0.06) 45%, transparent 52%),
+      linear-gradient(100deg, transparent 60%, rgba(239,230,204,0.05) 66%, transparent 74%),
+      linear-gradient(110deg, transparent 20%, rgba(239,230,204,0.04) 28%, transparent 36%);
+    animation: raysDrift 18s ease-in-out infinite alternate;
+    transition: opacity 2s ease;
+  }
+  .light-rays.active{ opacity:1; }
+  @keyframes raysDrift{
+    0%{ transform: translateX(-30px) skewX(0deg); }
+    100%{ transform: translateX(30px) skewX(1deg); }
+  }
+
+  /* 萤火虫 */
+  .firefly{
+    position:absolute; width:4px; height:4px; border-radius:50%;
+    background: rgba(220,230,150,0.9);
+    box-shadow: 0 0 8px 2px rgba(200,220,120,0.5);
+    animation: fireflyDrift ease-in-out infinite, fireflyGlow ease-in-out infinite;
+  }
+  @keyframes fireflyDrift{
+    0%{ transform: translate(0,0); }
+    25%{ transform: translate(30px,-40px); }
+    50%{ transform: translate(-20px,-80px); }
+    75%{ transform: translate(25px,-120px); }
+    100%{ transform: translate(0,-160px); }
+  }
+  @keyframes fireflyGlow{
+    0%,100%{ opacity:0; }
+    20%,80%{ opacity:1; }
+    50%{ opacity:0.3; }
+  }
+
+  /* 雨 */
+  .raindrop{
+    position:absolute; width:1px; height:14px;
+    background: linear-gradient(180deg, transparent, rgba(200,215,225,0.4));
+    animation: rainFall linear infinite;
+  }
+  @keyframes rainFall{
+    0%{ transform: translateY(-10vh); opacity:0; }
+    10%{ opacity:0.7; }
+    95%{ opacity:0.5; }
+    100%{ transform: translateY(110vh); opacity:0; }
+  }
+
+  /* 星星 */
+  .star{
+    position:absolute; border-radius:50%;
+    background: rgba(239,235,220,0.9);
+    animation: starTwinkle ease-in-out infinite;
+  }
+  @keyframes starTwinkle{
+    0%,100%{ opacity:0.2; transform: scale(0.8); }
+    50%{ opacity:0.9; transform: scale(1.1); }
+  }
+
+  /* 视差容器（背景随鼠标轻微移动）*/
+  .scene-layer{ will-change: transform; }
+
+  /* 角色立绘 */
+  .character-portrait{
+    position:fixed; z-index:3;
+    transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    opacity:0; transform: translateY(20px);
+    filter: drop-shadow(0 20px 40px rgba(0,0,0,0.5));
+  }
+  .character-portrait.active{ opacity:1; transform: translateY(0); }
+  .character-portrait.left{ left:5%; bottom:10%; width:280px; }
+  .character-portrait.right{ right:5%; bottom:10%; width:280px; }
+  .character-portrait img{
+    width:100%; height:auto; border-radius: 4px;
+    mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+  }
+  .character-name{
+    position:absolute; bottom:-30px; left:50%; transform:translateX(-50%);
+    font-family: var(--font-utility); font-size: 12px; letter-spacing: 0.15em;
+    color: var(--parchment); opacity:0.7; white-space:nowrap;
+  }
+
+  /* 主内容区 */
+  .stage{
+    position:relative; z-index:10;
+    min-height:100vh;
+    display:flex; align-items:flex-end; justify-content:center;
+    padding: 40px 18px 60px;
+  }
+  .book{
+    width:100%; max-width:720px;
+    margin-bottom: 5vh;
+  }
+  .page{
+    background: rgba(239,230,204,0.92);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(220,203,160,0.6);
+    box-shadow: 0 24px 60px -20px rgba(0,0,0,0.6);
+    padding: 38px 40px 34px;
+    position:relative;
+    animation: pageEnter 0.6s ease;
+  }
+  @keyframes pageEnter{
+    from{ opacity:0; transform: translateY(30px); }
+    to{ opacity:1; transform: translateY(0); }
+  }
+  .page::before{
+    content:""; position:absolute; top:0; left:0; right:0; height:5px;
+    background: linear-gradient(90deg, var(--bark) 0%, var(--bark-soft) 50%, var(--bark) 100%);
+  }
+
+  @media (max-width: 540px){
+    .page{ padding: 28px 22px 26px; }
+    .character-portrait{ width:180px !important; }
+  }
+
+  /* 标题 */
+  .eyebrow{
+    display:flex; align-items:baseline; gap:10px;
+    font-family: var(--font-utility); font-size: 12px; letter-spacing: .16em;
+    color: var(--bark); margin-bottom: 4px;
+  }
+  .eyebrow .roman{
+    font-family: var(--font-roman); font-style: italic; font-size: 15px; color: var(--ochre);
+  }
+  .eyebrow .twig-rule{ flex:1; height:1px; background: var(--parchment-edge); }
+  h1.title{
+    font-family: var(--font-display); font-weight:700;
+    font-size: clamp(22px, 5vw, 30px); margin: 6px 0 18px;
+  }
+
+  /* 属性 */
+  .stats{
+    display:flex; flex-direction:column; gap:6px;
+    margin: 6px 0 26px; padding: 14px 16px;
+    background: rgba(255,255,255,0.25);
+    border: 1px solid rgba(220,203,160,0.5);
+  }
+  .stat-row{ display:flex; align-items:center; gap:10px; }
+  .stat-label{
+    font-family: var(--font-utility); font-size: 11.5px;
+    letter-spacing: .1em; width: 56px; flex-shrink:0;
+  }
+  .stat-label.freedom{ color: var(--moss); }
+  .stat-label.wisdom{ color: var(--slate); }
+  .stat-label.bond{ color: var(--ochre); }
+  .leaf-track{ display:flex; gap:4px; }
+  .leaf-icon{ width:13px; height:13px; }
+  .leaf-icon.empty path{ fill: rgba(43,32,24,.14); }
+  .leaf-icon.pulse{ animation: leafPop .5s ease; }
+  @keyframes leafPop{ 0%{ transform: scale(.4); } 60%{ transform: scale(1.25); } 100%{ transform: scale(1); } }
+
+  /* 故事文字 */
+  .story{ font-size: 16.5px; line-height: 1.95; }
+  .story p{ margin: 0 0 1em; }
+  .story p:first-of-type::first-letter{
+    font-family: var(--font-display); font-weight:700;
+    font-size: 2.5em; line-height: .8; float:left;
+    padding: 4px 8px 0 0; color: var(--bark);
+  }
+  .reaction{
+    font-style: italic; color: var(--bark);
+    border-left: 2px solid var(--parchment-edge);
+    padding-left: 12px; margin: 18px 0 0; font-size: 15px;
+  }
+
+  /* 选择 */
+  .choices{ list-style:none; margin: 26px 0 0; padding:0; display:flex; flex-direction:column; gap:2px; }
+  .choice-btn{
+    width:100%; text-align:left; display:flex; align-items:center; gap:12px;
+    background:none; border:none; border-top: 1px solid rgba(220,203,160,0.6);
+    font-family: var(--font-body); font-size: 15.5px; color: var(--ink-text);
+    padding: 13px 4px; cursor:pointer; min-height:44px;
+    transition: all .3s ease;
+  }
+  .choices li:last-child .choice-btn{ border-bottom: 1px solid rgba(220,203,160,0.6); }
+  .choice-btn:hover{ color: var(--ochre); padding-left: 12px; background: rgba(201,122,61,0.05); }
+  .choice-btn:active{ transform: translateX(2px); }
+
+  /* 按钮 */
+  .continue-row{ margin-top: 28px; display:flex; justify-content:flex-end; }
+  .btn-continue, .btn-start, .btn-restart{
+    font-family: var(--font-utility); font-size: 13px; letter-spacing:.08em;
+    background: var(--bark); color: var(--parchment);
+    border:none; padding: 11px 22px; cursor:pointer;
+    transition: all .3s ease;
+  }
+  .btn-continue:hover, .btn-start:hover, .btn-restart:hover{
+    background: var(--ink-green-deep); transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  /* 封面 */
+  .cover{ text-align:center; padding: 18px 6px 4px; }
+  .cover .kicker{
+    font-family: var(--font-utility); font-size: 11.5px; letter-spacing:.22em;
+    color: var(--bark); margin-bottom: 14px;
+  }
+  .cover h1{ font-size: clamp(28px, 7vw, 38px); margin: 0 0 16px; font-family: var(--font-display); font-weight:700; }
+  .cover .lede{ font-size: 15.5px; line-height:1.9; max-width: 440px; margin: 0 auto 26px; }
+  .cover .credit{ font-family: var(--font-utility); font-size: 11.5px; color: var(--bark-soft); margin-top: 26px; }
+  .cover-divider{ width:48px; height:1px; background: var(--bark-soft); margin: 0 auto 26px; }
+
+  /* 终局 */
+  .ending-tag{ font-family: var(--font-utility); font-size: 12px; letter-spacing:.18em; color: var(--ochre); margin-bottom: 6px; }
+  .ending-stats{ margin-top: 28px; padding-top: 18px; border-top: 1px solid var(--parchment-edge); font-family: var(--font-utility); font-size: 12px; color: var(--bark); }
+
+  /* 音效控制 */
+  .audio-control{
+    position:fixed; top:20px; right:20px; z-index:100;
+    width:40px; height:40px;
+    background: rgba(239,230,204,0.15);
+    border: 1px solid rgba(239,230,204,0.3);
+    border-radius: 50%;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(4px);
+  }
+  .audio-control:hover{ background: rgba(239,230,204,0.3); }
+  .audio-control svg{ width:18px; height:18px; fill: var(--parchment); }
+  .audio-control.muted{ opacity:0.5; }
+
+  /* 语言切换 */
+  .lang-switch{
+    position:fixed; top:20px; left:20px; z-index:100;
+    display:flex; gap:1px;
+    backdrop-filter: blur(4px);
+  }
+  .lang-btn{
+    font-family: var(--font-utility); font-size:11px; letter-spacing:.1em;
+    padding: 7px 13px; text-decoration:none; cursor:pointer;
+    background: rgba(239,230,204,0.15);
+    border: 1px solid rgba(239,230,204,0.3);
+    color: rgba(239,230,204,0.6);
+    transition: all .3s ease;
+  }
+  .lang-btn.active{
+    background: rgba(239,230,204,0.25);
+    color: rgba(239,230,204,0.95);
+    cursor: default;
+  }
+  .lang-btn:hover:not(.active){
+    background: rgba(239,230,204,0.25);
+    color: rgba(239,230,204,0.9);
+  }
+
+  /* 加载画面 */
+  .loading-screen{
+    position:fixed; inset:0; z-index:1000;
+    background: var(--ink-green-deep);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    transition: opacity 1s ease, visibility 1s ease;
+  }
+  .loading-screen.hidden{ opacity:0; visibility:hidden; pointer-events:none; }
+  .loading-leaf{ width:60px; height:60px; animation: spin 2s ease-in-out infinite; }
+  @keyframes spin{ 0%{ transform: rotate(0deg); } 50%{ transform: rotate(180deg) scale(1.1); } 100%{ transform: rotate(360deg); } }
+  .loading-text{ font-family: var(--font-utility); font-size: 12px; letter-spacing: 0.2em; color: var(--parchment); opacity:0.6; margin-top: 20px; }
+
+  .footer-note{ text-align:center; margin-top: 22px; font-family: var(--font-utility); font-size: 11px; color: rgba(239,230,204,.45); }
+</style>
+<base target="_blank">
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen">
+  <svg class="loading-leaf" viewBox="0 0 24 24"><path d="M12 2C7 6 3 11 3 15.5C3 20 7 23 12 23C17 23 21 20 21 15.5C21 11 17 6 12 2Z" fill="#7E9A63"/></svg>
+  <div class="loading-text">正在进入海桐镇...</div>
+</div>
+
+<div class="scene-layer" id="sceneBg"></div>
+<div class="scene-overlay"></div>
+<div class="particle-layer" id="particleLayer"></div>
+<div class="fire-glow" id="fireGlow"></div>
+<div class="mist-layer" id="mistLayer"></div>
+<div class="light-rays" id="lightRays"></div>
+
+<div class="character-portrait" id="charPortrait">
+  <img src="" alt="" id="charImg">
+  <div class="character-name" id="charName"></div>
+</div>
+
+<!-- 语言切换 -->
+<nav class="lang-switch" aria-label="Language">
+  <span class="lang-btn active">中文</span>
+  <a class="lang-btn" href="./en/" target="_self">EN</a>
+</nav>
+
+<div class="audio-control" id="audioControl" onclick="toggleAudio()">
+  <svg id="audioIcon" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+</div>
+
+<div class="stage">
+  <div class="book">
+    <div id="sceneRoot"></div>
+    <div class="footer-note">一则关于自由与归属的寓言</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ===================== 音效系统 =====================
+  var audioCtx = null;
+  var audioEnabled = true;
+  var bgmOscillator = null;
+  var bgmGain = null;
+
+  function initAudio(){
+    if(!audioCtx){
+      try {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      } catch(e) {}
+    }
+  }
+
+  function playTone(freq, duration, type, volume){
+    if(!audioEnabled || !audioCtx) return;
+    try {
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.type = type || 'sine';
+      osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+      gain.gain.setValueAtTime(volume || 0.1, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    } catch(e) {}
+  }
+
+  function playAmbientBgm(){
+    if(!audioEnabled || !audioCtx || bgmOscillator) return;
+    try {
+      bgmOscillator = audioCtx.createOscillator();
+      bgmGain = audioCtx.createGain();
+      bgmOscillator.type = 'sine';
+      bgmOscillator.frequency.setValueAtTime(110, audioCtx.currentTime);
+      bgmGain.gain.setValueAtTime(0.03, audioCtx.currentTime);
+      bgmOscillator.connect(bgmGain);
+      bgmGain.connect(audioCtx.destination);
+      bgmOscillator.start();
+    } catch(e) {}
+  }
+
+  function stopAmbientBgm(){
+    if(bgmOscillator){
+      try { bgmOscillator.stop(); } catch(e) {}
+      bgmOscillator = null;
+    }
+  }
+
+  function playChoiceSound(){
+    playTone(440, 0.15, 'sine', 0.08);
+    setTimeout(function(){ playTone(554, 0.15, 'sine', 0.06); }, 80);
+  }
+
+  function playPageTurnSound(){
+    playTone(330, 0.3, 'triangle', 0.05);
+  }
+
+  function playFireSound(){
+    if(!audioEnabled || !audioCtx) return;
+    try {
+      var bufferSize = audioCtx.sampleRate * 2;
+      var buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      var data = buffer.getChannelData(0);
+      for(var i = 0; i < bufferSize; i++){
+        data[i] = (Math.random() * 2 - 1) * 0.05;
+      }
+      var noise = audioCtx.createBufferSource();
+      noise.buffer = buffer;
+      var filter = audioCtx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 400;
+      var gain = audioCtx.createGain();
+      gain.gain.value = 0.08;
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(audioCtx.destination);
+      noise.start();
+      noise.stop(audioCtx.currentTime + 3);
+    } catch(e) {}
+  }
+
+  window.toggleAudio = function(){
+    audioEnabled = !audioEnabled;
+    var btn = document.getElementById('audioControl');
+    var icon = document.getElementById('audioIcon');
+    if(audioEnabled){
+      btn.classList.remove('muted');
+      icon.innerHTML = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
+      initAudio();
+      playAmbientBgm();
+    } else {
+      btn.classList.add('muted');
+      icon.innerHTML = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73 4.27 3zM12 1L9.91 3.09 12 5.18V1z"/>';
+      stopAmbientBgm();
+    }
+  };
+
+  // ===================== 场景系统 =====================
+  var sceneImages = {
+    cover: 'https://images.unsplash.com/photo-1448375240586-882707db888b?w=1920&q=80',
+    ch1: 'https://images.unsplash.com/photo-1511497584788-876760111969?w=1920&q=80',
+    ch2: 'https://images.unsplash.com/photo-1542273917363-3b1817f69a2d?w=1920&q=80',
+    ch3: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=1920&q=80',
+    ch4: 'https://images.unsplash.com/photo-1541963463532-d68292c34b19?w=1920&q=80',
+    fire: 'https://images.unsplash.com/photo-1557330359-ffb0deed6163?w=1920&q=80',
+    ending: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=1920&q=80'
+  };
+
+  var sceneGradients = {
+    cover:  'linear-gradient(160deg,#1a3020 0%,#2B3A2C 50%,#1B2620 100%)',
+    ch1:    'linear-gradient(160deg,#162a1a 0%,#243829 55%,#1a2e20 100%)',
+    ch2:    'linear-gradient(160deg,#1a2822 0%,#253a2e 55%,#1c2e24 100%)',
+    ch3:    'linear-gradient(160deg,#2a2010 0%,#3a2e18 55%,#241e10 100%)',
+    ch4:    'linear-gradient(160deg,#201814 0%,#2e2018 55%,#1a1410 100%)',
+    fire:   'linear-gradient(160deg,#3a1a08 0%,#2e1810 55%,#1a1008 100%)',
+    ending: 'linear-gradient(160deg,#1a2e1c 0%,#2B3A2C 55%,#1B2620 100%)'
+  };
+
+  function setScene(sceneKey, options){
+    options = options || {};
+    var bg = document.getElementById('sceneBg');
+    var fire = document.getElementById('fireGlow');
+    var mist = document.getElementById('mistLayer');
+    var particles = document.getElementById('particleLayer');
+
+    var imgUrl = sceneImages[sceneKey] || sceneImages.cover;
+
+    // 立刻显示渐变兜底
+    bg.style.background = sceneGradients[sceneKey] || sceneGradients.cover;
+    bg.classList.add('active');
+
+    // 预加载图片后叠上去
+    var img = new Image();
+    img.onload = function(){
+      bg.style.backgroundImage = 'url(' + imgUrl + ')';
+      bg.style.backgroundSize = 'cover';
+      bg.style.backgroundPosition = 'center';
+    };
+    img.onerror = function(){
+      // 图片失败时渐变已经在了，无需额外处理
+    };
+    img.src = imgUrl;
+
+    if(options.fire){
+      fire.classList.add('active');
+      playFireSound();
+    } else {
+      fire.classList.remove('active');
+    }
+
+    mist.style.opacity = options.mist !== false ? '1' : '0';
+
+    var rays = document.getElementById('lightRays');
+    if(rays){
+      if(options.rays){ rays.classList.add('active'); }
+      else { rays.classList.remove('active'); }
+    }
+
+    particles.innerHTML = '';
+    if(options.particles === 'leaves'){
+      createLeaves();
+    } else if(options.particles === 'embers'){
+      createEmbers();
+    } else if(options.particles === 'snow'){
+      createSnow();
+    } else if(options.particles === 'fireflies'){
+      createFireflies();
+    } else if(options.particles === 'rain'){
+      createRain();
+    } else if(options.particles === 'stars'){
+      createStars();
+    }
+  }
+
+  function createLeaves(){
+    var container = document.getElementById('particleLayer');
+    for(var i = 0; i < 15; i++){
+      var leaf = document.createElement('div');
+      leaf.className = 'particle';
+      leaf.style.left = Math.random() * 100 + '%';
+      leaf.style.animationDuration = (8 + Math.random() * 12) + 's';
+      leaf.style.animationDelay = Math.random() * 10 + 's';
+      leaf.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24"><path d="M12 2C7 6 3 11 3 15.5C3 20 7 23 12 23C17 23 21 20 21 15.5C21 11 17 6 12 2Z" fill="rgba(126,154,99,' + (0.3 + Math.random() * 0.4) + ')"/></svg>';
+      container.appendChild(leaf);
+    }
+  }
+
+  function createEmbers(){
+    var container = document.getElementById('particleLayer');
+    for(var i = 0; i < 20; i++){
+      var ember = document.createElement('div');
+      ember.className = 'particle';
+      ember.style.left = Math.random() * 100 + '%';
+      ember.style.animationDuration = (3 + Math.random() * 5) + 's';
+      ember.style.animationDelay = Math.random() * 5 + 's';
+      ember.innerHTML = '<div style="width:4px;height:4px;border-radius:50%;background:rgba(201,122,61,' + (0.4 + Math.random() * 0.6) + ');box-shadow:0 0 6px rgba(201,122,61,0.5);"></div>';
+      container.appendChild(ember);
+    }
+  }
+
+  function createSnow(){
+    var container = document.getElementById('particleLayer');
+    for(var i = 0; i < 25; i++){
+      var snow = document.createElement('div');
+      snow.className = 'particle';
+      snow.style.left = Math.random() * 100 + '%';
+      snow.style.animationDuration = (6 + Math.random() * 10) + 's';
+      snow.style.animationDelay = Math.random() * 8 + 's';
+      snow.innerHTML = '<div style="width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,' + (0.3 + Math.random() * 0.5) + ');"></div>';
+      container.appendChild(snow);
+    }
+  }
+
+  function createFireflies(){
+    var container = document.getElementById('particleLayer');
+    for(var i = 0; i < 12; i++){
+      var fly = document.createElement('div');
+      fly.className = 'firefly';
+      fly.style.left = (5 + Math.random() * 90) + '%';
+      fly.style.top = (30 + Math.random() * 65) + '%';
+      fly.style.animationDuration = (10 + Math.random() * 8) + 's, ' + (2 + Math.random() * 3) + 's';
+      fly.style.animationDelay = Math.random() * 6 + 's, ' + Math.random() * 2 + 's';
+      container.appendChild(fly);
+    }
+  }
+
+  function createRain(){
+    var container = document.getElementById('particleLayer');
+    for(var i = 0; i < 60; i++){
+      var drop = document.createElement('div');
+      drop.className = 'raindrop';
+      drop.style.left = Math.random() * 100 + '%';
+      drop.style.animationDuration = (0.6 + Math.random() * 0.5) + 's';
+      drop.style.animationDelay = Math.random() * 2 + 's';
+      container.appendChild(drop);
+    }
+  }
+
+  function createStars(){
+    var container = document.getElementById('particleLayer');
+    for(var i = 0; i < 40; i++){
+      var star = document.createElement('div');
+      star.className = 'star';
+      var size = 1 + Math.random() * 2;
+      star.style.width = size + 'px';
+      star.style.height = size + 'px';
+      star.style.left = Math.random() * 100 + '%';
+      star.style.top = Math.random() * 55 + '%';
+      star.style.animationDuration = (2 + Math.random() * 4) + 's';
+      star.style.animationDelay = Math.random() * 4 + 's';
+      container.appendChild(star);
+    }
+  }
+
+  // 视差：背景随鼠标/陀螺仪轻微偏移（尊重 reduced-motion）
+  (function initParallax(){
+    if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var bg = document.getElementById('sceneBg');
+    if(!bg) return;
+    var targetX = 0, targetY = 0, curX = 0, curY = 0, raf = null;
+    function tick(){
+      curX += (targetX - curX) * 0.06;
+      curY += (targetY - curY) * 0.06;
+      bg.style.transform = 'scale(1.06) translate(' + curX + 'px,' + curY + 'px)';
+      raf = (Math.abs(targetX-curX) > 0.1 || Math.abs(targetY-curY) > 0.1) ? requestAnimationFrame(tick) : null;
+    }
+    function kick(){ if(!raf) raf = requestAnimationFrame(tick); }
+    document.addEventListener('mousemove', function(e){
+      targetX = (e.clientX / window.innerWidth - 0.5) * -14;
+      targetY = (e.clientY / window.innerHeight - 0.5) * -8;
+      kick();
+    });
+    if(window.DeviceOrientationEvent){
+      window.addEventListener('deviceorientation', function(e){
+        if(e.gamma === null) return;
+        targetX = Math.max(-14, Math.min(14, e.gamma * -0.6));
+        targetY = Math.max(-8, Math.min(8, (e.beta - 45) * -0.3));
+        kick();
+      });
+    }
+  })();
+
+  // ===================== 角色立绘 =====================
+  function showCharacter(imgUrl, name, position){
+    var portrait = document.getElementById('charPortrait');
+    var img = document.getElementById('charImg');
+    var nameEl = document.getElementById('charName');
+
+    portrait.classList.remove('active', 'left', 'right');
+
+    if(!imgUrl){
+      setTimeout(function(){ portrait.classList.remove('active'); }, 300);
+      return;
+    }
+
+    img.src = imgUrl;
+    img.alt = name || '';
+    nameEl.textContent = name || '';
+    portrait.classList.add(position || 'right');
+
+    setTimeout(function(){
+      portrait.classList.add('active');
+    }, 100);
+  }
+
+  // ===================== 游戏状态 =====================
+  var stats = { freedom: 0, wisdom: 0, bond: 0 };
+
+  function leafIconColored(filled, cls, pulse){
+    var color = filled ? 'var(--'+(cls==='freedom'?'moss':cls==='wisdom'?'slate':'ochre')+')' : 'rgba(43,32,24,.14)';
+    return '<svg class="leaf-icon'+(pulse?' pulse':'')+'" viewBox="0 0 24 24">' +
+      '<path d="M12 2C7 6 3 11 3 15.5C3 20 7 23 12 23C17 23 21 20 21 15.5C21 11 17 6 12 2Z" fill="'+color+'"/></svg>';
+  }
+
+  function statRow(label, cls, value, changedKey){
+    var leaves = '';
+    var filledCount = Math.min(6, Math.round(value/2));
+    for(var i=0;i<6;i++){
+      var filled = i < filledCount;
+      var pulse = changedKey===cls && i === filledCount-1;
+      leaves += leafIconColored(filled, cls, pulse);
+    }
+    return '<div class="stat-row"><span class="stat-label '+cls+'">'+label+'</span><span class="leaf-track">'+leaves+'</span></div>';
+  }
+
+  function renderStats(changedKey){
+    return '<div class="stats">' +
+      statRow('自由','freedom', stats.freedom, changedKey) +
+      statRow('智慧','wisdom', stats.wisdom, changedKey) +
+      statRow('联结','bond', stats.bond, changedKey) +
+      '</div>';
+  }
+
+  function choiceTwigSVG(){
+    return '<span class="choice-twig"><svg viewBox="0 0 24 24"><path d="M12 2C7 6 3 11 3 15.5C3 20 7 23 12 23C17 23 21 20 21 15.5C21 11 17 6 12 2Z"/></svg></span>';
+  }
+
+  // =====================================================================
+  // STORY DATA — REWRITE EVERYTHING BELOW THIS LINE FOR A NEW STORY
+  // (cover, chapters, choices, endings; engine code continues after)
+  // =====================================================================
+  var S = {};
+
+  S.cover = {
+    render: function(){
+      return '<div class="page cover">' +
+        '<div class="kicker">文字互动寓言</div>' +
+        '<h1>不落地的人</h1>' +
+        '<div class="cover-divider"></div>' +
+        '<p class="lede">十一岁那年，你爬上庭院里的那棵老树，立下一个誓言：这一生，脚再也不踏上地面。'+
+        '没有人知道，这个决定会把你的一生，变成什么样子。</p>' +
+        '<button class="btn-start" id="startBtn">爬上去</button>' +
+        '<div class="credit">灵感源自伊塔洛·卡尔维诺《树上的男爵》 —— 人物与情节均为原创改编</div>' +
+        '</div>';
+    },
+    bind: function(){
+      document.getElementById('startBtn').onclick = function(){
+        initAudio();
+        playAmbientBgm();
+        playPageTurnSound();
+        goto('ch1_intro');
+      };
+    },
+    scene: { key: 'cover', options: { particles: 'leaves', mist: true, rays: true } },
+    character: null
+  };
+
+  function textScene(opts){
+    return {
+      render: function(changedKey){
+        var eyebrow = opts.chapter ? '<div class="eyebrow"><span>'+opts.chapter+'</span><span class="roman">'+opts.roman+'</span><span class="twig-rule"></span></div>' : '';
+        var title = opts.title ? '<h1 class="title">'+opts.title+'</h1>' : '';
+        var statsHtml = opts.showStats ? renderStats(changedKey) : '';
+        var body = '<div class="story">' + opts.paras.map(function(p){ return '<p>'+p+'</p>'; }).join('') + '</div>';
+        return '<div class="page">' + eyebrow + title + statsHtml + body +
+          '<div class="continue-row"><button class="btn-continue" id="contBtn">继续</button></div></div>';
+      },
+      bind: function(){
+        document.getElementById('contBtn').onclick = function(){
+          playPageTurnSound();
+          goto(opts.next);
+        };
+      },
+      scene: opts.scene || { key: 'ch1', options: { particles: 'leaves' } },
+      character: opts.character || null
+    };
+  }
+
+  function choiceScene(opts){
+    return {
+      render: function(changedKey){
+        var eyebrow = opts.chapter ? '<div class="eyebrow"><span>'+opts.chapter+'</span><span class="roman">'+opts.roman+'</span><span class="twig-rule"></span></div>' : '';
+        var title = opts.title ? '<h1 class="title">'+opts.title+'</h1>' : '';
+        var statsHtml = opts.showStats ? renderStats(changedKey) : '';
+        var body = '<div class="story">' + opts.paras.map(function(p){ return '<p>'+p+'</p>'; }).join('') + '</div>';
+        var items = opts.options.map(function(o,i){
+          return '<li><button class="choice-btn" data-i="'+i+'">'+choiceTwigSVG()+'<span>'+o.label+'</span></button></li>';
+        }).join('');
+        return '<div class="page">' + eyebrow + title + statsHtml + body +
+          '<ul class="choices">' + items + '</ul></div>';
+      },
+      bind: function(){
+        var btns = document.querySelectorAll('.choice-btn');
+        btns.forEach(function(btn){
+          btn.onclick = function(){
+            playChoiceSound();
+            var o = opts.options[parseInt(btn.getAttribute('data-i'),10)];
+            if(o.special){ goto(o.special); return; }
+            if(o.stat){ stats[o.stat] += o.delta; }
+            showReaction(opts, o);
+          };
+        });
+      },
+      scene: opts.scene || { key: 'ch1', options: { particles: 'leaves' } },
+      character: opts.character || null
+    };
+  }
+
+  function showReaction(opts, o){
+    var eyebrow = opts.chapter ? '<div class="eyebrow"><span>'+opts.chapter+'</span><span class="roman">'+opts.roman+'</span><span class="twig-rule"></span></div>' : '';
+    var title = opts.title ? '<h1 class="title">'+opts.title+'</h1>' : '';
+    var statsHtml = opts.showStats ? renderStats(o.stat) : '';
+    var body = '<div class="story">' + opts.paras.map(function(p){ return '<p>'+p+'</p>'; }).join('') + '</div>';
+    var root = document.getElementById('sceneRoot');
+    root.innerHTML = '<div class="page">' + eyebrow + title + statsHtml + body +
+      '<p class="reaction">'+o.reaction+'</p>' +
+      '<div class="continue-row"><button class="btn-continue" id="contBtn2">继续</button></div></div>';
+    document.getElementById('contBtn2').onclick = function(){
+      playPageTurnSound();
+      goto(o.next);
+    };
+  }
+
+  function endingScene(key, eyebrowTag, title, paras){
+    return {
+      render: function(){
+        var body = '<div class="story">' + paras.map(function(p){ return '<p>'+p+'</p>'; }).join('') + '</div>';
+        var summary = '<div class="ending-stats">自由 '+stats.freedom+' · 智慧 '+stats.wisdom+' · 联结 '+stats.bond+'</div>';
+        return '<div class="page">' +
+          '<div class="ending-tag">终局 · '+eyebrowTag+'</div>' +
+          '<h1 class="title">'+title+'</h1>' +
+          body + summary +
+          '<div class="continue-row"><button class="btn-restart" id="restartBtn">重新爬一次</button></div></div>';
+      },
+      bind: function(){
+        document.getElementById('restartBtn').onclick = function(){
+          stats = { freedom:0, wisdom:0, bond:0 };
+          playPageTurnSound();
+          goto('cover');
+        };
+      },
+      scene: { key: 'ending', options: { particles: 'leaves', mist: true } },
+      character: null
+    };
+  }
+
+  // ===================== 章节定义 =====================
+
+  S.ch1_intro = textScene({
+    chapter:'卷一', roman:'I', title:'誓言',
+    paras:[
+      '十一岁那年的夏天，海桐镇的空气里全是腌橄榄和远航归来的盐味。你的父亲，镇上最体面的货运行老板，在晚饭桌上第三次把一盘蒸蜗牛推到你面前——这是他认定的"正确的食物"，也是他认定的"正确的人生"的一部分。',
+      '你把盘子推了回去。椅子翻倒在地的声音很响。你跑出门，爬上了庭院里那棵百年刺桐树。你没有想过，这一爬，会是一辈子。'
+    ],
+    next:'ch1_choiceA',
+    scene: { key: 'ch1', options: { particles: 'leaves', mist: true } }
+  });
+
+  S.ch1_choiceA = choiceScene({
+    chapter:'卷一', roman:'I', title:'誓言',
+    paras:['夜色慢慢爬上来，你坐在第一根足够粗的枝杈上，第一次认真地问自己：刚才那一刻，你到底想要的是什么？'],
+    options:[
+      { label:'树皮粗糙，但风是自由的', stat:'freedom', delta:2,
+        reaction:'你靠着树干坐下，第一次觉得，往下看比往上看更让人头晕——头晕的，是那种规矩。', next:'ch1_bridge' },
+      { label:'你想知道，没人能管到你的地方，世界长什么样', stat:'wisdom', delta:2,
+        reaction:'你数着叶子的脉络，像在数一本还没写出来的书的目录。', next:'ch1_bridge' },
+      { label:'你想看清楚，谁会因为你不见了而抬头', stat:'bond', delta:2,
+        reaction:'你听见母亲在楼下喊你的名字，声音里有一种你从未听过的认真。', next:'ch1_bridge' }
+    ],
+    scene: { key: 'ch1', options: { particles: 'fireflies' } }
+  });
+
+  S.ch1_bridge = textScene({
+    chapter:'卷一', roman:'I',
+    paras:['第一晚很冷。镇上的人开始用各种方式，确认你是不是"还正常"——有人在树下放了一床被子，有人只是远远地看，什么也不说。'],
+    next:'ch1_choiceB',
+    scene: { key: 'ch1', options: { particles: 'stars', mist: true } }
+  });
+
+  S.ch1_choiceB = choiceScene({
+    chapter:'卷一', roman:'I', title:'誓言',
+    paras:['你需要决定，接下来的每一个夜晚，要怎么过。'],
+    options:[
+      { label:'搭一张吊床，把树当成自己的房间', stat:'freedom', delta:2,
+        reaction:'你用绳子和旧帆布做了第一张床，在摇晃中睡得比家里任何一晚都踏实。', next:'ch2_intro' },
+      { label:'托人借一本厚厚的书，打发长夜', stat:'wisdom', delta:2,
+        reaction:'借书的男孩说，镇上没人能想明白你到底想干什么，但所有人都很想知道结局。', next:'ch2_intro' },
+      { label:'和妹妹约好三种口哨暗号，保持联系', stat:'bond', delta:2,
+        reaction:'平安、需要东西、还有一种，意思是"别让爸爸知道"。', next:'ch2_intro' }
+    ],
+    scene: { key: 'ch1', options: { particles: 'leaves' } }
+  });
+
+  S.ch2_intro = textScene({
+    chapter:'卷二', roman:'II', title:'树冠工程',
+    paras:[
+      '日子一天天过去，一棵树成了不够用的房子。你开始在相邻的橡树、无花果树之间架起绳桥，把镇子边缘的林子，一点点变成只有你认得路的国土。',
+      '镇上人渐渐分成两派：一派说你疯了；另一派，开始踮着脚尖、隔着树荫问你借东西。'
+    ],
+    next:'ch2_choiceA',
+    scene: { key: 'ch2', options: { particles: 'leaves' } }
+  });
+
+  S.ch2_choiceA = choiceScene({
+    chapter:'卷二', roman:'II', title:'树冠工程',
+    paras:['造桥这件事，你打算怎么做？'],
+    options:[
+      { label:'造得又快又多，占满整片树林', stat:'freedom', delta:2,
+        reaction:'你的国土一天天扩张，没人再说得清，镇子边缘的林子里到底有几条路。', next:'ch2_bridge' },
+      { label:'每一段桥先画图、算重量，绝不返工', stat:'wisdom', delta:2,
+        reaction:'你开始随身带一本笔记，记录哪种绳结最经得住雨季的风。', next:'ch2_bridge' },
+      { label:'只把桥造在能看见镇上烟囱冒烟的那几棵树之间', stat:'bond', delta:2,
+        reaction:'每天黄昏，你数着远处亮起的灯火，确认谁家还没生火。', next:'ch2_bridge' }
+    ],
+    scene: { key: 'ch2', options: { particles: 'leaves' } }
+  });
+
+  S.ch2_bridge = textScene({
+    chapter:'卷二', roman:'II',
+    paras:['一个雨天的早晨，镇上的铁匠仰头看你时，踩滑了梯子，摔在自家门口的石阶上。'],
+    next:'ch2_choiceB',
+    scene: { key: 'ch2', options: { particles: 'rain', mist: true } }
+  });
+
+  S.ch2_choiceB = choiceScene({
+    chapter:'卷二', roman:'II', title:'树冠工程',
+    paras:['他在下面喊了一声，不知道是骂你，还是叫你。'],
+    options:[
+      { label:'丢下一句"梯子是地面的人才需要的东西"，继续干活', stat:'freedom', delta:2,
+        reaction:'铁匠后来再没找你说过话，但也没再说你疯了——他说，你像是另一种活法的证据。', next:'ch3_intro' },
+      { label:'连夜算出一套不用下树也能传话送物的滑轮系统', stat:'wisdom', delta:2,
+        reaction:'三天后，镇上有四户人家，默默在自家屋檐下也装了一个一样的挂钩。', next:'ch3_intro' },
+      { label:'顺着绳子滑下半截，伸手拉他一把', stat:'bond', delta:2,
+        reaction:'你的脚尖始终没有碰到地面，但那是你这辈子，离一个人最近的一次"落地"。', next:'ch3_intro' }
+    ],
+    scene: { key: 'ch2', options: { particles: 'rain' } }
+  });
+
+  S.ch3_intro = textScene({
+    chapter:'卷三', roman:'III', title:'思想与爱',
+    paras:[
+      '第三年，一个背着标本箱、自称"看树的人"的老人，在林子边搭了帐篷。他叫老桦，据说也曾想过一辈子不落地，只是没撑过第一个冬天。他开始每周给你递书——从他那里，你第一次知道，世界上还有人专门为"该怎么活着"这件事，争论了好几百年。',
+      '也是那一年，图书馆管理员的女儿茯苓，开始翻墙来送你她自己手抄的书页，因为父亲不准她把"危险的书"借给你。'
+    ],
+    next:'ch3_choiceA',
+    scene: { key: 'ch3', options: { particles: 'leaves', rays: true } },
+    character: { url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80', name: '老桦', position: 'left' }
+  });
+
+  S.ch3_choiceA = choiceScene({
+    chapter:'卷三', roman:'III', title:'思想与爱',
+    paras:['面对老桦带来的这些争论了几百年的问题，你真正在意的是哪一种？'],
+    options:[
+      { label:'怎样在树上活得更久、更稳', stat:'freedom', delta:2,
+        reaction:'你对老桦说，理论可以等，先把下一个雨季的屋顶修好。', next:'ch3_choiceB' },
+      { label:'把树冠当成一张能俯瞰整个时代的书桌，开始自己写信', stat:'wisdom', delta:2,
+        reaction:'你的第一封信，寄给了一个你从未见过、住在很远城市的陌生学者。', next:'ch3_choiceB' },
+      { label:'更在乎茯苓带来的故事，而不是老桦带来的理论', stat:'bond', delta:2,
+        reaction:'你开始更期待翻墙的脚步声，而不是帐篷里那盏总是亮到很晚的灯。', next:'ch3_choiceB' }
+    ],
+    scene: { key: 'ch3', options: { particles: 'leaves' } },
+    character: { url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&q=80', name: '老桦', position: 'left' }
+  });
+
+  S.ch3_choiceB = choiceScene({
+    chapter:'卷三', roman:'III', title:'思想与爱',
+    paras:['和茯苓之间的这件事，你打算怎么处理？'],
+    options:[
+      { label:'保持距离——怕欠下"必须为谁下树"的债', stat:'freedom', delta:2,
+        reaction:'你把每一次心动，都悄悄记成了"必须更小心"的理由。', next:'ch4_intro' },
+      { label:'和她在树皮上刻满关于"自由到底意味着什么"的争论', stat:'wisdom', delta:2,
+        reaction:'那棵树的树皮上，渐渐爬满了两个人的字迹，像一份没人看得懂的合同。', next:'ch4_intro' },
+      { label:'为她造一座全林子最稳的桥，只通向她家屋顶', stat:'bond', delta:2,
+        reaction:'她说，这是她见过的，最笨拙也最认真的一句"我喜欢你"。', next:'ch4_intro' }
+    ],
+    scene: { key: 'ch3', options: { particles: 'leaves', mist: true } },
+    character: { url: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=400&q=80', name: '茯苓', position: 'right' }
+  });
+
+  S.ch4_intro = textScene({
+    chapter:'卷四', roman:'IV', title:'风暴',
+    paras:[
+      '你三十岁那年的冬天，一场罕见的大火从林子边缘烧起来——没人说得清是雷击，还是哪家的炭炉。镇上的水井不够用，父亲货运行的仓库第一个着火，茯苓的父亲冲进去抢救账册时，被烟困在了阁楼里。',
+      '整片林子的人，都在喊你的名字。这是十九年来，第一次有人真的需要你回答：你愿不愿意，为了任何一个人，把脚放回地面。'
+    ],
+    next:'ch4_choice',
+    scene: { key: 'ch4', options: { particles: 'embers', fire: true, mist: false } }
+  });
+
+  S.ch4_choice = choiceScene({
+    chapter:'卷四', roman:'IV', title:'风暴',
+    paras:['火光照亮了你脚下那片，十九年没有踩过的土地。'],
+    options:[
+      { label:'脚踏上地面，冲进火场', special:'ending_ground' },
+      { label:'脚悬在半空——但你没有跳下去，你开始想另一条路', next:'ch4_climb' }
+    ],
+    scene: { key: 'ch4', options: { particles: 'embers', fire: true, mist: false } }
+  });
+
+  S.ch4_climb = textScene({
+    chapter:'卷四', roman:'IV',
+    paras:['十九年里学到的一切，在这一刻全部涌上来——绳结、力学、还是那个一直在等你回答的人。你知道，答案早就在这十九年里慢慢写好了。'],
+    next:'__compute_ending__',
+    scene: { key: 'ch4', options: { particles: 'embers', fire: true } }
+  });
+
+  // ===================== 终局 =====================
+  S.ending_freedom = endingScene('freedom','化作长青','长成一棵会移动的树',[
+    '你没有去够任何一个屋顶，而是把十九年练就的平衡感和对树冠的记忆，变成了一张只有你看得懂的逃生地图——你在浓烟之上指挥镇上的人，把水桶顺着你架的滑轮一条条递进火场，自己始终没有踩进一寸地面。',
+    '火被压住的那个清晨，镇上的人第一次没有问"你什么时候下来"，而是开始在课本里，把你写成一个真正活过的传说。',
+    '又过了很多年，某个秋天，你顺着林子深处一条新搭的绳桥，走得越来越远——再没有人见过你走回来。人们说，你终于把自己，活成了一棵会移动的树。'
+  ]);
+
+  S.ending_wisdom = endingScene('wisdom','写给世界的信','一个不站在地面上的中心',[
+    '火场里，你想起的不是逃生，而是结构——你用老桦教你的力学，在十分钟内算出哪一段仓库屋顶会先塌，喊出了唯一正确的撤离路线。没有人受伤。',
+    '这场火之后，你开始系统地把这些年关于"如何不落地地活着"的笨办法，写成一封又一封寄往远方大学的信。你从没有获得任何头衔。',
+    '但许多年后，一些素未谋面的人，会在论文的脚注里提起"海桐镇树上的那位通信者"——你用一生证明，一个人可以不站在地面上，却仍然站在这个世界的中心。'
+  ]);
+
+  S.ending_bond = endingScene('bond','众树之间的桥','比任何人都更靠近别人',[
+    '你第一个想到的不是数据，也不是逃生路线，而是茯苓——你以最快的速度沿着那座只通向她家屋顶的桥冲过去，把困在阁楼的她和父亲的账册一起救了出来，自始至终，脚都没有落地。',
+    '这场火烧掉了半座仓库，却也烧掉了镇上和你之间最后一点隔阂。往后的日子里，你架的桥越来越多，渐渐连起了镇上一半的屋顶。',
+    '孩子们不再说"树上那个怪人"，而是说"去桥那边找他"。你依然没有落地过一次，却比镇上任何一个人，都活得更靠近别人。'
+  ]);
+
+  S.ending_ground = endingScene('ground','自己决定的那一天','由我自己决定',[
+    '你想都没想，脚踩上了地面——十九年来第一次。地面很硬，也很烫，带着你从未感受过的、属于"别人"的重量。',
+    '你冲进火场，把茯苓的父亲拖了出来，自己被坍塌的梁木砸伤了脚。伤好之后，你本可以选择回到树上，但你没有——不是因为你输了，而是因为你终于明白，当年那个誓言，原本不是为了"永远不下来"，而是为了"什么时候下来，由我自己决定"。',
+    '镇上人后来很少再提起你曾经的十九年，但茯苓记得。她说，你下树那一刻的样子，比你在树上的任何一天，都更像一个自由的人。'
+  ]);
+
+  function computeEnding(){
+    var order = ['bond','wisdom','freedom'];
+    var best = order[0];
+    order.forEach(function(k){ if(stats[k] > stats[best]) best = k; });
+    return 'ending_' + best;
+  }
+
+  // =====================================================================
+  // ENGINE — DO NOT EDIT BELOW (computeEnding tie-break order excepted)
+  // =====================================================================
+  function goto(id){
+    if(id === '__compute_ending__'){ id = computeEnding(); }
+    var scene = S[id];
+    if(!scene){ console.error('Scene not found:', id); return; }
+
+    if(scene.scene){
+      setScene(scene.scene.key, scene.scene.options);
+    }
+    if(scene.character){
+      showCharacter(scene.character.url, scene.character.name, scene.character.position);
+    } else {
+      showCharacter(null);
+    }
+
+    var root = document.getElementById('sceneRoot');
+    try {
+      root.innerHTML = scene.render();
+    } catch(e) {
+      root.innerHTML = '<div class="page"><p>加载出错，请刷新页面重试。</p></div>';
+      return;
+    }
+
+    if(scene.bind){
+      try { scene.bind(); } catch(e) {}
+    }
+
+    window.scrollTo({top:0, behavior:'instant'});
+  }
+
+  // ===================== 初始化 =====================
+  function init(){
+    try {
+      setScene('cover', { particles: 'leaves', mist: true });
+      goto('cover');
+      setTimeout(function(){
+        var loading = document.getElementById('loadingScreen');
+        if(loading) loading.classList.add('hidden');
+      }, 1500);
+    } catch(e) {
+      document.getElementById('sceneRoot').innerHTML = '<div class="page"><p>初始化失败，请刷新页面。</p></div>';
+    }
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  document.addEventListener('click', function(){ initAudio(); }, { once: true });
+
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="360" viewBox="0 0 1280 360" role="img" aria-labelledby="ttl desc">
+  <title id="ttl">互动小说创作规范 · 你选，它写</title>
+  <desc id="desc">宣纸米白的底上浮着一块磨砂玻璃面板：左侧朱砂印章，中间是「互动小说创作规范」标题与副标题，下方一排 A–E 五个玻璃选项按钮，其中 C 被高亮。</desc>
+
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FDFBF7"/>
+      <stop offset="0.55" stop-color="#F8F2E8"/>
+      <stop offset="1" stop-color="#F1E7D8"/>
+    </linearGradient>
+
+    <radialGradient id="b1" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#FFC79B" stop-opacity="0.80"/>
+      <stop offset="0.55" stop-color="#FFB183" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#FFB183" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="b2" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#A9D3F2" stop-opacity="0.72"/>
+      <stop offset="0.55" stop-color="#8BC0E8" stop-opacity="0.24"/>
+      <stop offset="1" stop-color="#8BC0E8" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="b3" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#D8C3F2" stop-opacity="0.60"/>
+      <stop offset="0.55" stop-color="#B49AE0" stop-opacity="0.20"/>
+      <stop offset="1" stop-color="#B49AE0" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.86"/>
+      <stop offset="0.62" stop-color="#FFFFFF" stop-opacity="0.62"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.44"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="1"/>
+      <stop offset="0.30" stop-color="#FFFFFF" stop-opacity="0.72"/>
+      <stop offset="0.74" stop-color="#3C2D1E" stop-opacity="0.09"/>
+      <stop offset="1" stop-color="#3C2D1E" stop-opacity="0.19"/>
+    </linearGradient>
+
+    <linearGradient id="pill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.96"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.70"/>
+    </linearGradient>
+    <linearGradient id="pillOn" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#FFF4EA"/>
+    </linearGradient>
+    <linearGradient id="seal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#D2683E"/>
+      <stop offset="1" stop-color="#8F3B2C"/>
+    </linearGradient>
+
+    <filter id="lift" x="-15%" y="-25%" width="130%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="20" flood-color="#4A3A2A" flood-opacity="0.18"/>
+    </filter>
+    <filter id="liftS" x="-40%" y="-40%" width="180%" height="200%">
+      <feDropShadow dx="0" dy="6" stdDeviation="7" flood-color="#4A3A2A" flood-opacity="0.16"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="360" fill="url(#paper)"/>
+  <circle cx="1120" cy="20" r="340" fill="url(#b1)"/>
+  <circle cx="70" cy="330" r="320" fill="url(#b2)"/>
+  <circle cx="1010" cy="350" r="270" fill="url(#b3)"/>
+
+  <!-- 玻璃面板 -->
+  <rect x="80" y="38" width="1120" height="284" rx="44" fill="url(#glass)" filter="url(#lift)"/>
+  <rect x="80.6" y="38.6" width="1118.8" height="282.8" rx="43.4" fill="none" stroke="url(#ring)" stroke-width="1.2"/>
+
+  <!-- 落款章 -->
+  <g filter="url(#liftS)">
+    <rect x="126" y="88" width="58" height="58" rx="17" fill="url(#seal)"/>
+    <rect x="132.5" y="94.5" width="45" height="45" rx="11" fill="none" stroke="#FDF6EF" stroke-opacity="0.34" stroke-width="1.1"/>
+    <text x="155" y="128" font-family="'Noto Serif SC','Songti SC','STSong',SimSun,serif" font-size="31" fill="#FDF6EF" text-anchor="middle">拾</text>
+  </g>
+
+  <!-- 标题 -->
+  <text x="212" y="121" font-family="'Noto Serif SC','Songti SC','STSong',SimSun,serif" font-size="44" font-weight="700" letter-spacing="6" fill="#1B1712">互动小说创作规范</text>
+  <text x="214" y="160" font-family="'Noto Serif SC','Songti SC','STSong',SimSun,serif" font-size="18" letter-spacing="4" fill="#6E6154">以选项为笔墨，以剧情为山河</text>
+
+  <rect x="126" y="192" width="1028" height="1" fill="#3C2D1E" opacity="0.11"/>
+
+  <!-- 五选项 -->
+  <g font-family="'PingFang SC','Microsoft YaHei',system-ui,sans-serif">
+    <rect x="126" y="222" width="192" height="56" rx="18" fill="url(#pill)" stroke="#FFFFFF" stroke-width="1"/>
+    <rect x="142" y="240" width="22" height="20" rx="7" fill="#3C2D1E" opacity="0.07"/>
+    <text x="153" y="254.5" font-size="11" font-weight="700" fill="#3C2D1E" fill-opacity="0.52" text-anchor="middle">A</text>
+    <text x="176" y="255" font-size="15" fill="#2B2119">推门进去</text>
+
+    <rect x="334" y="222" width="192" height="56" rx="18" fill="url(#pill)" stroke="#FFFFFF" stroke-width="1"/>
+    <rect x="350" y="240" width="22" height="20" rx="7" fill="#3C2D1E" opacity="0.07"/>
+    <text x="361" y="254.5" font-size="11" font-weight="700" fill="#3C2D1E" fill-opacity="0.52" text-anchor="middle">B</text>
+    <text x="384" y="255" font-size="15" fill="#2B2119">绕到后窗</text>
+
+    <rect x="542" y="222" width="192" height="56" rx="18" fill="url(#pillOn)" stroke="#E8925C" stroke-opacity="0.62" stroke-width="1.6" filter="url(#liftS)"/>
+    <rect x="558" y="240" width="22" height="20" rx="7" fill="url(#seal)"/>
+    <text x="569" y="254.5" font-size="11" font-weight="700" fill="#FFFFFF" text-anchor="middle">C</text>
+    <text x="592" y="255" font-size="15" font-weight="600" fill="#2B2119">叫她的名字</text>
+
+    <rect x="750" y="222" width="192" height="56" rx="18" fill="url(#pill)" stroke="#FFFFFF" stroke-width="1"/>
+    <rect x="766" y="240" width="22" height="20" rx="7" fill="#3C2D1E" opacity="0.07"/>
+    <text x="777" y="254.5" font-size="11" font-weight="700" fill="#3C2D1E" fill-opacity="0.52" text-anchor="middle">D</text>
+    <text x="800" y="255" font-size="15" fill="#2B2119">先退一步</text>
+
+    <rect x="958" y="222" width="192" height="56" rx="18" fill="url(#pill)" stroke="#FFFFFF" stroke-width="1" opacity="0.92"/>
+    <rect x="974" y="240" width="22" height="20" rx="7" fill="#3C2D1E" opacity="0.05"/>
+    <text x="985" y="254.5" font-size="13" fill="#3C2D1E" fill-opacity="0.38" text-anchor="middle">←</text>
+    <text x="1008" y="255" font-size="15" fill="#2B2119" fill-opacity="0.86">自由输入</text>
+  </g>
+</svg>

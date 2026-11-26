@@ -1,0 +1,4 @@
+interface:
+  display_name: "Game Build"
+  short_description: "Build the approved spec into a playable game · 按定稿方案构建可运行游戏"
+  default_prompt: "Use $game-build to turn the approved design specs into a playable, verified game build."

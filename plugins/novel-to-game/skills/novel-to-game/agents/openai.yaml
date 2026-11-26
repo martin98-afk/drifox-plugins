@@ -1,0 +1,4 @@
+interface:
+  display_name: "NovelToGame"
+  short_description: "Turn novels into playable games · 把小说做成可玩的游戏"
+  default_prompt: "Use $novel-to-game to adapt this novel into a playable game on a fitting target platform."

@@ -1,0 +1,31 @@
+{
+    "name": "interactive-fiction",
+    "display_name": {
+        "zh": "互动小说"
+    },
+    "description": "可选项驱动的互动小说：穿越/自创/创世/随机四种开局，内置视角一致性、字数区间、选项机制、存档系统与角色卡体系。用户想玩或想写互动小说、说「加载小说包」「开个互动小说」时使用。三种叙事模式：爽文、主线、沉浸。",
+    "version": "10.3.0",
+    "type": "user",
+    "license": "MIT",
+    "author": {
+        "name": "Treasure-hub-agent",
+        "url": "https://github.com/Treasure-hub-agent"
+    },
+    "homepage": "https://github.com/Treasure-hub-agent/interactive-fiction-skill",
+    "repository": "https://github.com/Treasure-hub-agent/interactive-fiction-skill",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "keywords": [
+        "interactive-fiction",
+        "story",
+        "game",
+        "novel",
+        "skills"
+    ],
+    "components": {
+        "skills": true
+    },
+    "min_host_version": "0.5.0"
+}

@@ -1,0 +1,31 @@
+{
+    "name": "lit-interactive-fiction",
+    "display_name": {
+        "zh": "文学改互动小说"
+    },
+    "description": "把任何一本书、剧本或故事（含有版权的作品，走内置的原创化路径）变成可玩的单文件 HTML 互动小说：有意义的选择、隐藏价值观轴、蝴蝶效应，结局读作性格判定而不是输赢。",
+    "version": "1.0.0",
+    "type": "user",
+    "license": "MIT",
+    "author": {
+        "name": "LindseyyZhang",
+        "url": "https://github.com/LindseyyZhang"
+    },
+    "homepage": "https://github.com/LindseyyZhang/lit-interactive-fiction",
+    "repository": "https://github.com/LindseyyZhang/lit-interactive-fiction",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "keywords": [
+        "interactive-fiction",
+        "literature",
+        "html",
+        "game",
+        "skills"
+    ],
+    "components": {
+        "skills": true
+    },
+    "min_host_version": "0.5.0"
+}
