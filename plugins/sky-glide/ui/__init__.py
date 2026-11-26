@@ -8,7 +8,8 @@ iframe 是独立文档，脚本、canvas、keydown 都跑在自己的 window 里
 
 渲染要点：
 - srcdoc 用 html.escape(quote=True) 转义，属性值安全且能被解析回原文
-- 外层用 padding-top:56.25% 撑 16:9（Chromium 83 不支持 aspect-ratio）
+- 外层用 height:0 + padding-top:56.25% 锁定 16:9（Chromium 83 无 aspect-ratio）；
+  iframe 内画布另做 letterbox，容器比例失效时画面仍是横屏
 - 明暗跟随 ctx["is_dark"]（主程序 Qt 主题），缺省按浅色
 """
 
@@ -30,11 +31,12 @@ def _render_game(ctx: dict = None) -> str:
 <style>
 .sg-wrap {{
   position: relative; width: 100%; max-width: 760px; margin: 0 auto;
-  padding-top: 56.25%; border-radius: 14px; overflow: hidden;
+  height: 0; padding-top: 56.25%; border-radius: 14px; overflow: hidden;
   box-shadow: 0 6px 22px rgba(20, 46, 62, 0.14);
 }}
 .sg-frame {{
   position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+  aspect-ratio: 16 / 9;
   border: 0; display: block; background: #101c26;
 }}
 .sg-hint {{

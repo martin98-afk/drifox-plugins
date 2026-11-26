@@ -22,8 +22,9 @@ _DOC = r"""<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: transparent; }
-  canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1116; }
+  body { display: flex; align-items: center; justify-content: center; }
+  canvas { display: block; touch-action: none; }
 </style>
 </head>
 <body>
@@ -64,11 +65,24 @@ _DOC = r"""<!DOCTYPE html>
 
   var cv = document.getElementById("g");
   var ctx = cv.getContext("2d");
-  var DPR = window.devicePixelRatio || 1;
-  if (DPR > 2) DPR = 2;
-  cv.width = W * DPR;
-  cv.height = H * DPR;
-  ctx.scale(DPR, DPR);
+  // 画布按 16:9 letterbox：不管 iframe 实际多宽多高，画面永远是横屏，
+  // 富余部分用天空色补边（防止宿主把卡片容器拉成方形）
+  function fit() {
+    var vw = window.innerWidth || W, vh = window.innerHeight || H;
+    var s = Math.min(vw / W, vh / H);
+    if (!(s > 0)) s = 1;
+    var cw = Math.max(1, Math.round(W * s)), ch = Math.max(1, Math.round(H * s));
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.style.width = cw + "px";
+    cv.style.height = ch + "px";
+    cv.width = Math.round(cw * dpr);
+    cv.height = Math.round(ch * dpr);
+    ctx.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
+  }
+  fit();
+  document.body.style.background = "#0b1116";
+  window.addEventListener("resize", fit);
+  window.addEventListener("load", fit);
 
   var bird, pipes, clouds, score, state, tick, wingT, best, paused = false;
 
