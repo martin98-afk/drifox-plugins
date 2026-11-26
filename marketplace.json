@@ -6717,6 +6717,57 @@
             }
         },
         {
+            "name": "live2d-mascot",
+            "description": "桌面看板：Qt 原生渲染 Live2D 模型（无边框透明悬浮窗），呼吸、眨眼、视线跟随、点击换表情全部实时。内置一个示例模型，放入任意 Cubism 3/4 模型目录即可替换。",
+            "version": "0.2.1",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/live2d-mascot",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true
+            },
+            "display_name": {
+                "zh": "看板娘",
+                "en": "Live2D Mascot"
+            },
+            "keywords": [
+                "live2d",
+                "mascot",
+                "看板娘"
+            ],
+            "dependencies": {
+                "pip": {
+                    "default": [
+                        "live2d-py==1.0.0"
+                    ]
+                }
+            },
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            },
+            "tarball": {
+                "linux": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-live2d-mascot-v0.2.1/live2d-mascot-0.2.1-linux.tar.gz",
+                    "sha256": "ccdbeafa915f2df3ddb2001a289df52ca367a540edc49ed18169d3043359fc32",
+                    "size": 26209379
+                },
+                "win32": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-live2d-mascot-v0.2.1/live2d-mascot-0.2.1-win32.tar.gz",
+                    "sha256": "c6581a19a280b6ac8537cceb4341c4b0f98d90e2441d0e8fee8dfc917b8aa846",
+                    "size": 22458335
+                }
+            }
+        },
+        {
             "name": "lucy-edgerunner",
             "description": "露西 · 夜之城 — 深浅双模式动画主题，Wallpaper Engine 创意工坊 2963605825 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
             "version": "1.0.1",
