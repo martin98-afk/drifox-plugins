@@ -1,0 +1,41 @@
+{
+    "name": "cn-academic-paper",
+    "display_name": {
+        "zh": "中文论文"
+    },
+    "description": "中文论文从写到成稿：写作方法（摘要/引言/相关工作/方法/实验/结论七段式、润色规则、审稿回复）+ Word 排版（Markdown 转 docx、LaTeX 公式转 Word 原生公式、三线表、标题图表自动编号、GB/T 7714 参考文献）。适配课程论文、毕业设计、数模论文。",
+    "version": "1.0.0",
+    "type": "user",
+    "license": "MIT",
+    "author": {
+        "name": "zLanqing + Gostyan",
+        "url": "https://github.com/zLanqing/codex-claude-academic-skills"
+    },
+    "homepage": "https://github.com/Gostyan/docx-skill-4-cn-paper",
+    "repository": "https://github.com/Gostyan/docx-skill-4-cn-paper",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "keywords": [
+        "academic",
+        "paper",
+        "thesis",
+        "docx",
+        "word",
+        "chinese",
+        "skills"
+    ],
+    "components": {
+        "skills": true
+    },
+    "dependencies": {
+        "pip": {
+            "default": [
+                "lxml>=5.0",
+                "defusedxml>=0.7"
+            ]
+        }
+    },
+    "min_host_version": "0.5.0"
+}
