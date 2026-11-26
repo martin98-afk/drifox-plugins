@@ -7786,7 +7786,7 @@
         {
             "name": "notch-chat",
             "description": "macOS 顶边状态胶囊，一键展开独立多轮对话，支持流式回复和随时收起。",
-            "version": "0.1.0",
+            "version": "0.1.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -7809,11 +7809,15 @@
             ],
             "min_host_version": "0.6.2",
             "api_version": 2,
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-notch-chat-v0.1.0/notch-chat-0.1.0-all.tar.gz",
-                    "sha256": "120d5dbdb8a810d92cc9359235cb640dbdea4c73c8dc29032a2d3e1beb8b7611",
-                    "size": 14778
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-notch-chat-v0.1.1/notch-chat-0.1.1-all.tar.gz",
+                    "sha256": "53774062429b38ebb675b0034b074673b555186a736cb18c8f17d77180b274f2",
+                    "size": 15791
                 }
             }
         },
