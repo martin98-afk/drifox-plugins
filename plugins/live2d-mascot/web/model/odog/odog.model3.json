@@ -1,0 +1,29 @@
+{
+  "Version": 3,
+  "FileReferences": {
+    "Moc": "odog.moc3",
+    "Textures": [
+      "texture_00.png"
+    ],
+    "Physics": "odog.physics3.json",
+    "DisplayInfo": "odog.cdi3.json",
+    "Expressions": [
+      {
+        "Name": "tongue",
+        "File": "tongue.exp3.json"
+      }
+    ]
+  },
+  "Groups": [
+    {
+      "Target": "Parameter",
+      "Name": "LipSync",
+      "Ids": []
+    },
+    {
+      "Target": "Parameter",
+      "Name": "EyeBlink",
+      "Ids": []
+    }
+  ]
+}

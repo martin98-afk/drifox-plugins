@@ -1,0 +1,33 @@
+{
+    "name": "live2d-mascot",
+    "display_name": {
+        "zh": "看板娘",
+        "en": "Live2D Mascot"
+    },
+    "description": "桌面看板：Qt 原生渲染 Live2D 模型（无边框透明悬浮窗），呼吸、眨眼、视线跟随、点击换表情全部实时。内置一个示例模型，放入任意 Cubism 3/4 模型目录即可替换。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "0.2.1",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "license": "MIT",
+    "type": "user",
+    "keywords": [
+        "live2d",
+        "mascot",
+        "看板娘"
+    ],
+    "components": {
+        "ui": true
+    },
+    "dependencies": {
+        "pip": {
+            "default": [
+                "live2d-py==1.0.0"
+            ]
+        }
+    }
+}
