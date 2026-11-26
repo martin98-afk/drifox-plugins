@@ -74,7 +74,9 @@ PIP_ABIS = ("cp314", "abi3", "none")
 #        老包才用 manylinux2014(=2_17)。
 PIP_PLATFORM_TAGS = {
     "win32": ["win_amd64"],
-    "darwin": ["macosx_11_0_universal2", "macosx_11_0_arm64"],
+    # macosx_26_0 是 live2d-py 这类新 SDK 的 tag（wheel 只标 26.0 universal2），
+    # 放在 11_0 之后兜底：多数包仍走 11_0，拉不全时再退到 26_0
+    "darwin": ["macosx_11_0_universal2", "macosx_26_0_universal2", "macosx_11_0_arm64"],
     "linux": [
         "manylinux_2_28_x86_64",
         "manylinux_2_27_x86_64",
