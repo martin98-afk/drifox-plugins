@@ -79,10 +79,21 @@ _DOC = r"""<!DOCTYPE html>
     cv.height = Math.round(ch * dpr);
     ctx.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
   }
+  // iframe 自撑比例：宿主不认外层容器样式，只能由文档内脚本按自身宽度
+  // 把 frameElement 的高度设成 16:9。跨源拿不到就靠 letterbox 兜底。
+  function fitFrame() {
+    try {
+      var fe = window.frameElement;
+      if (!fe) return;
+      var w = fe.clientWidth || window.innerWidth || 0;
+      if (w > 0) fe.style.height = Math.round(w * H / W) + "px";
+    } catch (e) { /* 跨源（sandbox）只读不了，忽略 */ }
+  }
+  fitFrame();
   fit();
   document.body.style.background = "#0b1116";
-  window.addEventListener("resize", fit);
-  window.addEventListener("load", fit);
+  window.addEventListener("resize", function () { fitFrame(); fit(); });
+  window.addEventListener("load", function () { fitFrame(); fit(); });
 
   var bird, pipes, clouds, score, state, tick, wingT, best, paused = false;
 
