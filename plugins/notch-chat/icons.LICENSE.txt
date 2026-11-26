@@ -1,6 +1,6 @@
 icon.svg / icon_dark.svg
 
-Lucide 图标「panel-top」（https://lucide.dev/icons/panel-top）
+Lucide 图标「message-square-text」（https://lucide.dev/icons/message-square-text）
 Licensed under the ISC License.
 
 Copyright (c) for portions of Lucide are held by Cole Bemis 2013-2022 as part of Feather (MIT).

@@ -50,7 +50,7 @@ macOS 顶边胶囊，一键展开一条独立的纯文本对话。与主窗口�
 
 ## 图标
 
-`panel-top`，来自 Lucide，ISC 许可，声明见 `icons.LICENSE.txt`。
+`message-square-text`，来自 Lucide，ISC 许可，声明见 `icons.LICENSE.txt`。
 
 ## 结构
 
