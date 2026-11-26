@@ -7804,6 +7804,7 @@
             "display_name": {
                 "zh": "顶边快捷对话"
             },
+            "downloads": 1,
             "platforms": [
                 "macos"
             ],
@@ -9584,6 +9585,7 @@
                 "zh": "滑翔鸟",
                 "en": "Sky Glide"
             },
+            "downloads": 2,
             "keywords": [
                 "game",
                 "flappy",

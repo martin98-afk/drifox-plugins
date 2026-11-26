@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1795670127.18525,
+  "fetched_at": 1795707112.0537908,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -97,7 +97,6 @@
     "feature-dev": 5,
     "figma": 2,
     "file-designer": 14,
-    "floating-chat": 1,
     "fosunwealth": 1,
     "frog-picnic": 3,
     "frontend-design": 1,
@@ -180,6 +179,7 @@
     "mystical-landscape": 3,
     "neon": 0,
     "netlify": 0,
+    "notch-chat": 1,
     "notion": 5,
     "novel-to-game": 1,
     "nuwa-skill": 14,
@@ -220,6 +220,7 @@
     "silk-song": 2,
     "skill-creator": 3,
     "skillhub": 1,
+    "sky-glide": 2,
     "slack-gif-creator": 2,
     "slack-mcp": 0,
     "sledding-game": 2,
