@@ -52,6 +52,8 @@
 |------|------|------|------|------|
 | [`hallmark`](hallmark/) | 反模板网页设计 — 16 条底线 + 发牌式主题抽取 + 21 种形态 + 20 套主题 + sloplint 检查 | skills | 2.0.0 | Nutlope/hallmark（61k★） |
 | [`impeccable`](impeccable/) | 设计手艺全集 — 四种界面模式 + 24 个设计动作 + 50 个参考文件，含质量底线与绝对禁令 | skills | 4.11.1 | pbakaus/impeccable（117k★） |
+| [`humanizer`](humanizer/) | 去 AI 味写作 — 6 大类 26 种痕迹的判据与改法，附中文高频词表 | skills | 4.0.0 | blader/humanizer（73k★） |
+| [`i-have-adhd`](i-have-adhd/) | ADHD 输出模式 — 结论先行、多步编号、每轮复述进度，用 /adhd 开启 | commands + skills | 1.0.0 | ayghri/i-have-adhd（62k★） |
 
 ### UI 组件插件
 
@@ -141,6 +143,8 @@
 | excalidraw-diagram | — | — | ✅ | — | — | — | — | — |
 | hallmark | — | — | ✅ | — | — | — | — | — |
 | impeccable | — | — | ✅ | — | — | — | — | — |
+| humanizer | — | — | ✅ | — | — | — | — | — |
+| i-have-adhd | ✅ | — | ✅ | — | — | — | — | — |
 | voice-clone | ✅ | — | ✅ | — | — | — | — | — |
 | minimax-h3 | ✅ | — | ✅ | — | — | — | — | — |
 | calendar | — | — | — | — | — | — | — | ✅ |

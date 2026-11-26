@@ -1,0 +1,32 @@
+{
+    "name": "i-have-adhd",
+    "display_name": {
+        "zh": "ADHD 输出模式"
+    },
+    "description": "把输出塑造成 ADHD 读者能立刻行动的样子：第一行给下一步动作、多步任务编号、每轮复述进度、压掉跑题、给具体时间估计、让进展看得见。用 /adhd 开启，/adhd --off 关闭。源自 ayghri/i-have-adhd（62k★，MIT）。",
+    "version": "1.0.0",
+    "type": "user",
+    "license": "MIT",
+    "author": {
+        "name": "Ayoub Ghriss",
+        "url": "https://github.com/ayghri"
+    },
+    "homepage": "https://github.com/ayghri/i-have-adhd",
+    "repository": "https://github.com/ayghri/i-have-adhd",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "keywords": [
+        "output-style",
+        "productivity",
+        "formatting",
+        "commands",
+        "skills"
+    ],
+    "components": {
+        "commands": true,
+        "skills": true
+    },
+    "min_host_version": "0.5.0"
+}

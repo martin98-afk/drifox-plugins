@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">ADHD 输出模式</title>
+  <rect width="128" height="128" rx="28" fill="#111827"/>
+  <circle cx="64" cy="64" r="30" fill="none" stroke="#F8FAFC" stroke-opacity="0.55" stroke-width="5"/>
+  <path d="M64 30v34l20 12" fill="none" stroke="#FCD34D" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="64" cy="64" r="6" fill="#FCD34D"/>
+  <path d="M96 92 104 100 118 82" fill="none" stroke="#6EE7B7" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
