@@ -9615,6 +9615,13 @@
             "icon": {
                 "light": "icon.svg",
                 "dark": "icon_dark.svg"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-sky-glide-v0.1.0/sky-glide-0.1.0-all.tar.gz",
+                    "sha256": "ed073c2fc595e487bc5de6ecbfbb42e38b2ea0a4993c68f7ab6bc0f9729ee2fd",
+                    "size": 7611
+                }
             }
         },
         {
