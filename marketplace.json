@@ -5998,6 +5998,48 @@
             }
         },
         {
+            "name": "interactive-fiction",
+            "description": "可选项驱动的互动小说：穿越/自创/创世/随机四种开局，内置视角一致性、字数区间、选项机制、存档系统与角色卡体系。用户想玩或想写互动小说、说「加载小说包」「开个互动小说」时使用。三种叙事模式：爽文、主线、沉浸。",
+            "version": "10.3.0",
+            "author": "Treasure-hub-agent",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/interactive-fiction",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "display_name": {
+                "zh": "互动小说"
+            },
+            "keywords": [
+                "interactive-fiction",
+                "story",
+                "game",
+                "novel",
+                "skills"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://github.com/Treasure-hub-agent/interactive-fiction-skill",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-interactive-fiction-v10.3.0/interactive-fiction-10.3.0-all.tar.gz",
+                    "sha256": "71ae9611d842dde6ba5bab91ae4e37ecff7e9ba56ce58b7947064ce540268855",
+                    "size": 195788
+                }
+            }
+        },
+        {
             "name": "intercom",
             "description": "Intercom — 查询 Intercom 的会话、联系人与客服数据。",
             "version": "1.0.0",
@@ -6637,6 +6679,48 @@
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-linksapi-v0.1.0/linksapi-0.1.0-all.tar.gz",
                     "sha256": "7bcb58863844e6b170c6eb68d18ed685983937697558ff5529b92dc393ae67b4",
                     "size": 2253
+                }
+            }
+        },
+        {
+            "name": "lit-interactive-fiction",
+            "description": "把任何一本书、剧本或故事（含有版权的作品，走内置的原创化路径）变成可玩的单文件 HTML 互动小说：有意义的选择、隐藏价值观轴、蝴蝶效应，结局读作性格判定而不是输赢。",
+            "version": "1.0.0",
+            "author": "LindseyyZhang",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/lit-interactive-fiction",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "display_name": {
+                "zh": "文学改互动小说"
+            },
+            "keywords": [
+                "interactive-fiction",
+                "literature",
+                "html",
+                "game",
+                "skills"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://github.com/LindseyyZhang/lit-interactive-fiction",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-lit-interactive-fiction-v1.0.0/lit-interactive-fiction-1.0.0-all.tar.gz",
+                    "sha256": "7913b48872cfd2471176d20dc30094cfdfb1a2d6666e9e038877fedd14f544b9",
+                    "size": 32005
                 }
             }
         },
@@ -7797,6 +7881,49 @@
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-notion-v1.0.0/notion-1.0.0-all.tar.gz",
                     "sha256": "81f3fe49b12480af1679954a2bd209c0be4bf70f20c35a3f32858a608628b227",
                     "size": 10570
+                }
+            }
+        },
+        {
+            "name": "novel-to-game",
+            "description": "把任意语言的小说做成忠于原著的可玩游戏：通读拆书、玩法与美术策划、用本机工具构建、新玩家盲玩验收。支持网页、桌面与移动端、微信/抖音小游戏、TapTap 制造。5 个技能分级协作，quick/director/resume 三种模式。",
+            "version": "0.9.0",
+            "author": "zenstory-ai",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/novel-to-game",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "display_name": {
+                "zh": "小说改编游戏"
+            },
+            "keywords": [
+                "game",
+                "novel",
+                "interactive-story",
+                "rpg",
+                "text-adventure",
+                "skills"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://github.com/zenstory-ai/novel-to-game",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-novel-to-game-v0.9.0/novel-to-game-0.9.0-all.tar.gz",
+                    "sha256": "d2c5a7bf991996c18131cbacd61daee3f97948fae65fe0d8b74b23ba15095be9",
+                    "size": 39167
                 }
             }
         },
