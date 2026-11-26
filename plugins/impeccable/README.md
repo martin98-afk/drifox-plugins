@@ -56,3 +56,7 @@ skills/impeccable/
 ## 许可
 
 Apache-2.0，见 `skills/impeccable/LICENSE`。`reference/ios.md` 与 `reference/android.md` 蒸馏自 ehmo 的 `platform-design-skills`（MIT），署名见 `skills/impeccable/NOTICE.md`。
+
+## 图标
+
+图标符号取自 [Lucide](https://lucide.dev) 的 `pen-tool`（贝塞尔锚点，设计工具的通用语义），ISC 许可，见 `LICENSE-lucide.txt`。

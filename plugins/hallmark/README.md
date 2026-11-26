@@ -46,3 +46,7 @@ skills/hallmark/
 ## 许可
 
 上游 MIT，见 `skills/hallmark/LICENSE`。
+
+## 图标
+
+图标用上游 [Nutlope/hallmark](https://github.com/Nutlope/hallmark) 的 `site/favicon.svg`：米白底 + 近黑字形 + 品牌橙 `#FC4C02`；深色版把底与字形反色，橙色保留。

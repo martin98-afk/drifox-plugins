@@ -43,3 +43,7 @@ skills/humanizer/
 ## 许可
 
 MIT，见插件根 `LICENSE`。
+
+## 图标
+
+图标符号取自 [Lucide](https://lucide.dev) 的 `pen-line`（笔尖落字，对应改写动作），ISC 许可，见 `LICENSE-lucide.txt`。

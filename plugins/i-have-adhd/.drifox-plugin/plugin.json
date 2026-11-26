@@ -14,8 +14,8 @@
     "homepage": "https://github.com/ayghri/i-have-adhd",
     "repository": "https://github.com/ayghri/i-have-adhd",
     "icon": {
-        "light": "icon.svg",
-        "dark": "icon_dark.svg"
+        "light": "icon.png",
+        "dark": "icon_dark.png"
     },
     "keywords": [
         "output-style",

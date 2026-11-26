@@ -47,3 +47,7 @@ plugins/i-have-adhd/
 ## 许可
 
 MIT，见 `LICENSE`。
+
+## 图标
+
+图标用上游 [ayghri/i-have-adhd](https://github.com/ayghri/i-have-adhd) 的 `logo.png`（256×256）。

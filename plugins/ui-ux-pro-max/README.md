@@ -54,3 +54,7 @@ skills/ui-ux-pro-max/
 ## 许可
 
 MIT，见上游仓库。
+
+## 图标
+
+图标符号取自 [Lucide](https://lucide.dev) 的 `layout-grid`（栅格版式，对应设计体系），ISC 许可，见 `LICENSE-lucide.txt`。
