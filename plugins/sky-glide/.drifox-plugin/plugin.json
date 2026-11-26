@@ -1,0 +1,27 @@
+{
+    "name": "sky-glide",
+    "display_name": {
+        "zh": "滑翔鸟",
+        "en": "Sky Glide"
+    },
+    "description": "欢迎卡片里的小游戏：按空格扇翅膀，从管道缝里挤过去，无限刷分。跟随深浅主题配色。",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "version": "0.1.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "license": "MIT",
+    "type": "user",
+    "keywords": [
+        "game",
+        "flappy",
+        "welcome",
+        "小游戏"
+    ],
+    "components": {
+        "ui": true
+    }
+}

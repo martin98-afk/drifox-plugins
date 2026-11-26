@@ -9585,6 +9585,39 @@
             }
         },
         {
+            "name": "sky-glide",
+            "description": "欢迎卡片里的小游戏：按空格扇翅膀，从管道缝里挤过去，无限刷分。跟随深浅主题配色。",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/sky-glide",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true
+            },
+            "display_name": {
+                "zh": "滑翔鸟",
+                "en": "Sky Glide"
+            },
+            "keywords": [
+                "game",
+                "flappy",
+                "welcome",
+                "小游戏"
+            ],
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            }
+        },
+        {
             "name": "slack-gif-creator",
             "description": "动画 GIF 生成 — 面向 Slack 尺寸的动图制作，含约束校验与动画概念工具。",
             "version": "1.0.0",
