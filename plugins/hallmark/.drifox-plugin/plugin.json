@@ -1,0 +1,32 @@
+{
+    "name": "hallmark",
+    "display_name": {
+        "zh": "Hallmark 反模板设计"
+    },
+    "description": "让生成的网页看起来是设计过的，不是 AI 吐的：16 条不可协商底线、发牌式主题抽取、21 种页面形态与 20 套主题，附 sloplint 自动检查。源自 Nutlope/hallmark（61k★，MIT）。",
+    "version": "2.0.0",
+    "type": "user",
+    "license": "MIT",
+    "author": {
+        "name": "Nutlope",
+        "url": "https://github.com/Nutlope"
+    },
+    "homepage": "https://github.com/Nutlope/hallmark",
+    "repository": "https://github.com/Nutlope/hallmark",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "keywords": [
+        "design",
+        "frontend",
+        "ui",
+        "landing-page",
+        "anti-slop",
+        "skills"
+    ],
+    "components": {
+        "skills": true
+    },
+    "min_host_version": "0.5.0"
+}
