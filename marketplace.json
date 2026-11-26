@@ -4194,66 +4194,6 @@
             }
         },
         {
-            "name": "floating-chat",
-            "description": "随时呼出的对话悬浮窗：全局热键一键弹出，不打开主窗也能快速问大模型。独立会话不污染主对话，输入即问、流式作答、一键打开完整会话",
-            "version": "0.1.0",
-            "author": "DriFox Contributors",
-            "license": "MIT",
-            "categories": [
-                "ui"
-            ],
-            "source": {
-                "type": "git-subdir",
-                "url": "https://github.com/martin98-afk/drifox-plugins",
-                "path": "plugins/floating-chat",
-                "ref": "main"
-            },
-            "components": {
-                "tools": false,
-                "commands": true,
-                "agents": false,
-                "skills": false,
-                "hooks": false,
-                "mcp": false,
-                "lsp": false,
-                "themes": false,
-                "ui": true,
-                "providers": false,
-                "team_templates": false,
-                "model_adapters": false,
-                "loop_policies": false,
-                "storages": false,
-                "serializers": false,
-                "gateways": false,
-                "engines": false
-            },
-            "display_name": {
-                "zh": "对话悬浮窗"
-            },
-            "downloads": 1,
-            "keywords": [
-                "chat",
-                "floating",
-                "quick",
-                "hotkey",
-                "window",
-                "悬浮对话",
-                "快速提问"
-            ],
-            "min_host_version": "0.6.2",
-            "icon": {
-                "light": "icon.png",
-                "dark": "icon_dark.png"
-            },
-            "tarball": {
-                "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-floating-chat-v0.1.0/floating-chat-0.1.0-all.tar.gz",
-                    "sha256": "dc70c9bfdecf259141fb9695559ebd671269d608c338ed379e5fb8c92b1329a7",
-                    "size": 44751
-                }
-            }
-        },
-        {
             "name": "fosunwealth",
             "description": "从你关心的问题出发，获得更清晰的金融洞察。",
             "version": "1.0.0",
@@ -7840,6 +7780,40 @@
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-netlify-v1.0.0/netlify-1.0.0-all.tar.gz",
                     "sha256": "44623ac5a430f023dea2ffdeef129f5da20f4d42ff442b2d3164a2558e6a7831",
                     "size": 2835
+                }
+            }
+        },
+        {
+            "name": "notch-chat",
+            "description": "macOS 顶边状态胶囊，一键展开独立多轮对话，支持流式回复和随时收起。",
+            "version": "0.1.0",
+            "author": "DriFox Contributors",
+            "license": "MIT",
+            "categories": [
+                "ui"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/notch-chat",
+                "ref": "main"
+            },
+            "components": {
+                "ui": true
+            },
+            "display_name": {
+                "zh": "顶边快捷对话"
+            },
+            "platforms": [
+                "macos"
+            ],
+            "min_host_version": "0.6.2",
+            "api_version": 2,
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-notch-chat-v0.1.0/notch-chat-0.1.0-all.tar.gz",
+                    "sha256": "120d5dbdb8a810d92cc9359235cb640dbdea4c73c8dc29032a2d3e1beb8b7611",
+                    "size": 14778
                 }
             }
         },
