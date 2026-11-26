@@ -9587,7 +9587,7 @@
         {
             "name": "sky-glide",
             "description": "欢迎卡片里的小游戏：按空格扇翅膀，从管道缝里挤过去，无限刷分。跟随深浅主题配色。",
-            "version": "0.1.0",
+            "version": "0.1.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -9618,9 +9618,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-sky-glide-v0.1.0/sky-glide-0.1.0-all.tar.gz",
-                    "sha256": "ed073c2fc595e487bc5de6ecbfbb42e38b2ea0a4993c68f7ab6bc0f9729ee2fd",
-                    "size": 7611
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-sky-glide-v0.1.1/sky-glide-0.1.1-all.tar.gz",
+                    "sha256": "48d838d111749714c6d8a860fff83148aee7274ddd5248ebd23baf67fee2ba27",
+                    "size": 7972
                 }
             }
         },
