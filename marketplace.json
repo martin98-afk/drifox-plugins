@@ -1545,6 +1545,68 @@
             }
         },
         {
+            "name": "cn-academic-paper",
+            "description": "中文论文从写到成稿：写作方法（摘要/引言/相关工作/方法/实验/结论七段式、润色规则、审稿回复）+ Word 排版（Markdown 转 docx、LaTeX 公式转 Word 原生公式、三线表、标题图表自动编号、GB/T 7714 参考文献）。适配课程论文、毕业设计、数模论文。",
+            "version": "1.0.0",
+            "author": "zLanqing + Gostyan",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/cn-academic-paper",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "display_name": {
+                "zh": "中文论文"
+            },
+            "keywords": [
+                "academic",
+                "paper",
+                "thesis",
+                "docx",
+                "word",
+                "chinese",
+                "skills"
+            ],
+            "dependencies": {
+                "pip": {
+                    "default": [
+                        "lxml>=5.0",
+                        "defusedxml>=0.7"
+                    ]
+                }
+            },
+            "min_host_version": "0.5.0",
+            "homepage": "https://github.com/Gostyan/docx-skill-4-cn-paper",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            },
+            "tarball": {
+                "darwin": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-cn-academic-paper-v1.0.0/cn-academic-paper-1.0.0-darwin.tar.gz",
+                    "sha256": "e5bfb9e7ecfd7b43cf06d0bf367243fc2dc415d347af1f77079df853282a84ff",
+                    "size": 8817054
+                },
+                "linux": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-cn-academic-paper-v1.0.0/cn-academic-paper-1.0.0-linux.tar.gz",
+                    "sha256": "87b61f0e5e24719173c0d4fe261f15bcb4125a004e2231b439ad10a056df2b32",
+                    "size": 5444256
+                },
+                "win32": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-cn-academic-paper-v1.0.0/cn-academic-paper-1.0.0-win32.tar.gz",
+                    "sha256": "0405ba6bc5f90700ab1d59ea1d433b35e1e95ba9a47f602b3140832d58d457fd",
+                    "size": 4201827
+                }
+            }
+        },
+        {
             "name": "code-animation-styles",
             "description": "代码动画风格提示词库：341 种风格（代码样片、动态风格、卡通画风、中国风、版式、奥斯卡 98 部等十大类，193 种带静帧），附离线挑选页与 AI 检索工具，Opus / DeepSeek 通用，用于把内容做成代码动画。",
             "version": "0.1.1",
@@ -5482,6 +5544,49 @@
             }
         },
         {
+            "name": "hallmark",
+            "description": "让生成的网页看起来是设计过的，不是 AI 吐的：16 条不可协商底线、发牌式主题抽取、21 种页面形态与 20 套主题，附 sloplint 自动检查。源自 Nutlope/hallmark（61k★，MIT）。",
+            "version": "2.0.0",
+            "author": "Nutlope",
+            "license": "MIT",
+            "categories": [
+                "language"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/hallmark",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "display_name": {
+                "zh": "Hallmark 反模板设计"
+            },
+            "keywords": [
+                "design",
+                "frontend",
+                "ui",
+                "landing-page",
+                "anti-slop",
+                "skills"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://github.com/Nutlope/hallmark",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-hallmark-v2.0.0/hallmark-2.0.0-all.tar.gz",
+                    "sha256": "811bf273bdc3c05266a40fd33027f2abbde926d64b458404a12365a1111d38d0",
+                    "size": 5214655
+                }
+            }
+        },
+        {
             "name": "hanabi-futari",
             "description": "二人花火 — 深浅双模式动画主题，Wallpaper Engine 创意工坊 1143394477 完整一轮转制动画 WebP 整窗铺底，附 1 首原壁纸音乐。",
             "version": "1.0.1",
@@ -5688,6 +5793,48 @@
             }
         },
         {
+            "name": "humanizer",
+            "description": "把读起来像 AI 写的文字改回人写的，内容不变：6 大类 26 种痕迹，从「不是 X 而是 Y」、一句话收尾、硬凑三连，到夸大意义、借用权威、装饰性加粗与聊天机器人残留，每条给判据与改前改后。源自 blader/humanizer（73k★，MIT）。",
+            "version": "4.0.0",
+            "author": "blader",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/humanizer",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "display_name": {
+                "zh": "Humanizer 去 AI 味"
+            },
+            "keywords": [
+                "writing",
+                "editing",
+                "anti-slop",
+                "prose",
+                "skills"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://github.com/blader/humanizer",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-humanizer-v4.0.0/humanizer-4.0.0-all.tar.gz",
+                    "sha256": "fd141fc30b5733e12d2cdf07b3b40b1cb7e7aef3e9867e2a27109b57fb3e6cde",
+                    "size": 31698
+                }
+            }
+        },
+        {
             "name": "hyperframes",
             "description": "HTML 代码渲染视频 — HeyGen HyperFrames 官方技能全量移植，9 个技能覆盖渲染契约、剪辑时间线、450+ 预制组件库、媒体与配音、字幕、风格复刻、视频反解、Remotion 迁移与放映模式。",
             "version": "0.9.44",
@@ -5725,6 +5872,93 @@
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-hyperframes-v0.9.44/hyperframes-0.9.44-all.tar.gz",
                     "sha256": "30bc1f149a356c0cc505accb3d860b15212e7c0cf149200e4a7eef6d5305dfaa",
                     "size": 1953236
+                }
+            }
+        },
+        {
+            "name": "i-have-adhd",
+            "description": "把输出塑造成 ADHD 读者能立刻行动的样子：第一行给下一步动作、多步任务编号、每轮复述进度、压掉跑题、给具体时间估计、让进展看得见。用 /adhd 开启，/adhd --off 关闭。源自 ayghri/i-have-adhd（62k★，MIT）。",
+            "version": "1.0.0",
+            "author": "Ayoub Ghriss",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/i-have-adhd",
+                "ref": "main"
+            },
+            "components": {
+                "commands": true,
+                "skills": true
+            },
+            "display_name": {
+                "zh": "ADHD 输出模式"
+            },
+            "keywords": [
+                "output-style",
+                "productivity",
+                "formatting",
+                "commands",
+                "skills"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://github.com/ayghri/i-have-adhd",
+            "icon": {
+                "light": "icon.png",
+                "dark": "icon_dark.png"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-i-have-adhd-v1.0.0/i-have-adhd-1.0.0-all.tar.gz",
+                    "sha256": "fd4b4bfdc07eea25f1829691ca0332ff56a33a49ed33d1806d8af2ed4bde112d",
+                    "size": 200074
+                }
+            }
+        },
+        {
+            "name": "impeccable",
+            "description": "前端设计手艺全套：四种界面模式 + 24 个设计动作（critique/audit/polish/bolder/quieter/distill/harden/animate/typeset/layout/clarify 等）+ 50 个参考文件，含质量底线与绝对禁令。源自 pbakaus/impeccable（117k★，Apache-2.0）。",
+            "version": "4.11.1",
+            "author": "Peter Bakaus",
+            "license": "Apache-2.0",
+            "categories": [
+                "language"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/impeccable",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "display_name": {
+                "zh": "Impeccable 设计手艺"
+            },
+            "keywords": [
+                "design",
+                "frontend",
+                "ui",
+                "ux",
+                "critique",
+                "polish",
+                "skills"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://github.com/pbakaus/impeccable",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-impeccable-v4.11.1/impeccable-4.11.1-all.tar.gz",
+                    "sha256": "ae79dc4e7c62d009072642471b0fd962a47f8b7ae26249b06091e5148193e5bb",
+                    "size": 196566
                 }
             }
         },
@@ -10614,6 +10848,50 @@
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-ui-motion-skills-v1.0.0/ui-motion-skills-1.0.0-all.tar.gz",
                     "sha256": "a17d29d8471ec8f67b6584d43d0399531d2b2932b335ada73f635d4d5b5fad06",
                     "size": 168999
+                }
+            }
+        },
+        {
+            "name": "ui-ux-pro-max",
+            "description": "本地可搜索的 UI/UX 设计智能：80 种风格、194 套产品配色、74 组字体搭配、141 条 UX 准则、25 类图表、23 个技术栈，7 个子技能一条命令出整套设计体系。源自 nextlevelbuilder/ui-ux-pro-max-skill（154k★，MIT）。",
+            "version": "2.0.0",
+            "author": "nextlevelbuilder",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/ui-ux-pro-max",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "display_name": {
+                "zh": "UI/UX Pro Max 设计智能"
+            },
+            "keywords": [
+                "design",
+                "ui",
+                "ux",
+                "design-system",
+                "typography",
+                "palette",
+                "skills"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-ui-ux-pro-max-v2.0.0/ui-ux-pro-max-2.0.0-all.tar.gz",
+                    "sha256": "cdea78d7cd9f3623bc973236e14debc0e53381269a8a33c23d722dc7c454d666",
+                    "size": 814726
                 }
             }
         },
