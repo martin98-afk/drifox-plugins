@@ -1,0 +1,31 @@
+{
+    "name": "humanizer",
+    "display_name": {
+        "zh": "Humanizer 去 AI 味"
+    },
+    "description": "把读起来像 AI 写的文字改回人写的，内容不变：6 大类 26 种痕迹，从「不是 X 而是 Y」、一句话收尾、硬凑三连，到夸大意义、借用权威、装饰性加粗与聊天机器人残留，每条给判据与改前改后。源自 blader/humanizer（73k★，MIT）。",
+    "version": "4.0.0",
+    "type": "user",
+    "license": "MIT",
+    "author": {
+        "name": "blader",
+        "url": "https://github.com/blader"
+    },
+    "homepage": "https://github.com/blader/humanizer",
+    "repository": "https://github.com/blader/humanizer",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "keywords": [
+        "writing",
+        "editing",
+        "anti-slop",
+        "prose",
+        "skills"
+    ],
+    "components": {
+        "skills": true
+    },
+    "min_host_version": "0.5.0"
+}
