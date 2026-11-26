@@ -27,9 +27,15 @@ npm install docx temml fast-xml-parser   # 在 skills/docx-paper/ 目录下执�
 - `temml`：LaTeX → MathML，供 Word 原生公式使用
 - `fast-xml-parser`：XML 解析
 
-另外按需：`pandoc`（读 docx 内容）、LibreOffice 的 `soffice`（.doc 转 .docx、转 PDF）、`pdftoppm`（PDF 转图）。Python 脚本的 `lxml` 与 `defusedxml` 已写进 manifest 的 `dependencies.pip`，由宿主自动安装；`xml.etree`、`zipfile` 走标准库。
+另外按需：`pandoc`（读 docx 内容）、LibreOffice 的 `soffice`（.doc 转 .docx、转 PDF）、`pdftoppm`（PDF 转图）。`scripts/office/validate.py` 需要 `lxml` 与 `defusedxml`，按需自行安装：
 
-本插件不自动装 npm 依赖，首次使用前必须手动跑上面的命令；没装时会报 `Cannot find module 'docx'`。`python scripts/office/validate.py` 需要 `lxml` 与 `defusedxml`，宿主没装成时手动 `pip install lxml defusedxml`。
+```bash
+pip install lxml defusedxml
+```
+
+其余 Python 脚本只用标准库（`xml.etree`、`zipfile`）。
+
+本插件不自动装 npm 依赖，首次使用前必须手动跑上面的命令；没装时会报 `Cannot find module 'docx'`。
 
 ## 快速参考
 

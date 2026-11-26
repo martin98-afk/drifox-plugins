@@ -29,13 +29,5 @@
     "components": {
         "skills": true
     },
-    "dependencies": {
-        "pip": {
-            "default": [
-                "lxml>=5.0",
-                "defusedxml>=0.7"
-            ]
-        }
-    },
     "min_host_version": "0.5.0"
 }
