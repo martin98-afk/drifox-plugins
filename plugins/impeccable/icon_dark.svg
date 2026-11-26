@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title">
+  <title id="title">Impeccable</title>
+  <rect width="128" height="128" rx="28" fill="#111827"/>
+  <circle cx="64" cy="64" r="34" fill="none" stroke="#F8FAFC" stroke-opacity="0.7" stroke-width="5"/>
+  <path d="M46 64.5 58.5 77 84 50" fill="none" stroke="#C4B5FD" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="64" cy="64" r="5" fill="#F8FAFC" fill-opacity="0.4"/>
+</svg>

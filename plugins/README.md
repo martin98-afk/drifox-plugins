@@ -46,6 +46,13 @@
 | [`playground`](playground/) | 交互式 HTML 练习场 — 控件 + 实时预览 + 提示词输出 | skills | 1.0.0 | Anthropic 官方 |
 | [`excalidraw-diagram`](excalidraw-diagram/) | 手绘风格图表 — 流程图/时序图/ER 图/思维导图 + 模板库 | skills | 1.0.0 | github/awesome-copilot |
 
+### 设计与写作技能
+
+| 插件 | 描述 | 组件 | 版本 | 来源 |
+|------|------|------|------|------|
+| [`hallmark`](hallmark/) | 反模板网页设计 — 16 条底线 + 发牌式主题抽取 + 21 种形态 + 20 套主题 + sloplint 检查 | skills | 2.0.0 | Nutlope/hallmark（61k★） |
+| [`impeccable`](impeccable/) | 设计手艺全集 — 四种界面模式 + 24 个设计动作 + 50 个参考文件，含质量底线与绝对禁令 | skills | 4.11.1 | pbakaus/impeccable（117k★） |
+
 ### UI 组件插件
 
 | 插件 | 描述 | 组件 | 版本 | 来源 |
@@ -132,6 +139,8 @@
 | web-artifacts-builder | — | — | ✅ | — | — | — | — | — |
 | playground | — | — | ✅ | — | — | — | — | — |
 | excalidraw-diagram | — | — | ✅ | — | — | — | — | — |
+| hallmark | — | — | ✅ | — | — | — | — | — |
+| impeccable | — | — | ✅ | — | — | — | — | — |
 | voice-clone | ✅ | — | ✅ | — | — | — | — | — |
 | minimax-h3 | ✅ | — | ✅ | — | — | — | — | — |
 | calendar | — | — | — | — | — | — | — | ✅ |
