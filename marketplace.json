@@ -1574,14 +1574,6 @@
                 "chinese",
                 "skills"
             ],
-            "dependencies": {
-                "pip": {
-                    "default": [
-                        "lxml>=5.0",
-                        "defusedxml>=0.7"
-                    ]
-                }
-            },
             "min_host_version": "0.5.0",
             "homepage": "https://github.com/Gostyan/docx-skill-4-cn-paper",
             "icon": {
@@ -5748,6 +5740,49 @@
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-hookify-v1.0.0/hookify-1.0.0-all.tar.gz",
                     "sha256": "ab95688d3c7f51439e7bbc68f8f0fff8684c3c9a3eba1e32ab358e7c65c4fc66",
                     "size": 127331
+                }
+            }
+        },
+        {
+            "name": "huashu-art-motion",
+            "description": "艺术与视频动画：36 种实做风格 + 16 种研究配方、9 种解说动画语法、镜头表模板、分镜 lint、逐帧质检、红灯不交付。用代码画画，导演方法论 + 三道门禁，uv + playwright + ffmpeg 出片，不需要 node。",
+            "version": "1.3.1",
+            "author": "花叔",
+            "license": "MIT",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/huashu-art-motion",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "display_name": {
+                "zh": "花叔艺术动画"
+            },
+            "keywords": [
+                "animation",
+                "motion",
+                "art",
+                "video",
+                "storyboard",
+                "skills"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://github.com/alchaincyf/huashu-art-motion",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-huashu-art-motion-v1.3.1/huashu-art-motion-1.3.1-all.tar.gz",
+                    "sha256": "19b80f45125b2762ce2adcf02bd931aa1266c2359188827f9be7224591adad27",
+                    "size": 21850944
                 }
             }
         },
@@ -10976,6 +11011,49 @@
                     "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-video-pipeline-v1.0.0/video-pipeline-1.0.0-all.tar.gz",
                     "sha256": "930a85a2f4e6e21793ae18c6ebdbc1abfaaabe141a6672dec40b8b8bb51f41e3",
                     "size": 493661
+                }
+            }
+        },
+        {
+            "name": "video-shotcraft",
+            "description": "电影感产品宣传片：124 张镜头配方卡（附 demo 源码与动态样片）、Ink Press 完整可渲染模板、Freesound 音效选材与节拍同步、六阶段工作流、三种创作模式（套模板/自由创作/共同创作）。基于 Remotion，需 node 与 npm install。",
+            "version": "1.0.0",
+            "author": "Vincentwei1021",
+            "license": "Apache-2.0",
+            "categories": [
+                "workflow"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/video-shotcraft",
+                "ref": "main"
+            },
+            "components": {
+                "skills": true
+            },
+            "display_name": {
+                "zh": "Shotcraft 产品宣传片"
+            },
+            "keywords": [
+                "video",
+                "remotion",
+                "promo",
+                "motion-graphics",
+                "storyboard",
+                "skills"
+            ],
+            "min_host_version": "0.5.0",
+            "homepage": "https://vincentwei1021.github.io/video-shotcraft/",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-video-shotcraft-v1.0.0/video-shotcraft-1.0.0-all.tar.gz",
+                    "sha256": "bfd1d9208fcbbab87d12f453ede671e040af1de8833f32a3448d5102e46669ab",
+                    "size": 16341121
                 }
             }
         },
