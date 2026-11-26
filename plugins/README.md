@@ -50,6 +50,7 @@
 
 | 插件 | 描述 | 组件 | 版本 | 来源 |
 |------|------|------|------|------|
+| [`ui-ux-pro-max`](ui-ux-pro-max/) | 设计智能库 — 80 种风格 / 194 套配色 / 74 组字体 / 141 条 UX 准则 / 23 个技术栈，7 个子技能一条命令出设计体系 | skills | 2.0.0 | nextlevelbuilder/ui-ux-pro-max-skill（154k★） |
 | [`hallmark`](hallmark/) | 反模板网页设计 — 16 条底线 + 发牌式主题抽取 + 21 种形态 + 20 套主题 + sloplint 检查 | skills | 2.0.0 | Nutlope/hallmark（61k★） |
 | [`impeccable`](impeccable/) | 设计手艺全集 — 四种界面模式 + 24 个设计动作 + 50 个参考文件，含质量底线与绝对禁令 | skills | 4.11.1 | pbakaus/impeccable（117k★） |
 | [`humanizer`](humanizer/) | 去 AI 味写作 — 6 大类 26 种痕迹的判据与改法，附中文高频词表 | skills | 4.0.0 | blader/humanizer（73k★） |
@@ -145,6 +146,7 @@
 | impeccable | — | — | ✅ | — | — | — | — | — |
 | humanizer | — | — | ✅ | — | — | — | — | — |
 | i-have-adhd | ✅ | — | ✅ | — | — | — | — | — |
+| ui-ux-pro-max | — | — | ✅ | — | — | — | — | — |
 | voice-clone | ✅ | — | ✅ | — | — | — | — | — |
 | minimax-h3 | ✅ | — | ✅ | — | — | — | — | — |
 | calendar | — | — | — | — | — | — | — | ✅ |

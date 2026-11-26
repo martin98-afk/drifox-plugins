@@ -1,0 +1,33 @@
+{
+    "name": "ui-ux-pro-max",
+    "display_name": {
+        "zh": "UI/UX Pro Max 设计智能"
+    },
+    "description": "本地可搜索的 UI/UX 设计智能：80 种风格、194 套产品配色、74 组字体搭配、141 条 UX 准则、25 类图表、23 个技术栈，7 个子技能一条命令出整套设计体系。源自 nextlevelbuilder/ui-ux-pro-max-skill（154k★，MIT）。",
+    "version": "2.0.0",
+    "type": "user",
+    "license": "MIT",
+    "author": {
+        "name": "nextlevelbuilder",
+        "url": "https://github.com/nextlevelbuilder"
+    },
+    "homepage": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+    "repository": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "keywords": [
+        "design",
+        "ui",
+        "ux",
+        "design-system",
+        "typography",
+        "palette",
+        "skills"
+    ],
+    "components": {
+        "skills": true
+    },
+    "min_host_version": "0.5.0"
+}
