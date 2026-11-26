@@ -1,0 +1,32 @@
+{
+    "name": "video-shotcraft",
+    "display_name": {
+        "zh": "Shotcraft 产品宣传片"
+    },
+    "description": "电影感产品宣传片：124 张镜头配方卡（附 demo 源码与动态样片）、Ink Press 完整可渲染模板、Freesound 音效选材与节拍同步、六阶段工作流、三种创作模式（套模板/自由创作/共同创作）。基于 Remotion，需 node 与 npm install。",
+    "version": "1.0.0",
+    "type": "user",
+    "license": "Apache-2.0",
+    "author": {
+        "name": "Vincentwei1021",
+        "url": "https://github.com/Vincentwei1021"
+    },
+    "homepage": "https://vincentwei1021.github.io/video-shotcraft/",
+    "repository": "https://github.com/Vincentwei1021/video-shotcraft",
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "keywords": [
+        "video",
+        "remotion",
+        "promo",
+        "motion-graphics",
+        "storyboard",
+        "skills"
+    ],
+    "components": {
+        "skills": true
+    },
+    "min_host_version": "0.5.0"
+}

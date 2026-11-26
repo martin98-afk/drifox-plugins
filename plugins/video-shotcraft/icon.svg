@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img">
+  <title>video-shotcraft</title>
+  <rect width="128" height="128" rx="28" fill="#171714"/>
+  <g transform="translate(28 28) scale(0.75)">
+    <path fill="#F5F3EE" d="M16 16h96v26H42v44h70v26H16V16Z"/>
+    <path fill="#D3923C" d="M92 48h28L84 84H56l36-36Z"/>
+  </g>
+</svg>
