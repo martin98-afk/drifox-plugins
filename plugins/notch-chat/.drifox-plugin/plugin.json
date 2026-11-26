@@ -3,7 +3,7 @@
   "display_name": {
     "zh": "顶边快捷对话"
   },
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "macOS 顶边状态胶囊，一键展开独立多轮对话，支持流式回复和随时收起。",
   "icon": {
     "light": "icon.svg",
