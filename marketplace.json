@@ -6719,7 +6719,7 @@
         {
             "name": "live2d-mascot",
             "description": "桌面看板：Qt 原生渲染 Live2D 模型（无边框透明悬浮窗），呼吸、眨眼、视线跟随、点击换表情全部实时。内置一个示例模型，放入任意 Cubism 3/4 模型目录即可替换。",
-            "version": "0.2.1",
+            "version": "0.2.2",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -6756,15 +6756,20 @@
                 "dark": "icon_dark.svg"
             },
             "tarball": {
+                "darwin": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-live2d-mascot-v0.2.2/live2d-mascot-0.2.2-darwin.tar.gz",
+                    "sha256": "cece53aa1dff8eca342fbd6ea0c603c6a44af21f553382f19fb53b91e68b219d",
+                    "size": 1276169
+                },
                 "linux": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-live2d-mascot-v0.2.1/live2d-mascot-0.2.1-linux.tar.gz",
-                    "sha256": "ccdbeafa915f2df3ddb2001a289df52ca367a540edc49ed18169d3043359fc32",
-                    "size": 26209379
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-live2d-mascot-v0.2.2/live2d-mascot-0.2.2-linux.tar.gz",
+                    "sha256": "713c33b4f0b4d2cdb2329bd69a2da40afdee05c63be6cd77ad3850a262d3a5a4",
+                    "size": 26209451
                 },
                 "win32": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-live2d-mascot-v0.2.1/live2d-mascot-0.2.1-win32.tar.gz",
-                    "sha256": "c6581a19a280b6ac8537cceb4341c4b0f98d90e2441d0e8fee8dfc917b8aa846",
-                    "size": 22458335
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-live2d-mascot-v0.2.2/live2d-mascot-0.2.2-win32.tar.gz",
+                    "sha256": "6ea03052d7e28f9f5d0c35d74d9bf91360cdde4919c85ab0edc9e729e520d6ca",
+                    "size": 22458479
                 }
             }
         },
