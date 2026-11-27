@@ -25,7 +25,10 @@ DriFox 欢迎卡片的 WebView 没有 WebGL：实测 `canvas.getContext('webgl')
 
 ## 依赖
 
-`deps/darwin/` 内置 live2d-py 1.0.0（Cubism Native SDK 封装，MIT 之外的
+运行时随源码放在 `runtime/<platform>/`（git-subdir 安装时用它），
+tarball 安装则优先用构建期注入的 `deps/<platform>/`。
+
+`runtime/darwin/` 内置 live2d-py 1.0.0（Cubism Native SDK 封装，MIT 之外的
 Live2D 专有许可，见 `deps/darwin/LICENSE`）。
 
 目前只在 macOS 26 / Apple Silicon 上实测通过；Windows / Linux 有对应 wheel，
