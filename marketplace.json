@@ -4941,7 +4941,7 @@
         {
             "name": "git-panel",
             "description": "Git 控制面板 — 变更列表与文件树切换、暂存/提交、Stash、分支、提交历史、Diff 预览、AI 生成提交描述",
-            "version": "2.5.3",
+            "version": "2.5.4",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -4977,9 +4977,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-git-panel-v2.5.3/git-panel-2.5.3-all.tar.gz",
-                    "sha256": "5d61d4a5cb60b5797e627cad794cbfb38afae0e4d9d0a1c36991807f38dfef15",
-                    "size": 89849
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-git-panel-v2.5.4/git-panel-2.5.4-all.tar.gz",
+                    "sha256": "7496e7e651b3c5ea2c234d599c24cdb7746f9de13e31a28d42e8ef48395a7848",
+                    "size": 90903
                 }
             }
         },
