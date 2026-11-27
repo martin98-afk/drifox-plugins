@@ -1,6 +1,11 @@
 # Changelog
 
 ## Unreleased
+### 🔧 git-panel 2.5.4：AI 生成提交描述不再写未暂存的改动
+- **症状**：只暂存了一部分文件时，AI 生成的提交描述会提到工作区里没暂存的其他改动，看起来像「未暂存内容也被一起提交了」
+- **根因**：生成链路本身只读暂存区（`git diff --cached`），提交也只走 index（`git commit -m`，无 `-a`）；但提示词没划定提交范围，模型会按仓库名与文件名「合理推测」未提供的改动，输出越界
+- **修复**：`_build_commit_user_prompt` 顶部新增「# 提交范围（硬约束）」，声明本次提交仅含列出的 N 个暂存文件、清单外内容禁止描述或提及；系统提示词补同样的边界句（代码默认值与 manifest `config_schema` 内嵌默认值同步）；生成成功提示改为回显「依据：a.py、b.py 等 N 个暂存文件」，可直接核对本次生成范围
+- **验证**：`tests/test_ui_p1.py` 加断言（硬约束段须在「# 仓库详情」之前）；`plugins/git-panel/tests` 56 passed；隔离仓库实测暂存 f1、不暂存 f2 时 prompt 只含 f1
 ### 🔧 file-designer v0.6.1：预览图片拖出恒名 download.png，多图在输入框互相覆盖
 - **症状**：从预览窗把图片拖进输入框，所有图片都叫 `download.png`，多张叠在一起分不清
 - **根因**：预览页图片是内联 `data:` URI，Chromium 对 data: 图片拖拽一律按 `download.<ext>` 命名（crbug 40556755，`download` 属性对 data scheme 无效），插件侧无法指定文件名

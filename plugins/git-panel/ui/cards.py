@@ -3622,6 +3622,9 @@ class GitPanelCard(QWidget):
         if not files:
             self._show_info_bar("info", "AI 生成", "暂存区为空，请先暂存要提交的文件")
             return
+        # 回显给用户：本次生成到底基于哪些暂存文件（区分「模型幻觉」与
+        # 「index 里本来就有这些改动」的唯一现场证据）
+        self._ai_files = [f["path"] for f in files]
         override = resolve_model(
             load_plugin_text_config("commit_provider", ""),
             load_plugin_text_config("commit_model", ""),
@@ -3652,7 +3655,8 @@ class GitPanelCard(QWidget):
     def _build_commit_user_prompt(self, repo, files) -> str:
         """拼装 AI 生成提交描述的 user 消息
 
-        对齐 VSCode Copilot 的三层信息：
+        对齐 VSCode Copilot 的四层信息：
+        0. 提交范围硬约束——声明本次提交仅含下列文件，工作区其余改动不在输入内
         1. 仓库详情（仓库名/分支名）——给模型定位上下文
         2. 变更文件清单（状态 + 增删行数）——即使大文件 diff 被截，也不漏文件
         3. 逐文件 diff（单文件超限才截断，带显式标记；按改动量降序）
@@ -3684,7 +3688,15 @@ class GitPanelCard(QWidget):
         included_paths = {f["path"] for f in included}
         omitted = len(files) - len(included_paths)
 
+        # 范围硬约束置顶：模型看不到工作区，但会按仓库名/文件名「合理推测」，
+        # 一旦推测出未暂存的改动就表现为描述越界（用户报的「提到了我没暂存的改动」）。
+        # 显式声明提交集 = 下列文件，才压得住这种扩散。
         lines = [
+            "# 提交范围（硬约束）",
+            f"本次提交包含且仅包含下列 {len(files)} 个文件的暂存区快照。",
+            "工作区里尚未暂存的改动、未跟踪文件、以及清单之外的任何内容都不属于本次提交："
+            "不要描述、不要推测、不要提及，也不要因为仓库里还有其他改动而扩展描述范围。",
+            "",
             "# 仓库详情",
             f"仓库名：{repo_name}",
             f"分支名：{branch}",
@@ -3729,6 +3741,7 @@ class GitPanelCard(QWidget):
             task.cancel()
         self._ai_task = None
         self._ai_task_running = False
+        self._ai_files = []
         self._set_ai_running(False)
         self._show_info_bar("info", "AI 生成", "已停止生成")
 
@@ -3745,15 +3758,25 @@ class GitPanelCard(QWidget):
         self._ai_task_running = False
         self._ai_task = None
         self._set_ai_running(False)
+        paths = list(getattr(self, "_ai_files", []) or [])
+        self._ai_files = []
         if message:
             self._commit_input.setPlainText(message)
-            self._show_info_bar("success", "AI 生成", "已生成提交描述，可编辑后提交")
+            if paths:
+                names = "、".join(os.path.basename(p) for p in paths[:3])
+                more = (f" 等 {len(paths)} 个暂存文件" if len(paths) > 3
+                        else f"（{len(paths)} 个暂存文件）")
+                content = f"已生成，依据：{names}{more}；可编辑后提交"
+            else:
+                content = "已生成提交描述，可编辑后提交"
+            self._show_info_bar("success", "AI 生成", content)
         else:
             self._show_info_bar("info", "AI 生成", "模型返回为空")
 
     def _on_ai_error(self, err: str):
         self._ai_task_running = False
         self._ai_task = None
+        self._ai_files = []
         self._set_ai_running(False)
         self._show_info_bar("error", f"AI 生成失败（已重试 {_AI_MAX_ATTEMPTS} 次）", (err or "")[:80])
 

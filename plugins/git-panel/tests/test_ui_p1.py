@@ -422,6 +422,10 @@ class TestCommitPromptAssembly(P1UITestBase):
         card._repo_path = self.repo
         files = self.g.staged_file_diffs(2000)
         prompt = card._build_commit_user_prompt(self.g, files)
+        # 范围硬约束置顶：防模型把工作区未暂存改动写进描述
+        self.assertIn("# 提交范围（硬约束）", prompt)
+        self.assertIn("都不属于本次提交", prompt)
+        self.assertLess(prompt.index("# 提交范围（硬约束）"), prompt.index("# 仓库详情"))
         self.assertIn("# 仓库详情", prompt)
         self.assertIn(f"仓库名：{os.path.basename(self.repo)}", prompt)
         self.assertIn("# 变更文件", prompt)
