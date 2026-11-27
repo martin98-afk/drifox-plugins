@@ -21,23 +21,9 @@ _PLUGIN_DIR = Path(__file__).resolve().parent.parent
 _PLATFORM_DIR = {"darwin": "darwin", "win32": "win32"}.get(sys.platform, "linux")
 
 
-def _inject_runtime():
-    """把 live2d 运行时目录插进 sys.path
-
-    两个来源：deps/（tarball 安装 + 本地开发，构建期注入）与
-    runtime/（随源码入库，git-subdir 安装时唯一可用的来源）。
-    市场当前对 macOS 只回退到 git-subdir，没有 deps，所以 runtime 必须入库。
-    """
-    for sub in ("deps", "runtime"):
-        cand = _PLUGIN_DIR / sub / _PLATFORM_DIR
-        if (cand / "live2d").is_dir():
-            if str(cand) not in sys.path:
-                sys.path.insert(0, str(cand))
-            return cand
-    return None
-
-
-_RUNTIME_DIR = _inject_runtime()
+_DEPS = _PLUGIN_DIR / "deps" / _PLATFORM_DIR
+if (_DEPS / "live2d").is_dir() and str(_DEPS) not in sys.path:
+    sys.path.insert(0, str(_DEPS))
 
 from PyQt5.QtCore import QPoint, QRect, QSettings, Qt, QTimer
 from PyQt5.QtGui import QCursor, QImage, QOpenGLWindow, QSurfaceFormat
