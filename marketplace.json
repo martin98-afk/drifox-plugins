@@ -4141,7 +4141,7 @@
             "display_name": {
                 "zh": "多格式文件设计"
             },
-            "downloads": 15,
+            "downloads": 16,
             "keywords": [
                 "document",
                 "docx",
@@ -4960,7 +4960,7 @@
             "display_name": {
                 "zh": "Git 控制面板"
             },
-            "downloads": 121,
+            "downloads": 123,
             "keywords": [
                 "git",
                 "source-control",
@@ -9082,6 +9082,7 @@
             "display_name": {
                 "zh": "软件服务AI 中转站"
             },
+            "downloads": 2,
             "keywords": [
                 "rjfw",
                 "软件服务AI",
