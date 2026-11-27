@@ -1,0 +1,36 @@
+{
+    "icon": {
+        "light": "icon.svg",
+        "dark": "icon_dark.svg"
+    },
+    "name": "rjfw-provider",
+    "display_name": {
+        "zh": "软件服务AI 中转站"
+    },
+    "description": "软件服务AI API中转站（s.rjfw.com）服务商：一条配置聚合 GPT / Claude / Gemini / Grok / DeepSeek / Kimi / 智谱全系模型，OpenAI 兼容协议，支持用 API Key 直接查钱包余额与今日/累计用量",
+    "version": "1.0.0",
+    "author": {
+        "name": "DriFox Contributors"
+    },
+    "homepage": "https://s.rjfw.com",
+    "license": "GPL-3.0-or-later",
+    "type": "user",
+    "api_version": 2,
+    "min_host_version": "0.7.4",
+    "capabilities": [],
+    "keywords": [
+        "rjfw",
+        "软件服务AI",
+        "ZLY",
+        "Sub2API",
+        "中转站",
+        "OpenAI",
+        "Claude",
+        "Gemini",
+        "服务商",
+        "余额"
+    ],
+    "components": {
+        "providers": true
+    }
+}
