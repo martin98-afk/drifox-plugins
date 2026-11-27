@@ -4141,7 +4141,7 @@
             "display_name": {
                 "zh": "多格式文件设计"
             },
-            "downloads": 14,
+            "downloads": 15,
             "keywords": [
                 "document",
                 "docx",
@@ -4960,7 +4960,7 @@
             "display_name": {
                 "zh": "Git 控制面板"
             },
-            "downloads": 118,
+            "downloads": 121,
             "keywords": [
                 "git",
                 "source-control",
@@ -6738,7 +6738,7 @@
                 "zh": "看板娘",
                 "en": "Live2D Mascot"
             },
-            "downloads": 1,
+            "downloads": 2,
             "keywords": [
                 "live2d",
                 "mascot",
