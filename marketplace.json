@@ -9062,6 +9062,54 @@
             }
         },
         {
+            "name": "rjfw-provider",
+            "description": "软件服务AI API中转站（s.rjfw.com）服务商：一条配置聚合 GPT / Claude / Gemini / Grok / DeepSeek / Kimi / 智谱全系模型，OpenAI 兼容协议，支持用 API Key 直接查钱包余额与今日/累计用量",
+            "version": "1.0.0",
+            "author": "DriFox Contributors",
+            "license": "GPL-3.0-or-later",
+            "categories": [
+                "provider"
+            ],
+            "source": {
+                "type": "git-subdir",
+                "url": "https://github.com/martin98-afk/drifox-plugins",
+                "path": "plugins/rjfw-provider",
+                "ref": "main"
+            },
+            "components": {
+                "providers": true
+            },
+            "display_name": {
+                "zh": "软件服务AI 中转站"
+            },
+            "keywords": [
+                "rjfw",
+                "软件服务AI",
+                "ZLY",
+                "Sub2API",
+                "中转站",
+                "OpenAI",
+                "Claude",
+                "Gemini",
+                "服务商",
+                "余额"
+            ],
+            "min_host_version": "0.7.4",
+            "api_version": 2,
+            "homepage": "https://s.rjfw.com",
+            "icon": {
+                "light": "icon.svg",
+                "dark": "icon_dark.svg"
+            },
+            "tarball": {
+                "default": {
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-rjfw-provider-v1.0.0/rjfw-provider-1.0.0-all.tar.gz",
+                    "sha256": "fbe83232a11d49905572132d835772ada799d0a209e616758f70eb4a4643b7bc",
+                    "size": 6857
+                }
+            }
+        },
+        {
             "name": "security-guidance",
             "description": "AI 生成代码安全审查 — PostToolUse 静态模式检查，识别注入攻击、XSS、SQL 注入、硬编码密钥、不安全反序列化等 25+ 类漏洞风险。",
             "version": "2.0.6",
