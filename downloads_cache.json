@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "fetched_at": 1795707112.0537908,
+  "fetched_at": 1795738317.6031635,
   "downloads": {
     "ai-image-gen": 1,
     "ai-video-gen": 1,
@@ -146,7 +146,7 @@
     "jina": 0,
     "jsonl-storage": 0,
     "kdocs": 0,
-    "kim-service": 11,
+    "kim-service": 12,
     "kling-ai-plugin": 1,
     "knowledge-base-skills": 2,
     "laputa-fog": 11,
@@ -154,6 +154,7 @@
     "linksapi": 4,
     "lit-interactive-fiction": 0,
     "live-data": 6,
+    "live2d-mascot": 1,
     "lucy-edgerunner": 4,
     "lunheng-article-pipeline": 0,
     "magpie": 15,

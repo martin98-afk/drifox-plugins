@@ -6392,7 +6392,7 @@
             "display_name": {
                 "zh": "Kim Service 技能合集"
             },
-            "downloads": 11,
+            "downloads": 12,
             "keywords": [
                 "prompt",
                 "optimizer",
@@ -6738,6 +6738,7 @@
                 "zh": "看板娘",
                 "en": "Live2D Mascot"
             },
+            "downloads": 1,
             "keywords": [
                 "live2d",
                 "mascot",
