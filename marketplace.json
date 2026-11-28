@@ -997,7 +997,7 @@
         {
             "name": "browser",
             "description": "内置浏览器 — Chrome 体验多标签浏览 + 外部链接接管 + AI 智能体浏览控制（MCP）。",
-            "version": "1.8.0",
+            "version": "1.9.0",
             "author": "DriFox Contributors",
             "license": "GPL-3.0-or-later",
             "categories": [
@@ -1032,9 +1032,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-browser-v1.8.0/browser-1.8.0-all.tar.gz",
-                    "sha256": "d66ee2ab65072910fc3e01fceaa28a27833364bc44166705cf1d06492ce479f6",
-                    "size": 81598
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-browser-v1.9.0/browser-1.9.0-all.tar.gz",
+                    "sha256": "69c0128d4e51732800f10fd8ce20b4fb8fd0ded708dbe63ea7f36aa2ba785634",
+                    "size": 82220
                 }
             }
         },
@@ -4941,7 +4941,7 @@
         {
             "name": "git-panel",
             "description": "Git 控制面板 — 变更列表与文件树切换、暂存/提交、Stash、分支、提交历史、Diff 预览、AI 生成提交描述",
-            "version": "2.5.4",
+            "version": "2.6.1",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -4977,9 +4977,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-git-panel-v2.5.4/git-panel-2.5.4-all.tar.gz",
-                    "sha256": "7496e7e651b3c5ea2c234d599c24cdb7746f9de13e31a28d42e8ef48395a7848",
-                    "size": 90903
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-git-panel-v2.6.1/git-panel-2.6.1-all.tar.gz",
+                    "sha256": "515ebba510e7267185cc1ac04b21aedd1b837e73b78d3febb641915bff940f0b",
+                    "size": 91285
                 }
             }
         },
@@ -8793,7 +8793,7 @@
         {
             "name": "prompt-enhancer",
             "description": "输入框按钮：一键用 LLM 优化当前输入框的提示词，增强指令可在系统配置中多行编辑。优化中按钮圆环转圈动画，复用主程序模型配置，「提示词增强模型」选择可持久化（关闭再打开保留），闭包实现（不修改主程序）。",
-            "version": "0.5.3",
+            "version": "0.6.0",
             "author": "DriFox Contributors",
             "license": "MIT",
             "categories": [
@@ -8827,9 +8827,9 @@
             },
             "tarball": {
                 "default": {
-                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-prompt-enhancer-v0.5.3/prompt-enhancer-0.5.3-all.tar.gz",
-                    "sha256": "c96c6e45844b38176ac207ee01301bd4e4f23a8862d40e8ea8f833453bbb4db2",
-                    "size": 16673
+                    "url": "https://github.com/martin98-afk/drifox-plugins/releases/download/plugin-prompt-enhancer-v0.6.0/prompt-enhancer-0.6.0-all.tar.gz",
+                    "sha256": "6227fb4dc122de8ba8325f4411172dab429e4d302eb3549a28992dd1afa5ccd7",
+                    "size": 15138
                 }
             }
         },
