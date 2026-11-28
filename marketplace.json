@@ -1018,7 +1018,7 @@
             "display_name": {
                 "zh": "内置浏览器"
             },
-            "downloads": 101,
+            "downloads": 102,
             "keywords": [
                 "browser",
                 "web",
@@ -4960,7 +4960,7 @@
             "display_name": {
                 "zh": "Git 控制面板"
             },
-            "downloads": 123,
+            "downloads": 125,
             "keywords": [
                 "git",
                 "source-control",
@@ -8245,7 +8245,7 @@
             "display_name": {
                 "zh": "OpenAI 服务商"
             },
-            "downloads": 4,
+            "downloads": 5,
             "keywords": [
                 "服务商"
             ],
@@ -8811,7 +8811,7 @@
             "display_name": {
                 "zh": "提示词增强"
             },
-            "downloads": 82,
+            "downloads": 83,
             "keywords": [
                 "prompt",
                 "enhance",
