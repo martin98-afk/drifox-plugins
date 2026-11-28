@@ -144,7 +144,7 @@ class BrowserWindowCard(QWidget):
     # ── UI 搭建 ──
 
     def _setup_ui(self):
-        self.setMinimumSize(520, 320)
+        self.setMinimumSize(360, 320)
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setStyleSheet("BrowserWindowCard { background: transparent; }")
 
@@ -759,6 +759,14 @@ class BrowserWindowCard(QWidget):
         self._url_bar.apply_theme(c)
         self._tab_bar.apply_theme(c)
         self._bookmark_bar.apply_theme()
+        from .panel_base import apply_panel_theme
+
+        for attr in self._POPUP_PANEL_ATTRS:
+            panel = getattr(self, attr, None)
+            if panel is not None and panel.isVisible():
+                apply_panel_theme(panel, self)
+                if attr == "_downloads_panel" and panel._results.currentWidget() is panel._list:
+                    panel._render_items()
         for entry in self._views:
             placeholder = entry.get("placeholder")
             if placeholder is not None:
@@ -833,12 +841,17 @@ class BrowserWindowCard(QWidget):
         return panel
 
     def _position_popup(self, panel):
-        panel.adjustSize()
         anchor = self._btn_menu.mapTo(
             self, QPoint(self._btn_menu.width(), self._btn_menu.height())
         )
-        x = max(8, anchor.x() - panel.width())
-        panel.move(x, anchor.y() + 4)
+        y = anchor.y() + 4
+        if hasattr(panel, "preferred_size"):
+            width, height = panel.preferred_size
+            panel.resize(min(width, max(1, self.width() - 16)), min(height, max(1, self.height() - y - 8)))
+        else:
+            panel.adjustSize()
+        x = max(8, min(anchor.x(), self.width() - 8) - panel.width())
+        panel.move(x, y)
         panel.raise_()
 
     def _position_menu(self):

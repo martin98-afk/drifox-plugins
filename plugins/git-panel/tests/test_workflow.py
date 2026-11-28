@@ -81,6 +81,21 @@ class ChangesTests(unittest.TestCase):
         self.view.set_items([{"path": f"src/f{i}.py", "status": "M", "staged": False} for i in range(1000)])
         self.assertLessEqual(len(self.view.findChildren(QWidget)), before + 2)
 
+    def test_filter_survives_refresh_and_mode_switch(self):
+        self.view.set_items(self.items)
+        self.view.set_filter(" DOCS/ ")
+        self.view.set_mode("tree")
+        self.view.set_items(self.items + [{"path": "docs/guide.md", "status": "A", "staged": True}])
+        self.assertEqual(
+            sorted(i.data(FILE_ROLE)["path"] for i in self.view.file_indexes()),
+            ["docs/guide.md", "docs/new name.md"],
+        )
+        self.view.set_filter("missing")
+        self.assertEqual(self.view.model().rowCount(), 0)
+        self.view.set_filter("")
+        self.assertEqual(len(self.view.file_indexes()), len(self.items) + 1)
+        self.view.set_mode("list")
+
 
 class RunnerTests(unittest.TestCase):
     def test_serializes_and_coalesces_pending_refresh(self):

@@ -311,13 +311,11 @@ class GitRepo:
     def restore_staged(self, paths: List[str]) -> GitResult:
         """取消暂存（paths 可为 ["."] 表示全部）
 
-        空仓库（无任何提交）下 `git restore --staged` 报
-        "fatal: could not resolve 'HEAD'"，回退 rm --cached 完成同样的语义。
+        路径形式的 reset 只更新暂存区，也适用于首次提交之前的空仓库。
         """
-        res = self._run("restore", "--staged", *paths)
-        if not res.ok and "could not resolve 'HEAD'" in (res.stderr or ""):
-            return self._run("rm", "--cached", "-q", "--", *paths)
-        return res
+        if not paths:
+            return GitResult(False, "", "未选择要取消暂存的路径")
+        return self._run("reset", "-q", "--", *paths)
 
     def checkout_discard(self, paths: List[str]) -> GitResult:
         """放弃已跟踪文件的工作区修改"""

@@ -30,8 +30,9 @@ import threading
 from typing import Any, Dict, List, Optional, Tuple
 
 from loguru import logger
+from PyQt5 import sip
 from PyQt5.QtCore import QObject, QRectF, QRunnable, QThreadPool, QTimer, Qt, pyqtProperty, pyqtSignal
-from PyQt5.QtGui import QColor, QIcon, QPainter, QPen, QPixmap
+from PyQt5.QtGui import QColor, QIcon, QPainter, QPen, QPixmap, QTextCharFormat, QTextCursor
 from PyQt5.QtWidgets import QApplication, QHBoxLayout, QLabel, QPlainTextEdit, QWidget
 
 from app.plugins.managers.plugin_config_store import PluginConfigStore
@@ -395,12 +396,12 @@ class _EnhanceConfigCard(_ConfigCardBase):
     def __init__(self, parent=None):
         from qfluentwidgets import FluentIcon, PushButton
 
-        super().__init__(FluentIcon.EDIT, "提示词增强", "增强指令 + 模型选择（即时保存）", parent)
+        super().__init__(FluentIcon.EDIT, "提示词增强", "自定义改写指令与模型，更改自动保存", parent)
         self.viewLayout.setContentsMargins(48, 8, 48, 8)
         self.viewLayout.setSpacing(4)
 
         self._edit = TextEdit(self.view) if TextEdit is not None else QPlainTextEdit(self.view)
-        self._edit.setPlaceholderText("用于优化用户输入的 system 指令，留空回默认")
+        self._edit.setPlaceholderText("描述你希望模型如何改写提示词，留空使用默认指令")
         self._edit.setMinimumHeight(140)
         self.viewLayout.addWidget(_field_row("增强指令", self._edit, self.view, Qt.AlignTop))
 
@@ -412,12 +413,13 @@ class _EnhanceConfigCard(_ConfigCardBase):
 
             self._provider_combo = ComboBox(self.view)
             self._provider_combo.setMaxVisibleItems(MAX_MODEL_VISIBLE_ITEMS)
+            self._provider_combo.addItem("跟随当前会话", userData="")
             for label, pid in self._providers:
                 # 关键字 userData：qfluentwidgets.addItem 第二参数是 icon，
                 # 位置传参 userData 会丢失 → currentData() 恒 None → 配置不固化
                 self._provider_combo.addItem(label, userData=pid)
             self._provider_combo.setToolTip(
-                "执行提示词优化的服务商。两键均空（当前模型）= 沿用调用方当前 provider/model。"
+                "选择用于优化提示词的服务商，默认跟随当前会话。"
             )
             self._provider_combo.currentIndexChanged.connect(self._on_provider_changed)
             self.viewLayout.addWidget(_field_row("服务商", self._provider_combo, self.view))
@@ -428,9 +430,11 @@ class _EnhanceConfigCard(_ConfigCardBase):
                 "执行提示词优化的模型（清单随上方服务商联动）。"
             )
             self._model_combo.currentIndexChanged.connect(self._on_model_changed)
-            self.viewLayout.addWidget(_field_row("模型", self._model_combo, self.view))
+            self._model_row = _field_row("模型", self._model_combo, self.view)
+            self.viewLayout.addWidget(self._model_row)
 
-        self._reset_btn = PushButton("恢复默认", self.view)
+        self._reset_btn = PushButton("恢复默认设置", self.view)
+        self._reset_btn.setToolTip("恢复内置指令，并跟随当前会话的模型")
         self._reset_btn.clicked.connect(self._on_reset)
         self.viewLayout.addWidget(_reset_row(self._reset_btn, self.view))
 
@@ -508,6 +512,7 @@ class _EnhanceConfigCard(_ConfigCardBase):
             idx = 1
         self._model_combo.setCurrentIndex(max(0, idx))
         self._model_combo.blockSignals(False)
+        self._model_row.setEnabled(self._model_combo.count() > 1)
 
     def _on_changed(self) -> None:
         PluginConfigStore().set_values(PLUGIN_NAME, {"enhance_prompt": self._edit.toPlainText().strip()})
@@ -516,9 +521,8 @@ class _EnhanceConfigCard(_ConfigCardBase):
         if self._provider_combo is None:
             return
         pid = str(self._provider_combo.currentData() or "")
-        PluginConfigStore().set_values(PLUGIN_NAME, {"enhance_provider": pid})
         # 换服务商后模型清单全变，清空模型值避免指向不存在的模型
-        PluginConfigStore().set_values(PLUGIN_NAME, {"enhance_model": ""})
+        PluginConfigStore().set_values(PLUGIN_NAME, {"enhance_provider": pid, "enhance_model": ""})
         self._fill_models(pid)
 
     def _on_model_changed(self, _index: int) -> None:
@@ -630,7 +634,8 @@ def _on_enhance_clicked(context: Dict[str, Any]) -> None:
         _notify(main_widget, "提示词增强", "正在优化中，请稍候…", "warning")
         return
 
-    text = input_area.toPlainText().strip()
+    draft = input_area.toPlainText()
+    text = draft.strip()
     if not text:
         _notify(main_widget, "提示词增强", "输入框为空，无可优化的内容", "warning")
         return
@@ -658,7 +663,7 @@ def _on_enhance_clicked(context: Dict[str, Any]) -> None:
 
     signals = _EnhanceSignals()
     signals.done.connect(
-        lambda result, _t=text: _on_done(main_widget, input_area, result, window_id, original_text=_t)
+        lambda result: _on_done(main_widget, input_area, result, window_id, original_text=draft)
     )
     signals.error.connect(lambda err: _on_error(main_widget, err, window_id))
 
@@ -761,17 +766,39 @@ def _strip_thinking(text: str) -> str:
     return text.strip()
 
 
-def _on_done(main_widget, input_area, result, window_id, original_text=""):
+def _on_done(main_widget, input_area, result, window_id, original_text):
     _close_progress(window_id)
     _stop_button_spinner(window_id)
     _busy_windows.pop(window_id, None)
-    if result:
-        # 追加增强提示词到原用户问题后面，不替换原问题
-        combined = f"{original_text}\n\n{result}".strip()
-        input_area.setPlainText(combined)
-        _notify(main_widget, "提示词增强", "已优化并追加到输入框（保留原问题）", "success")
-    else:
+    if sip.isdeleted(input_area) or sip.isdeleted(main_widget):
+        return
+    if not result:
         _notify(main_widget, "提示词增强", "模型返回为空", "warning")
+        return
+    if input_area.toPlainText() != original_text:
+        from qfluentwidgets import InfoBar, InfoBarIcon, InfoBarPosition, PushButton
+
+        bar = InfoBar(InfoBarIcon.INFORMATION, "优化已完成", "草稿已更改，可单独复制结果。",
+                      duration=-1, position=InfoBarPosition.BOTTOM, parent=main_widget)
+        copy_btn = PushButton("复制结果", bar)
+
+        def copy_result():
+            QApplication.clipboard().setText(result)
+            bar.close()
+
+        copy_btn.clicked.connect(copy_result)
+        bar.addWidget(copy_btn)
+        bar.show()
+        return
+
+    # 只在末尾插入一次，保留原文中的附件胶囊与撤销历史。
+    cursor = input_area.textCursor()
+    cursor.movePosition(QTextCursor.End)
+    cursor.beginEditBlock()
+    cursor.insertText("\n\n" + result, QTextCharFormat())
+    cursor.endEditBlock()
+    input_area.setTextCursor(cursor)
+    _notify(main_widget, "提示词增强", "已追加优化结果，可撤销本次追加", "success")
 
 
 def _on_error(main_widget, err, window_id):
@@ -782,7 +809,7 @@ def _on_error(main_widget, err, window_id):
 
 
 def _show_progress(main_widget, window_id, text):
-    """常驻 InfoBar 提示（duration=0 不自动关闭），完成/失败时由 _close_progress 关闭。
+    """常驻 InfoBar 提示，完成/失败时由 _close_progress 关闭。
 
     需持有 bar 引用控制生命周期，无法走 ui.notify；parent 直连当前标签页
     窗口（TabManagerWindow），避免多标签下弹到非激活页。
@@ -800,7 +827,7 @@ def _show_progress(main_widget, window_id, text):
             "提示词增强",
             text,
             parent=parent,
-            duration=0,
+            duration=-1,
             isClosable=False,
             position=InfoBarPosition.BOTTOM,
         )

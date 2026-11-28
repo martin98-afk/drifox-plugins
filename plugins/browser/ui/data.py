@@ -317,7 +317,7 @@ def search_history(keyword: str, limit: int = 100) -> List[dict]:
     try:
         conn = _get_conn()
         rows = conn.execute(
-            "SELECT url, title, visited_at FROM history "
+            "SELECT url, title, visited_at, visit_count FROM history "
             "WHERE url LIKE ? OR title LIKE ? "
             "ORDER BY visited_at DESC LIMIT ?",
             (f"%{keyword}%", f"%{keyword}%", limit),

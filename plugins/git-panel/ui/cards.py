@@ -173,10 +173,10 @@ class _StrokeIconEngine(QIconEngine):
     def __init__(self, kind: str, color: str):
         super().__init__()
         self.kind = kind
-        self.color = QColor(color)
+        self.color = _css_color_to_qcolor(color)
 
     def clone(self):
-        return _StrokeIconEngine(self.kind, self.color.name())
+        return _StrokeIconEngine(self.kind, self.color.name(QColor.HexArgb))
 
     def paint(self, painter: QPainter, rect: QRect, mode, state):
         painter.save()
@@ -2575,6 +2575,7 @@ class GitPanelCard(QWidget):
             self._history_fingerprint = None
             self._history_dirty = True
             self._changes_view.set_items([])
+            self._path_filter.clear()
             self._clear_history()
             self._commit_input.clear()
             self._commit_btn.setEnabled(True)
@@ -2597,16 +2598,11 @@ class GitPanelCard(QWidget):
         self._header_widget.setStyleSheet("background: transparent;")
 
     def _apply_branch_badge_style(self):
-        """分支徽章 QSS：蓝底胶囊明暗通用，字号跟随主题字号
-
-        字号必须写在 QSS 里：QLabel 装了 QSS 后 font-size 会覆盖 setFont，
-        setFont 单独调用无效。
-        """
+        """分支徽章使用宿主面板色和正文字体。"""
         fs = self._cached_fs or 14
         self._branch_lb.setStyleSheet(
-            "background: rgba(98,160,234,0.12); border-radius: 5px; padding: 3px 10px; "
-            f"color: #62a0ea; font-weight: 600; font-size: {fs}px;"
-            "font-family: 'Consolas', 'Courier New', monospace;"
+            f"background: {self._cached_panel}; border-radius: 5px; padding: 3px 8px; "
+            f"color: {self._cached_tc}; font-weight: 600; font-size: {max(fs - 1, 11)}px;"
         )
 
     def _theme_snapshot(self) -> dict:
@@ -2721,15 +2717,11 @@ class GitPanelCard(QWidget):
             "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
         )
 
-        # tab 名的字体族取系统 UI 字体（上面的 QSS 只管颜色与内边距），
-        # 而根控件被设成宿主主题字体（如行楷）+ 正文字号后会被子控件继承；
-        # 字号在主题字号上收 3 号，避免 tab 名比正文更抢眼。
-        tab_font = QFont(QApplication.font())
-        tab_font.setPointSize(max(int(fs) - 3, 9) if fs else 9)
-        self._tabs.setFont(tab_font)
         self._tabs.setStyleSheet(
-            f"QTabBar::tab {{ color: {tcs}; background: transparent; padding: 7px 12px; border-bottom: 2px solid transparent; }}"
-            f"QTabBar::tab:selected {{ color: {self._cached_accent}; border-bottom-color: {self._cached_accent}; }}"
+            f"QTabBar {{ font-family: '{ff}'; font-size: {max(fs - 1, 11)}px; }}"
+            f"QTabBar::tab {{ color: {tcs}; padding: 5px 10px; margin: 4px 1px 0; border-radius: 5px; }}"
+            f"QTabBar::tab:hover {{ background: {self._cached_hover}; }}"
+            f"QTabBar::tab:selected {{ color: {tc}; background: {self._cached_panel}; font-weight: 600; }}"
         )
         self._changes_view.setStyleSheet(
             f"QTreeView {{ background: transparent; color: {tc}; border: none; outline: none; font-family: '{ff}'; font-size: {max(fs - 1, 11)}px; }}"
@@ -2750,6 +2742,11 @@ class GitPanelCard(QWidget):
             pass
         self._summary_lb.setStyleSheet(f"color: {tcs}; background: transparent; font-size: {max(fs - 2, 10)}px;")
         self._view_btn.setStyleSheet(btn_base)
+        self._path_filter.setStyleSheet(
+            f"QLineEdit {{ background: {self._cached_panel}; color: {tc}; border: 1px solid {border_c};"
+            f" border-radius: 5px; padding: 3px 6px; font-size: {max(fs - 2, 11)}px; }}"
+            f"QLineEdit:focus {{ border-color: {self._cached_accent}; }}"
+        )
 
         # Labels 样式更新
         for child in self.findChildren(QLabel):
@@ -3129,16 +3126,23 @@ class GitPanelCard(QWidget):
         self._view_btn.setToolTip("切换列表 / 文件树")
         self._view_btn.clicked.connect(self._toggle_changes_view)
         row.addWidget(self._view_btn)
-        row.addStretch(1)
+        self._path_filter = QLineEdit(tools)
+        self._path_filter.setPlaceholderText("筛选文件路径")
+        self._path_filter.setAccessibleName("筛选变更文件路径")
+        self._path_filter.setClearButtonEnabled(True)
+        self._path_filter.setMinimumWidth(48)
+        row.addWidget(self._path_filter, 1)
+        self._bulk_stage_buttons = []
         for icon, title, handler in (
             (FluentIcon.ADD, "暂存全部", self._on_stage_all),
             (FluentIcon.REMOVE, "取消暂存全部", self._on_unstage_all),
         ):
             button = TransparentToolButton(icon, tools)
             button.setFixedSize(26, 26)
-            button.setToolTip(title)
+            button.setToolTip(f"{title}（整个仓库）")
             button.clicked.connect(handler)
             row.addWidget(button)
+            self._bulk_stage_buttons.append(button)
         root.addWidget(tools)
         self._pages = QStackedWidget(self)
         self._changes_view = ChangesView(self._pages)
@@ -3170,11 +3174,26 @@ class GitPanelCard(QWidget):
         self._stage_layout.addWidget(self._pages, 0, 0)
         root.addWidget(stage, 1)
 
-        self._summary_lb = QLabel("✓ 工作区干净，无变更", self)
+        self._summary_lb = QLabel(self)
+        self._summary_lb.setProperty("keepColor", True)
         self._summary_lb.setAlignment(Qt.AlignCenter)
         self._stage_layout.addWidget(self._summary_lb, 0, 0, Qt.AlignCenter)
         self._summary_lb.hide()
+        self._path_filter.textChanged.connect(self._filter_paths)
         self._tabs.currentChanged.connect(self._on_page_changed)
+
+    def _filter_paths(self, text):
+        self._changes_view.set_filter(text)
+        for button in self._bulk_stage_buttons:
+            button.setEnabled(not text.strip())
+        self._update_changes_summary()
+
+    def _update_changes_summary(self):
+        is_empty = self._changes_view.model().rowCount() == 0
+        self._summary_lb.setText("没有匹配的文件" if self._snapshot.get("status") else "工作区干净，无待提交的更改")
+        self._summary_lb.setVisible(
+            is_empty and self._tabs.currentIndex() == 0 and "status" in self._snapshot and self._empty.isHidden()
+        )
 
     def _popup(self, menu, anchor=None, pos=None):
         old = getattr(self, "_popup_menu", None)
@@ -3317,9 +3336,8 @@ class GitPanelCard(QWidget):
     def _on_page_changed(self, index):
         self._pages.setCurrentIndex(index)
         self._commit_editor.setVisible(index == 0)
-        self._changes_tools.setVisible(index == 0)
-        # 干净标签只属于变更页：历史页隐藏，切回时按当前变更状态恢复
-        self._summary_lb.setVisible(index == 0 and not self._snapshot.get("status", []))
+        self._changes_tools.setVisible(index == 0 and self._empty.isHidden())
+        self._update_changes_summary()
         if index == 1:
             self._async_refresh(0)
 
@@ -3506,14 +3524,15 @@ class GitPanelCard(QWidget):
         self._snapshot.update(data)
         branch = data.get("branch", "")
         ahead, behind = data.get("ahead", 0), data.get("behind", 0)
-        self._branch_lb.setText(f"⑂ {branch}  ↑{ahead} ↓{behind}")
+        sync = "  ".join(label for count, label in ((ahead, f"↑{ahead}"), (behind, f"↓{behind}")) if count)
+        self._branch_lb.setText(f"{branch}  {sync}".rstrip())
         self._push_btn.setToolTip(f"推送（领先 {ahead} 个提交）")
         self._pull_btn.setToolTip(f"拉取（落后 {behind} 个提交）")
         items = data.get("status", [])
         self._changes_view.set_items(items)
         self._tabs.setTabText(0, f"变更 {len(items)}" if items else "变更")
         # 有变更时或历史页不显示状态标签；变更页且工作区干净时居中显示。
-        self._summary_lb.setVisible(self._tabs.currentIndex() == 0 and not items)
+        self._update_changes_summary()
         if "log" not in data:
             return
         fingerprint = repr((data["log"], branch, ahead))

@@ -25,7 +25,7 @@ from PyQt5.QtWidgets import (
 from qfluentwidgets import FluentIcon
 
 from .data import AsyncDataLoader, add_bookmark, remove_bookmark
-from .panel_base import _PanelMixin, build_footer, build_header, show_singleton_panel
+from .panel_base import PageRowDelegate, _PanelMixin, build_footer, build_header, show_singleton_panel
 from .theme import font_css, scrollbar_style, theme_colors
 
 
@@ -223,11 +223,9 @@ class BookmarksPanel(QFrame, _PanelMixin):
         super().__init__(parent or owner)
         self._owner = owner
         self.setObjectName("bookmarksPanel")
-        self.setFixedSize(460, 320)
         self._loader = AsyncDataLoader(self)
         self._items_cache: List[dict] = []
         self._setup_ui()
-        self._reload()
 
     def _setup_ui(self):
         root = QVBoxLayout(self)
@@ -248,42 +246,42 @@ class BookmarksPanel(QFrame, _PanelMixin):
 
         self._list = QListWidget(self)
         self._list.setIconSize(QSize(16, 16))
+        self._list.setItemDelegate(PageRowDelegate(self._list))
         self._list.itemDoubleClicked.connect(self._open_item)
-        root.addWidget(self._list, 1)
+        root.addWidget(self._build_results(), 1)
 
         def _footer_actions(footer: QHBoxLayout):
             self._btn_open = QPushButton("打开", self)
             self._btn_delete = QPushButton("删除", self)
             self._btn_open.clicked.connect(self._open_selected)
             self._btn_delete.clicked.connect(self._delete_selected)
+            self._list.itemSelectionChanged.connect(self._update_selection)
+            self._update_selection()
             footer.addWidget(self._btn_open)
             footer.addWidget(self._btn_delete)
 
-        root.addLayout(build_footer(self, actions=_footer_actions))
+        root.addLayout(build_footer(_footer_actions))
 
         from .panel_base import apply_panel_theme
         apply_panel_theme(self, self._owner)
 
-    # ── H2 修复：异步加载（统一基类 _reload_async） ──
+    def _update_selection(self):
+        selected = bool(self._list.selectedItems())
+        self._btn_open.setEnabled(selected)
+        self._btn_delete.setEnabled(selected)
 
-    def _reload_async(self):
-        """异步查询 bookmarks，缓存后渲染"""
-        self._loader.load(
-            "bookmarks",
-            self._on_items_loaded,
-            limit=500,
-        )
+    def _list_query(self):
+        return "bookmarks", {"limit": 500}
 
     def _render_items(self):
         """同步渲染缓存到 QListWidget"""
         self._list.clear()
         if not self._items_cache:
-            placeholder = QListWidgetItem("暂无收藏")
-            self._list.addItem(placeholder)
+            self._show_message("还没有收藏\n浏览网页时可按 Ctrl+D 收藏当前页")
             return
         for bm in self._items_cache:
             title = bm.get("title") or bm.get("url")
-            item = QListWidgetItem(f"{title}\n   {bm.get('url')}")
+            item = QListWidgetItem(title)
             icon = icon_from_base64(bm.get("icon", ""))
             if not icon.isNull():
                 item.setIcon(icon)

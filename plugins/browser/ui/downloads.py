@@ -22,6 +22,7 @@ from PyQt5.QtWidgets import (
     QListWidgetItem,
     QProgressBar,
     QPushButton,
+    QSizePolicy,
     QVBoxLayout,
     QWidget,
 )
@@ -135,11 +136,9 @@ class DownloadsPanel(QFrame, _PanelMixin):
         super().__init__(parent or owner)
         self._owner = owner
         self.setObjectName("downloadsPanel")
-        self.setFixedSize(460, 320)
         self._loader = AsyncDataLoader(self)
         self._items_cache: list = []
         self._setup_ui()
-        self._reload()
 
     def _setup_ui(self):
         root = QVBoxLayout(self)
@@ -159,7 +158,7 @@ class DownloadsPanel(QFrame, _PanelMixin):
         )
 
         self._list = QListWidget(self)
-        root.addWidget(self._list, 1)
+        root.addWidget(self._build_results(), 1)
 
         def _footer_actions(footer: QHBoxLayout):
             self._btn_open_folder = QPushButton("打开下载目录", self)
@@ -169,26 +168,18 @@ class DownloadsPanel(QFrame, _PanelMixin):
             footer.addWidget(self._btn_open_folder)
             footer.addWidget(self._btn_clear)
 
-        root.addLayout(build_footer(self, actions=_footer_actions))
+        root.addLayout(build_footer(_footer_actions))
 
         apply_panel_theme(self, self._owner)
 
-    # ── H2 修复：异步加载（统一基类 _reload_async） ──
-
-    def _reload_async(self):
-        """异步查询 downloads，缓存后渲染"""
-        self._loader.load(
-            "downloads",
-            self._on_items_loaded,
-            limit=100,
-        )
+    def _list_query(self):
+        return "downloads", {"limit": 100}
 
     def _render_items(self):
         """同步渲染缓存"""
         self._list.clear()
         if not self._items_cache:
-            placeholder = QListWidgetItem("暂无下载记录")
-            self._list.addItem(placeholder)
+            self._show_message("暂无下载记录")
             return
         for d in self._items_cache:
             item = QListWidgetItem()
@@ -236,7 +227,7 @@ def open_folder(path: str) -> bool:
     if not path:
         return False
     try:
-        folder = os.path.dirname(path)
+        folder = path if os.path.isdir(path) else os.path.dirname(path)
         if os.path.exists(folder):
             if hasattr(os, "startfile"):
                 os.startfile(folder)  # type: ignore[attr-defined]  # noqa: S606
@@ -271,10 +262,13 @@ class _DownloadItemWidget(QWidget):
 
         row = QHBoxLayout()
         label = QLabel(name)
-        label.setStyleSheet(f"{font_css(c['ff'], c['fs'])} color: {c['text']};")
+        label.setTextFormat(Qt.PlainText)
+        label.setToolTip(self._path or name)
+        label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        label.setStyleSheet(f"{font_css(c['ff'], c['fs'])} font-weight: 600; color: {c['text']};")
         row.addWidget(label, 1)
 
-        state_label = QLabel(f"[{state}]")
+        state_label = QLabel(state)
         state_color = _STATE_COLORS.get(data.get("state", ""))
         state_label.setStyleSheet(
             f"{font_css(c['ff'], c['fs'])} color: {state_color or c['secondary']};"
@@ -283,25 +277,11 @@ class _DownloadItemWidget(QWidget):
 
         received = data.get("bytes_received", 0)
         total = data.get("bytes_total", 0)
-        pct = int(received / total * 100) if total > 0 else 0
         size_txt = (
             f"{received // 1024}KB / {total // 1024}KB"
             if total > 0
             else f"{received // 1024}KB"
         )
-
-        self._progress = QProgressBar(self)
-        self._progress.setRange(0, 100)
-        self._progress.setValue(pct)
-        self._progress.setTextVisible(True)
-        self._progress.setFormat(f"{size_txt}")
-        self._progress.setFixedHeight(16)
-        self._progress.setStyleSheet(
-            f"QProgressBar {{ background: {c['raised']}; border: none; border-radius: 4px;"
-            f" {font_css(c['ff'], c['fs'] - 2)} color: {c['secondary']}; text-align: center; }}"
-            f"QProgressBar::chunk {{ background: {c['accent']}; border-radius: 4px; }}"
-        )
-        row.addWidget(self._progress, 2)
 
         if data.get("state") == "finished" and self._path:
             btn = QPushButton()
@@ -316,6 +296,21 @@ class _DownloadItemWidget(QWidget):
             row.addWidget(btn)
 
         layout.addLayout(row)
+        size = QLabel(size_txt, self)
+        size.setStyleSheet(f"{font_css(c['ff'], max(10, c['fs'] - 2))} color: {c['secondary']};")
+        layout.addWidget(size)
+        if data.get("state") == "downloading":
+            progress = QProgressBar(self)
+            progress.setRange(0, 100 if total > 0 else 0)
+            if total > 0:
+                progress.setValue(min(100, int(received / total * 100)))
+            progress.setTextVisible(False)
+            progress.setFixedHeight(4)
+            progress.setStyleSheet(
+                f"QProgressBar {{ background: {c['border']}; border: none; border-radius: 2px; }}"
+                f"QProgressBar::chunk {{ background: {c['accent']}; border-radius: 2px; }}"
+            )
+            layout.addWidget(progress)
 
 
 def show_downloads_panel(owner):

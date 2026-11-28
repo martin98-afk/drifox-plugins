@@ -141,6 +141,7 @@ class ChangesView(QTreeView):
         self._items = ()
         self._fingerprint = None
         self._mode = "list"
+        self._query = ""
         self._settings = QSettings("DriFox", "git-panel")
         self._dir_state = {}
         self._model = QStandardItemModel(self)
@@ -215,6 +216,12 @@ class ChangesView(QTreeView):
         self._rebuild()
         return True
 
+    def set_filter(self, text):
+        query = text.strip().casefold()
+        if query != self._query:
+            self._query = query
+            self._rebuild()
+
     def _all_indexes(self, parent=None):
         from PyQt5.QtCore import QModelIndex
         parent = parent if parent is not None else QModelIndex()
@@ -237,6 +244,8 @@ class ChangesView(QTreeView):
         self._model.clear()
         groups = {key: [] for key, _ in GROUPS}
         for info in self._items:
+            if self._query not in info["path"].casefold():
+                continue
             group = "conflict" if info["status"] in CONFLICTS else "staged" if info["staged"] else "changes"
             groups[group].append(info)
         for group, title in GROUPS:
