@@ -2717,8 +2717,10 @@ class GitPanelCard(QWidget):
             "QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }"
         )
 
+        tab_font = QFont(QApplication.font())
+        tab_font.setPointSize(max(fs - 3, 9))
+        self._tabs.setFont(tab_font)
         self._tabs.setStyleSheet(
-            f"QTabBar {{ font-family: '{ff}'; font-size: {max(fs - 1, 11)}px; }}"
             f"QTabBar::tab {{ color: {tcs}; padding: 5px 10px; margin: 4px 1px 0; border-radius: 5px; }}"
             f"QTabBar::tab:hover {{ background: {self._cached_hover}; }}"
             f"QTabBar::tab:selected {{ color: {tc}; background: {self._cached_panel}; font-weight: 600; }}"

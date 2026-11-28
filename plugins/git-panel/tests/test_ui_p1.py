@@ -320,6 +320,36 @@ class TestContextMenu(P1UITestBase):
         _APP.processEvents()
 
 
+class TestHeaderIcons(unittest.TestCase):
+    def test_more_and_close_follow_theme_foreground(self):
+        from PyQt5.QtCore import Qt
+        from PyQt5.QtGui import QImage, QPainter
+
+        card = cards.GitPanelCard()
+        self.addCleanup(card.deleteLater)
+        colors = {}
+        card.set_context_provider(lambda: {"colors": colors})
+        for value, rgb, alpha in [
+            ("rgba(255, 255, 255, 0.66)", (255, 255, 255), 168),
+            ("rgba(10, 24, 48, 0.60)", (10, 24, 48), 153),
+        ]:
+            colors["text_secondary"] = value
+            card._apply_latest_theme()
+            for button in (card._more_btn, card._close_btn):
+                with self.subTest(theme=value, button=button.toolTip()):
+                    image = QImage(48, 48, QImage.Format_ARGB32_Premultiplied)
+                    image.fill(Qt.transparent)
+                    painter = QPainter(image)
+                    button.icon().paint(painter, image.rect())
+                    painter.end()
+                    # 取描边内部像素；边缘有抗锯齿，叉号交点有两笔叠色。
+                    expected = (*rgb, alpha)
+                    self.assertTrue(any(
+                        all(abs(a - b) <= 1 for a, b in zip(image.pixelColor(x, y).getRgb(), expected))
+                        for y in range(image.height()) for x in range(image.width())
+                    ))
+
+
 class TestTabFont(P1UITestBase):
     """tab 名的字体族必须取系统 UI 字体，不跟随宿主主题字体（行楷等）；字号比正文字号小 3 号"""
 
