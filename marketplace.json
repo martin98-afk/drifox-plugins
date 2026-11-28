@@ -1018,7 +1018,7 @@
             "display_name": {
                 "zh": "内置浏览器"
             },
-            "downloads": 102,
+            "downloads": 105,
             "keywords": [
                 "browser",
                 "web",
@@ -4960,7 +4960,7 @@
             "display_name": {
                 "zh": "Git 控制面板"
             },
-            "downloads": 125,
+            "downloads": 128,
             "keywords": [
                 "git",
                 "source-control",
@@ -8811,7 +8811,7 @@
             "display_name": {
                 "zh": "提示词增强"
             },
-            "downloads": 83,
+            "downloads": 86,
             "keywords": [
                 "prompt",
                 "enhance",
@@ -10941,7 +10941,7 @@
             "display_name": {
                 "zh": "Token 用量统计"
             },
-            "downloads": 25,
+            "downloads": 26,
             "keywords": [
                 "welcome",
                 "token",
